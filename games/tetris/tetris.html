@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="euc-kr">
+
+<title>Tetris</title>
+
+<script>
+
+function addEvent(obj, eventType, functionName, useCapture)
+{
+    if (obj.addEventListener) {
+        obj.addEventListener(eventType, functionName, useCapture);
+    }
+    else if (obj.attachEvent) {
+        obj.attachEvent("on" + eventType, functionName);
+    }
+    else {
+        // same as "obj.onType = functionName"
+        obj["on" + eventType] = functionName;
+    }
+}
+
+function Block()
+{
+    var blockColors = ['#FF0000', '#00FF00', '#0000FF'];
+
+    this.color     = blockColors[ random( blockColors.length )];
+    this.cxBlock   = 0;
+    this.cyBlock   = 0;
+    this.shape     = null;
+}
+
+Block.prototype.getShapeInfo = function ()
+{
+    return { shape: this.shape,
+             cxBlock : this.cxBlock,
+             cyBlock : this.cyBlock };
+};
+
+Block.prototype.rotate = function ()
+{
+    var cxBlockNew;
+    var cyBlockNew;
+    var shapeNew;
+
+    cxBlockNew = this.cyBlock;
+    cyBlockNew = this.cxBlock;
+
+    var i, j;
+
+    shapeNew = new Array();
+    for( i = 0; i < cyBlockNew; ++i )
+        shapeNew[ i ] = new Array();
+
+    for( i = 0; i < this.cyBlock; ++i )
+        for( j = 0; j < this.cxBlock; ++j )
+            shapeNew[ cyBlockNew - j - 1 ][ i ] = this.shape[ i ][ j ];
+
+    this.cxBlock = cxBlockNew;
+    this.cyBlock = cyBlockNew;
+    this.shape   = shapeNew;
+};
+
+Block.prototype.derotate = function ()
+{
+};
+
+Block.prototype.getRandomMode = function ()
+{
+    return Math.floor( Math.random() * this.numModes );
+};
+
+// **
+// **
+function Block1()
+{
+    this.shape = new Array();
+
+    this.cxBlock = 2;
+    this.cyBlock = 2;
+
+    for( var i = 0; i < this.cyBlock; ++i )
+    {
+        this.shape[ i ] = new Array();
+
+        for( var j = 0; j < this.cxBlock; ++j )
+        {
+            this.shape[ i ][ j ] = 1;
+        }
+    }
+}
+
+Block1.prototype = new Block();
+
+// ****
+function Block2()
+{
+    this.shape = new Array();
+
+    this.cxBlock = 4;
+    this.cyBlock = 1;
+
+    this.shape[ 0 ] = new Array();
+    for( var i = 0; i < this.cxBlock; ++i )
+        this.shape[ 0 ][ i ] = 1;
+}
+
+Block2.prototype = new Block();
+
+// **
+//  **
+function Block3()
+{
+    this.shape = new Array();
+
+    this.cxBlock = 3;
+    this.cyBlock = 2;
+
+    for( var i = 0; i < this.cyBlock; ++i )
+    {
+        this.shape[ i ] = new Array();
+
+        for( var j = 0; j < this.cxBlock; ++j )
+            this.shape[ i ][ j ] = 0;
+    }
+
+    this.shape[ 0 ][ 0 ] = 1;
+    this.shape[ 0 ][ 1 ] = 1;
+    this.shape[ 1 ][ 1 ] = 1;
+    this.shape[ 1 ][ 2 ] = 1;
+}
+
+Block3.prototype = new Block();
+
+//  **
+// **
+function Block4()
+{
+    this.shape = new Array();
+
+    this.cxBlock = 3;
+    this.cyBlock = 2;
+
+    for( var i = 0; i < this.cyBlock; ++i )
+    {
+        this.shape[ i ] = new Array();
+
+        for( var j = 0; j < this.cxBlock; ++j )
+            this.shape[ i ][ j ] = 0;
+    }
+
+    this.shape[ 0 ][ 1 ] = 1;
+    this.shape[ 0 ][ 2 ] = 1;
+    this.shape[ 1 ][ 0 ] = 1;
+    this.shape[ 1 ][ 1 ] = 1;
+}
+
+Block4.prototype = new Block();
+
+//  *
+// ***
+function Block5()
+{
+    this.shape = new Array();
+
+    this.cxBlock = 3;
+    this.cyBlock = 2;
+
+    for( var i = 0; i < this.cyBlock; ++i )
+    {
+        this.shape[ i ] = new Array();
+
+        for( var j = 0; j < this.cxBlock; ++j )
+            this.shape[ i ][ j ] = 0;
+    }
+
+    this.shape[ 0 ][ 1 ] = 1;
+    this.shape[ 1 ][ 0 ] = 1;
+    this.shape[ 1 ][ 1 ] = 1;
+    this.shape[ 1 ][ 2 ] = 1;
+}
+
+Block5.prototype = new Block();
+
+// *
+// ***
+function Block6()
+{
+    this.shape = new Array();
+
+    this.cxBlock = 3;
+    this.cyBlock = 2;
+
+    for( var i = 0; i < this.cyBlock; ++i )
+    {
+        this.shape[ i ] = new Array();
+
+        for( var j = 0; j < this.cxBlock; ++j )
+            this.shape[ i ][ j ] = 0;
+    }
+
+    this.shape[ 0 ][ 0 ] = 1;
+    this.shape[ 1 ][ 0 ] = 1;
+    this.shape[ 1 ][ 1 ] = 1;
+    this.shape[ 1 ][ 2 ] = 1;
+}
+
+Block6.prototype = new Block();
+
+//   *
+// ***
+function Block7()
+{
+    this.shape = new Array();
+
+    this.cxBlock = 3;
+    this.cyBlock = 2;
+
+    for( var i = 0; i < this.cyBlock; ++i )
+    {
+        this.shape[ i ] = new Array();
+
+        for( var j = 0; j < this.cxBlock; ++j )
+            this.shape[ i ][ j ] = 0;
+    }
+
+    this.shape[ 0 ][ 2 ] = 1;
+    this.shape[ 1 ][ 0 ] = 1;
+    this.shape[ 1 ][ 1 ] = 1;
+    this.shape[ 1 ][ 2 ] = 1;
+}
+
+Block7.prototype = new Block();
+
+function Tetris( row, col )
+{
+    this.board   = null;
+    this.table   = null;
+    this.row     = row;
+    this.col     = col;
+    this.x       = 0;
+    this.y       = 0;
+    this.block   = null;
+    this.bsi     = null;
+    this.timerId = null;
+}
+
+Tetris.prototype.createBoard = function()
+{
+    var board = new Array();
+    var table = document.createElement("table");
+    var tbody = document.createElement("tbody");
+    var i, j;
+
+    for( i = 0; i < this.row; ++i )
+    {
+        var tr = document.createElement("tr");
+
+        board[ i ] = new Array();
+
+        for( j = 0; j < this.col; ++j )
+        {
+            var td = document.createElement("td");
+            td.setAttribute("width", "20");
+            td.setAttribute("height", "20");
+            td.setAttribute("align", "center");
+
+            tr.appendChild( td );
+
+            board[ i ][ j ] = 0;
+        }
+
+        tbody.appendChild( tr );
+    }
+
+    table.appendChild( tbody );
+    table.setAttribute("border", "1");
+
+    document.getElementById("divGame").appendChild( table );
+
+    this.table = table;
+
+    this.board = board;
+};
+
+Tetris.prototype.board2shape = function( bsi, boardRow, boardCol )
+{
+    var shapeRow = boardRow - this.y + bsi.cyBlock - 1;
+    var shapeCol = boardCol - this.x;
+    return { row : shapeRow, col : shapeCol };
+};
+
+Tetris.prototype.shape2board = function( bsi, shapeRow, shapeCol )
+{
+    var boardRow = this.y + ( shapeRow - bsi.cyBlock + 1 );
+    var boardCol = this.x + shapeCol;
+
+    return { row : boardRow, col : boardCol };
+};
+
+Tetris.prototype.putSquare = function ( row, col, set, drawOnly )
+{
+    if( drawOnly === undefined )
+        drawOnly = true;
+
+    if( !drawOnly )
+    {
+        var value   = set ? true : false;
+        this.board[ row ][ col ] = value;
+    }
+
+    //var content = set ? "*" : " ";
+    var bgColor = set ? this.block.color : '#FFFFFF';
+    //this.table.rows[ row ].cells[ col ].innerHTML = content;
+    this.table.rows[ row ].cells[ col ].style.backgroundColor = bgColor;
+};
+
+Tetris.prototype.put = function ( bsi, set, drawOnly )
+{
+    var i, j;
+
+    if( set === undefined )
+        set = true;
+
+    if( drawOnly === undefined )
+        drawOnly = true;
+
+    for( i = this.y - bsi.cyBlock + 1; i <= this.y; ++i )
+    {
+        if( i >= 0 )
+        {
+            for( j = this.x; j <= this.x + bsi.cxBlock - 1; ++j )
+            {
+                var bsiPos = this.board2shape( bsi, i, j );
+
+                if( bsi.shape[ bsiPos.row ][ bsiPos.col ])
+                    this.putSquare( i , j, set, drawOnly );
+            }
+        }
+    }
+};
+
+Tetris.prototype.rotate = function ()
+{
+    var blockNext = this.block;
+    var i, j;
+
+    blockNext.rotate();
+
+    if( this.x + blockNext.cxBlock > this.col )
+        return;
+
+    for( i = 0; i < blockNext.cyBlock; ++i )
+    {
+        for( j = 0; j < blockNext.cxBlock; ++j )
+        {
+            if( blockNext.shape[ i ][ j ])
+            {
+                var pos = this.shape2board( blockNext.getShapeInfo(),
+                                            i, j );
+
+                if( pos.row >= 0 && this.board[ pos.row ][ pos.col ])
+                    return;
+            }
+        }
+    }
+
+    this.put( this.bsi, false );
+    this.block = blockNext;
+    this.bsi = this.block.getShapeInfo();
+    this.put( this.bsi, true );
+};
+
+Tetris.prototype.removeLine = function ( row )
+{
+    var col;
+
+    while( row > 0 )
+    {
+        for( col = 0; col < this.col; ++col )
+        {
+            this.putSquare( row, col, this.board[ row - 1 ][ col ], false );
+        }
+
+        --row;
+    }
+
+    for( col = 0; col < this.col; ++col )
+    {
+        this.putSquare( 0, col, false, false );
+    }
+};
+
+Tetris.prototype.checkLine = function ()
+{
+    var row, col, lines, complete;
+
+    for( row = this.y, lines = 0; lines < this.bsi.cyBlock; ++lines )
+    {
+        complete = true;
+
+        for( col = 0; col < this.col; ++col )
+        {
+            if( !this.board[ row ][ col ])
+            {
+                complete = false;
+                break;
+            }
+        }
+
+        if( complete )
+        {
+            this.removeLine( row );
+        }
+        else
+            --row;
+    }
+};
+
+Tetris.prototype.moveLeft = function ()
+{
+    var i, j;
+    var pos;
+
+    if( this.x == 0 )
+        return;
+
+    for( i = 0; i < this.bsi.cyBlock; ++i )
+    {
+        for( j = 0; j < this.bsi.cxBlock; ++j )
+        {
+            if( this.bsi.shape[ i ][ j ])
+                break;
+        }
+
+        pos = this.shape2board( this.bsi, i, j );
+
+        if( pos.row >= 0 && this.board[ pos.row ][ pos.col - 1 ])
+            return;
+    }
+
+    for( i = 0; i < this.bsi.cyBlock; ++i )
+    {
+        for( j = 0; j < this.bsi.cxBlock; ++j )
+        {
+            if( this.bsi.shape[ i ][ j ])
+            {
+                pos = this.shape2board( this.bsi, i, j );
+
+                if( pos.row >= 0 )
+                {
+                    this.putSquare( pos.row, pos.col, false );
+                    this.putSquare( pos.row, pos.col - 1, true );
+                }
+            }
+        }
+    }
+
+    --this.x;
+};
+
+Tetris.prototype.moveRight = function ()
+{
+    var i, j;
+
+    if( this.x + this.bsi.cxBlock == this.col )
+        return;
+
+    for( i = 0; i < this.bsi.cyBlock; ++i )
+    {
+        for( j = this.bsi.cxBlock - 1; j >= 0; --j )
+        {
+            if( this.bsi.shape[ i ][ j ])
+                break;
+        }
+
+        pos = this.shape2board( this.bsi, i, j );
+
+        if( pos.row >= 0 && this.board[ pos.row ][ pos.col + 1 ])
+            return;
+    }
+
+    for( i = 0; i < this.bsi.cyBlock; ++i )
+    {
+        for( j = this.bsi.cxBlock - 1; j >= 0; --j )
+        {
+            if( this.bsi.shape[ i ][ j ])
+            {
+                pos = this.shape2board( this.bsi, i, j );
+
+                if( pos.row >= 0 )
+                {
+                    this.putSquare( pos.row, pos.col, false );
+                    this.putSquare( pos.row, pos.col + 1, true );
+                }
+            }
+        }
+    }
+
+    ++this.x;
+};
+
+Tetris.prototype.moveDown = function ()
+{
+    var i, j;
+
+    for( j = 0; j < this.bsi.cxBlock; ++j )
+    {
+        for( i = this.bsi.cyBlock - 1; i >= 0; --i )
+        {
+            if( this.bsi.shape[ i ][ j ])
+                break;
+        }
+
+        pos = this.shape2board( this.bsi, i, j );
+
+        if(( this.y + 1 == this.row ) ||
+           ( pos.row >= 0 && this.board[ pos.row + 1 ][ pos.col ]))
+        {
+            if( this.y - this.bsi.cyBlock + 1 < 0 )
+            {
+                this.stopTimer();
+                alert("Game Over");
+            }
+            else
+            {
+                this.put( this.bsi, true, false );
+                this.checkLine();
+                this.makeNewBlock();
+            }
+
+            return false;
+        }
+    }
+
+    for( j = 0; j < this.bsi.cxBlock; ++j )
+    {
+        for( i = this.bsi.cyBlock - 1; i >= 0; --i )
+        {
+            if( this.bsi.shape[ i ][ j ])
+            {
+                pos = this.shape2board( this.bsi, i, j );
+
+                if( pos.row >= 0 )
+                    this.putSquare( pos.row, pos.col, false );
+                if( pos.row + 1 >= 0 )
+                    this.putSquare( pos.row + 1, pos.col, true );
+            }
+        }
+    }
+
+    ++this.y;
+
+    return true;
+};
+
+Tetris.prototype.makeNewBlock = function ()
+{
+    var blockTypeCount = 7;
+    var blockModeCount = 4;
+
+    var block;
+    var r;
+
+    r = random( blockTypeCount );
+
+    switch( r )
+    {
+        case 0 :
+            block = new Block1();
+            break;
+
+        case 1 :
+            block = new Block2();
+            break;
+
+        case 2 :
+            block = new Block3();
+            break;
+
+        case 3 :
+            block = new Block4();
+            break;
+
+        case 4 :
+            block = new Block5();
+            break;
+
+        case 5 :
+            block = new Block6();
+            break;
+
+        case 6 :
+            block = new Block7();
+            break;
+    }
+
+    r = random( blockModeCount );
+    for( var i =  0; i <= r; ++i )
+        block.rotate();
+
+    this.block = block;
+    this.bsi   = this.block.getShapeInfo();
+
+    this.x = Math.floor(( this.col - this.bsi.cxBlock ) / 2 );
+    this.y = -1;
+    this.put( this.bsi );
+};
+
+Tetris.prototype.downToBottom = function ()
+{
+    while( this.moveDown())
+        /* nothing */;
+};
+
+Tetris.prototype.run = function ()
+{
+    this.makeNewBlock();
+    this.startTimer();
+};
+
+function random( n )
+{
+    return Math.floor( Math.random() * n );
+}
+
+function onKeyupClosure( tetris )
+{
+    var t = tetris;
+
+    return function ( e )
+    {
+        var arrowUp    = 38;
+        var arrowDown  = 40;
+        var arrowLeft  = 37;
+        var arrowRight = 39;
+        var space      = 32;
+
+        switch( e.keyCode )
+        {
+            case arrowUp :
+                t.rotate();
+                break;
+
+            case arrowDown :
+                t.moveDown();
+                break;
+
+            case arrowLeft :
+                t.moveLeft();
+                break;
+
+            case arrowRight :
+                t.moveRight();
+                break;
+
+            case space :
+                t.downToBottom();
+                break;
+        }
+    }
+}
+
+Tetris.prototype.startTimer = function ()
+{
+    this.timerId = setInterval( timerClosure( this ), 1000 );
+};
+
+Tetris.prototype.stopTimer = function ()
+{
+    clearInterval( this.timerId );
+}
+
+function timerClosure( tetris )
+{
+    var t = tetris;
+
+    return function ()
+    {
+        t.moveDown();
+    };
+}
+
+function main()
+{
+    var tetris = new Tetris( 15, 10 );
+
+    addEvent( document, "keyup", onKeyupClosure( tetris ));
+
+    tetris.createBoard();
+    tetris.run();
+}
+
+addEvent( window, "load", main, false );
+
+</script>
+
+</head>
+
+<body>
+
+    <div id="divGame">
+    </div>
+
+</body>
+
+</html>

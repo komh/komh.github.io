@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="euc-kr">
+
+<title>Puzzle</title>
+
+<script>
+function Piece( index, id, name )
+{
+    this.index  = index;
+    this.id     = id;
+    this.name   = name;
+}
+
+Piece.prototype.setIdName = function( id, name )
+{
+    this.id   = id;
+    this.name = name;
+};
+
+function Puzzle( doc, row, col )
+{
+    this.row = row;
+    this.col = col;
+    this.pieces = new Array();
+
+    for( var i = 0, index = 0; i < row; ++i )
+    {
+        this.pieces[ i ] = new Array();
+
+        for( var j = 0; j < col; ++j )
+        {
+            this.pieces[ i ][ j ] = new Piece( index, index, index + 1 );
+            ++index;
+        }
+    }
+
+    this.current      = this.getPiece( row - 1, col - 1 );
+    this.current.setIdName( this.current.id, " ");
+
+    var table = document.createElement("table");
+    table.setAttribute("border", "1");
+
+    var tbody = document.createElement("tbody");
+
+    for( var i = 0; i < this.row; ++i )
+    {
+        var tr = document.createElement("tr");
+
+        for( var j = 0; j < this.col; ++j )
+        {
+            var td = document.createElement("td");
+            td.innerHTML = this.getPiece( i, j ).name;
+
+            tr.appendChild( td );
+        }
+
+        tbody.appendChild( tr );
+    }
+
+    table.appendChild( tbody );
+
+    doc.getElementById("divGame").appendChild( table );
+
+    this.table = table;
+}
+
+Puzzle.prototype.getPiece = function ( row, col )
+{
+    return this.pieces[ row ][ col ];
+};
+
+Puzzle.prototype.setPiece = function ( row, col, newPiece )
+{
+    var piece = this.getPiece( row, col );
+
+    piece.setIdName( newPiece.id, newPiece.name );
+
+    this.table.rows[ row ].cells[ col ].innerHTML = newPiece.name;
+};
+
+Puzzle.prototype.getPos = function ( piece )
+{
+    return { row : Math.floor( piece.index / this.col ),
+             col : piece.index % this.col };
+};
+
+Puzzle.prototype.checkComplete = function ()
+{
+    var result = true;
+
+    for( var i = 0, index = 0; i < this.row; ++i )
+    {
+        for( var j = 0; j < this.col; ++j, ++index )
+        {
+            if( index != this.getPiece( i, j ).id )
+            {
+                result = false;
+                break;
+            }
+        }
+    }
+
+    return result;
+};
+
+Puzzle.prototype.swapPiece = function ( newRow, newCol )
+{
+    var temp     = new Piece( this.current.index,
+                              this.current.id,
+                              this.current.name );
+    var curPos   = this.getPos( this.current );
+
+    this.setPiece( curPos.row, curPos.col,
+                   this.getPiece( newRow, newCol ));
+
+    this.setPiece( newRow, newCol, temp );
+
+    this.current = this.getPiece( newRow, newCol );
+};
+
+Puzzle.prototype.moveUp = function ()
+{
+    var pos = this.getPos( this.current );
+
+    if( pos.row + 1 < this.row )
+        this.swapPiece( pos.row + 1, pos.col );
+};
+
+Puzzle.prototype.moveDown = function ()
+{
+    var pos = this.getPos( this.current );
+
+    if( pos.row > 0 )
+        this.swapPiece( pos.row - 1, pos.col );
+};
+
+Puzzle.prototype.moveLeft = function ()
+{
+    var pos = this.getPos( this.current );
+
+    if( pos.col + 1 < this.col )
+        this.swapPiece( pos.row, pos.col + 1 );
+};
+
+Puzzle.prototype.moveRight = function ()
+{
+    var pos = this.getPos( this.current );
+
+    if( pos.col > 0 )
+        this.swapPiece( pos.row, pos.col - 1 );
+};
+
+Puzzle.prototype.shuffle = function()
+{
+    for( i = 0; i < 100; ++i )
+    {
+        var arrow = Math.floor( Math.random() * 4 );
+
+        switch( arrow )
+        {
+            case 0 :
+                this.moveUp();
+                break;
+
+            case 1 :
+                this.moveDown();
+                break;
+
+            case 2 :
+                this.moveLeft();
+                break;
+
+            case 3 :
+                this.moveRight();
+                break;
+        }
+    }
+};
+
+Puzzle.prototype.onKeyup = function ( e )
+{
+    switch( e.keyCode )
+    {
+        case 37 :   // left
+            puzzle.moveLeft();
+            break;
+
+        case 38 :   // up
+            puzzle.moveUp();
+            break;
+
+        case 39 :   // right
+            puzzle.moveRight();
+            break;
+
+        case 40 :   // down
+            puzzle.moveDown();
+            break;
+    }
+
+    if( puzzle.checkComplete())
+        alert("Confgratulation!!! Mission completed.");
+};
+
+function addEvent(obj, eventType, functionName, useCapture)
+{
+    if (obj.addEventListener) {
+        obj.addEventListener(eventType, functionName, useCapture);
+    }
+    else if (obj.attachEvent) {
+        obj.attachEvent("on" + eventType, functionName);
+    }
+    else {
+        // same as "obj.onType = functionName"
+        obj["on" + eventType] = functionName;
+    }
+}
+
+function main()
+{
+    puzzle = new Puzzle( document, 3, 3 );
+
+    puzzle.shuffle();
+
+    addEvent( document, "keyup", puzzle.onKeyup, false );
+}
+
+addEvent( window, "load", main, false );
+
+</script>
+
+</head>
+
+<body>
+
+    <div id="divGame">
+    </div>
+
+</body>
+
+</html>
