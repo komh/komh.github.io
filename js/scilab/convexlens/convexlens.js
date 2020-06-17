@@ -172,6 +172,10 @@
       fgCtx.lineTo(x2, y2);
 
       fgCtx.stroke();
+
+      // restore to solid line
+      if (dashed)
+        fgCtx.setLineDash([]);
     }
 
     var rayX = arrowX;
