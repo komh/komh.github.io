@@ -229,9 +229,9 @@
   {
     if ($("#virtual-image").checked) {
       var a = lensX - arrowX;
-      var b = 1 / (1 / lensFocus + 1 / a);
+      var b = 1 / (1 / -lensFocus - 1 / a);
 
-      drawArrow(lensX - b, b / a);
+      drawArrow(lensX + b, -b / a);
     }
   }
 
