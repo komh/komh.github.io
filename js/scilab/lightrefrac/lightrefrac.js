@@ -237,7 +237,7 @@
       refracAngle = r2d(Math.asin(sine));
 
       if (rotatedAngle > 90) // down to up ?
-        refracAngle = 360 - refracAngle;
+        refracAngle = -refracAngle;
       else                  // up to down ?
         refracAngle += 180;
     }
