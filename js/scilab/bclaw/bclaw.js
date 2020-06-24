@@ -37,8 +37,8 @@
   var maxPiston = undefined;
 
   // average velocity of particles
-  const avgVelocityX = 7;
-  const avgVelocityY = 7;
+  var avgVelocityX = 7;
+  var avgVelocityY = 7;
 
   // initial number of particles
   const N0 = 10;
@@ -172,6 +172,9 @@
       p.vx = p.vx / prevW * wallW;
       p.vy = p.vy / prevH * wallH; 
     });
+
+    avgVelocityX = avgVelocityX / prevW * wallW;
+    avgVelocityY = avgVelocityY / prevH * wallH;
 
     piston = piston / prevH * wallH;
 
