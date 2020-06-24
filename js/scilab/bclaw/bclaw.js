@@ -37,8 +37,8 @@
   var maxPiston = undefined;
 
   // average velocity of particles
-  const avgVelocityX = 20;//7;
-  const avgVelocityY = 20;//7;
+  const avgVelocityX = 7;
+  const avgVelocityY = 7;
 
   // initial number of particles
   const N0 = 10;
@@ -261,8 +261,6 @@
 
     y += fontSize;
     fgCtx.fillText("부피: " + calcVolume().toFixed(1), x, y);
-
-    var val = Math.round(statVert /  (currentTime - startTime) * 1000);
 
     y += fontSize;
     fgCtx.fillText("충돌: " + 
