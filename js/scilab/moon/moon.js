@@ -371,6 +371,70 @@ window.addEventListener("load", function() {
     });
   });
 
+  // 마우스 버튼 눌림 상태
+  var pressed = {
+    id: undefined,      // 버튼 요소 id
+    timer: undefined,   // 타이머 id
+    repeated: false     // 누름 반복 여부
+  };
+
+  function checkPress(once) {
+    if (pressed["lunar-day-up"])
+      lunarDay.stepUp();
+    else if (pressed["lunar-day-down"])
+      lunarDay.stepDown();
+    else if (pressed["rotation-up"])
+      rotation.stepUp();
+    else if (pressed["rotation-down"])
+      rotation.stepDown();
+
+    pressed.repeated = true;
+
+    update();
+
+    if (!once) {
+      // 계속 누를 때
+      pressed.timer = setTimeout(checkPress, 100);
+    }
+  }
+
+  // 버튼 누르기 이벤트 리스너
+  [$("#lunar-day-up"), $("#lunar-day-down"),
+   $("#rotation-up"), $("#rotation-down")].forEach(function(elm) {
+    ["mousedown", "touchstart"].forEach(function(ev) {
+      elm.addEventListener(ev, function(event) {
+        pressed.id = event.target.id;
+        pressed[pressed.id] = true;
+
+        // 처음 누를 때
+        pressed.timer = setTimeout(checkPress, 150);
+
+        event.preventDefault();
+      });
+    });
+  });
+
+  // 버튼 떼기 이벤트 리스너
+  ["mouseup", "touchend"].forEach(function(ev) {
+    window.addEventListener(ev, function(event) {
+      if (pressed.id !== undefined) {
+        clearTimeout(pressed.timer);
+
+        // 한 번만 눌렀을면 클릭 처리
+        if (!pressed.repeated)
+          checkPress(true);
+
+        pressed[pressed.id] = false;
+
+        pressed.id = undefined;
+        pressed.timer = undefined;
+        pressed.repeated = false;
+
+        event.preventDefault();
+      }
+    });
+  });
+
   // 크기 변경 이벤트 리스너
   window.addEventListener("resize", function() { reset(); update(); });
 });
