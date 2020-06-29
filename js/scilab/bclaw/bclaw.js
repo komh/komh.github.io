@@ -266,6 +266,11 @@
     fgCtx.fillText("부피: " + calcVolume().toFixed(1), x, y);
 
     y += fontSize;
+    fgCtx.fillText("속력: " + $("input[name='temp']:checked")[0].value *
+                              $("input[name='velocity']:checked")[0].value,
+                   x, y);
+
+    y += fontSize;
     fgCtx.fillText("충돌: " + 
                     numStr(Math.round(statVert /  (currentTime - startTime) 
                       * 1000)), 
