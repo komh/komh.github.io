@@ -110,26 +110,32 @@ function drawMoon(c, ctx, ex, ey, mx, my, mr, lday)
   var rotateAngle = lday == 30 ? 0 : 2 * Math.PI * (lday / 30);
   ctx.rotate(-rotateAngle);
 
-  // 지구에서 보이는 면
+  // 지구쪽 ?
   if (moonEarthSide.checked) {
+    // 지구에서 보이는 면
     ctx.beginPath();
     ctx.arc(mx, my, mr, Math.PI / 2, -Math.PI / 2);
     ctx.fillStyle = "green";
     ctx.fill();
   }
 
-  // 태양빛을 받는 면
+  // 태양쪽?
   if (moonSunSide.checked) {
     ctx.save();
+
+    // 달 원점
     ctx.translate(mx, my);
+
+    // 월령 효과 제거
     ctx.rotate(rotateAngle);
 
+    // 태양빛을 받는 면
     ctx.beginPath();
     ctx.arc(0, 0, mr, -Math.PI / 2, Math.PI / 2);
     ctx.fillStyle = "red";
     ctx.fill();
 
-    // 경계선
+    // 태양빛을 받는 면의 경계선
     ctx.beginPath();
     ctx.moveTo(0, -mr);
     ctx.lineTo(0, +mr);
@@ -139,6 +145,7 @@ function drawMoon(c, ctx, ex, ey, mx, my, mr, lday)
     ctx.restore();
   }
 
+  // 지구쪽?
   if (moonEarthSide.checked) {
     // 지구에서 보이는 면의 경계선
     ctx.beginPath();
@@ -148,7 +155,7 @@ function drawMoon(c, ctx, ex, ey, mx, my, mr, lday)
     ctx.stroke();
   }
 
-  // 실제로 보이는 면
+  // 보이는 쪽?
   if (moonSeeingSide.checked) {
     var startAngle = Math.PI / 2;
     var endAngle = Math.PI / 2 + rotateAngle;
@@ -159,6 +166,7 @@ function drawMoon(c, ctx, ex, ey, mx, my, mr, lday)
       endAngle = -Math.PI / 2;
     }
 
+    // 실제로 보이는 면
     ctx.beginPath();
     ctx.arc(mx, my, mr, startAngle, endAngle);
     ctx.lineTo(mx, my);
