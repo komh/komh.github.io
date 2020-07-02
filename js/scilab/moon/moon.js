@@ -120,10 +120,32 @@ function drawMoon(c, ctx, ex, ey, mx, my, mr, lday)
 
   // 태양빛을 받는 면
   if (moonSunSide.checked) {
+    ctx.save();
+    ctx.translate(mx, my);
+    ctx.rotate(rotateAngle);
+
     ctx.beginPath();
-    ctx.arc(mx, my, mr, -Math.PI / 2 + rotateAngle, Math.PI / 2 + rotateAngle);
+    ctx.arc(0, 0, mr, -Math.PI / 2, Math.PI / 2);
     ctx.fillStyle = "red";
     ctx.fill();
+
+    // 경계선
+    ctx.beginPath();
+    ctx.moveTo(0, -mr);
+    ctx.lineTo(0, +mr);
+    ctx.strokeStyle = "white";
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  if (moonEarthSide.checked) {
+    // 지구에서 보이는 면의 경계선
+    ctx.beginPath();
+    ctx.moveTo(mx, my - mr);
+    ctx.lineTo(mx, my + mr);
+    ctx.strokeStyle = "white";
+    ctx.stroke();
   }
 
   // 실제로 보이는 면
