@@ -1,0 +1,90 @@
+<HTML>
+<HEAD>
+<TITLE>Customizing Memory Management</TITLE>
+</HEAD>
+<BODY>
+<H1>Customizing Memory Management</H1><!-- entering slot 201 -->
+<P>
+SOM is designed to be policy free and highly adaptable. Most of the SOM
+behavior can be customized by subclassing the built-in classes and overriding
+their methods, or by replacing selected functions in the SOM run-time library
+with application code. This chapter contains more advanced topics describing
+how to customize the following aspects of SOM behavior: memory management,
+dynamic class loading and unloading, character output, error handling, and
+method resolution. Information on customizing Distributed SOM is provided
+in Chapter 6.
+<P>
+The memory management functions used by the SOM run-time environment are
+a subset of those supplied in the ANSI C standard library. They have the
+same calling interface and return the equivalent types of results as their
+ANSI C counterparts, but include some supplemental error checking. Errors
+detected in these functions result in the invocation of the error-handling
+function to which<B> SOMError</B> points.
+<P>
+The correspondence between the SOM memory-management function variables
+and their ANSI standard library equivalents is given in the table below.
+
+<P>
+
+<P>
+<B>Memory-Management Functions</B>
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³SOM FUNCTION   ³ANSI STANDARD C³RETURN TYPE ³ARGUMENT TYPES    ³
+³VARIABLE       ³LIBRARY        ³            ³                  ³
+³               ³FUNCTION       ³            ³                  ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³SOMCalloc      ³calloc( )      ³somToken    ³size_t, size_t    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³SOMFree        ³free( )        ³void        ³somToken          ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³SOMMalloc      ³malloc( )      ³somToken    ³size_t            ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³SOMRealloc     ³realloc( )     ³somToken    ³somToken, size_t  ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+An application program can replace SOM's memory management functions with
+its own memory management functions to change the way SOM allocates memory
+(for example, to perform all memory allocations as suballocations in a shared
+memory heap). This replacement is possible because<B> SOMCalloc, SOMMalloc,
+SOMRealloc</B>, and<B> SOMFree</B> are actually<I> global variables</I> that
+point to SOM's default memory management functions, rather than being the
+names of the functions themselves. Thus, an application program can replace
+SOM's default memory management functions by assigning the entry-point address
+of the user-defined memory management function to the appropriate global
+variable. For example, to replace the default free procedure with the user-defined
+function<B> MyFree</B> (which must have the same signature as the ANSI C
+<B>free</B> function), an application program would require the following
+code:
+<PRE>#include &lt;som.h&gt;
+/* Define a replacement routine: */
+
+#ifdef __OS2__                  /* not for SOM 3.0 */
+#pragma linkage(myFree, system) /* not for SOM 3.0 */
+#endif                          /* not for SOM 3.0 */
+
+void SOMLINK myFree (somToken memPtr)
+{
+     (Customized code goes here)
+}
+...
+SOMFree = myFree;
+</PRE>
+
+<P>
+<B>Note: </B> In general, all of these routines should be replaced as a
+group. For instance, if an application supplies a customized version of
+<B>SOMMalloc</B>,<!-- entering slot 202 --> it should also supply correponding
+<B>SOMCalloc</B>,<B> SOMFree</B>, and<B> SOMRealloc</B> functions that conform
+to this same style of memory management.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+
+<P><HR>
+
+<A HREF="166_L3_Creatingtheimportlib.html">[Back: Creating the import library]</A> <BR>
+<A HREF="168_L2_CustomizingClassLoad.html">[Next: Customizing Class Loading and Unloading]</A> 
+</BODY>
+</HTML>

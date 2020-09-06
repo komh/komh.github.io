@@ -1,0 +1,371 @@
+<HTML>
+<HEAD>
+<TITLE>Compact Disc-Digital Audio Stream Handler</TITLE>
+</HEAD>
+<BODY>
+<H1>Compact Disc-Digital Audio Stream Handler</H1><!-- entering slot 210 -->
+<P>
+Many CDs have CD-DA ("<I>Redbook audio</I>") tracks that contain digital
+audio.  These audio tracks can be played using the built-in DAC or the data
+can be read into the system and streamed to an adapter with DAC hardware
+KB (for example, ACPA card).  For the latter case, the CD-DA Stream Handler
+DLL is required and acts as the source stream handler.
+<P>
+This handler does not operate fully in a real-time mode, but it must support
+continuous data streaming.  It also does not support synchronization mastering,
+because of the lack of real-time nature of CD devices.
+<P>
+This handler operates on the specific CD addresses.  Most CD-DA do not have
+data in approximately the first 2 seconds of the CD, but some discs do.
+ CD-DA tracks can also be placed between other data tracks on mixed-mode
+disks.  Because of this operation, the CD-DA Stream Handler will interpret
+the absolute beginning of the disc as MMTIME 0.  The calling program must
+query the disc and find where the desired CD-DA track begins and call SpiSeekStream
+before starting the stream.  The CD Audio media control interface driver
+does this operation for the applications coding to the media control interface.
+
+<P>
+<B>External Interface Description</B>
+<P>
+The description for the Compact Disc-Digital Audio Stream Handler external
+interface follows:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+File Name<!-- lm: 0x2 21 -->
+<UL> CDDASH.DLL<!-- lm: 0x2 1 -->
+</UL> Handler
+Name<!-- lm: 0x2 21 -->
+<UL> CDDASH<!-- lm: 0x2 1 -->
+</UL> Handler Class
+<!-- lm: 0x2 21 -->
+<UL>FILESYS<!-- lm: 0x2 1 -->
+</UL> PDD/DLL<!-- lm: 0x2 21 -->
+<UL> DLL
+<!-- lm: 0x2 1 -->
+</UL>Source<!-- lm: 0x2 21 -->
+<UL> This stream handler
+<I>can</I> be the source in a stream.<!-- lm: 0x2 1 -->
+</UL> Target<!-- lm: 0x2 21 -->
+<UL> This
+stream handler<I> cannot</I> be the target in a stream.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Device Control Blocks</B>
+<P>
+None.
+<P>
+<B>Associate Control Blocks</B>
+<P>
+This handler supports type ACBTYPE_CDDA associate control blocks.
+<PRE> /******************************************************  * CDDASH - CD DA Stream Handler Object ACB
+  ******************************************************/
+  #define ACBTYPE_CDDA        0x0004L   /* Compact disc - digital audio */
+  typedef struct _acb_CDDA        /* acbcdda - CD Assoc. Control Block  */
+     {
+     ULONG   ulACBLen;              /* Length of structure     */
+     ULONG   ulObjType;             /* ACB_CDDA                */
+     CHAR    bCDDrive;              /* CD drive letter         */
+     } ACB_CDDA;
+</PRE>
+
+<P>
+<B>Implicit (EVENT_IMPLICIT_TYPE) Events Supported</B>
+<P>
+The following implicit (EVENT_IMPLICIT_TYPE) events for the Compact Disc-Digital
+Audio Stream Handler are supported:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->EVENT_ERROR
+<P>
+The error type will be set in the<I> ulFlag</I> field of the event implicit
+control block (EVCB). The three types of errors that will be reported are:
+<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->Temporary Error (TEMPORARY_ERROR 0x0000L)
+<P>
+An error occurred during streaming but the stream handler, the Sync/Stream
+Manager or both the stream handler and the Sync/Stream Manager were able
+to continue streaming.<!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 11 -->Recoverable Error (RECOVERABLE_ERROR 0x0001L)
+<P>
+An error occurred that required the stream to be stopped.  The application
+can restart the stream if appropriate.<!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 11 -->NonRecoverable Error (NONRECOVERABLE_ERROR 0x0002L)
+
+<P>
+A severe error occurred causing the stream handler to stop this stream.
+ The stream can not be<!-- entering slot 211 --> restarted.  The application
+must issue an SpiDestroyStream.<!-- lm: 0x2 6 -->
+</UL>
+<P>
+The<I> ulStatus</I> field will contain the error code.  The possible error
+codes that can be generated and returned by this stream handler are:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->None<!-- lm: 0x2 6 -->
+</UL> Also, errors from the
+following APIs can be returned:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->DosGetInfoBlocks<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->SMHEntryPoint SMH_NOTIFY<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->DosDevIOCtl (from ReadLong command to CD device driver).
+<!-- lm: 0x2 6 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Explicit Events Supported</B>
+<P>
+No explicit events are supported for the Compact Disc-Digital Audio Stream
+Handler.
+<P>
+<B>Stream Handler Commands Supported</B>
+<P>
+The following stream handler commands (SHC) are supported.  Refer to the
+<I>OS/2 Multimedia Programming Reference</I> for a description of these
+SHC commands and the error return codes.<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->SHC_ASSOCIATE
+<P>
+<B>Note: </B> A stream requires a file to be opened and associated to the
+stream before a stream can be started.  Reassociating a new drive letter
+without stopping the stream is not supported.<!-- lm: 0x2 6 -->
+<UL>
+<P>
+Possible return codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_STREAM (invalid<I> hstream</I> or<I> hid</I>-or
+both-passed)<!-- lm: 0x2 8 --> -<!-- lm: 0x2 11 -->
+<UL>ERROR_INVALID_OBJTYPE
+(only ACBTYPE_CDDA is supported)<!-- lm: 0x2 8 -->
+</UL>-<!-- lm: 0x2 11 -->
+<UL>ERROR_INVALID_BUFFER_SIZE (<I>ulAcbLen</I> is
+smaller than needed)<!-- lm: 0x2 8 -->
+</UL>-<!-- lm: 0x2 11 -->
+<UL>ERROR_STREAM_NOT_STOP (stream must be stopped
+to associate)<!-- lm: 0x2 6 -->
+</UL> Return codes from the following APIs
+are also returned:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->DosRequestMutexSem<!-- lm: 0x2 8 --> -<!-- lm: 0x2 11 -->
+<UL>DosOpen
+(for CD device).<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_CREATE
+
+<P>
+<B>Note: </B> The only data type supported is 16-bit PCM Stereo sampled
+at 44.1 kHz.<!-- lm: 0x2 6 -->
+<P>
+Possible return codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_SPCBKEY<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_ALLOC_RESOURCES<!-- lm: 0x2 6 -->
+</UL>
+<P>
+Return codes from the following APIs are also returned:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->DosRequestMutexSem<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->DosCreateThread<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_DESTROY
+
+<P>
+Possible return codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_STREAM (invalid<I> hstream</I> or<I> hstream
+</I>and<I> hid</I> passed)<!-- lm: 0x2 6 -->
+</UL> Return codes from the
+following APIs are also returned:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->DosRequestMutexSem<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_START
+
+<P>
+Possible return codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_STREAM (invalid<I> hstream</I> or<I> hstream
+</I>and<I> hid</I> passed)<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_DATA_ITEM_NOT_SPECIFIED (stream must be associated
+before it is started).<!-- lm: 0x2 6 -->
+</UL> Return codes from the following
+APIs are also returned:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->DosRequestMutexSem<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_STOP
+
+<P>
+Possible return codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_STREAM (invalid<I> hstream</I> or<I> hstream
+</I>and<I> hid</I> passed)<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_STREAM_NOT_STARTED<!-- lm: 0x2 6 -->
+</UL> Return
+codes from the following APIs are also returned:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->DosRequestMutexSem<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->DosResumeThread<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->DosSuspendThread<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_SEEK
+
+<P>
+<B>Note: </B> Keep in mind that SEEK will go to the specified address in
+absolute terms.  The absolute address from the beginning of the disc might
+not be the beginning of the CD-DA music.<!-- lm: 0x2 6 -->
+<P>
+Also the seekpoint is granular to the<I> mmtimePerUnit</I> specified in
+the SPCB.
+<P>
+Possible return codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_STREAM (invalid<I> hstream</I> or<I> hid</I>-or
+both-passed)<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_DATA_ITEM_NOT_SEEKABLE<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_DATA_ITEM_NOT_SPECIFIED<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_STREAM_NOT_STOP
+<P>
+<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_SEEK_PAST_END<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_SEEK_BEFORE_BEGINNING<!-- lm: 0x2 6 -->
+</UL> Return
+codes from the following APIs are also returned:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->DosRequestMutexSem<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->DosDevIOCtl (DiskInfo command for Seek_End)<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->DosDevIOCtl (Seek command)<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_GET_PROTOCOL
+
+<P>
+Possible return codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_SPCBKEY<!-- lm: 0x2 6 -->
+</UL> Return
+codes from the following APIs are also returned:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->DosRequestMutexSem<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_INSTALL_PROTOCOL
+
+<P>
+<B>Note: </B> This stream handler allows any data type and subtype to be
+installed.<!-- lm: 0x2 6 -->
+<P>
+Possible return codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_SPCBKEY<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_ALLOC_RESOURCES<!-- lm: 0x2 6 -->
+</UL> Return
+codes from the following APIs are also returned:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->DosRequestMutexSem<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_ENUMERATE_PROTOCOLS
+
+<P>
+Possible return codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->ERROR_INSUFF_BUFFER<!-- lm: 0x2 6 -->
+</UL> Return
+codes from the following APIs are also returned:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->DosRequestMutexSem<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_NEGOTIATE_RESULT
+
+<P>
+Possible return codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_STREAM (invalid<I> hstream</I> or<I> hid</I>-or
+both-passed)<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_FUNCTION (must only be called directly
+after create).<!-- lm: 0x2 6 -->
+</UL> Return codes from the following APIs
+are also returned:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->DosRequestMutexSem<!-- lm: 0x2 6 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Base Stream Protocol Control Block Data Types Supported</B>
+<P>
+The Compact Disc-Digital Audio Stream Handler has only 1 base SPCB.  It
+is DATATYPE_WAVEFORM with DataSubType WAVE_FORMAT_4S16.  This SPCB has the
+following defaults:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³SPCB Field          ³DATATYPE_WAVEFORM Values                ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ulBufSize           ³48KB                                    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ulMinBuf            ³8                                       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ulMaxBuf            ³12                                      ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ulSrcStart          ³1                                       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ulTgtStart          ³7                                       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ulBufFlag           ³SPCBBUF_FIXEDBUF                        ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ulHandFlag          ³SPCBHAND_NOSYNC | SPCBHAND_<!-- entering slot 212 -->PHYS_SEEK    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ulBytesPerUnit      ³588                                     ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³mmtimePerUnit       ³10                                      ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+<B>Stream Handler Limits</B>
+<P>
+Maximum number of streams (only limited by available memory).
+<P>
+
+
+<P><HR>
+
+<A HREF="160_L2_MemoryStreamHandler.html">[Back: Memory Stream Handler]</A> <BR>
+<A HREF="162_L2_CDROMXAStreamHandler.html">[Next: CD-ROM XA Stream Handler]</A> 
+</BODY>
+</HTML>

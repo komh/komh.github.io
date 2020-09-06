@@ -1,0 +1,69 @@
+<HTML>
+<HEAD>
+<TITLE>Interrupt Processing</TITLE>
+</HEAD>
+<BODY>
+<H1>Interrupt Processing</H1><!-- entering slot 62 -->
+<P>
+Interrupt processing should not be affected, except by the need to lock
+spinlocks for critical resources. When a spinlock is locked, the LockManger
+will disable interrupts before returning to the device driver. This insures
+that no interrupt will occur, on the same processor, between when the spinlock
+is requested and when the kernel returns to the device driver with the spinlock
+locked. (The same level of function accomplished by a CLI on a single processor
+system). The device driver MUST leave interrupts disabled while owning the
+spinlock. If interrupts were enabled a deadlock could occur.  Consider the
+following:
+<PRE>
+
+      Task Time                           Int Time
+
+   (ints enabled)
+   Lock spinlock1
+   STI
+                   ---Interrupt---&gt;     Lock spinlock1
+                                        some processing
+                                        Unlock spinlock1
+                                        EOI
+                   &lt;-- Return from Int
+   Some processing
+   Unlock spinlock1
+</PRE>
+
+<P>
+In the above example the the task time and interrupt code are running on
+the same processor. When the task time code locks spinlock1 with interrupts
+enabled the LockManager will return with interrupts disabled. If interrupts
+were enabled after the lock with the STI instruction, then the interrupt
+code on the right could run. The first thing the interrupt handler does
+is try to grab spinlock1. Because spinlock1 is already locked, the interrupt
+handler will spin. The lock, however, will never become available. The task
+time code will not run until the interrupt code completes. The result is
+deadlock. This is why it is important to leave interrupts disabled while
+owning a spinlock.
+<P>
+Consider the same code above, but with the task time code running on processor
+A and the interrupt code running on processor B. For this example, however,
+interrupts remain disabled (remove the STI). Because the LockManager disables
+interrupts, processor B will run the interrupt code. When the interrupt
+code attempts to get the spinlock, it will spin. Because processor A continues
+executing, the spinlock will be released, thereby allowing the interrupt
+code on processor B to acquire the spinlock and continue execution.  Deadlock
+is avoided. When processor A returns from the unlock the state of the interrupt
+flag will be restored by the LockManager to its state before the lock was
+done.
+<P>
+Another action the device driver must avoid is issuing its own EOI. All
+EOIs must use the DevHelp_EOI device helper service. The reason for this
+is that different multiprocessor platforms have defined their own advanced
+interrupt controllers. Without detailed knowledge of the controller and
+how it operates, and knowledge of how the kernel is using the controller,
+the device driver can cause unpredictable results, including deadlock. All
+MP-aware device drivers must use the EOI service.
+
+<P><HR>
+
+<A HREF="059_L2_Blocking.html">[Back: Blocking]</A> <BR>
+<A HREF="061_L1_NewDeviceHelperDevHl.html">[Next: New Device Helper (DevHlp) Routines]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,90 @@
+<HTMLHIDDEN>
+<HEAD>
+<TITLE>DosCreateSem</TITLE>
+</HEAD>
+<BODY>
+<H1>DosCreateSem</H1><!-- entering slot 235 -->
+<PRE>#define INCL_DOSSEMAPHORES
+
+USHORT  rc = DosCreateSem(NoExclusive, SemHandle, SemName);
+
+USHORT           NoExclusive;   /* Indicate no exclusive ownership */
+PHSYSSEM         SemHandle;     /* Semaphore handle (returned) */
+PSZ              SemName;       /* Semaphore name string */
+
+USHORT           rc;            /* return code */
+</PRE>
+
+<P>
+<B>Example</B>
+<P>
+This example creates a semaphore named timeout.sem.
+<PRE>#define INCL_DOSSEMAPHORES
+
+#define SEM_OWNERSHIP 0
+#define SEM_NAME "\\SEM\\timeout.sem"
+
+HSEM   SemHandle;
+USHORT rc;
+
+
+   rc = DosCreateSem(SEM_OWNERSHIP,    /* Indicate ownership */
+                     &amp;SemHandle,       /* Semaphore handle */
+                     SEM_NAME);        /* Semaphore name string */
+</PRE>
+
+<P>
+The following example illustrates the serialization of access to a shared
+resource between threads of the same process.  The program creates a nonexclusive
+system semaphore named resource.sem, requests access to the semaphore, clears
+it, and finally closes the semaphore.  For an illustration of notification
+of events, see the example given in DosOpenSem, DosSemSet, or DosSemWait.
+
+<PRE>#define INCL_DOSSEMAPHORES
+
+#include &lt;os2.h&gt;
+
+#define SEM_NAME "\\SEM\\resource.sem"  /* Semaphore name */
+#define TIMEOUT 1500L                   /* Timeout (in milliseconds) */
+
+
+main()
+{
+  HSEM SemHandle;
+  USHORT rc;
+
+  /* Note: the semaphore could have been created by another    */
+  /*       thread.                                             */
+  DosCreateSem(CSEM_PUBLIC,         /* Ownership - nonexclusive */
+               &amp;SemHandle,          /* Semaphore handle (returned) */
+               SEM_NAME);           /* Semaphore name */
+  if(!(rc = DosSemRequest(SemHandle,       /* Semaphore Handle */
+                         TIMEOUT)))        /* Timeout Period   */
+  {
+    /* Semaphore obtained; resource may now be used. */
+    /* Clear the semaphore after using resource.     */
+    if(DosSemClear(SemHandle))
+    {
+      /* Semaphore exclusively owned by another process --  */
+      /* cannot clear now.                                  */
+    }
+  }
+  else
+  {
+    /* Semaphore not obtained: error processing (i.e. switch on rc) */
+  }
+  /* Semaphore no longer needed; close it */
+  if(DosCloseSem(SemHandle))
+  {
+    /* Semaphore is still set -- cannot close now */
+  }
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="193_L2H_DosCreateQueue.html">[Back: DosCreateQueue]</A> <BR>
+<A HREF="195_L2H_DosCreateThread.html">[Next: DosCreateThread]</A> 
+</BODY>
+</HTML>

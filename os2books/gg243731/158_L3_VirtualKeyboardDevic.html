@@ -1,0 +1,118 @@
+<HTML>
+<HEAD>
+<TITLE>Virtual Keyboard Device Driver</TITLE>
+</HEAD>
+<BODY>
+<H1>Virtual Keyboard Device Driver</H1><!-- entering slot 166 -->
+<P>
+The Virtual Keyboard Device Driver VKBD.SYS provides virtualization support
+for the keyboard.  It allows keystrokes to be passed from the keyboard to
+virtual DOS machines.  It also allows for text to be pasted into the VDM
+as key strokes.
+<P>
+Upon creation of the VDM, VKBD establishes communication with the physical
+keyboard device driver and initializes the portions of the CBIOS data area
+associated with the keyboard.  Subsequently, the physical device driver
+notifies VKBD of each scan code that is bound for the VDM.
+<P>
+To allow monitoring of I/O activity, VKBD registers itself with the 8086
+Emulation component.  8086 Emulation then notifies VKBD when a DOS application
+in a VDM accesses a virtual keyboard port.
+<P>
+VKBD supports two virtual I/O ports:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Port 64h - Controller Status/Command<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Port 60h - Controller Input/Output Buffer.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+These two ports may respond to requests in a variety of ways, depending
+on the state of the controller at the time of the request.
+<P>
+<B>Read Output Buffer</B>
+<P>
+An I/O read request to port 0x60 reads the contents of the controller output
+buffer. If the "output-buffer-full" status was set before the read request,
+a timer (T1) is started.  The output-buffer-full status is then cleared.
+ When the T1 timer expires, VKBD determines if another byte is ready to
+be placed into the output buffer.  If so, the byte is placed into the output
+buffer and the "output-buffer-full" status is set.
+<P>
+<B>Write Output Buffer</B>
+<P>
+An I/O write request to port 0x60 writes the specified byte to the controller
+input buffer.  The previous contents of the input buffer are lost.  The
+port number (0x60) is saved and the byte written is processed, depending
+on the current state of the keyboard controller.  The "input-buffer-empty"
+status is never set.
+<P>
+<B>Status Read</B>
+<P>
+An I/O read request to port 0x64 simply returns the contents of the controller
+internal status register.  Reading this port has no effect on the state
+of the virtual keyboard hardware.
+<P>
+<B>Write Controller Command</B>
+<P>
+An I/O write request to port 0x64, like a write request to port 0x60, writes
+the specified byte to the controller input buffer.  Since the port number
+(0x64) is saved here, the system distinguishes between a command byte and
+a data byte.  As above, the byte written is processed, depending on the
+state of the controller, and the "input-buffer-empty" status is never set.
+
+<P>
+<B>Physical Device Driver Notification</B>
+<P>
+Since keystrokes are external events, it is the responsibility of the physical
+device driver to notify VKBD when keystrokes are available for processing.
+ In particular, the physical device driver calls VKBD when hardware scan
+codes arrive, and passes each scan code received to VKBD. This occurs whenever
+the keyboard's current focus is a virtual DOS machine.
+<P>
+When called, VKBD places the scan code in a queue.  If the queue was previously
+empty, the controller "output-buffer-full" status condition is set and if
+interrupts are enabled, the Virtual Programmable Interrupt Controller is
+called to simulate the interrupt to the VDM.  If the queue was not previously
+empty, the scan code is added without any other processing.  If the queue
+is full, the speaker is sounded.
+<P>
+<B>INT 09h Processing</B>
+<P>
+In a "real" DOS environment, the IRQ1 interrupt request is translated by
+the interrupt controller, causing the INT 09h interrupt service routine
+to be invoked.  This interrupt vector normally points to a routine in the
+CBIOS. This manner of processing is not desirable in a VDM since the CBIOS
+only performs U.S. key translation; such processing would complicate the
+task of national language support.  Instead, VKBD simulates this CBIOS function,
+and may thus use<!-- entering slot 167 --> whatever key translation is appropriate
+for the current country and code page.
+<P>
+The INT 09h emulation code within VKBD performs all functions that the CBIOS
+would normally perform.  This includes:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Key and scan code enqueueing<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->INT 05h (Print Screen) processing<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->INT 15h processing for monitoring scan codes and handling
+the SysReq key<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->INT 1Bh for Ctrl+Break and Pause key processing<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Key translation<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Update of keyboard LEDs<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Update of the CBIOS data area status.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+Upon termination, VKBD relinquishes access to the keyboard.
+
+<P><HR>
+
+<A HREF="157_L3_VFLPYDeviceDriver.html">[Back: VFLPY Device Driver]</A> <BR>
+<A HREF="159_L3_VirtualPrinterDevice.html">[Next: Virtual Printer Device Driver]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,75 @@
+<HTML>
+<HEAD>
+<TITLE>Using Named Shared Memory</TITLE>
+</HEAD>
+<BODY>
+<H1>Using Named Shared Memory</H1><!-- entering slot 29 -->
+<P>
+An application uses<A><!-- external link: 1D 5F C3 36 --> DosAllocSharedMem
+</A>to allocate shared memory. When allocating the shared memory, an application
+can assign a unique name to the memory. Any application that has the name
+of the shared memory can use<A><!-- external link: 1D 95 C3 37 --> DosGetNamedSharedMem
+</A>to retrieve a pointer to the memory. This makes it possible for two
+or more applications to share memory at the same time.
+<P>
+The name of a shared memory object has the following form:
+<PRE>    \sharemem\name
+</PRE>
+
+<P>
+The "\sharemem\" is required. The "name" parameter can be any name that
+conforms to the rules for an OS/2 file name. No file is actually created
+for the memory object. There is no actual "\sharemem\" subdirectory.
+<P>
+The following code fragment allocates 65536 bytes of named shared memory
+with the name "\sharemem\mymem".
+<PRE>    #define  INCL_DOSMEMMGR   /* Memory Manager values */
+    #include &lt;os2.h&gt;
+
+    APIRET  ulrc;
+    CHAR    szMem[] = { "\\sharemem\\mymem" };
+    PULONG  pulPb;
+
+    ulrc = DosAllocSharedMem((PVOID *) &amp;pulPb,
+                             szMem,
+                             65536,
+                             fALLOC);
+
+    *pulPb = 2762;
+
+</PRE>
+
+<P>
+Once the named memory is allocated, any other process can retrieve a pointer
+to the named memory by using<A><!-- external link: 1D 95 C3 FC --> DosGetNamedSharedMem</A>.
+
+<P>
+The following code fragment retrieves a pointer to the named memory allocated
+above:
+<PRE>    #define  INCL_DOSMEMMGR   /* Memory Manager values */
+    #include &lt;os2.h&gt;
+    #define HF_STDOUT 1       /* Standard output handle */
+
+    APIRET  ulrc;
+    CHAR    szMem[] = { "\\sharemem\\mymem" };
+    PULONG  pulPb2;
+    ULONG   ulWritten;
+
+    ulrc = DosGetNamedSharedMem((PVOID *) &amp;pulPb2,
+                                szMem,
+                                PAG_READ |
+                                PAG_WRITE);
+
+    if (*pulPb2 == 2762)
+        ulrc = DosWrite(HF_STDOUT, "\r\n Success!\r\n", 13,
+                        &amp;ulWritten);
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="028_L2_UsingSharedMemory.html">[Back: Using Shared Memory]</A> <BR>
+<A HREF="030_L3_UsingUnnamedGiveable.html">[Next: Using Unnamed Giveable Shared Memory]</A> 
+</BODY>
+</HTML>

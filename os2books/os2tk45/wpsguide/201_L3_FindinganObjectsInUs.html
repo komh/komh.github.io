@@ -1,0 +1,67 @@
+<HTML>
+<HEAD>
+<TITLE>Finding an Object's In-Use Item</TITLE>
+</HEAD>
+<BODY>
+<H1>Finding an Object's In-Use Item</H1><!-- entering slot 216 -->
+<P>
+You can use wpFindUseItem to determine how an object is being used. It searches
+an object's in-use list for items of a specified type and returns a pointer
+to the USEITEM data structure that matches that specified type. The wpFindViewItem
+method finds USAGE_OPENVIEW items in the use list. The following figure
+shows the syntax of the USEITEM data structure:
+<PRE>typedef struct _USEITEM
+{
+  ULONG   type;                 /* Type of this item     */
+  struct _USEITEM FAR *pNext;   /* Next item in use list */
+}USEITEM;
+
+</PRE>
+
+<P>
+The following sample code shows an example of how you can use the usage
+methods. It uses the wpFindUseItem and wpFindViewItem along with the USAGE_OPENVIEW
+item.
+<PRE>SOMAny    *Object;
+PVIEWITEM pViewItem;
+PUSEITEM  pUseFile;
+ULONG     ulView;
+// Are there any open views of this object?
+if (_wpFindUseItem(Object, USAGE_OPENVIEW, NULL))
+{
+  // Find any views of this object
+  for (pViewItem = _wpFindViewItem(Object, VIEW_ANY, NULL);
+       pViewItem;
+       pViewItem = _wpFindViewItem(Object, VIEW_ANY, pViewItem))
+  {
+    // Is a program running?
+    if (pViewItem-&gt;view == OPEN_RUNNING)
+    {
+      ulView = (ULONG)0;
+
+      // Find any open file use-items
+      for (pUseFile = _wpFindUseItem(Object, USAGE_OPENFILE, NULL);
+           pUseFile;
+           pUseFile = _wpFindUseItem(Object, USAGE_OPENFILE, pUseFile))
+      {
+        // Does the VIEWFILE's open handle match the VIEWITEM's open handle?
+        if (((PVIEWFILE)(pUseFile+1))-&gt;handle == pViewItem-&gt;handle)
+        {
+          // Save the VIEWFILE's menu id
+          ulView = ((PVIEWFILE)(pUseFile+1))-&gt;ulMenuId;
+          break;
+        }
+      }
+    }
+  }
+}
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="200_L3_IncreasingorDecreasi.html">[Back: Increasing or Decreasing the Object's Lock Count]</A> <BR>
+<A HREF="202_L1_ObjectUserActionPopU.html">[Next: Object User Action: Pop-Up Menu Methods]</A> 
+</BODY>
+</HTML>

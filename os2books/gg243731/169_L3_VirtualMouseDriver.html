@@ -1,0 +1,88 @@
+<HTML>
+<HEAD>
+<TITLE>Virtual Mouse Driver</TITLE>
+</HEAD>
+<BODY>
+<H1>Virtual Mouse Driver</H1><!-- entering slot 182 -->
+<P>
+Given the diversity of mouse hardware, and the complexity of dealing with
+all possible combinations of mouse hardware and video equipment, few if
+any applications talk directly to mouse hardware.  Most applications which
+support a mouse do so through the INT 33h interface.  Virtualization of
+the INT 33h interface is provided by the virtual mouse device driver VMOUSE.SYS.
+
+<P>
+The INT 33h interface performs the following:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Position and button tracking<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Position and button event notification<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Selectable pixel and mickey mappings<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Video mode tracking<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Video pointer management (location and appearance)
+<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Light pen emulation.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+The interface between the physical mouse driver and VMOUSE is straightforward.
+ The physical mouse driver is aware at all times of which session owns the
+mouse; thus, when a foreground VDM owns the mouse, it notifies VMOUSE of
+mouse events.  The events themselves remain buffered by the physical device
+driver until VMOUSE requests them.  Normally, VMOUSE asks for each event
+immediately, and updates the INT 33h data structures for the foreground
+VDM, unless the application running in the VDM has registered a mouse event
+subroutine.
+<P>
+If a mouse event subroutine has been registered by the application, VMOUSE
+may have to notify the routine of a mouse event.  This depends on the events
+for which the subroutine has requested notification.  When a registered
+subroutine must be called, VMOUSE requests a fake interrupt to be simulated
+into the VDM.  A fake interrupt service routine (loaded into each VDM upon
+creation) immediately emulates the interrupt and then proceeds to notify
+the VDM's registered subroutine.  In order to pick an IRQ that is guaranteed
+to not conflict with any other virtual device driver, VMOUSE queries the
+physical mouse driver at initialization time for the physical IRQ used by
+the mouse.  This ensures that no conflict occurs.
+<P>
+<B>Position and Button Data Tracking</B>
+<P>
+Position and button events are interrupt time events that are communicated
+to VMOUSE by the physical device driver via a "data ready" entry point.
+ If the VDM is not already processing a previous event, VMOUSE calls the
+physical device driver to get the new event; otherwise, VMOUSE waits until
+previous event processing is complete.  This avoids the need for buffering
+within VMOUSE.
+<P>
+Normally, the VDM will not be processing any events, so position and button
+information can be immediately retrieved and stored for later query by a
+VDM application, via INT 33h.
+<P>
+<B>Position and Button Event Notification</B>
+<P>
+As events are requested and supplied by the physical mouse driver, VMOUSE
+peeks ahead to the next event (if any) and, if it is a movement-only event,
+extracts it and overlays the current event.  This is continued until there
+are no more events, or the next event is not a movement-only event.  This
+reduces the amount of interrupt-simulation overhead during periods of rapid
+mouse movement.
+<P>
+<B>Selectable Pixel-to-Coordinate and Mickey-to-Pixel Mappings</B>
+<P>
+Since pixel-to-virtual-coordinate mappings are often used by DOS applications
+but are not supported for protected mode applications;  VMOUSE manages such
+mappings.  Since mickey-to-pixel mappings<I> are</I> supported for protected
+mode, VMOUSE relies on the physical mouse driver to perform these mappings.
+ Thus physical mouse driver interfaces are provided to set the mickey-to-pixel
+mapping and the dimensions of the screen in pixels.
+
+<P><HR>
+
+<A HREF="168_L3_VWINDeviceDriver.html">[Back: VWIN Device Driver]</A> <BR>
+<A HREF="170_L3_VCDROMDeviceDriver.html">[Next: VCDROM Device Driver]</A> 
+</BODY>
+</HTML>

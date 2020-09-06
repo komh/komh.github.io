@@ -1,0 +1,148 @@
+<HTML>
+<HEAD>
+<TITLE>DosQueryMemState</TITLE>
+</HEAD>
+<BODY>
+<H1>DosQueryMemState</H1><!-- entering slot 75 -->
+<P>
+<B>Purpose</B>
+<P>
+DosQueryMemState gets the status of a range of pages in memory. Its input
+parameters are an address and size. The address is rounded down to page
+boundary and size is rounded up to a whole number of pages. The status of
+the pages in the range is returned in the state parameter, and the size
+of the range queried is returned in the size parameter. If the pages in
+the range have conflicting states, then the state of the first page is returned.
+
+<P>
+<B>Syntax</B>
+<PRE>#define INCL_PROFILE
+#include  os2.h&gt;
+
+</PRE>
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+APIRET APIENTRY DosQueryMemState<!-- lm: 0x2 11 -->
+<UL><B> (PVOID pMem,
+PULONG size, PULONG state)</B><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Parameters</B><!-- lm: 0x2 1 -->
+<P>
+pMem (PVOID)  input<!-- lm: 0x11 11 -->
+<UL><!-- lm: 0x2 1 -->
+</UL> size
+(PULONG)  input/output<!-- lm: 0x11 11 -->
+<UL><!-- lm: 0x2 1 -->
+</UL> state
+(PLONG)  output<!-- lm: 0x11 11 -->
+<UL> Flags indicate the following page
+states <!-- lm: 0x2 11 -->
+<P>
+PAG_NPOUT 0x00000000<!-- lm: 0x2 26 -->
+<UL> Page is not present, not in
+core.<!-- lm: 0x2 11 -->
+</UL> PAG_PRESENT 0x00000001<!-- lm: 0x2 26 -->
+<UL> Page
+is present.<!-- lm: 0x2 11 -->
+</UL> PAG_NPIN 0x00000002<!-- lm: 0x2 26 -->
+<UL> Page
+is not present, in core.<!-- lm: 0x2 11 -->
+</UL> PAG_PRESMASK 0x00000003
+<!-- lm: 0x2 26 -->
+<UL>Present state mask.<!-- lm: 0x2 11 -->
+</UL> PAG_INVALID
+0x00000000<!-- lm: 0x2 26 -->
+<UL> Page is invalid.<!-- lm: 0x2 11 -->
+</UL> PAG_RESIDENT
+0x00000010<!-- lm: 0x2 26 -->
+<UL> Page is resident.<!-- lm: 0x2 11 -->
+</UL> PAG_SWAPPABLE
+0x00000020<!-- lm: 0x2 26 -->
+<UL> Page is swappable.<!-- lm: 0x2 11 -->
+</UL> PAG_DISCARDABLE
+0x00000030<!-- lm: 0x2 26 -->
+<UL> Page is discardable.<!-- lm: 0x2 11 -->
+</UL> PAG_TYPEMASK
+0x00000030<!-- lm: 0x2 26 -->
+<UL> Typemask.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Returns</B><!-- lm: 0x2 1 -->
+<P>
+ulrc (APIRET)  returns<!-- lm: 0x11 11 -->
+<UL> Return Code.
+<P>
+DosQueryMemState returns one of the following values <!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->NO_ERROR<!-- lm: 0x2 11 -->
+<P>
+87<!-- lm: 0x2 26 -->
+<UL> ERROR_INVALID_PARAMETER<!-- lm: 0x2 11 -->
+</UL> 487
+<!-- lm: 0x2 26 -->
+<UL>ERROR_INVALID_ADDRESS<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Related Functions</B><!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->DosQueryMem<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Example Code</B>
+<PRE>int main(int argc, char *argv[], char *envp[]){
+   APIRET rc=0;
+   PVOID pMem;
+   ULONG status;
+   ULONG size;
+   ULONG pages;
+   ULONG onepage = 0x1000;
+
+   if (argc   3) {
+
+      printf("Syntax  MEMSTATE  address&gt;  size&gt;\n");
+      return 0;
+
+   } else {
+
+      pMem = (PVOID) strtoul(argv[1], NULL, 0);
+      size = strtoul(argv[2], NULL, 0);
+      pages = (size+0x0fff) &gt;&gt; 12;
+
+      printf("address     state\n");
+      while (pages--) {
+
+         rc = DosQueryMemState(pMem,  onepage,  status);
+
+         if (rc) printf("0x%08x DosQueryMemState returned %u\n",pMem, rc);
+         else {
+            printf("0x%08x 0x%08x ", pMem, status);
+            if ((status   PAG_PRESMASK) == PAG_NPOUT) printf("not present, not in-core, ");
+            else if (status   PAG_PRESENT) printf("present, in-core, ");
+            else if (status   PAG_NPIN) printf("not present, in-core, ");
+
+            if ((status   PAG_TYPEMASK) == PAG_INVALID) printf("invalid\n");
+            if ((status   PAG_TYPEMASK) == PAG_RESIDENT) printf("resident\n");
+            if ((status   PAG_TYPEMASK) == PAG_SWAPPABLE) printf("swappable\n");
+            if ((status   PAG_TYPEMASK) == PAG_DISCARDABLE) printf("discardable\n");
+         }
+         pMem = (PVOID)((ULONG)pMem + 0x1000);
+
+      } /* endwhile */
+
+   } /* end if*/
+
+   return rc;
+}
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="044_L2_DosQueryFileInfo.html">[Back: DosQueryFileInfo]</A> <BR>
+<A HREF="046_L2_Dos16QueryModFromCS.html">[Next: Dos16QueryModFromCS]</A> 
+</BODY>
+</HTML>

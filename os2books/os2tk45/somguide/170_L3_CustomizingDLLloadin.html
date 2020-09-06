@@ -1,0 +1,98 @@
+<HTML>
+<HEAD>
+<TITLE>Customizing DLL loading</TITLE>
+</HEAD>
+<BODY>
+<H1>Customizing DLL loading</H1><!-- entering slot 205 -->
+<P>
+To dynamically load a SOM class, the<B> SOMClassMgrObject</B>  calls the
+function pointed to by the global variable<B> SOMLoadModule</B> to load
+the DLL containing the class. The reason for making public the<B> SOMLoadModule
+</B>function (and the following<B> SOMDeleteModule</B> function) is to reveal
+the boundary where SOM touches the operating system. Explicit invocation
+of these functions is never required. However, they are provided to allow
+class implementors to insert their own code between the operating system
+and SOM, if desired. The<B>  SOMLoadModule</B> function has the following
+signature:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+long  (*SOMLoadModule)<!-- lm: 0x2 26 -->
+<UL><B> ( string</B><I> className</I><B>,
+
+<BR>
+  string</B><I> fileName</I><B>,
+<BR>
+
+<BR>
+ string</B><I> functionName</I><B>,
+<BR>
+
+<BR>
+ long</B><I> majorVersion</I><B>,
+<BR>
+
+<BR>
+ long</B><I> minorVersion</I><B>,
+<BR>
+
+<BR>
+ somToken *</B><I>modHandle</I><B>);</B>
+<BR>
+<!-- lm: 0x2 1 -->
+</UL>This function is responsible for loading the DLL containing the SOM
+class<I> className</I> and returning either the value zero (for success)
+or a nonzero system-specific error code. The output argument<I> modHandle
+</I>is used to return a token that can subsequently be used by the DLL-un
+loading routine (described below) to unload the DLL. The default DLL-loading
+routine returns the DLL's<I> module handle</I> in this argument. The remaining
+arguments are used as follows:<!-- lm: 0x2 1 -->
+<P>
+Argument<!-- lm: 0x12 26 -->
+<UL><B> Usage</B><!-- lm: 0x2 1 -->
+</UL><I> fileName
+</I><!-- lm: 0x12 26 -->
+<UL>The file name of the DLL to be loaded, which
+can be either a simple name or a full path name.<!-- lm: 0x2 1 -->
+</UL><I> functionName
+</I><!-- lm: 0x12 26 -->
+<UL>The name of the routine to be called after
+the DLL is successfully loaded by the<B> SOMClassMgrObject</B>. This routine
+is responsible for creating the class objects for the class(es) contained
+in the DLL. Typically, this argument has the value "<B>SOMInitModule</B>",
+which is obtained from the function<B> SOMClassInitFuncName</B> described
+above. If no<B> SOMInitModule</B> entry exists in the DLL, the default DLL-loading
+routine looks in the DLL for a procedure with the name<I> &lt;className&gt;</I><B>NewClass
+</B>instead. If neither entry point can be found, the default DLL-loading
+routine fails.<!-- lm: 0x2 1 -->
+</UL><I> majorVersion</I><!-- lm: 0x12 26 -->
+<UL> The
+major version number to be passed to the class initialization function in
+the DLL (specified by the<I> functionName</I> argument).<!-- lm: 0x2 1 -->
+</UL><I> minorVersion
+</I><!-- lm: 0x12 26 -->
+<UL>The minor version number to be passed to the
+class initialization function in the DLL (specified by the<I> FunctionName
+</I>argument).<!-- lm: 0x2 1 -->
+</UL>
+<P>
+An application program can replace the default DLL-loading routine by assigning
+the entry point address of the new DLL-loading function (such as<I> MyLoadModule</I>)
+to the global variable<B> SOMLoadModule</B>, as follows:
+<PRE>#include &lt;som.h&gt;/* Define a replacement routine: */
+long myLoadModule (string className, string fileName,
+                   string functionName, long majorVersion,
+                   long minorVersion, somToken *modHandle)
+{
+     (Customized code goes here)
+}
+...
+SOMLoadModule = MyLoadModule;
+</PRE>
+
+
+<P><HR>
+
+<A HREF="169_L3_Customizingclassinit.html">[Back: Customizing class initialization]</A> <BR>
+<A HREF="171_L3_CustomizingDLLunload.html">[Next: Customizing DLL unloading]</A> 
+</BODY>
+</HTML>

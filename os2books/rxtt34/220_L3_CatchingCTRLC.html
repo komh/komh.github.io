@@ -1,0 +1,121 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Catching CTRL-C</TITLE>
+</HEAD>
+<BODY>
+<H1>Catching CTRL-C</H1><!-- entering slot 217 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+In REXX programs that don't contain an error handler for CTRL-C, CTRL-C
+and CTRL-BREAK are processed by the REXX interpreter using the default error
+handler for CTRL-C. The default error handler for CTRL-C simply prints an
+error message and ends the program. Here are some ways to make the handling
+of CTRL-C und CTRL-BREAK more useful.
+<P>
+To install your own error handler you can use either
+<PRE> 
+  signal on halt name myCTRLCHandler
+</PRE>
+
+<P>
+or
+<PRE> 
+  call on halt name myCTRLCHandler
+</PRE>
+
+<P>
+
+<P>
+The adavantage of the<B> call</B> statement is that you can use the<B> RETURN
+</B>instruction in your CTRL-C handler to continue the execution of your
+program. Thus, using this method, it is possible, for example, to suppress
+CTRL-C depending on user input, to display specific messages, and so on
+(see the examples below).
+<P>
+Note: Because of a bug in the CTRL-C handling of the CMD.EXE you should
+always use
+<PRE> 
+  cmd /c os2_command
+</PRE>
+
+<P>
+to execute internal or external OS/2 commands from within a REXX program
+(see <A HREF="113_L2_CTRLBreak&OS2command.html">CTRL-Break &amp; OS/2 commands</A>,
+see also <A HREF="218_L3_Informationsavedduri.html">Information saved during
+subroutine &amp; function execution</A>).
+<P>
+Examples:
+<PRE> 
+/* sample for a CTRL-C error handler using SIGNAL ON HALT ...       */
+
+                    /* install the error handler for CTRL-C         */
+  signal on halt name MyCtrlCHandler
+
+                    /* this is an endless loop                      */
+  do forever
+     say 'Press CTRL-C to end this program ...'
+  end /* do forever */
+
+exit
+
+/* error handler for CTRL-C                                         */
+/*                                                                  */
+/* This error handler simply ends the program.                      */
+/*                                                                  */
+MyCtrlCHandler:
+
+                    /* reinstall the error handler for CTRL-C       */
+  signal on halt name MyCtrlCHandler
+
+  say 'CTRL-C pressed!'
+exit
+</PRE>
+
+<P>
+ 
+<PRE> 
+/* sample for a CTRL-C error handler using CALL ON HALT ...         */
+
+                    /* install the error handler for CTRL-C         */
+  call on halt name MyCtrlCHandler
+
+  ctrlCPressed = 0
+
+                    /* this is an endless loop                      */
+  do until CtrlCPressed = 1
+     say 'Press CTRL-C to end this program ...'
+  end /* do until CtrlCPressed */
+
+  say 'Program ends now'
+
+                    /* end the program                              */
+exit
+
+/* error handler for CTRL-C                                         */
+MyCtrlCHandler:
+
+                    /* reinstall the error handler for CTRL-C       */
+  signal on halt name MyCtrlCHandler
+
+  say 'CTRL-C pressed (Execution was interrupted in line ' || sigl || ')!'
+  say 'Press Y &lt;RETURN&gt; to end the program. Any other key to continue ...'
+  if translate( strip( lineIn() ) ) = 'Y' then
+  do
+                    /* signal "end now" to the main program         */
+    ctrlCPressed = 1
+  end /* if */
+                    /* continue the program at the interupted line  */
+return
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="219_L3_Returningmorethanone.html">[Back: Returning more than one value from a function]</A> <BR>
+<A HREF="221_L2_Redefinitionofintern.html">[Next: Redefinition of internal functions]</A> 
+</BODY>
+</HTML>

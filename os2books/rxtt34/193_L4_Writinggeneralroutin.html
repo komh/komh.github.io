@@ -1,0 +1,241 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Writing general routines for compound variables</TITLE>
+</HEAD>
+<BODY>
+<H1>Writing general routines for compound variables</H1><!-- entering slot 193 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+To write general routines working on compound variables you may use the
+techniques shown in the two examples below.
+<P>
+In the first example we use two nested routines to implement a save routine
+with a local variable scope for processing the data. The only global variable
+that the routines knows is the stem that it should process
+<P>
+In the second example we use a global variable with the name of the stem
+variable.
+<P>
+Note that <A HREF="269_L1_HintsforObjectREXX.html">Object-Oriented REXX
+</A>allows stem variables as parameters and also as return values. Therefore
+you don't need these techniques in programs running in <A HREF="269_L1_HintsforObjectREXX.html">Object-Oriented
+REXX</A> (see also the part about the local and global environment in the
+section <A HREF="282_L2_NewfeaturesinObjectR.html">New features in Object
+REXX that are useful in Classic REXX programs also</A>).
+<P>
+(see also <A HREF="473_L3_ReadatextfileusingCh.html">Read a textfile using
+CharIn()</A> for another example).
+<PRE> 
+/* sample for a general routine to work on compound variables         */
+
+                    /* create some global variables                   */
+  myStem.0 = 4
+  myStem.1 = 'MyElement1'
+  myStem.2 = 'MyElement2'
+  myStem.3 = 'MyElement3'
+  myStem.4 = 'MyElement4'
+
+  yourStem.0 = 3
+  yourStem.1 = 'YourElement1'
+  yourStem.2 = 'YourElement2'
+  yourStem.3 = 'YourElement3'
+
+  i = 5
+  j = 7
+
+                    /* display the values of i and j before           */
+                    /* calling the routine                            */
+  say 'I is ' || i || ', J is ' || J || '.'
+
+                    /* display the values of the stems before         */
+                    /* calling the routine                            */
+  say 'The stem MyStem. contains ' || MyStem.0 || ' elements:'
+  do i = 1 to  mystem.0
+    say ' Element No ' || i || ' is ' myStem.i
+  end /* do i = 1 to  mystem.0 */
+
+  say 'The stem YourStem. contains ' || YourStem.0 || ' elements:'
+  do i = 1 to  YourStem.0
+    say ' Element No ' || i || ' is ' YourStem.i
+  end /* do i = 1 to  mystem.0 */
+
+  'pause'
+
+  say 'Now calling ShowMyArray for myStem. and YourStem. ...'
+
+                    /* now call the routine to show the stem          */
+  call ShowMyArray 'myStem.'
+  call ShowMyArray 'YourStem.'
+
+  say 'Results:'
+
+                    /* display the values of i and j after            */
+                    /* calling the routine                            */
+  say 'I is ' || i || ', J is ' || J || '.'
+
+                    /* display the values of the stems after          */
+                    /* calling the routine                            */
+  say 'The stem MyStem. contains ' || MyStem.0 || ' elements:'
+  do i = 1 to  mystem.0
+    say ' Element No ' || i || ' is ' myStem.i
+  end /* do i = 1 to  mystem.0 */
+
+  say 'The stem YourStem. contains ' || YourStem.0 || ' elements:'
+  do i = 1 to  YourStem.0
+    say ' Element No ' || i || ' is ' YourStem.i
+  end /* do i = 1 to  mystem.0 */
+
+exit
+
+/* This is the procedure called by the main program                   */
+/* Note: Do _NOT_ use PROCEDURE for this routine!!!                   */
+
+ShowMyArray:
+                                                             /* v2.60 */
+  I!.__stemName = arg(1)
+
+                    /* now call the internal routine with the local   */
+                    /* variable scope                                 */
+  call  I!.__ShowMyArray I!.__stemName
+RETURN
+
+/* This is the procedure with only knows the global                   */
+/* variable which name is saved in the variable I!.__stemName.        */
+
+I!.__ShowMyArray: PROCEDURE expose (I!.__stemName)
+  parse arg theStem
+
+                    /* theStem contains the name of the stem to       */
+                    /* process                                        */
+                    /* Note that you've to use the value function to  */
+                    /* access the variable                            */
+
+                    /* j and i are local variables!                   */
+  j = value( theStem || '0' )
+
+  say 'The stem "' || theStem || '" contains ' || j || ' elements:'
+
+  do i = 1 to j
+    say ' Element ' || i || ' is: "' || value( theStem || i ) || '"'
+  end /* do i = 1 to j */
+
+                    /* add some elements to the stem                  */
+  say 'Now adding 4 further elements to the stem ...'
+  do i = j+1 to j+4
+    call value theStem ||  i , 'New Element No ' || i-j
+  end /* do i = j+1 to j+4 */
+
+                    /* correct the counter                            */
+  call value theStem || '0', i-1
+
+RETURN
+</PRE>
+
+<P>
+
+<PRE> 
+/* another sample for a general routine to work on compound variables */
+
+                    /* create some global variables                   */
+  myStem.0 = 4
+  myStem.1 = 'MyElement1'
+  myStem.2 = 'MyElement2'
+  myStem.3 = 'MyElement3'
+  myStem.4 = 'MyElement4'
+
+  yourStem.0 = 3
+  yourStem.1 = 'YourElement1'
+  yourStem.2 = 'YourElement2'
+  yourStem.3 = 'YourElement3'
+
+  i = 5
+  j = 7
+                    /* display the values of i and j before           */
+                    /* calling the routine                            */
+  say 'I is ' || i || ', J is ' || J || '.'
+
+                    /* display the values of the stems before         */
+                    /* calling the routine                            */
+  say 'The stem MyStem. contains ' || MyStem.0 || ' elements:'
+  do i = 1 to  mystem.0
+    say ' Element No ' || i || ' is ' myStem.i
+  end /* do i = 1 to  mystem.0 */
+
+  say 'The stem YourStem. contains ' || YourStem.0 || ' elements:'
+  do i = 1 to  YourStem.0
+    say ' Element No ' || i || ' is ' YourStem.i
+  end /* do i = 1 to  mystem.0 */
+
+  'pause'
+
+  say 'Now calling ShowMyArray for myStem. and YourStem. ...'
+
+                    /* now call the routine to show the stem          */
+
+                    /* 'stemName' contains the name of the stem to    */
+                    /* process                                        */
+  stemName = 'myStem.'
+  call ShowMyArray
+
+                    /* 'stemName' contains the name of the stem to    */
+                    /* process                                        */
+  stemname = 'YourStem.'
+  call ShowMyArray
+
+  say 'Results:'
+
+                    /* display the values of i and j after            */
+                    /* calling the routine                            */
+  say 'I is ' || i || ', J is ' || J || '.'
+
+                    /* display the values of the stems after          */
+                    /* calling the routine                            */
+  say 'The stem MyStem. contains ' || MyStem.0 || ' elements:'
+  do i = 1 to  mystem.0
+    say ' Element No ' || i || ' is ' myStem.i
+  end /* do i = 1 to  mystem.0 */
+
+  say 'The stem YourStem. contains ' || YourStem.0 || ' elements:'
+  do i = 1 to  YourStem.0
+    say ' Element No ' || i || ' is ' YourStem.i
+  end /* do i = 1 to  mystem.0 */
+
+exit
+
+ShowMyArray: PROCEDURE expose (stemName)
+
+                    /* stemName contains the name of the stem to      */
+                    /* process                                        */
+                    /* Note that you've to use the value function to  */
+                    /* access the variable                            */
+
+                    /* j and i are local variables!                   */
+  j = value( StemName || '0' )
+
+  say 'The stem "' || StemName || '" contains ' || j || ' elements:'
+
+  do i = 1 to j
+    say ' Element ' || i || ' is: "' || value( StemName || i ) || '"'
+  end /* do i = 1 to j */
+
+                    /* add some elements to the stem                  */
+  say 'Now adding 4 further elements to the stem ...'
+  do i = j+1 to j+4
+    call value StemName ||  i , 'New Element No ' || i-j
+  end /* do i = j+1 to j+4 */
+
+                    /* correct the counter                            */
+  call value StemName || '0', i-1
+RETURN
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="192_L4_Usingvariablesforthe.html">[Back: Using variables for the tail]</A> <BR>
+<A HREF="194_L4_Sampleforusingcompou.html">[Next: Sample for using compound variables]</A> 
+</BODY>
+</HTML>

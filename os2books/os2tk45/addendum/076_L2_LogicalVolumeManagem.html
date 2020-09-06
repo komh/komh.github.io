@@ -1,0 +1,190 @@
+<HTML>
+<HEAD>
+<TITLE>Logical Volume ManagementDSK_LVMMGMT(69h)</TITLE>
+</HEAD>
+<BODY>
+<H1>Logical Volume ManagementDSK_LVMMGMT(69h)</H1><!-- entering slot 117 -->
+<P>
+<B>Purpose</B> 
+<P>
+ This IOCtl may be used with any logical volume to which a drive letter
+has been assigned. This function will be used by FORMAT and will also be
+of use to those writing disk utilities for OS/2.
+<P>
+<B>Parameter Packet Format</B>
+<PRE>Field                      Length              C Datatype
+Command Information        BYTE                UCHAR
+Drive Unit                 BYTE                UCHAR
+Table Number               WORD                USHORT
+LSN                        4 BYTES             ULONG
+</PRE>
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Command Information<!-- lm: 0x11 6 -->
+<UL> Command information may be <!-- lm: 0x2 6 -->
+<P>
+<LI><!-- lm: 0x2 21 -->Identify Volume Type<!-- lm: 0x2 6 -->
+<P>
+<LI><!-- lm: 0x2 21 -->Enable Bad Block Relocation<!-- lm: 0x2 6 -->
+<P>
+<LI><!-- lm: 0x2 21 -->Disable Bad Block Relocation<!-- lm: 0x2 6 -->
+<P>
+<LI><!-- lm: 0x2 21 -->Get Bad Block Information<!-- lm: 0x2 6 -->
+<P>
+<LI><!-- lm: 0x2 21 -->Get Table Size<!-- lm: 0x2 6 -->
+<P>
+<LI><!-- lm: 0x2 21 -->Get Relocated Sector List<!-- lm: 0x2 6 -->
+<P>
+<LI><!-- lm: 0x2 21 -->Get Relocated Data<!-- lm: 0x2 6 -->
+<P>
+<LI><!-- lm: 0x2 21 -->Remove Relocation Table Entry<!-- lm: 0x2 6 -->
+<P>
+<LI><!-- lm: 0x2 21 -->Clear Relocation Table<!-- lm: 0x2 6 -->
+<P>
+<LI><!-- lm: 0x2 21 -->Get Drive Name<!-- lm: 0x2 6 -->
+<P>
+The Identify Volume Type command provides a way to determine whether a volume
+is a Compatibility or LVM Volume.
+<P>
+The Enable Bad Block Relocation command enables bad block relocation on
+the specified volume if that volume supports it.
+<P>
+The Disable Bad Block Relocation command disables bad block relocation on
+the specified volume.
+<P>
+Get Bad Block Information returns the total number of bad block relocations
+which are currently in effect for the specified volume, as well as the number
+of relocation tables being used to perform bad block relocation for the
+specified volume.  There is one bad block relocation table per physical
+disk partition, so, for LVM volumes employing drive linking, there may be
+several such tables.
+<P>
+Get Table Size returns the number of active entries in the specified bad
+block relocation table, as well as the maximum number of entries that the
+table can hold.  The size of a bad block relocation table is dependent upon
+the size of the partition it is supporting.  Larger partitions have larger
+relocation tables, while smaller partitions have smaller relocation tables.
+
+<P>
+Get Relocated Sector List returns an array of Logical Sector Numbers (LSN).
+ Each LSN in the array is a sector whose data had to be relocated because
+of a problem writing to that sector.  The array returned is specific to
+a Relocation Table.  The user supplied buffer must be large enough to hold
+the entire array.  The size of the array can be determined by using the
+Get Table Size command to find the number of active entries in the table,
+and then multiplying that value by the size of a Logical Sector Number (currently,
+4 bytes).
+<P>
+Get Relocated Data returns the data associated with a sector that appears
+in a relocation table for the specified volume.  The user supplied buffer
+must be at least 512 bytes in length, because 512 bytes are returned.
+<P>
+Remove Relocation Table Entry removes the specified LSN from the relocation
+tables on the specified volume.  This function is typically used by utilities
+which adjust the file system on a volume so that all LSNs requiring relocation
+are removed from use.  Since the file system will never use these LSNs again,
+they can be safely removed from the relocation tables for the volume, thereby
+freeing those entries to be used again.
+<P>
+Clear Relocation Table is used to remove all of the entries in a relocation
+table in a single operation.  This function is intended to be used by FORMAT
+immediately before a long format is performed.  Typically, FORMAT will disable
+bad block relocation and clear the bad block relocation tables prior to
+a long format so that all bad sectors may be detected by FORMAT.  FORMAT
+will place any bad sectors detected into the bad block list for the appropriate
+file system.
+<P>
+Get Drive Name is used to return the user defined name associated with the
+physical drive on which the specified relocation table resides.  This function
+can be used to identify which physical drive contains a specific relocation
+table associated with a volume.  The name returned will not exceed 20 characters.
+<!-- lm: 0x2 1 -->
+</UL>Drive Unit<!-- lm: 0x11 6 -->
+<UL> Drive Unit is
+used only when the IOCtl is issued without using a previously allocated
+file<!-- entering slot 118 --> handle. In this case, the IOCtl must be issued
+with a file handle of  1. Drive Unit values are 0=A, 1=B, 2=C, etc.<!-- lm: 0x2 1 -->
+</UL> Table
+Number<!-- lm: 0x11 6 -->
+<UL> Table Number is the number of the relocation
+table to operate on. This field is not used for commands 0 3, and 6 8.<!-- lm: 0x2 1 -->
+</UL> LSN
+<!-- lm: 0x11 6 -->
+<UL>LSN is the logical sector number of sector requiring
+relocation. This field is used only by commands 6 and 7.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Data Packet Format</B>
+<PRE>Field                      Length              C DatatypeReturn Value               BYTE                UCHAR
+Buffer                     4 BYTEs             void*
+</PRE>
+<!-- lm: 0x2 1 -->
+<P>
+Return Value<!-- lm: 0x11 6 -->
+<UL> Return Value is set by every command
+that this IOCtl accepts. The specific meaning of the value it is set to
+is dependent upon the command issued.<!-- lm: 0x2 1 -->
+</UL> Buffer<!-- lm: 0x11 6 -->
+<UL> Buffer
+is a pointer to an area of memory large enough to hold any return value
+associated with the command issued. Some commands do not make use of Buffer.
+For these commands, Buffer should be NULL.<!-- lm: 0x2 1 -->
+</UL> Values
+Returned<!-- lm: 0x11 6 -->
+<UL> Command Information and possible return
+values are <!-- lm: 0x2 1 -->
+</UL>
+<PRE>Command Information Return Value        Buffer0                   1 = Compatibility V Unused
+                    2 = Logical Volume
+1                   0 = Success         Unused
+                    1 = Failure
+2                   0 = Success         Unused
+                    1 = Failure
+3                   0 = Success         typedef struct_BadBlockInf
+                    1 = Failure         ULONG Total_Relocations;
+                                        ULONG Total_Tables;
+                                        }BadBlockInfo;
+4                   0 = Success         typedef struct_BadBlackInf
+                    1 = Failure         ULONG Active_Relocations;
+                                        ULONG Max_Relocations;
+                                        }BadBlockTableInfo;
+5                   0 = Success         Array of LSNs.
+                    1 = Failure         Each entry in array is
+                                        sector requiring relocatio
+6                   0 = Success         Data written to
+                    1 = Failure         specified sector
+7                   0 = Success         Unused
+                    1 = Failure
+8                   0 = Success         Unused
+                    1 = Failure
+9                   0 = Success         Text of name being
+                    1 = Failure         returned by this function.
+                                        Name will be null terminat
+</PRE>
+
+<P>
+<B>Returns</B>
+<P>
+Possible values are shown in the following list <!-- lm: 0x2 1 -->
+<P>
+<LI><!-- lm: 0x2 11 -->NO_ERROR<!-- lm: 0x2 1 -->
+<P>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_HANDLE<!-- lm: 0x2 1 -->
+<P>
+15<!-- lm: 0x2 11 -->
+<UL> ERROR_INVALID_DRIVE<!-- lm: 0x2 1 -->
+</UL> 31
+<!-- lm: 0x2 11 -->
+<UL>ERROR_GEN_FAILURE<!-- lm: 0x2 1 -->
+</UL> 87<!-- lm: 0x2 11 -->
+<UL> ERROR_INVALID_PARAMETER
+<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="075_L1_IOCtls.html">[Back: IOCtls]</A> <BR>
+<A HREF="077_L2_QueryHardDriveGeomet.html">[Next: Query Hard Drive Geometry and Physical ParametersOEMHLP_QUERYDISKINFO (0Eh)]</A> 
+</BODY>
+</HTML>

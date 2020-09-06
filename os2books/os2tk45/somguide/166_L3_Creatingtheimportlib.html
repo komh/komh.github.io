@@ -1,0 +1,161 @@
+<HTML>
+<HEAD>
+<TITLE>Creating the import library</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating the import library</H1><!-- entering slot 200 -->
+<P>
+Finally, for each of your class libraries, you should create an import library
+that can be used by client programs (or by other class libraries that use
+your classes) to resolve the references to your classes.
+<P>
+Here is an example illustrating all of the steps required to create a class
+library ("abc.dll") that contains the three classes "A", "B", and "C".<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Compile all of the implementation files for the
+classes that will be included in the library. Include the initialization
+function also.
+<P>
+<B>For AIX</B> written in<B> C</B>:
+<PRE>  xlc -I. -I$SOMBASE/include -c a.c
+  xlc -I. -I$SOMBASE/include -c b.c
+  xlc -I. -I$SOMBASE/include -c c.c
+  xlc -I. -I$SOMBASE/include -c initfunc.c
+</PRE>
+
+<P>
+<B>For AIX</B> written in<B> C++</B>:
+<PRE>  xlC -I. -I$SOMBASE/include -c a.C
+  xlC -I. -I$SOMBASE/include -c b.C
+  xlC -I. -I$SOMBASE/include -c c.C
+  xlC -I. -I$SOMBASE/include -c initfunc.C
+</PRE>
+
+<P>
+<B>For OS/2</B> written in<B> C</B>:
+<PRE>   icc -I. -I%SOMBASE%\include -Ge- -c a.c
+   icc -I. -I%SOMBASE%\include -Ge- -c b.c
+   icc -I. -I%SOMBASE%\include -Ge- -c c.c
+   icc -I. -I%SOMBASE%\include -Ge- -c initfunc.c
+</PRE>
+
+<P>
+<B>Note: </B> The "-GE" option is used only with the IBM compiler.  It indicates
+that the object files will go into a DLL.<!-- lm: 0x2 6 -->
+<UL>
+<P>
+<B>For OS/2</B> written in<B> C++</B>:
+<PRE>   icc -I. -I%SOMBASE%\include -Ge- -c a.cpp
+   icc -I. -I%SOMBASE%\include -Ge- -c b.cpp
+   icc -I. -I%SOMBASE%\include -Ge- -c c.cpp
+   icc -I. -I%SOMBASE%\include -Ge- -c initfunc.cpp
+</PRE>
+
+<P>
+<B>Note: </B> The "-Ge" option is used only with the IBM compiler.  It indicates
+that the object files will go into a DLL.<!-- lm: 0x2 6 --><!-- lm: 0x2 2 -->
+</UL>
+2.<!-- lm: 0x2 6 -->
+<UL>Produce an export file for each class.
+<P>
+<B>For AIX:</B>
+<PRE>   sc -sexp a.idl b.idl c.idl
+</PRE>
+
+<P>
+<B>For OS/2:</B>
+<PRE>   sc -sdef a.idl b.idl c.idl
+</PRE>
+<!-- lm: 0x2 2 -->
+</UL> 3.<!-- lm: 0x2 6 -->
+<UL>Manually combine the exported
+symbols into a single file.
+<P>
+<B>For AIX,</B> create a file "abc.exp" from "a.exp", "b.exp", and "c.exp".
+Do<I> not</I> include the initialization function (<B>SOMInitModule</B>)
+in the export list.
+<P>
+<B>For OS/2,</B> create a file "abc.def" from "a.def", "b.def", and  c.def".
+Include the initialization function (<B>SOMInitModule</B>) in the export
+list, so that all classes will be initialized automatically, unless your
+initialization function does not need arguments and you explicitly invoke
+it yourself from an OS/2 DLL initialization routine.<!-- lm: 0x2 2 -->
+</UL>
+4.<!-- lm: 0x2 6 -->
+<UL>Using the object files and the export file, produce
+a binary class library.
+<P>
+<B>For AIX:</B>
+<PRE>   ld -o abc.dll -bE:abc.exp -e SOMInitModule -H512 -T512 \
+      a.o b.o c.o initfunc.o -lc -L$SOMBASE/lib -lsomtk
+</PRE>
+
+<P>
+The<B> -o</B> option assigns a name to the class library ("abc.dll"). The
+<B>-bE:</B> option designates the file with the appropriate export list.
+The<B> -e</B> option designates<B> SOMInitModule</B> as the initialization
+function. The<B> -H</B> and<B> -T</B> options must be supplied as shown;
+they specify the necessary alignment information for the text and data portions
+of your code. The<B> -l</B> options name the specific libraries needed by
+your classes. If your classes make use of classes in other class libraries,
+include a<B> -l</B> option for each of these also. The<B> ld</B> command
+looks for a library named "lib&lt;<I>x</I>&gt;.a", where &lt;<I>x</I>&gt;
+is the name provided with each<B> -l</B> option. The<B> -L</B> option specifies
+the directory where the "somtk" library resides.
+<P>
+<B>For OS/2:</B>
+<PRE>   set LIB=%SOMBASE%\lib;%LIB%
+   link386 /noi /packd /packc /align:16 /exepack \
+       a.obj b.obj c.obj initfunc.obj, abc.dll,,os2386 somtk, \
+       abc.def
+</PRE>
+
+<P>
+If your classes make use of classes in other class libraries, include the
+names of their import libraries immediately after "somtk" (before the next
+comma).<!-- lm: 0x2 2 -->
+</UL>  5.<!-- lm: 0x2 6 -->
+<UL>Create an import
+library that corresponds to the class library, so that programs and other
+class libraries can use (import) your classes.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>For AIX:</B>
+<PRE>   ar ruv libabc.a abc.exp   <B>Note the use of the  ".exp" file, not a ".o" file</B></PRE>
+
+<P>
+The first filename ("libabc.a") specifies the name to give to the import
+library. It should be of the form "lib&lt;<I>x</I>&gt;.a", where &lt;<I>x</I>&gt;
+represents your class library. The second filename ("abc.exp") specifies
+the exported symbols to include in the import library.
+<P>
+Caution: Although AIX shared libraries can be placed directly into an archive
+file ("lib&lt;<I>x</I>&gt;.a"), this is not recommended! A SOM class library
+should have a corresponding import library constructed directly from the
+combined export file.
+<P>
+<B>For OS/2:</B>
+<PRE>   implib /noi abc.lib abc.def
+</PRE>
+
+<P>
+The first filename ("abc.lib") specifies the name for the import library
+and should always have a suffix of ".lib". The second filename ("abc.def")
+specifies the exported symbols to include in the import library.
+<P>
+<B>Note: </B><B> SOMInitModule</B> should be included in the &lt;x&gt;.dll
+but not in &lt;x&gt;.lib.  If you are using an export file that contains
+the symbol<B> SOMInitModule,</B> delete it first;<B> SOMInitModule</B> should
+not appear in your import library because it need not be exported.<B> SOMInitModule
+</B>should be included when creating your file &lt;x&gt;.dll because all
+classes in the &lt;x&gt;.dll will be initialized.<!-- lm: 0x2 1 -->
+<P>
+
+
+<P><HR>
+
+<A HREF="165_L4_UsingWindowsclasslib.html">[Back: Using Windows class libraries]</A> <BR>
+<A HREF="167_L2_CustomizingMemoryMan.html">[Next: Customizing Memory Management]</A> 
+</BODY>
+</HTML>

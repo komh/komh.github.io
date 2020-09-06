@@ -1,0 +1,322 @@
+<HTML>
+<HEAD>
+<TITLE>Writing the Communication Object Code</TITLE>
+</HEAD>
+<BODY>
+<H1>Writing the Communication Object Code</H1><!-- entering slot 271 -->
+<P>
+An IPF communication object can be structured in many ways.  Its content
+depends on the function being implemented. Application-controlled windows
+typically simulate activity that might or might not require user interaction.
+
+<P>
+An example of a communication object is provided in the IPF sample program
+(available in the Toolkit), and is shown in the previous IPF-controlled
+window example. The program contains two procedures:
+<P>
+<B>IPFMain</B> registers a window class for the application-controlled window,
+creates an instance of the class, and registers it with IPF as a communication
+object.
+<P>
+<B>IPFWinProc</B> provides the animation in the application-controlled window.
+ IPFWinProc is called by IPFMain procedure.
+<PRE>#define INCL_WIN
+#define INCL_GPI
+#define INCL_DOS
+#define INCL_DOSMODULEMGR
+#define LINT_ARGS
+#define DINCL_32
+
+#include &lt;OS2.H&gt;
+#include "IPF.H"
+
+#define COM_HWND             4  /* Used in WinSetWindowULong              */
+#define FRAMES               5  /* Number of frames in animation sequence */
+#define BEEP_WARN_FREQ      60  /* Frequency of warning beep              */
+#define BEEP_WARN_DUR      100  /* Duration of warning beep               */
+
+USHORT   IPFClassRegistered = 0;         /* IPF class registered flag     */
+HWND     hwndClient;                     /* Handle to the client window   */
+HWND     hwndPrevious;                   /* Handle to the previous active */
+                                         /* object communication window   */
+HWND     hwndLatest;                     /* Handle to the latest active   */
+                                         /* object communication window   */
+
+MRESULT EXPENTRY IPFMain (PACVP pACVP, PCH Parameter);
+MRESULT EXPENTRY IPFWinProc (HWND hwnd, USHORT msg, MPARAM mp1, MPARAM mp2);
+VOID Error (PCH str);
+
+MRESULT EXPENTRY IPFMain (PACVP pACVP, PCH Parameter)
+{
+
+    HWND  hwndParent;         /* Handle of parent window in IPF             */
+    HWND  hwndFrame;          /* Handle to the frame                        */
+    ULONG WinStyle;           /* window style for creating frame            */
+    ULONG CtrlData;           /* control data for creating frame            */
+
+    Parameter; /* Warning Level 3 Avoidance */
+
+/** 1) Initialize **/
+    if (!IPFClassRegistered)
+    {
+        if (!WinRegisterClass (pACVP-&gt;hAB,
+                               "CLASS_IPF",
+                               (PFNWP) IPFWinProc,
+                               CS_SYNCPAINT | CS_SIZEREDRAW | CS_MOVENOTIFY,
+                               8))
+        {
+            DosBeep (BEEP_WARN_FREQ, BEEP_WARN_DUR);
+            exit (TRUE);
+        }
+        IPFClassRegistered = 1;
+    }
+    WinStyle = 0L;
+    CtrlData = 0L;
+</PRE>
+
+<PRE>    if (!(hwndFrame = WinCreateStdWindow (pACVP-&gt;hWndParent,
+                                          WinStyle,
+                                          &amp;CtrlData,
+                                          "CLASS_IPF",
+                                          "IPF",
+                                          0L,
+                                          0L,
+                                          0L,
+                                          &amp;hwndClient
+                                          )))
+    {
+        Error ("Cannot create window");
+        return (MRESULT) TRUE;
+    }
+
+/** 2) Process **/
+
+    pACVP-&gt;hWndACVP = hwndFrame;
+
+    hwndParent = pACVP-&gt;hWndParent;
+
+    hwndPrevious = WinSendMsg (pACVP-&gt;hWndParent,
+                               HM_SET_OBJCOM_WINDOW,
+                               (MPARAM) hwndFrame,
+                               NULL);
+
+    hwndLatest = WinSendMsg (pACVP-&gt;hWndParent,
+                             HM_QUERY,
+                             MPFROM2SHORT (NULL, HMQW_OBJCOM_WINDOW),
+                             NULL);
+
+    if (hwndFrame != hwndLatest)
+    {
+        Error ("Cannot set object communication window");
+        return (MRESULT) TRUE;
+    }
+
+/** 3) Finish **/
+
+    if (!WinSetWindowULong (hwndClient, COM_HWND, (ULONG) hwndPrevious))
+    {
+        Error ("Cannot save handle into reserved memory");
+        return (MRESULT) TRUE;
+    }
+    return (MRESULT) FALSE;
+}
+</PRE>
+
+<PRE>MRESULT EXPENTRY IPFWinProc (HWND hwnd, USHORT msg, MPARAM mp1, MPARAM mp2)
+{
+
+    static HAB      Hhab;         /* anchor block handle                    */
+    static HBITMAP  hbm [5];      /* array of bitmap handles                */
+    static HPS      hps;          /* presentation space                     */
+    static POINTL   ptl;          /* pointl                                 */
+    static HMODULE  hModule;      /* to get bitmaps from DLL resource       */
+    static SHORT    index;        /* index to current bitmap to display     */
+    static LONG     cxClient,
+                    cyClient;     /* window size                            */
+           <!-- entering slot 272 -->BOOL     rValue=TRUE;  /* FALSE if the message was acted         */
+                                  /* upon successfully                      */
+
+/** 1) Initialize **/
+
+    switch (msg)
+    {
+        case HM_UPDATE_OBJCOM_WINDOW_CHAIN:
+
+            hwndPrevious = (HWND) WinQueryWindowULong (hwnd, COM_HWND);
+
+            if (hwndPrevious == mp2)
+            {
+                 hwndPrevious = mp1;
+
+               if (!WinSetWindowULong (hwndClient,
+                                        COM_HWND,
+                                        (ULONG) hwndPrevious))
+                {
+                    Error ("Cannot save handle into reserved memory");
+                    break;
+                }
+            }
+            else
+            {
+                if (hwndPrevious != NULL)
+                {
+                    WinSendMsg (hwndPrevious,
+                                HM_UPDATE_OBJCOM_WINDOW_CHAIN,
+                                (MPARAM) mp1,
+                                (MPARAM) mp2);
+                }
+            }
+
+            rValue = FALSE;
+            break;
+</PRE>
+
+<PRE>        case WM_CREATE:
+
+            if (DosLoadModule (NULL, 0L, "IPF", &amp;hModule))
+            {
+                Error ("Cannot load module");
+                break;
+            }
+
+            if (!(hps = WinGetPS(hwnd)))
+            {
+                Error ("Cannot get presentation space");
+                break;
+            }
+
+            for (index = 0; index &lt; FRAMES; index++)
+            {
+                if (!(hbm [index] = GpiLoadBitmap (hps,
+                                                   hModule,
+                                                   (USHORT)(IDB_FRAME1+index),
+                                                   cxClient,
+                                                   cyClient)))
+                {
+                    Error ("Cannot load bitmap");
+                    return (MRESULT) rValue;
+                }
+            }
+
+            WinReleasePS (hps);
+
+            index = 0;
+
+            if (!(Hhab = WinQueryAnchorBlock (hwnd)))
+            {
+                Error ("Cannot retrieve anchor block handle");
+                break;
+            }
+
+            if (!WinStartTimer (Hhab, hwnd, ID_TIMER, 150))
+            {
+                Error ("Cannot start timer");
+                break;
+            }
+
+            rValue = FALSE;
+            break;
+</PRE>
+
+<PRE>        case WM_TIMER:
+
+            if (index++ == FRAMES-1)
+            {
+                index = 0;
+            }
+
+            WinInvalidateRect (hwnd, NULL, FALSE);
+
+            rValue = FALSE;
+            break;
+
+/** 2) Process **/
+
+        case WM_PAINT:
+
+            if (!(hps = WinBeginPaint (hwnd, NULL, NULL)))
+            {
+                Error ("Cannot set presentation space for drawing");
+                break;
+            }
+
+            if (!WinDrawBitmap (hps,
+                                hbm [index],
+                                NULL,
+                                &amp;ptl,
+                                CLR_NEUTRAL,
+                                CLR_BACKGROUND,
+                                DBM_NORMAL))
+            {
+                Error ("Cannot draw bitmap");
+                break;
+            }
+
+            WinEndPaint (hps);
+
+            rValue = FALSE;
+            break;
+
+        case WM_SIZE:
+
+            cxClient = SHORT1FROMMP (mp2);
+            cyClient = SHORT2FROMMP (mp2);
+
+            rValue = FALSE;
+            break;
+</PRE>
+
+<PRE>/** 3) Finish **/
+
+        case WM_CLOSE:
+
+            WinDestroyWindow (WinQueryWindow (hwnd, QW_PARENT));
+
+            rValue = FALSE;
+            break;
+
+        case WM_DESTROY:
+
+            WinStopTimer (Hhab, hwnd, ID_TIMER);
+
+            for (index = 0; index &lt; 8; index++)
+            {
+                GpiDeleteBitmap (hbm [index]);
+            }
+
+            hwndPrevious = (HWND) WinQueryWindowULong (hwnd, COM_HWND);
+
+            hwndLatest = WinSendMsg (hwnd,
+                                     HM_QUERY,
+                                     MPFROM2SHORT (NULL, HMQW_OBJCOM_WINDOW),
+                                     NULL);
+
+            WinSendMsg (hwndLatest,
+                        HM_UPDATE_OBJCOM_WINDOW_CHAIN,
+                        (MPARAM) hwndPrevious,
+                        (MPARAM) WinQueryWindow (hwnd, QW_PARENT));
+
+            DosFreeModule (hModule);
+
+            rValue = FALSE;
+            break;
+
+        default:
+
+            rValue = TRUE;
+            break;
+
+    }
+
+    return (rValue ? WinDefWindowProc (hwnd, msg, mp1, mp2) : 0L);
+
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="256_L1_ControllingWindowswi.html">[Back: Controlling Windows with Applications (ACVIEWPORTS)]</A> <BR>
+<A HREF="258_L3_UsingCommunicationWi.html">[Next: Using Communication Windows]</A> 
+</BODY>
+</HTML>

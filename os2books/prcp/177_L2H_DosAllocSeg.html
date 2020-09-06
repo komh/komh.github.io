@@ -1,0 +1,116 @@
+<HTMLHIDDEN>
+<HEAD>
+<TITLE>DosAllocSeg</TITLE>
+</HEAD>
+<BODY>
+<H1>DosAllocSeg</H1><!-- entering slot 218 -->
+<PRE>#define INCL_DOSMEMMGR
+
+USHORT  rc = DosAllocSeg(Size, Selector, AllocFlags);
+
+USHORT           Size;          /* Number of bytes requested */
+PSEL             Selector;      /* Selector allocated (returned) */
+USHORT           AllocFlags;    /* Allocation flags */
+
+USHORT           rc;            /* return code */
+</PRE>
+
+<P>
+<B>Example</B>
+<P>
+This example requests a segment of memory with 30,128 bytes.  The segment
+can be shared with a DosGetSeg API call.
+<PRE>#define INCL_DOSMEMMGR
+
+#define NUMBER_OF_BYTES 30128
+#define ALLOC_FLAG SEG_GETTABLE
+
+SEL    Selector;
+USHORT rc;
+
+   rc = DosAllocSeg(NUMBER_OF_BYTES,     /* # of bytes requested */
+                    &amp;Selector,           /* Selector allocated */
+                    ALLOC_FLAG);         /* Allocation flags */
+</PRE>
+
+<P>
+The following example requests a segment of memory with 4,000 bytes. The
+following example also shows how to suspend and resume execution of a thread
+within a process.  The main thread creates Thread2 and allows it to begin
+executing.  Thread2 iterates through a loop that prints a line and then
+sleeps, relinquishing its time slice to the main thread. After one iteration
+by Thread2, the main thread suspends Thread2 and then resumes it.  Subsequently,
+Thread2 completes the remaining three iterations.
+<PRE>#define INCL_DOSPROCESS
+
+#include &lt;os2.h&gt;
+
+#define   SEGSIZE       4000   /* Number of bytes requested in segment */
+#define   ALLOCFLAGS    0      /* Segment allocation flags - no sharing */
+#define   SLEEPSHORT    5L     /* Sleep interval - 5 milliseconds */
+#define   SLEEPLONG     75L    /* Sleep interval - 75 milliseconds */
+#define   RETURN_CODE   0      /* Return code for DosExit() */
+
+VOID APIENTRY Thread2()
+{
+  USHORT     i;
+
+  /* Loop with four iterations */
+  for(i=1; i&lt;5; i++)
+  {
+    printf("In Thread2, i is now %d\n", i);
+    /* Sleep to relinquish time slice to main thread */
+    DosSleep(SLEEPSHORT);          /* Sleep interval */
+  }
+  DosExit(EXIT_THREAD,             /* Action code - end a thread */
+          RETURN_CODE);            /* Return code */
+}
+
+
+main()
+{
+  TID        ThreadID;             /* Thread identification */
+  SEL        ThreadStackSel;       /* Segment selector for thread stack */
+  PBYTE      StackEnd;             /* Ptr. to end of thread stack */
+  USHORT     rc;
+
+  /** Allocate segment for thread stack; make pointer to end **/
+  /**  of stack. **/
+  /** We must allocate a segment in order to preserve **/
+  /**  segment protection for the thread.  **/
+
+  rc = DosAllocSeg(SEGSIZE,             /* Number of bytes requested */
+                   &amp;ThreadStackSel,     /* Segment selector (returned) */
+                   ALLOCFLAGS);         /* Allocation flags - no sharing */
+  StackEnd = MAKEP(ThreadStackSel, SEGSIZE-1);
+
+  /** Start Thread2 **/
+  if(!(rc=DosCreateThread((PFNTHREAD) Thread2,    /* Thread address */
+                       &amp;ThreadID,                 /* Thread ID (returned) */
+                       StackEnd)))   /* End of thread stack */
+    printf("Thread2 created.\n");
+
+  /* Sleep to relinquish time slice to Thread2 */
+  if(!(DosSleep(SLEEPSHORT)))                  /* Sleep interval */
+    printf("Slept a little to let Thread2 execute.\n");
+
+  /***** Suspend Thread2, do some work, then resume Thread2 *****/
+  if(!(rc=DosSuspendThread(ThreadID)))         /* Thread ID */
+    printf("Thread2 SUSPENDED.\n");
+  printf("Perform work that will not be interrupted by Thread2.\n");
+  if(!(rc=DosResumeThread(ThreadID)))          /* Thread ID */
+    printf("Thread2 RESUMED.\n");
+  printf("Now we may be interrupted by Thread2.\n");
+
+  /* Sleep to allow Thread2 to complete */
+  DosSleep(SLEEPLONG);                         /* Sleep interval */
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="176_L2H_DosAllocHuge.html">[Back: DosAllocHuge]</A> <BR>
+<A HREF="178_L2H_DosAllocShrSeg.html">[Next: DosAllocShrSeg]</A> 
+</BODY>
+</HTML>

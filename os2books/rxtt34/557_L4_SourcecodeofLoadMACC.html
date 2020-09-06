@@ -1,0 +1,892 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Source code of LoadMAC.CMD - part 4</TITLE>
+</HEAD>
+<BODY>
+<H1>Source code of LoadMAC.CMD - part 4</H1><!-- entering slot 602 -->
+<PRE> 
+/***       Start of Part 4 of the source code of TEMPLATE.CMD       ***/
+                                                                   /*!*/
+
+/* ------------------------------------------------------------------ */
+/* function: main procedure of the program                            */
+/*                                                                    */
+/* call:     called by the runtime system with:                       */
+/*           =&gt; call main parameter_of_the_program                    */
+/*                                                                    */
+/* returns:  program return code                                      */
+/*           If no return code is returned, the value of the variable */
+/*           prog.__ExitCode is returned to the calling program.      */
+/*                                                                    */
+/* Note:     YOU MUST FILL THIS ROUTINE WITH CODE.                    */
+/*           If you want to add further global variables you SHOULD   */
+/*           add them to the expose list of the procedure MAIN!       */
+/*                                                                    */
+Main: PROCEDURE expose (exposeList)
+
+                    /* load the necessary function from REXXUTIL      */
+  call rxFuncAdd 'SysSearchPath', 'REXXUTIL', 'SysSearchPath'
+
+                    /* strings which should not be written into       */
+                    /* the log file                                   */
+  prog.__LogExcludeWords = screen.__fgYellow screen.__highlight ,
+                           screen.__AttrOff
+
+                    /* get and split the parameter of the program     */
+  call SplitParameter arg(1), ':'
+
+                    /* load the DLL functions to work on the macro    */
+                    /* space                                          */
+  if LoadMacroSpaceFunctions() &lt;&gt; 0 then
+    call ShowError CIDRC.__unexpected_condition,,
+           'Cannot load the DLL functions to work with' ,
+           'the macrospace functions'
+
+                    /* process the parameter                          */
+  do i = 1 to argv.0
+
+    curKeyWord = argv.i.__keyWord
+    curKeyValue = argv.i.__keyValue
+
+    if wordPos( curKeyWord, ' LOAD SAVE QUERY ADD DROP ' ) &lt;&gt; 0 then
+    do
+                    /* The parameter LOAD, SAVE, QUERY, ADD and DROP  */
+                    /* need a keyvalue                                */
+      if curKeyValue = '' then
+            call ShowError CIDRC.__unexpected_condition ,,
+                        'Error: Keyvalue missing for parameter "' || ,
+                        curKeyWord || '"'
+    end /* if */
+
+    select
+
+      when curkeyword = 'CLEAR' then
+      do
+        call log ' Clearing the macro space ...'
+
+        curClearRC = SysClearREXXMacroSpace()
+
+        select
+
+          when curClearRC = 0 then
+            nop
+
+                    /* RC = 2 -&gt; no macros in the macro space         */
+          when curClearRC = 2 then
+            call ShowWarning,
+                   GetMacroDllErrorMessage( curClearRC )
+
+          otherwise
+            call ShowError CIDRC.__unexpected_condition ,,
+                        'Error ' || curClearRc || ' (' || ,
+                         GetMacroDllErrorMessage( curClearRC ) || ,
+                         ') clearing the macro space'
+
+        end /* select */
+
+      end /* when */
+
+      when curkeyword = 'LOAD' then
+      do
+                    /* load the macro space from a file               */
+        parse value GetMacroImageFile( curKeyValue ) WITH ,
+              thisRC curMacroImageFile
+
+        if thisRC &gt; 1 then
+          call ShowError CIDRC.__data_resource_not_found ,,
+                 'Cannot find the file "' || curMacroImageFile || '"'
+
+        call log ' Loading the macro space from the file ' || ,
+                   AddColor1( '"', curMacroImageFile ) || ' ...'
+
+        curLoadFileRC = SysLoadRexxMacroSpace( curMacroImageFile )
+        if curLoadFileRC &lt;&gt; 0 then
+          call ShowError CIDRC.__unexpected_condition ,,
+                        'Error ' || curLoadFileRC || ' (' || ,
+                        GetMacroDllErrorMessage( curLoadFileRC ) || ,
+                        ') loading the file'
+      end /* when */
+
+      when curkeyword = 'SAVE' then
+      do
+                    /* save the macro space to a file                 */
+        curMacroImageFile = curKeyValue
+
+                    /* add the extension if necessary                 */
+        if lastPos( '.', curMacroImageFile ) = 0 then
+          curMacroImageFile = curMacroImageFile || '.MAC'
+
+        parse var curMacroImageFile firstChar +1 curName
+        if firstChar = '!' then
+        do
+                    /* delete an existing target file                 */
+          curMacroImageFile = curName
+          if stream( curMacroImageFile, 'c', 'QUERY EXIST' ) &lt;&gt; '' then
+            '@del ' curMacroImageFile prog.__LogALL
+        end /* if firstChar = '!' then */
+
+        call log ' Saving the macro space in the file ' || ,
+                   AddColor1( '"', curMacroImageFile ) || ' ...'
+
+        curSaveFileRC = SysSaveRexxMacroSpace( curMacroImageFile )
+
+        select
+
+          when curSaveFileRC = 0 then
+            nop
+
+                    /* RC = 2 -&gt; no macros in the macro space         */
+          when curSaveFileRC = 2 then
+            call ShowWarning,
+                   GetMacroDllErrorMessage( curSaveFileRC )
+
+          otherwise
+            call ShowError CIDRC.__unexpected_condition ,,
+                        'Error ' || curSaveFileRC || ' (' || ,
+                        GetMacroDllErrorMessage( curSaveFileRC ) || ,
+                        ') saving the file'
+
+        end /* select */
+
+      end /* when */
+
+      when curkeyword = 'QUERY' then
+      do
+                    /* query if a macro exists                        */
+
+        parse var curKeyValue firstChar +1 curMacroName
+        if firstChar &lt;&gt; '!' then
+        do
+                    /* try to read the source file with the macro     */
+          curMacroName = GetMacroName( curKeyValue )
+          if curMacroName = '' then
+            curMacroName = curKeyValue
+        end /* if */
+
+        call log ' Querying the macro ' || ,
+                 AddColor1( '"', curMacroName ) || ' ...'
+
+        curQueryRC = SysQueryRexxMacro( curMacroName )
+
+                    /* set the program exit code according to the     */
+                    /* result of SysQueryRexxMacro                    */
+        prog.__ExitCode = 0
+        if curQueryRC = 'A' then
+          prog.__ExitCode = 2
+        if curQueryRC = 'B' then
+          prog.__ExitCode = 1
+
+        if prog.__ExitCode &lt;&gt; 0 then
+          call log ' --&gt; The macro exists (Option is: ' ||,
+                   AddColor1( '"', curQueryRC ) || ').'
+        else
+          call log ' --&gt; The macro does not exist.'
+
+      end /* when */
+
+      when curkeyword = 'REORDER' then
+      do
+                    /* reorder a macro                                */
+
+                    /* split the value into the macro name and the    */
+                    /* new option                                     */
+        parse var curKeyValue curMacroCMDFile ',' newOption
+        if newOption &lt;&gt; '' then
+        do
+                    /* check the option                               */
+          if pos( newOption, 'AaBb' ) = 0 then
+            call ShowError CIDRC.__unexpected_condition ,,
+                         'Invalid option "' || newOption || ,
+                         '" for the REORDER command'
+        end /* if */
+        else
+          newOption = 'B'
+
+        parse var curMacroCMDFile firstChar +1 curMacroName
+        if firstChar &lt;&gt; '!' then
+        do
+                    /* try to read the source file with the macro     */
+          curMacroName = GetMacroName( curMacroCMDFile )
+          if curMacroName = '' then
+            curMacroName = curMacroCmdFile
+        end /* if */
+
+        call log ' Reordering the macro ' || ,
+                 AddColor1( '"', curMacroName ) ||,
+                 'the new option is ' || ,
+                 AddColor1( '"', newOption ) || ' ...'
+
+        curReorderRC = SysReorderRexxMacro( curMacroName, newOption )
+
+        select
+
+          when curReorderRC = 0 then
+            nop
+
+                    /* RC = 2 -&gt; macro not found                      */
+          when curReorderRC = 2 then
+            call ShowWarning,
+                   GetMacroDllErrorMessage( curReorderRC )
+
+          otherwise
+            call ShowError CIDRC.__unexpected_condition ,,
+                        'Error ' || curReorderRc || ' (' || ,
+                         GetMacroDllErrorMessage( curReorderRC ) || ,
+                         ') reordering the macro'
+
+        end /* select */
+
+      end /* when */
+
+      when curkeyword = 'DROP' then
+      do
+                    /* drop a macro from the macro space              */
+        parse var curKeyValue firstChar +1 curMacroName
+        if firstChar &lt;&gt; '!' then
+        do
+                    /* try to read the source file with the macro     */
+          curMacroName = GetMacroName( curKeyValue )
+          if curMacroName = '' then
+            curMacroName = curKeyValue
+        end /* if */
+
+        call Log ' Dropping the macro ' || ,
+                 AddColor1( '"', curMacroName ) || '...'
+
+        curDropRC = SysDropRexxMacro( curMacroName )
+
+        select
+
+          when curDropRC = 0 then
+            nop
+
+                    /* RC = 2 -&gt; macro not found                      */
+          when curDropRC = 2 then
+            call ShowWarning,
+                   GetMacroDllErrorMessage( curDropRC )
+
+          otherwise
+            call ShowError CIDRC.__unexpected_condition ,,
+                        'Error ' || curDropRc || ' (' || ,
+                         GetMacroDllErrorMessage( curDropRC ) || ,
+                         ') dropping the macro'
+
+        end /* select */
+
+      end /* when */
+
+      when curkeyword = 'ADD' then
+      do
+                    /* add a macro to the macro space                 */
+
+                    /* split the value into the macro name and the    */
+                    /* new option                                     */
+        parse var curKeyValue curMacroCMDFile ',' curOption
+        if curOption &lt;&gt; '' then
+        do
+                    /* check the option                               */
+          if pos( curOption, 'AaBb' ) = 0 then
+            call ShowError CIDRC.__unexpected_condition ,,
+                         'Invalid option "' || curOption || ,
+                         '" for the ADD command'
+        end /* if */
+        else
+          curOption = 'B'
+
+        parse var curMacroCMDFile firstChar +1 curName
+        if firstChar = '!' then
+        do
+                    /* we should overwrite an existing macro          */
+          curMacroCMDFile = curName
+          overwrite = 'Y'
+        end /* if */
+        else
+          overwrite = '<!-- entering slot 603 -->N'
+
+        parse value GetMacroCMDFileName( curMacroCMDFile ) WITH ,
+              thisRC macroCmdFile
+
+        if thisRC &gt; 1 then
+          call ShowError CIDRC.__data_resource_not_found ,,
+                     'Cannot find the file "' || MacroCMDFile || '"'
+        else
+          curMacroCMDFile = macroCmdFile
+
+        call log ' Loading a macro from the file ' || ,
+                 AddColor1( '"', curMacroCMDFile ) || ' ...'
+
+        curMacroName = GetMacroName( curMacroCMDFile )
+
+        if curMacroName = '' then
+           call ShowError CIDRC.__unexpected_condition ,,
+                  'Cannot read the file "' || curMacroCMDFile || '"'
+
+        call Log '  The name of the macro is ' || ,
+                 AddColor1( '"', curMacroName ) || ,
+                 ', the option is ' || AddColor1( '"', curOption ) || '.'
+
+        if SysQueryRexxMacro( curMacroName ) &lt;&gt; '' &amp; overWrite = 'N' then
+        do
+          call ShowError CIDRC.__unexpected_condition ,,
+                 'The macro "' || curMacroName || '" already exists'
+        end /* if */
+
+        curLoadRC = SysAddRexxMacro( curMacroName,,
+                                     curMacroCMDFile , curOption )
+
+        select
+
+          when curLoadRC = 0 then
+            nop
+
+                    /* RC = 4 -&gt; macro already exist                  */
+          when curLoadRC = 4 then
+            call ShowWarning  ,
+                   curLoadRc || ' (' || ,
+                   GetMacroDllErrorMessage( curLoadRC ) || ,
+                   ') loading the file.'
+
+          otherwise
+            call ShowError CIDRC.__unexpected_condition ,,
+                          'Error ' || curLoadRc || ' (' || ,
+                           GetMacroDllErrorMessage( curLoadRC ) || ,
+                           ') loading the file'
+        end /* select */
+
+      end /* when */
+
+      otherwise
+      do
+                    /* invalid parameter found                        */
+        call ShowError CIDRC.__unexpected_condition ,,
+               'Invalid parameter found: "' || curKeyWord || '"'
+
+      end /* otherwise */
+
+    end /* select */
+
+  end /* do i = 1 argv.0 */
+
+
+/* ------------------------------ */
+
+                        /* exit the program                           */
+RETURN
+
+/* ------------------------------------------------------------------ */
+
+/*** INSERT FURTHER SUBROUTINES HERE ***/
+
+/*** Note: Do not forget the string 'EXPOSELIST' in the exposeList  ***/
+/***       of ALL procedures!                                       ***/
+
+/* ------------------------------------------------------------------ */
+/* function: get the fully qualified name of a macro cmd file         */
+/*                                                                    */
+/* call:     fullname = GetMacroCMDFileName( curName )                */
+/*                                                                    */
+/* where:    curName - name of the file with the macro                */
+/*                                                                    */
+/* returns:  n x                                                      */
+/*           where n is the return code (0 okay, else error) and      */
+/*           x is the searched file name                              */
+/*                                                                    */
+GetMacroCmdFileName: PROCEDURE expose (exposeList)
+
+return SearchFile( arg( 1 ), '.CMD' )
+
+/* ------------------------------------------------------------------ */
+/* function: get the fully qualified name of a macro image file       */
+/*                                                                    */
+/* call:     fullName = GetMacroImageFileName( curName )              */
+/*                                                                    */
+/* where:    curName - name of the file with the macro image          */
+/*                                                                    */
+/* returns:  n x                                                      */
+/*           where n is the return code (0 okay, else error) and      */
+/*           x is the searched file name                              */
+/*                                                                    */
+GetMacroImageFile: PROCEDURE expose (exposeList)
+
+return SearchFile( arg( 1 ), '.MAC' )
+
+/* ------------------------------------------------------------------ */
+/* function: Search a file in the PATH directories                    */
+/*                                                                    */
+/* call:     fullName = SearchFile( filename, extension )             */
+/*                                                                    */
+/* where:    filename - name of the file                              */
+/*           extension - extension to use if 'filename' contains no   */
+/*                       extension                                    */
+/*                                                                    */
+/* returns:  n x                                                      */
+/*           where n is the return code (0 okay, else error) and      */
+/*           x is the searched file name                              */
+/*                                                                    */
+SearchFile: PROCEDURE expose (exposeList)
+  parse arg filename, extension
+
+  thisRC_No = 2
+  thisRC_Name = fileName
+
+  signal on syntax name SearchFileEnd
+
+                    /* add the extension if necessary                 */
+  if left( extension, 1 ) &lt;&gt; '.' then
+    extension = '.' || extension
+
+  if lastPos( '.', filename ) = 0 then
+  do
+    filename = fileName || extension
+    thisRC_Name = fileName
+  end /* if */
+
+  if pos( '\', fileName ) = 0 then
+  do
+    fileName = SysSearchPath( 'PATH', fileName )
+    if fileName &lt;&gt; '' then
+    do
+      thisRC_Name = fileName
+      thisRC_No = 0
+    end /* if */
+  end /* if */
+  else
+    thisRC_No = 1
+
+SearchFileEnd:
+
+return thisRC_No thisRC_Name
+
+/* ------------------------------------------------------------------ */
+/* function: get the name for a macro                                 */
+/*                                                                    */
+/* call:     curMacroName = GetMacroName( curMacroCMDFile )           */
+/*                                                                    */
+/* where:    curMacroCMDFile - name of the file with the macro        */
+/*                                                                    */
+/* returns:  the name of the macro or ''                              */
+/*                                                                    */
+/* notes:    GetMacroName first tries to get the macro name from the  */
+/*           first line of the file. Is this fails, it uses the name  */
+/*           of the file without the extension as macro name.         */
+/*                                                                    */
+GetMacroName: PROCEDURE expose (exposeList)
+  parse arg CurMacroCMDFile
+
+                    /* init the return code                           */
+  curMacroName = ''
+
+  parse value GetMacroCMDFileName( curMacroCMDFile ) WITH ,
+        thisRC curMacroCmdFile
+
+  if thisRC &lt;= 1 then
+  do
+                    /* check the filetype                             */
+    if stream( curMacroCMDFile, 'c', 'QUERY EXISTS' ) &lt;&gt; '' then
+    do
+      curMacroSignatur = charIn( curMacroCMDFile, 1,2 )
+
+                    /* close the file                                 */
+      call stream curMacroCMDFile, 'c', 'CLOSE'
+
+      if length( curMacroSignatur ) = 2 then
+      do
+        if curMacroSignatur = '/' || '*' then
+        do
+                    /* get the name for the macro                     */
+          firstMacroLine = lineIn( curMacroCMDFile )
+
+                    /* close the macro file                           */
+          call stream curMacroCmdFile, 'c', 'CLOSE'
+
+          parse upper var firstMacroLine . 'MACRONAME:' curMacroName .
+          curMacroName = strip( curMacroName )
+          parse var curMacroName tc +1 .
+          if tc = '"' | tc = "'" then
+            parse var firstMacroLine . 'MACRONAME:' (tc) curMacroName (tc)
+          else
+            curMacroName = strip( word( curMacroName, 1 ) )
+        end /* if */
+
+        if curMacroName = '' then
+        do
+          curMacroName = fileSpec( "name", curMacroCMDFile )
+          if lastPos( '.', curMacroName ) &lt;&gt; 0 then
+            curMacroName = substr( curMacroName, 1,,
+                           lastPos( '.', curMacroName )-1 )
+        end /* if curMacroName = '' then */
+      end /* if length( curMacroSignatur ) = 2 then */
+    end /* if stream( curMacroCMDFile, 'c', 'QUERY EXISTS' ) &lt;&gt; '' then */
+  end /* if curMacroCMDFile &lt;&gt; '' then */
+
+return curMacroName
+
+/* ------------------------------------------------------------------ */
+/* function: split a string into separate arguments                   */
+/*                                                                    */
+/* call:     call SplitParameter Parameter_string, separator          */
+/*                                                                    */
+/* where:    parameter_string - string to split                       */
+/*           separator - separator character to split a parameter     */
+/*                       into keyword and keyvalue                    */
+/*                                                                    */
+/* returns:  the number of arguments                                  */
+/*           The arguments are returned in the stem argv.:            */
+/*             argv.0 = number of arguments                           */
+/*             argv.n.__keyword = keyword                             */
+/*             argv.n.__keyValue = keyValue                           */
+/*                                                                    */
+/* note:     handles arguments in quotes and double quotes also       */
+/*                                                                    */
+/*                                                                    */
+SplitParameter: PROCEDURE EXPOSE (exposeList) argv.
+
+                    /* get the parameter                              */
+  parse arg thisArgs, thisSeparator
+
+                    /* init the result stem                           */
+  argv.0 = 0
+
+  do while thisargs &lt;&gt; ''
+
+    parse value strip( thisArgs, "B" ) with curArg thisArgs
+
+    parse var curArg tc +1 .
+    if tc = '"' | tc = "'" then
+      parse value curArg thisArgs with (tc) curArg (tc) ThisArgs
+
+    parse var curArg '' -1 lastChar 1 argType (thisSeparator) argValue
+
+    parse var argValue tc +1 .
+    if tc = '"' | tc = "'" then
+      parse value argValue thisArgs with (tc) argValue (tc) ThisArgs
+
+    argtype  = strip( argType  )
+    argValue = strip( argValue )
+
+    i = argv.0 + 1
+
+    if translate( argType ) &lt;&gt; 'CLEAR' &amp; ,
+       argValue = '' &amp; lastChar &lt;&gt; thisSeparator then
+    do
+      argv.i.__keyWord = 'ADD'
+      argv.i.__KeyValue = argType
+    end /* if */
+    else
+    do
+      argv.i.__keyword = translate( argType )
+      argv.i.__KeyValue = argValue
+    end /* else */
+
+    argv.0 = i
+
+  end /* do while thisArgs &lt;&gt; '' */
+
+RETURN argv.0
+
+/* ------------------------------------------------------------------ */
+/* function: get the message for an error number from the macro       */
+/*           functions                                                */
+/*                                                                    */
+/* call:     GetMacroDLLErrorMessage <!-- entering slot 604 -->errorNo                          */
+/*                                                                    */
+/* where:    errorNo - error number                                   */
+/*                                                                    */
+/* returns:  error message                                            */
+/*                                                                    */
+GetMacroDllErrorMessage: PROCEDURE expose (exposeList)
+  parse arg thisErrorNo .
+
+  select
+
+    when thisErrorNo = 1 then
+      thisErrorMessage =  'Not enough memory'
+
+    when thisErrorNo = 2 then
+      thisErrorMessage =  'Macro not found'
+
+    when thisErrorNo = 3 then
+      thisErrorMessage =  'Extension required'
+
+    when thisErrorNo = 4 then
+      thisErrorMessage =  'Macro already exist'
+
+    when thisErrorNo = 5 then
+      thisErrorMessage =  'File error'
+
+    when thisErrorNo = 6 then
+      thisErrorMessage =  'Signatur error'
+
+    when thisErrorNo = 7 then
+      thisErrorMessage =  'Sourcefile not found'
+
+    when thisErrorNo = 8 then
+      thisErrorMessage =  'Invalid position'
+
+    otherwise
+      thisErrorMessage = 'Unknwon error'
+
+  end /* select */
+
+RETURN thisErrorMessage
+
+/* ------------------------------------------------------------------ */
+/* function: load the functions to process the macro space            */
+/*                                                                    */
+/* call:     thisRC = LoadMacroSpaceFunctions()                       */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  0 =  okay                                                */
+/*           else error                                               */
+/*                                                                    */
+/*                                                                    */
+LoadMacroSpaceFunctions: PROCEDURE expose (exposeList)
+                    /* init the stem with the macro function names    */
+
+                    /*-functions from the new REXXUTIL DLL            */
+  i = 0; newFunctions.0 = i;
+  i=i+1; newFunctions.i = 'SysQueryRexxMacro'
+  i=i+1; newFunctions.i = 'SysAddRexxMacro'
+  i=i+1; newFunctions.i = 'SysClearRexxMacroSpace'
+  i=i+1; newFunctions.i = 'SysdropRexxMacro'
+  i=i+1; newFunctions.i = 'SysLoadRexxMacroSpace'
+  i=i+1; newFunctions.i = 'SysSaveRexxMacroSpace'
+         newFunctions.0 = i
+
+                    /* name of the DLL with the functions             */
+  DLLtoUse = ''
+
+                    /* possible names of the DLL to use               */
+  possibleDLLS = 'REXXUTIL' global.__RexxUtilDLL
+
+  do i = 1 to words( possibleDLLs ) while DLLToUse = ''
+    curDLLName = word( possibleDLLs, i )
+
+                    /* try to load the first function                 */
+    call rxFuncAdd newFunctions.1, curDLLName, newFunctions.1
+
+                    /* check if the call was successfull              */
+    if FunctionLoaded( newFunctions.1, '"dummy"' ) = 0 then
+      DLLToUse = curDLLName
+    else
+      call rxFuncDrop newFunctions.1
+  end /* do i = 1 to ... */
+
+  if DLLToUse &lt;&gt; '' then
+  do
+    thisRC = 0
+                    /* load the other functions                       */
+    do i = 2 to newFunctions.0
+      call rxFuncAdd newFunctions.i, DLLToUse, newFunctions.i
+    end /* do i = 2 to newFunctions.0 */
+  end /* if */
+  else
+    thisRC = 1
+
+RETURN thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: Check if a function is loaded                            */
+/*                                                                    */
+/* call:     thisRC = FunctionLoaded( Name {,parm1} {...} {,parm#}    */
+/*                                                                    */
+/* where:    name - name of the function                              */
+/*           parm1 ... parm#                                          */
+/*              parameter for the function                            */
+/*                                                                    */
+/* returns:  0 - okay, function is loaded                             */
+/*           else error: either the function is not loaded or the     */
+/*                       parameter are invalid                        */
+/*                                                                    */
+FunctionLoaded: PROCEDURE expose (exposeList)
+
+                    /* init the return code                           */
+  thisRC = 1
+                    /* install a local error handler                  */
+  signal on syntax name functionLoadedEnd
+
+                    /* create the statement to call the function      */
+  stmt = 'functionRC = ' || arg(1) || '('
+
+  do i = 2 to arg()
+    stmt = stmt arg( i )
+  end /* do i = 1 to arg() */
+
+  stmt = stmt || ')'
+
+                    /* execute the statement                          */
+  interpret stmt
+
+                    /* the next statement is only executed if there's */
+                    /* no error                                       */
+  thisRC = 0
+
+FunctionLoadedEnd:
+
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: Show the invocation syntax                               */
+/*                                                                    */
+/* call:     called by the runtime system with                        */
+/*           =&gt; call ShowUsage                                        */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  ''                                                       */
+/*                                                                    */
+/* Note:     YOU SHOULD FILL THIS ROUTINE WITH CODE.                  */
+/*           You may change the return code for your program in this  */
+/*           routine. The default for the return code is 253.         */
+/*           (The variable for the return code is prog.__ExitCode)    */
+/*                                                                    */
+/*                                                                    */
+ShowUsage: PROCEDURE expose (exposeList)
+  call ShowString I!.__GetMsg( 14 ) || ' ' ,,                /* v3.06 */
+                  prog.__name ,                              /* v3.06 */
+                  global.__userUsage prog.__DefParms         /* v3.06 */
+
+RETURN ' '                                                   /* v3.03 */
+
+
+/* ------------------------------------------------------------------ */
+/* function: add quote chars and color codes to a string              */
+/*                                                                    */
+/* call:     AddColor1( quoteChar ,myString )                         */
+/*                                                                    */
+/* where:    quoteChar - leading and trailing character for the       */
+/*                       converted string (may be omitted)            */
+/*           myString - string to convert                             */
+/*                                                                    */
+/* returns:  converted string                                         */
+/*                                                                    */
+/* note:     Add the color codes used in this routine to the          */
+/*           variable 'prog.__LogExcludeWords' if you don't want      */
+/*           them in the logfile. Example:                            */
+/*                                                                    */
+/*               prog.__LogExcludeWords = screen.__fgYellow ,         */
+/*                                        screen.__highlight ,        */
+/*                                        screen.__AttrOff            */
+/*                                                                    */
+/*           This should be one of the first statements in the        */
+/*           routine main.                                            */
+/*                                                                    */
+AddColor1: PROCEDURE expose (exposeList)
+  parse arg quoteChar, myString
+
+return quoteChar || screen.__fgYellow || screen.__highlight || ,
+       myString || ,
+      screen.__AttrOff || quoteChar
+
+/* ------------------------------------------------------------------ */
+/* note: You must uncomment these routines <!-- entering slot 605 -->before using them!!!       */
+
+/*** DEBUGGING SUBROUTINES ***/
+
+/**DEBUG** Delete this line before using the debugging routines!!! */
+
+
+/* ------------------------------------------------------------------ */
+/* function: show all variables defined for the routine calling       */
+/*           this routine.                                            */
+/*                                                                    */
+/* call:     ShowDefinedVariables {N}, {varMask}                      */
+/*                                                                    */
+/* where:    N - no pause if the screen is full                       */
+/*           varMask - mask for the variables                         */
+/*                                                                    */
+/* returns:  nothing                                                  */
+/*                                                                    */
+/* note:     This routine needs Dave Boll's DLL RXU.DLL!              */
+/*           Be aware that the special REXX variables SIGL, RC and    */
+/*           RESULT are changed if you call this routine!             */
+/*                                                                    */
+/*                                                                    */
+ShowDefinedVariables:
+  parse upper arg SDV.__pauseMode, SDV.__varMask
+
+
+                                /* install a local error handler      */
+  signal on syntax name SDV.__RXUNotFound
+
+                                /* load the necessary DLL function    */
+  call rxFuncDrop 'RxVLIst'
+  call rxFuncAdd 'RxVlist', 'RXU', 'RxVList'
+
+  call rxFuncDrop 'RxPullQueue'
+  call rxFuncAdd 'RxPullQueue', 'RXU', 'RxPullQueue'
+
+                                /* create a queue for the variables   */
+  SDV.__newQueue = rxqueue( 'create' )
+
+                                /* the 'D' parameter of the RxVList   */
+                                /*-functions won't pause if the       */
+                                /* screen is full                     */
+  SDV.__thisRC = RxVList( SDV.__varMask, 'V' , SDV.__newQueue )
+
+                                /* ignore local variables of this     */
+                                /* routine                            */
+  SDV.__thisRC = SDV.__thisRC
+
+  say '  ' || copies( 'Ä',76 )
+
+  if SDV.__thisRC &lt;&gt; 0 then
+  do
+
+    say '  Defined variable(s) and their values:'
+    SDV.__i = 0
+
+    do SDV.__n = 1 to SDV.__ThisRC
+      if SDV.__i &gt;= 23 &amp; ,
+         SDV.__pauseMode &lt;&gt; 'N' then
+      do
+        ADDRESS 'CMD' 'PAUSE'
+        SDV.__i = 0
+      end /* if */
+      SDV.__varName = RxPullQueue( SDV.__newQueue, 'Nowait', 'SDV.__dummy' )
+      SDV.__varValue = RxPullQueue( SDV.__newQueue, 'Nowait', 'SDV.__dummy' )
+
+                                /* ignore local variables of this     */
+                                /* routine                            */
+      if left( SDV.__varName, 6 ) &lt;&gt; 'SDV.__' then
+      do
+        say '     ' || SDV.__varName || ' = "' || SDV.__varValue || '"'
+        SDV.__i = SDV.__i+1
+      end /* if right( ... */
+
+    end /* do */
+
+                        /* delete the queue for the variables         */
+    call rxqueue 'Delete', SDV.__newQueue
+  end
+  else
+    say '  No variables defined.'
+
+  say '  ' || copies( 'Ä',76 )
+
+                        /* delete local variables                     */
+  drop SDV.
+RETURN ' '                                                   /* v3.03 */
+
+                        /* error exit for ShowDefinedVariables        */
+SDV.__RXUNotFound:
+  say 'ShowDefinedVariables: RXU.DLL not found'
+RETURN 255
+
+/*   Delete this line before using the debugging routines!!!    **DEBUG**/
+
+/***        End of Part 4 of the source code of TEMPLATE.CMD        ***/
+/**********************************************************************/
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="556_L4_SourcecodeofLoadMACC.html">[Back: Source code of LoadMAC.CMD - part 1]</A> <BR>
+<A HREF="558_L3_CDPLAYCMD.html">[Next: CDPLAY.CMD]</A> 
+</BODY>
+</HTML>

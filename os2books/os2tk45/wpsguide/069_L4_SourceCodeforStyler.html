@@ -1,0 +1,930 @@
+<HTML>
+<HEAD>
+<TITLE>Source Code for Styler</TITLE>
+</HEAD>
+<BODY>
+<H1>Source Code for Styler</H1><!-- entering slot 70 -->
+<P>
+The following sample illustrates the source code (C):
+<PRE>/*
+ * File.....: WPSTYLER.C
+ *
+ * Purpose..: Workplace Shell Object Styler.
+ *
+ * Instance Methods...:
+ *            Sty_InsertObjectStylePage()
+ *            Sty_QueryObjectStyle()
+ *            Sty_SetObjectStyle()
+ *            Sty_wpInitData()
+ *            Sty_wpDragOver()
+ *            Sty_wpDrop()
+ *            Sty_wpOpen()
+ *            Sty_wpAddSettingsPages()
+ *            Sty_wpAddObjectWindowPage()
+ *            Sty_wpAddObjectGeneralPage()
+ *
+ * Class Methods...:
+ *            StyM_clsQueryModuleHandle()
+ *            StyM_wpclsInitData()
+ *            StyM_wpclsQueryIcon()
+ *            StyM_wpclsQueryStyle()
+ *            StyM_wpclsQueryDefaultHelp()
+ *            StyM_wpclsQueryDefaultView()
+ *
+ * Dialog Procedures and Functions...:
+ *            DialogProc()
+ *            MLEImportText()
+ *            MLEExportText()
+ */
+
+#pragma comment(compiler)
+#pragma info(nogen)
+
+#define Styler_Class_Source
+#define M_Styler_Class_Source
+#include "wpstyler.ih"
+
+/*
+ * Prototype local functions used
+ */
+MRESULT EXPENTRY DialogProc(HWND, ULONG, MPARAM, MPARAM);
+ULONG   EXPENTRY MLEImportText(HWND, CHAR *, ULONG);
+APIRET  EXPENTRY MLEExportText(HWND, PSZ *);
+
+CHAR szHelpLibrary[] = "wpstyler.hlp";
+
+/*
+ *  Override: InsertObjectStylePage
+ *
+ *  Description:
+ *    Insert the Style page into the Settings notebook
+ */
+
+SOM_Scope ULONG SOMLINK Sty_InsertObjectStylePage(Styler *somSelf,
+                                                  HWND hwndDlg)
+{
+   PAGEINFO  pi;
+
+   /* StylerData *somThis = StylerGetData(somSelf); */
+   StylerMethodDebug("Styler", "Sty_InsertObjectStylePage");
+
+   memset((PCH) &amp;pi, 0, sizeof(PAGEINFO));
+   pi.cb                  = sizeof(PAGEINFO);
+   pi.hwndPage            = NULLHANDLE;
+   pi.usPageStyleFlags    = BKA_MAJOR;
+   pi.usPageInsertFlags   = BKA_FIRST;
+   pi.pfnwp               = DialogProc;
+   pi.resid               = _clsQueryModuleHandle(_Styler);
+   pi.dlgid               = DLG_STYLE;
+   pi.pszName             = "~Style";
+   pi.pCreateParams       = somSelf;
+   pi.pszHelpLibraryName  = szHelpLibrary;
+
+   return _wpInsertSettingsPage(somSelf, hwndDlg, &amp;pi);
+}
+
+/*
+ *  Override: QueryObjectStyle
+ *
+ *  Description:
+ *    Query the object's title and current style.
+ *    Set the Styler Settings page checkboxes and MLE.
+ */
+
+SOM_Scope ULONG SOMLINK Sty_QueryObjectStyle(Styler *somSelf,
+                                             HWND hwndDlg)
+{
+   StylerData *somThis = StylerGetData(somSelf);
+   StylerMethodDebug("Styler", "Sty_QueryObjectStyle");
+
+   /*
+    * Query and set the object's name in the notebook page
+    */
+   MLEImportText(WinWindowFromID(hwndDlg, DLG_OBJECTNAME),
+                 _wpQueryTitle(_self), 0);
+
+   /*
+    * Query the object's current state
+    */
+   _ulStyle = _wpQueryStyle(_self);
+
+   PMWinSetDlgItemChecked(hwndDlg, DLG_COPY,
+      _ulStyle &amp; OBJSTYLE_NOCOPY ? BM_UNCHECKED : BM_CHECKED);
+
+   PMWinSetDlgItemChecked(hwndDlg, DLG_SHADOW,
+      _ulStyle &amp; OBJSTYLE_NOLINK ? BM_UNCHECKED : BM_CHECKED);
+
+   PMWinSetDlgItemChecked(hwndDlg, DLG_DELETE,
+      _ulStyle &amp; OBJSTYLE_NODELETE ? BM_UNCHECKED : BM_CHECKED);
+
+   PMWinSetDlgItemChecked(hwndDlg, DLG_DRAG,
+      _ulStyle &amp; OBJSTYLE_NODRAG ? BM_UNCHECKED : BM_CHECKED);
+
+   PMWinSetDlgItemChecked(hwndDlg, DLG_DROP,
+      _ulStyle &amp; OBJSTYLE_NODROP ? BM_UNCHECKED : BM_CHECKED);
+
+   PMWinSetDlgItemChecked(hwndDlg, DLG_SETTINGS,
+      _ulStyle &amp; OBJSTYLE_NOSETTINGS ? BM_UNCHECKED : BM_CHECKED);
+
+   PMWinSetDlgItemChecked(hwndDlg, DLG_MOVE,
+      _ulStyle &amp; OBJSTYLE_NOMOVE ? BM_UNCHECKED : BM_CHECKED);
+
+   PMWinSetDlgItemChecked(hwndDlg, DLG_PRINT,
+      _ulStyle &amp; OBJSTYLE_NOPRINT ? BM_UNCHECKED : BM_CHECKED);
+
+   PMWinSetDlgItemChecked(hwndDlg, DLG_RENAME,
+      _ulStyle &amp; OBJSTYLE_NORENAME ? BM_UNCHECKED : BM_CHECKED);
+
+   PMWinSetDlgItemChecked(hwndDlg, DLG_TEMPLATE,
+      _ulStyle &amp; OBJSTYLE_TEMPLATE ? BM_CHECKED : BM_UNCHECKED);
+
+   return _ulStyle;
+}
+
+/*
+ *  Override: SetObjectStyle
+ *
+ *  Description:
+ *    Query the current checkbox state and set the style of the
+ *    object accordingly.
+ */
+
+SOM_Scope void SOMLINK Sty_SetObjectStyle(Styler *somSelf,
+                                          HWND hwndDlg)
+{
+   PSZ pszName;
+   StylerData *somThis = StylerGetData(somSelf);
+   StylerMethodDebug("Styler", "Sty_SetObjectStyle");
+
+   /*
+    * NOCOPY: This object cannot be copied
+    */
+   if (PMWinIsDlgItemChecked(hwndDlg, DLG_COPY))
+     _ulStyle &amp;= ~OBJSTYLE_NOCOPY;
+   else
+     _ulStyle |= OBJSTYLE_NOCOPY;
+
+   /*
+    * NOSHADOW: This object cannot have a shadow created
+    */
+   if (PMWinIsDlgItemChecked(hwndDlg, DLG_SHADOW))
+     _ulStyle &amp;= ~OBJSTYLE_NOLINK;
+   else
+     _ulStyle |= OBJSTYLE_NOLINK;
+
+   /*
+    * NODELETE: This object cannot be deleted
+    */
+   if (PMWinIsDlgItemChecked(hwndDlg, DLG_DELETE))
+     _ulStyle &amp;= ~OBJSTYLE_NODELETE;
+   else
+     _ulStyle |= OBJSTYLE_NODELETE;
+
+   /*
+    * NODRAG: This object cannot be dragged
+    */
+   if (PMWinIsDlgItemChecked(hwndDlg, DLG_DRAG))
+     _ulStyle &amp;= ~OBJSTYLE_NODRAG;
+   else
+     _ulStyle |= OBJSTYLE_NODRAG;
+
+   /*
+    * NODROP: No other object can be dropped on this object.
+    *         However, object can be dragged and dropped on other objects.
+    */
+   if (PMWinIsDlgItemChecked(hwndDlg, DLG_DROP))
+     _ulStyle &amp;= ~OBJSTYLE_NODROP;
+   else
+     _ulStyle |= OBJSTYLE_NODROP;
+
+   /*
+    * NODRAG: This object cannot be moved
+    */
+   if (PMWinIsDlgItemChecked(hwndDlg, DLG_MOVE))
+     _ulStyle &amp;= ~OBJSTYLE_NOMOVE;
+   else
+     _ulStyle |= OBJSTYLE_NOMOVE;
+
+   /*
+    * NOPRINT: This object cannot be printed
+    */
+   if (PMWinIsDlgItemChecked(hwndDlg, DLG_PRINT))
+     _ulStyle &amp;= ~OBJSTYLE_NOPRINT;
+   else
+     _ulStyle |= OBJSTYLE_NOPRINT;
+
+   /*
+    * NORENAME: This object cannot be renamed
+    */
+   if (PMWinIsDlgItemChecked(hwndDlg, DLG_RENAME))
+     _ulStyle &amp;= ~OBJSTYLE_NORENAME;
+   else
+     _ulStyle |= OBJSTYLE_NORENAME;
+
+   /*
+    * NOTEMPLATE: This object is a template
+    */
+   if (PMWinIsDlgItemChecked(hwndDlg, DLG_TEMPLATE))
+     _ulStyle |= OBJSTYLE_TEMPLATE;
+   else
+     _ulStyle &amp;= ~OBJSTYLE_TEMPLATE;
+
+   /*
+    * Extract and set the title text
+    */
+   MLEExportText(WinWindowFromID(hwndDlg, DLG_OBJECTNAME),
+                 &amp;pszName);
+   _wpSetTitle(_self, pszName);
+   free(pszName);
+
+   /*
+    * Set the object's new style and save the state to the .INI file
+    */
+   _wpSetStyle(_self, _ulStyle);
+   _wpSaveDeferred(_self);
+}
+
+/*
+ *  Override: wpInitData
+ *
+ *  Description:
+ *    Initialize the state variables.  Allocate any extra
+ *    memory that WPStyler might need.
+ */
+
+SOM_Scope void SOMLINK Sty_wpInitData(Styler *somSelf)
+{
+   StylerData *somThis = StylerGetData(somSelf);
+   StylerMethodDebug("Styler", "Sty_wpInitData");
+
+   _self = (WPObject *) 0;
+   parent_wpInitData(somSelf);
+}
+
+/*
+ *   Method: wpDragOver
+ *
+ *   Description:
+ *     Allow any object to be dropped on the Styler
+ */
+
+SOM_Scope MRESULT SOMLINK Sty_wpDragOver(Styler *somSelf,
+                                         HWND hwndCnr,
+                                         PDRAGINFO pdrgInfo)
+
+{
+   BOOL            fSuccess;
+   <!-- entering slot 71 -->PDRAGITEM       pditem;    // Drag item pointer
+
+   /* StylerData *somThis = StylerGetData(somSelf); */
+   StylerMethodDebug("Styler", "Sty_wpDragOver");
+
+   pditem = DrgQueryDragitemPtr(pdrgInfo, 0);
+   if (pditem == NULL)
+     DosBeep(500, 100);
+
+   fSuccess = DrgVerifyRMF(pditem, "DRM_OBJECT", NULL);
+   if (fSuccess)
+     return MRFROM2SHORT(DOR_DROP, DO_COPY);
+   else
+     return MRFROM2SHORT(DOR_NEVERDROP, DO_COPY);
+}
+
+/*
+ *   Method: wpDrop
+ *
+ *   Description:
+ *     Query the self pointer of the dropped object.
+ *     Call wpOpen to open the Settings notebook and display the styles.
+ */
+
+SOM_Scope MRESULT SOMLINK Sty_wpDrop(Styler *somSelf,
+                                     HWND hwndCnr,
+                                     PDRAGINFO pdrgInfo,
+                                     PDRAGITEM pdrgItem)
+{
+   StylerData *somThis = StylerGetData(somSelf);
+   StylerMethodDebug("Styler", "Sty_wpDrop");
+
+   /*
+    * Query for the dropped object's self pointer.
+    */
+   _self = OBJECT_FROM_PREC(pdrgItem-&gt;ulItemID);
+
+   /*
+    * Call the parents wpOpen to display the Settings notebook
+    */
+   _fGeneralPage = FALSE;
+   parent_wpOpen(somSelf, NULLHANDLE, OPEN_SETTINGS, 0L);
+
+   return parent_wpDrop(somSelf, hwndCnr, pdrgInfo, pdrgItem);
+}
+
+/*
+ *   Method: wpOpen
+ *
+ *   Description:
+ *     Opens the Settings notebook to display the General
+ *     page for the Styler object.
+ */
+
+SOM_Scope HWND SOMLINK Sty_wpOpen(Styler *somSelf,
+                                  HWND hwndCnr,
+                                  ULONG ulView,
+                                  ULONG param)
+{
+   StylerData *somThis = StylerGetData(somSelf);
+   StylerMethodDebug("Styler", "Sty_wpOpen");
+
+   switch(ulView)
+   {
+      case OPEN_SETTINGS:
+         _fGeneralPage = TRUE;
+         break;
+
+      case OPEN_STYLER:
+      {
+         /*
+          * If the user double clicks on the Styler object, present a
+          * message box instead of openning the Settings page.
+          */
+         WinMessageBox(HWND_DESKTOP,
+                       HWND_DESKTOP,
+                       "Drop an object on the Workplace Shell Object "
+                       "Styler to change the style state of that object.",
+                       "Workplace Shell Object Styler",
+                       0,
+                       MB_OK |
+                       MB_APPLMODAL |
+                       MB_MOVEABLE);
+         break;
+      }
+      default:
+         break;
+   }
+   return parent_wpOpen(somSelf, hwndCnr, ulView, param);
+}
+
+/*
+ *   Method: wpAddSettingsPages
+ *
+ *   Description:
+ *     Add the Styler Settings page to let the user alter the styles
+ *     of any object that is dropped onto us.
+ */
+
+SOM_Scope BOOL SOMLINK Sty_wpAddSettingsPages(Styler *somSelf,
+                                              HWND hwndNotebook)
+{
+   StylerData *somThis = StylerGetData(somSelf);
+   StylerMethodDebug("Styler", "Sty_wpAddSettingsPages");
+
+   parent_wpAddSettingsPages(somSelf, hwndNotebook);
+
+   /*
+    * Insert the user page into the Settings notebook
+    */
+   if (!_fGeneralPage)
+     _InsertObjectStylePage(somSelf, hwndNotebook);
+   return TRUE;
+}
+
+/*
+ *   Method: wpAddObjectWindowPage
+ *
+ *   Description:
+ *     Remove the Window page
+ */
+
+SOM_Scope ULONG SOMLINK Sty_wpAddObjectWindowPage(Styler *somSelf,
+                                                  HWND hwndNotebook)
+{
+   /* StylerData *somThis = StylerGetData(somSelf); */
+   StylerMethodDebug("Styler", "Sty_wpAddObjectWindowPage");
+
+   return SETTINGS_PAGE_REMOVED;
+}
+
+/*
+ *   Method: wpAddObjectGeneralPage
+ *
+ *   Description:
+ *     Remove the General page when displaying the Styler page
+ */
+
+SOM_Scope ULONG SOMLINK Sty_wpAddObjectGeneralPage(Styler *somSelf,
+                                                   HWND hwndNotebook)
+{
+   StylerData *somThis = StylerGetData(somSelf);
+   StylerMethodDebug("Styler","Sty_wpAddObjectGeneralPage");
+
+   return _fGeneralPage ?
+          parent_wpAddObjectGeneralPage(somSelf, hwndNotebook) :
+          SETTINGS_PAGE_REMOVED;
+}
+
+/*
+ *   Method: wpclsQueryDefaultHelp
+ *
+ *   Description:
+ *     Set the help library name and default help ID
+ */
+
+SOM_Scope BOOL SOMLINK StyM_wpclsQueryDefaultHelp(M_Styler *somSelf,
+                                                  PULONG pHelpPanelId,
+                                                  PSZ pszHelpLibrary)
+{
+    /* M_StylerData *somThis = M_StylerGetData(somSelf); */
+    M_StylerMethodDebug("M_Styler","StyM_wpclsQueryDefaultHelp");
+
+    if (pHelpPanelId)
+      *pHelpPanelId = ID_HELP_STYLER;
+
+    if (pszHelpLibrary)
+      strcpy(pszHelpLibrary, szHelpLibrary);
+
+    return TRUE;
+}
+
+/*
+ *   Method: clsQueryModuleHandle
+ *
+ *   Description:
+ *     Return the module handle
+ */
+
+SOM_Scope HMODULE SOMLINK StyM_clsQueryModuleHandle(M_Styler *somSelf)
+{
+   M_StylerData *somThis = M_StylerGetData(somSelf);
+   M_StylerMethodDebug("M_Styler", "StyM_clsQueryModuleHandle");
+
+   return (HMODULE) _hmod;
+}
+
+/*
+ *   Method: wpclsInitData
+ *
+ *   Description:
+ *     Initalize the class data, query and save the module handle.
+ *     Load the icon handle.
+ */
+
+SOM_Scope void SOMLINK StyM_wpclsInitData(M_Styler *somSelf)
+{
+   PSZ     psz;
+   somId   stylerId;
+
+   M_StylerData *somThis = M_StylerGetData(somSelf);
+   M_StylerMethodDebug("M_Styler", "StyM_wpclsInitData");
+
+   parent_wpclsInitData(somSelf);
+
+   stylerId = somIdFromString("Styler");
+   psz = _somLocateClassFile(SOMClassMgrObject,
+                             stylerId,
+                             Styler_MajorVersion,
+                             Styler_MinorVersion);
+   SOMFree(stylerId);
+
+   if (psz != NULL)
+     DosQueryModuleHandle(psz, &amp;_hmod);
+
+   /*
+    * Load the icon and store it in the class data
+    */
+   _hicon = WinLoadPointer(HWND_DESKTOP, _hmod, ID_OBJECTICON);
+}
+
+/*
+ *   Method: wpclsQueryIcon
+ *
+ *   Description:
+ *     Set the Styler's icon handle
+ */
+
+SOM_Scope HPOINTER SOMLINK StyM_wpclsQueryIcon(M_Styler *somSelf)
+{
+   M_StylerData *somThis = M_StylerGetData(somSelf);
+   M_StylerMethodDebug("M_Styler", "StyM_wpclsQueryIcon");
+
+   return _hicon;
+}
+
+/*
+ *   Method: wpclsQueryStyle
+ *
+ *   Description:
+ *     wpclsQueryStyle is called to allow the class object to
+ *     specify the default object class style for its instances.
+ *
+ *   Remarks:
+ *     This method can be called at any time in order to determine the
+ *     default style for instances of this class.
+ *     This method should be overridden in order to modify the default
+ *     object style for instances of this class.
+ */
+
+SOM_Scope ULONG SOMLINK StyM_wpclsQueryStyle(M_Styler *somSelf)
+{
+   /* M_StylerData *somThis = M_StylerGetData(somSelf); */
+   M_StylerMethodDebug("M_Styler","StyM_wpclsQueryStyle");
+
+   return parent_wpclsQueryStyle(somSelf) | CLSSTYLE_NEVERTEMPLATE;
+}
+
+/*
+ *   Method: wpclsQueryDefaultView
+ *
+ *   Description:
+ *     Return the default view for a new instance of this object.
+ *     Tell the system what the Styler's default view is.
+ */
+
+SOM_Scope ULONG SOMLINK StyM_wpclsQueryDefaultView(M_Styler *somSelf)
+{
+   /* M_StylerData *somThis = M_StylerGetData(somSelf); */
+   M_StylerMethodDebug("M_Styler", "StyM_wpclsQueryDefaultView");
+
+   return OPEN_STYLER;
+}
+
+typedef struct _WINDATA
+{
+   SOMAny     *somSelf;
+   StylerData *somThis;
+   BOOL       fClose;
+} WINDATA, *PWINDATA;
+
+/*
+ *   Dialog window Procedure
+ */
+
+MRESULT EXPENTRY <!-- entering slot 72 -->DialogProc(HWND hwndDlg,
+                            ULONG msg,
+                            MPARAM mp1,
+                            MPARAM mp2)
+{
+   MRESULT  mresultWpRtnCd = MRFALSE;
+   PWINDATA pwin = (PWINDATA) WinQueryWindowPtr(hwndDlg, QWL_USER);
+
+   switch(msg)
+   {
+      case WM_INITDLG:
+      {
+         pwin = (PWINDATA) _wpAllocMem((SOMAny *) mp2,
+                                       sizeof(WINDATA), NULL);
+         WinSetWindowPtr(hwndDlg, QWL_USER, pwin);
+
+         /*
+          * Initialize the WINDATA data structure
+          */
+         pwin-&gt;somSelf     = (SOMAny *) mp2;
+         pwin-&gt;somThis     = StylerGetData(pwin-&gt;somSelf);
+         pwin-&gt;fClose      = FALSE;
+
+         /*
+          * Query the style of the object and set the checkboxes
+          */
+         _QueryObjectStyle(pwin-&gt;somSelf, hwndDlg);
+
+         /*
+          * Set the status line font size
+          */
+         WinSetDialogFont(hwndDlg, DLG_STATUS, "8.Helv");
+
+         /*
+          * Return TRUE to tell PM that focus has changed
+          */
+         mresultWpRtnCd = (MRESULT) TRUE;
+         break;
+      }  /* End of case WM_INITDLG */
+
+      case WM_FOCUSCHANGE:
+      {
+         HWND   hwndFocus  = HWNDFROMMP(mp1);
+
+         mresultWpRtnCd = WinDefDlgProc(hwndDlg, msg, mp1, mp2);
+
+         /*
+          * When mp2 is FALSE, then hwndFocus is the
+          * control window that is receiving focus
+          */
+         if (SHORT1FROMMP(mp2))
+           break;
+
+         /* Title text MLE */
+         if (hwndFocus == WinWindowFromID(hwndDlg, DLG_OBJECTNAME))
+         {
+            WinSetDlgItemText(hwndDlg,
+                              DLG_STATUS,
+                              "Change the title of the object");
+            break;
+         }
+         else
+         /* Apply push button */
+         if (hwndFocus == WinWindowFromID(hwndDlg, DLG_APPLY))
+         {
+            WinSetDlgItemText(hwndDlg,
+                              DLG_STATUS,
+                              "Save all changes to the system .INI file");
+            break;
+         }
+         else
+         /* Undo push button */
+         if (hwndFocus == WinWindowFromID(hwndDlg, DLG_UNDO))
+         {
+            WinSetDlgItemText(hwndDlg,
+                              DLG_STATUS,
+                              "Undo all changes made since last apply");
+            break;
+         }
+         else
+         /* Cancel push button */
+         if (hwndFocus == WinWindowFromID(hwndDlg, DLG_CANCEL))
+         {
+            WinSetDlgItemText(hwndDlg,
+                              DLG_STATUS,
+                              "Cancel processing the current object");
+            break;
+         }
+         else
+         /* Help push button */
+         if (hwndFocus == WinWindowFromID(hwndDlg, DLG_HELP))
+         {
+            WinSetDlgItemText(hwndDlg,
+                              DLG_STATUS,
+                              "Display the user help for Styler");
+            break;
+         }
+         else
+         /* Copy checkbox */
+         if (hwndFocus == WinWindowFromID(hwndDlg, DLG_COPY))
+         {
+            WinSetDlgItemText(hwndDlg,
+                              DLG_STATUS,
+                              "Allow the object to be copied");
+            break;
+         }
+         else
+         /* Delete checkbox */
+         if (hwndFocus == WinWindowFromID(hwndDlg, DLG_DELETE))
+         {
+            WinSetDlgItemText(hwndDlg,
+                              DLG_STATUS,
+                              "Make object deletable");
+            break;
+         }
+         else
+         /* Drag checkbox */
+         if (hwndFocus == WinWindowFromID(hwndDlg, DLG_DRAG))
+         {
+            WinSetDlgItemText(hwndDlg,
+                              DLG_STATUS,
+                              "Allow the object to be dragged");
+            break;
+         }
+         else
+         /* Drop checkbox */
+         if (hwndFocus == WinWindowFromID(hwndDlg, DLG_DROP))
+         {
+            WinSetDlgItemText(hwndDlg,
+                              DLG_STATUS,
+                              "Allow objects to be drop on object");
+            break;
+         }
+         else
+         /* Settings checkbox */
+         if (hwndFocus == WinWindowFromID(hwndDlg, DLG_SETTINGS))
+         {
+            WinSetDlgItemText(hwndDlg,
+                              DLG_STATUS,
+                              "Settings checkbox");
+            break;
+         }
+         else
+         /* Move checkbox */
+         if (hwndFocus == WinWindowFromID(hwndDlg, DLG_MOVE))
+         {
+            WinSetDlgItemText(hwndDlg,
+                              DLG_STATUS,
+                              "Allow this object to be moved");
+            break;
+         }
+         else
+         /* Print checkbox */
+         if (hwndFocus == WinWindowFromID(hwndDlg, DLG_PRINT))
+         {
+            WinSetDlgItemText(hwndDlg,
+                              DLG_STATUS,
+                              "Make object printable");
+            break;
+         }
+         else
+         /* Template checkbox */
+         if (hwndFocus == WinWindowFromID(hwndDlg, DLG_TEMPLATE))
+         {
+            WinSetDlgItemText(hwndDlg,
+                              DLG_STATUS,
+                              "Make a template from the object");
+            break;
+         }
+         else
+         /* Rename checkbox */
+         if (hwndFocus == WinWindowFromID(hwndDlg, DLG_RENAME))
+         {
+            WinSetDlgItemText(hwndDlg,
+                              DLG_STATUS,
+                              "Allow the object to be renamed");
+            break;
+         }
+         else
+         /* Shadow checkbox */
+         if (hwndFocus == WinWindowFromID(hwndDlg, DLG_SHADOW))
+         {
+            WinSetDlgItemText(hwndDlg,
+                              DLG_STATUS,
+                              "Allow the object to be shadowed");
+            break;
+         }
+         else
+         {
+            WinSetDlgItemText(hwndDlg, DLG_STATUS, "");
+         }
+
+         break;
+      }  /* End of case WM_FOCUSCHANGE */
+
+      case WM_COMMAND:
+      {
+         switch(SHORT1FROMMP(mp1))
+         {
+            case DLG_APPLY:   /* Apply push button */
+            {
+               _SetObjectStyle(pwin-&gt;somSelf, hwndDlg);
+
+               // Save state to the .INI file now!
+               _wpSaveImmediate(pwin-&gt;somSelf);
+
+               WinSetDlgItemText(hwndDlg,
+                                 DLG_STATUS,
+                                 "Changes applied to object");
+               break;
+            }
+
+            case DLG_UNDO:   /* Undo push button   */
+            {
+               _QueryObjectStyle(pwin-&gt;somSelf, hwndDlg);
+               WinSetDlgItemText(hwndDlg,
+                                 DLG_STATUS,
+                                 "Changes undone");
+               break;
+            }
+
+            case DLG_CANCEL:   /* Cancel push button */
+            {
+               pwin-&gt;fClose = TRUE;
+               WinPostMsg(WinQueryWindow(hwndDlg, QW_OWNER),
+                          WM_CLOSE, 0L, 0L);
+               break;
+            }
+
+            case DLG_HELP:   /* Help push button */
+            {
+               _wpDisplayHelp(pwin-&gt;somSelf,
+                              ID_HELP_STYLER,
+                              szHelpLibrary);
+               break;
+            }
+
+            default:
+               break;
+         }
+         break;
+      }  /* End of case WM_COMMAND */
+
+      case WM_DESTROY:
+      {
+         /*
+          * Set the style of the object from the checkbox settings
+          */
+         if (!pwin-&gt;fClose)
+           _SetObjectStyle(pwin-&gt;somSelf, hwndDlg);
+
+         _wpFreeMem(pwin-&gt;somSelf, (PBYTE) pwin);
+         mresultWpRtnCd = WinDefDlgProc(hwndDlg, msg, mp1, mp2);
+      }  /* End of case WM_DESTROY */
+
+      default:
+      {
+         mresultWpRtnCd = WinDefDlgProc(hwndDlg, msg, mp1, mp2);
+         break;
+      } // End of default:
+   }
+   return mresultWpRtnCd;
+}
+
+/*
+ *   Function: MLEImportText
+ *
+ *   Description:
+ *     Import the text into an MLE window.
+ */
+
+ULONG EXPENTRY MLEImportText(HWND hwndMLE,
+                             CHAR *pText,
+                             ULONG ulSize)
+{
+   ULONG  ulLen = ulSize;
+   ULONG  cch;
+   LINE   lBegin = 0;
+   IPT    lOffset = 0;
+
+   WinSendMsg(hwndMLE, MLM_DISABLEREFRESH, 0L, 0L);
+
+   /*
+    * Get the current number of characters in the MLE box
+    * then send a message to delete them
+    */
+   cch = (ULONG) WinSendMsg(hwndMLE,
+                            MLM_QUERYTEXTLENGTH,
+                            0L, 0L);
+   WinSendMsg(hwndMLE,
+              MLM_DELETE,
+              MPFROMLONG(lBegin),
+              MPFROMLONG(cch));
+
+   if (pText)
+   {
+      if (ulLen &lt;= 0L)
+        ulLen = (ULONG) strlen(pText);
+      WinSendMsg(hwndMLE,
+                 MLM_SETIMPORTEXPORT,
+                 MPFROMP(pText),
+                 MPFROMSHORT((SHORT) ulLen));
+
+      cch = (ULONG) WinSendMsg(hwndMLE, MLM_IMPORT,
+                               MPFROMP(&amp;lOffset),
+                               MPFROMP(&amp;ulLen));
+   }
+   WinSendMsg(hwndMLE, MLM_ENABLEREFRESH, 0L, 0L);
+   return cch;
+} /* End of Function: MLEImportText() */
+
+/*
+ *   Function: MLEImportText
+ *
+ *   Description:
+ *     Export the text from an MLE window.
+ */
+APIRET EXPENTRY MLEExportText(HWND hwndMLE, PSZ *<!-- entering slot 73 -->pBuf)
+{
+   APIRET apiRtnCd = 0;
+   LONG   cch;
+   LONG   cchnl;
+   IPT    lOffset = 0;
+   LONG   cbChar = -1;
+   CHAR   *ptr;
+
+   *pBuf = (CHAR *) NULL;
+
+   /*
+    * Get the length of the data field.
+    * Query text length using the selected format.
+    */
+   cch = (ULONG) WinSendMsg(hwndMLE,
+                            MLM_QUERYFORMATTEXTLENGTH,
+                            MPFROMLONG(lOffset),
+                            MPFROMLONG(cbChar));
+   if (cch &gt; 0L)
+   {
+      if ((ptr = (CHAR *) malloc((USHORT) (cch + 1L))) == (CHAR *) NULL)
+         return PMERR_MEMORY_ALLOCATION_ERR;
+
+      /*
+       * Get the text from the MLE window.
+       */
+      *pBuf = ptr;
+      WinSendMsg(hwndMLE,
+                 MLM_SETIMPORTEXPORT,
+                 MPFROMP(ptr),
+                 MPFROMSHORT(cch));
+      cchnl = (ULONG) WinSendMsg(hwndMLE,
+                                 MLM_EXPORT,
+                                 MPFROMP(&amp;lOffset),
+                                 MPFROMP((ULONG) &amp;cch));
+      *(*pBuf + cchnl) = (CHAR) NULL;
+   }
+   return apiRtnCd;
+} /* End of Function: MLEExportText() */
+
+#pragma info(nouse)
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="068_L4_ClassDefinitionFilef.html">[Back: Class Definition File for Styler]</A> <BR>
+<A HREF="070_L4_ResourceHeaderFilefo.html">[Next: Resource Header File for Styler]</A> 
+</BODY>
+</HTML>

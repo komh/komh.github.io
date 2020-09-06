@@ -1,0 +1,79 @@
+<HTML>
+<HEAD>
+<TITLE>Creating a Custom Fill Pattern from a Font Character</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating a Custom Fill Pattern from a Font Character</H1><!-- entering slot 1075 -->
+<P>
+The following figure is an example of how to create a custom fill pattern
+by using a character from a font. The fill pattern can be only an 8-by-8
+bit map; as a result, not all of the character is used.
+<P>
+
+<PRE>#define INCL_GPI
+#define INCL_WIN
+#include &lt;os2.h&gt;
+   HPS hps;                      /* Presentation-space handle */
+   LONG lcidCustom;              /* Font identifier           */
+   FONTMETRICS afm[80];
+   FATTRS fat;
+
+   VOID LoadFont(VOID);
+
+   void fncAREA05(void){
+
+        LoadFont();
+GpiSetPatternSet(hps, lcidCustom);
+GpiSetPattern(hps, 'o');         /* Use lowercase 'o' as fill */
+    .
+    .
+    .
+   } /* fncAREA05 */
+
+   VOID LoadFont(VOID){
+      LONG cFonts = 0;
+      LONG cPublicFonts, i;
+
+      lcidCustom = 1;
+
+/* Determine the number of loaded public fonts.               */
+cPublicFonts = GpiQueryFonts(hps, QF_PUBLIC, NULL, (PLONG) &amp;cFonts,
+    (LONG) (sizeof(FONTMETRICS)), NULL);
+
+/* Load the metrics for all public fonts into afm.            */
+GpiQueryFonts(hps, QF_PUBLIC, NULL, (PLONG) &amp;cPublicFonts,
+    (LONG) (sizeof(FONTMETRICS)), afm);
+
+/* Get the first image font with a point size larger than 8.  */
+for (i = 0; ((afm[i].fsDefn &amp; FM_DEFN_OUTLINE) ||
+     afm[i].lEmHeight &lt;= 8) &amp;&amp; i &lt; cPublicFonts; i++);
+
+/* Load the FATTRS structure with the required metrics.       */
+fat.usRecordLength = sizeof(fat);
+fat.fsSelection = 0;
+fat.lMatch = afm[i].lMatch;
+StringCopy(fat.szFacename, afm[i].szFacename);
+fat.idRegistry = 0;
+fat.usCodePage = 0;
+fat.lMaxBaselineExt = 0;
+fat.lAveCharWidth = 0;
+fat.fsType = 0;
+fat.fsFontUse = 0;
+
+/* Select this font and assign it a custom lcid.              */
+GpiCreateLogFont(hps, NULL, lcidCustom, &amp;fat);
+GpiSetCharSet(hps, lcidCustom);
+} /* LoadFont */
+</PRE>
+ 
+<P>
+
+<BR>
+Creating a Custom Fill Pattern from a Font Character
+
+<P><HR>
+
+<A HREF="1054_L3_CreatingaCustomFillP.html">[Back: Creating a Custom Fill Pattern from a Bit Map]</A> <BR>
+<A HREF="1056_L1_BitMaps.html">[Next: Bit Maps]</A> 
+</BODY>
+</HTML>

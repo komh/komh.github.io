@@ -1,0 +1,159 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Set or get the WPS lockup password</TITLE>
+</HEAD>
+<BODY>
+<H1>Set or get the WPS lockup password</H1><!-- entering slot 365 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/*                                                                    */
+/* sample REXX functions to set and get the password for the WPS      */
+/* lockup feature                                                     */
+/*                                                                    */
+/* Author: Ned Konz (see <A HREF="953_L2H_EMailaddressesK.html">EMail Addresses</A>)                             */
+/*                                                                    */
+/* History:                                                           */
+/*   12.12.1996 /bs                                                   */
+/*   - added code to distinguish between OS/2 2.1(1) and OS/2 WARP    */
+/*     (Tested with OS/2 WARP 3 and OS/2 WARP 4)                      */
+/*   - added code to handle 'Password not yet set' situations         */
+/*                                                                    */
+/*                                                                    */
+/* note:                                                              */
+/*   see also <A HREF="353_L4_ChangingtheLockuppag.html">Changing the Lockup page entry</A>,                         */
+/*   <A HREF="396_L3_SetupstringsforWPDes.html">Setup strings for WPDesktop objects</A>                              */
+/*   and <A HREF="414_L4_ActivatingLockupnow.html">Activating Lockup now</A>                                       */
+/*                                                                    */
+
+  call rxfuncadd "SYSLOADFUNCS", "REXXUTIL", "SYSLOADFUNCS"
+  call sysloadfuncs
+
+                        /* check the OS/2 version                     */
+  if SysOS2Ver() &gt; "2.11" then
+  do
+                        /* current OS/2 version is WARP 3 or newer    */
+    LockUpOptionString = "LockupOptions"
+    LockUpApplication = "PM_Lockup"
+  end /* if SysOS2Ver() &gt; "2.11" then */
+  else
+  do
+                        /* current OS/2 version is v2.11 or older     */
+    LockUpOptionString = "Lockup_options3"
+    LockUpApplication =  "Lock Up Workplace"
+  end /* else */
+
+  inival = SysIni( "USER", LockupApplication, LockUpOptionString )
+
+  if iniVal = "ERROR:" then
+  do
+                        /* Never opened the lockup page of the        */
+                        /* desktop setup menu until now -&gt;            */
+                        /* The entry for the Lockup page is missing   */
+                        /* in the INI file                            */
+    say "Error: No screen saver password set!"
+    say "Hint:  Use the setup menu of the desktop to set an" ,
+                     "initial password."
+    rc = 255
+  end /* if IniVal = "ERROR:" then */
+  else
+  do
+    say "The current password is: '" || GetPassword(inival) || "'"
+    say
+    say "Enter the new password (blank line to quit)"
+
+    newpass = lineIn()
+
+    if length( newpass ) &lt;&gt; 0 then
+    do
+      inival = SetPassword( inival, newpass )
+      rc = SysIni( "USER", LockupApplication, LockupOptionString, inival )
+
+      say "Password changed. Re-boot is needed to make permanent."
+    end /* if length( newPass ) &lt;&gt; 0 then */
+  end /* else */
+
+EXIT rc
+
+/* ------------------------------------------------------------------ */
+/* function: given a single character encrypted key, return           */
+/*           decrypted key                                            */
+/*                                                                    */
+/* call:     DecrypKey encrypted_key                                  */
+/*                                                                    */
+/* where:    encrypted_key - encrypted character                      */
+/*                                                                    */
+/* returns:  decrypted key                                            */
+/*                                                                    */
+/* note:     called by GetPassword()                                  */
+/*                                                                    */
+DecryptKey: PROCEDURE
+  RETURN d2c( c2d( arg( 1 ) ) / 3 - 12 )
+
+/* ------------------------------------------------------------------ */
+/* function: get the password from the INI file entry                 */
+/*                                                                    */
+/* call:     GetPassword iniFileEntry                                 */
+/*                                                                    */
+/* where:    iniFileEntry - entry from the INI file                   */
+/*                                                                    */
+/* returns:  decrypted password                                       */
+/*                                                                    */
+/*                                                                    */
+GetPassword: PROCEDURE
+
+  inival = arg( 1 )
+                        /* encrypted key                              */
+  ekey = substr( inival, 7, 1 )
+
+                        /* real key                                   */
+  key = DecryptKey( ekey )
+
+                        /* NUL term.                                  */
+  parse value substr( inival, 11, 16 ) WITH val "00"x
+
+  key = copies( key, length( val ) )
+
+RETURN bitxor( val, key )
+
+/* ------------------------------------------------------------------ */
+/* function: create an INI file entry to change the password          */
+/*                                                                    */
+/* call:     SetPassword iniFileEntry, newPassword                    */
+/*                                                                    */
+/* where:    iniFileEntry - entry from the INI file                   */
+/*           newPassword - new password                               */
+/*                                                                    */
+/* returns:  new entry for the INI file                               */
+/*                                                                    */
+/*                                                                    */
+SetPassword: PROCEDURE
+  inival = arg( 1 )
+
+  parse upper value arg( 2 ) WITH newpass
+
+                    /* encrypted key: "27"x                           */
+  ekey = "27"x
+
+                    /* real key: "01"x                                */
+  key = copies( DecryptKey( ekey ), length( newpass ) )
+
+  key = overlay( bitxor( key,newpass ), copies( "00"x, 16 ) )
+
+  inival = overlay( key, inival, 11 )
+
+RETURN overlay( ekey, inival, 7 )
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="353_L4_ChangingtheLockuppag.html">[Back: Changing the Lockup page entry]</A> <BR>
+<A HREF="355_L4_Disableorenablethere.html">[Next: Disable or enable the registration reminder]</A> 
+</BODY>
+</HTML>

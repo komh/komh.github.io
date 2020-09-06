@@ -1,0 +1,82 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosExitList - Remarks</TITLE>
+</HEAD>
+<BODY>
+<H1>DosExitList - Remarks</H1><!-- entering slot 490 -->
+<P>
+DosExitList is issued to define a routine that is to be given control when
+a process completes its execution. Multiple routines may be defined to receive
+control when a process is ending. For each process, the operating system
+maintains a list of addresses of defined exit list routines.
+<P>
+When the process is ending, the operating system transfers control to each
+address in this list. If there are multiple addresses in the list, they
+will each get control in numerical order by function invocation order, that
+is, low (0) will be first, and high (0xFF) will be last. In case of duplicate
+entries for the same value, the routines will be run in LIFO (last in, first
+out) order.
+<P>
+Library modules can issue DosExitList to free resources or to clear flags
+and semaphores in case the client process ends without notifying them.
+<P>
+Before transferring control to the routines in the termination list, the
+operating system resets the stack to its initial value. The routine must
+be in the address space of the ending process. The termination routine should
+perform its processing and then issue DosExitList with a value of 3 (EXLST_EXIT)
+for<I> ordercode</I>. The termination routine should be as short as possible.
+
+<P>
+Most system functions are allowed in an exit list routine. However, <A HREF="285_L2_DosCreateThread.html">DosCreateThread
+</A>and <A HREF="445_L2_DosExecPgm.html">DosExecPgm</A> are not.
+<P>
+An exit list routine must not call functions that have a better function
+order priority (that is, a lower value for<I> ordercode</I>) than itself.
+For example, an exit list routine with a function order value of 0x9A can
+use Presentation Services functions but not Communications Manager functions.
+
+<P>
+When the exit list routine receives control, the first parameter on the
+stack (located at ESP+4) contains a termination code that describes why
+the process ended. The values of the termination codes are as follows:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 5 -->TC_EXIT
+<BR>
+Normal exit<!-- lm: 0x2 1 -->
+<P>
+<LI><!-- lm: 0x2 5 -->TC_HARDERROR
+<BR>
+Hard-error halt<!-- lm: 0x2 1 -->
+<P>
+<LI><!-- lm: 0x2 5 -->TC_TRAP
+<BR>
+Trap operation for a 16-bit child process<!-- lm: 0x2 1 -->
+<P>
+<LI><!-- lm: 0x2 5 -->TC_KILLPROCESS
+<BR>
+Unintercepted <A HREF="702_L2_DosKillProcess.html">DosKillProcess</A><!-- lm: 0x2 1 -->
+<P>
+<LI><!-- lm: 0x2 5 -->TC_EXCEPTION
+<BR>
+Exception operation for a 32-bit child process<!-- lm: 0x2 1 -->
+<BR>
+
+<P>
+When the exit list routine receives control, all system semaphores owned
+by the process have their ownership transferred to the thread that performs
+exit list processing. This allows the thread to request serialization semaphores
+without danger of blocking in case the semaphore was held by another thread
+in the process that has already ended.
+<P>
+<B>Note: </B> All exit list routines<I> must</I> be declared as VOID APIENTRY.
+This ensures the integrity of the stack.<!-- lm: 0x2 1 -->
+<P>
+
+
+<P><HR>
+
+<A HREF="483_L2H_DosExitListParameter.html">[Back: DosExitList - Parameters]</A> <BR>
+<A HREF="485_L2H_DosExitListRelatedFu.html">[Next: DosExitList - Related Functions]</A> 
+</BODY>
+</HTML>

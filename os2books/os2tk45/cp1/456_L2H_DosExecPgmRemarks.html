@@ -1,0 +1,145 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosExecPgm - Remarks</TITLE>
+</HEAD>
+<BODY>
+<H1>DosExecPgm - Remarks</H1><!-- entering slot 461 -->
+<P>
+DosExecPgm allows a program to request that another program execute as a
+child process.
+<P>
+The target program is located and loaded into storage (if necessary), a
+process is created for it and placed into execution. The execution of a
+child process can be synchronous or asynchronous to the execution of its
+parent process. If synchronous execution is indicated, the requesting thread
+waits for completion of the child process. Other threads in the requesting
+process may continue to run.
+<P>
+If asynchronous execution is indicated, DosExecPgm places the process ID
+of the started child process into the first doubleword of the<I> pRes</I> structure.
+If EXEC_ASYNCRESULT is specified for<I> execFlag</I>, the parent process
+can issue <A HREF="1940_L2_DosWaitChild.html">DosWaitChild</A> (after DosExecPgm)
+to examine the result code returned when the child process ends. If the
+value of<I> execFlag</I>, is EXEC_ASYNC, the result code of the asynchronous
+child process is not returned to the parent process.
+<P>
+If synchronous execution is indicated, DosExecPgm places the termination
+code and result code into the<I> pRes</I> structure.
+<P>
+The new process is created with an address space separate and distinct from
+its parent; that is, a new linear address space is built for the process.
+
+<P>
+The new process inherits all file handles and pipes of its parent, although
+not necessarily with the same access rights:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Files are inherited except for those opened with no
+inheritance indicated.<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Pipes are inherited.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+A child process inherits file handles obtained by its parent process with
+<A HREF="754_L2_DosOpen.html">DosOpen</A> calls that indicated inheritance.
+The child process also inherits handles to pipes created by the parent process
+with <A HREF="265_L2_DosCreatePipe.html">DosCreatePipe</A>. This means that
+the parent process has control over the meanings of standard input, output,
+and error. For example, the parent could write a series of records to a
+file, open the file as standard input, open a listing file as standard output,
+and then execute a sort program that takes its input from standard input
+and writes to standard output.
+<P>
+Because a child process can inherit handles, and a parent process controls
+the meanings of handles for standard I/O, the parent can duplicate inherited
+handles as handles for standard I/O. This permits the parent process and
+the child process to coordinate I/O to a pipe or file. For example, a parent
+process can create two pipes with <A HREF="265_L2_DosCreatePipe.html">DosCreatePipe
+</A>requests. It can issue <A HREF="369_L2_DosDupHandle.html">DosDupHandle
+</A>to redefine the read handle of one pipe as standard input (0x0000),
+and the write handle of the other pipe as standard output (0x0001). The
+child process uses the standard I/O handles, and the parent process uses
+the remaining read and write pipe handles. Thus, the child process reads
+what the parent process writes to one pipe, and the parent process reads
+what the child process writes to the other pipe.
+<P>
+When an inherited file handle is duplicated, the position of the file pointer
+is always the same for both handles, regardless of which handle repositions
+the file pointer.
+<P>
+An asynchronous process that was started because the value of<I> execFlag
+</I>was EXEC_TRACE or EXEC_ASYNCRESULTDB is provided a trace flag facility.
+This facility and the trace buffers provided by <A HREF="298_L2_DosDebug.html">DosDebug
+</A>enable a debugger to perform breakpoint debugging. <A HREF="1790_L2_DosStartSession.html">DosStartSession
+</A>provides additional debugging capabilities that allow a debugger to
+trace all processes associated with an application running in a child session,
+regardless of whether the process is started with DosExecPgm or <A HREF="1790_L2_DosStartSession.html">DosStartSession</A>.
+
+<P>
+A detached process is treated as an orphan of the parent process and runs
+in the background. Thus, it cannot make any VIO, KBD, or MOU calls, except
+from within a video pop-up requested by VioPopUp. To test whether a program
+is running detached, use the following method. Issue a video call, (for
+example, VioGetAnsi). If the call is not issued within a video pop-up and
+the process is detached, the video call returns error code ERROR_VIO_DETACHED.
+
+<P>
+You may use DosExecPgm to start a process that is of the same type as the
+starting process. Process types include Presentation Manager, text-windowed,
+and full-screen. You may not use DosExecPgm to start a process that is of
+a different type<!-- entering slot 462 --> than the starting process.
+<P>
+You must use <A HREF="1790_L2_DosStartSession.html">DosStartSession</A> to
+start a new process from a process that is of a different type. For example,
+use <A HREF="1812_L2_DosStopSession.html">DosStopSession</A> to start a
+Presentation Manager process from a non-Presentation Manager process.
+<P>
+The following are the register conventions for 32-bit programs:<!-- lm: 0x2 1 -->
+<P>
+Register<!-- lm: 0x2 17 -->
+<UL> Definition<!-- lm: 0x2 1 -->
+</UL>EIP<!-- lm: 0x2 17 -->
+<UL> Starting program entry address<!-- lm: 0x2 1 -->
+</UL>ESP<!-- lm: 0x2 17 -->
+<UL> Top of stack address<!-- lm: 0x2 1 -->
+</UL>CS<!-- lm: 0x2 17 -->
+<UL> Code selector for the base of the linear
+address space<!-- lm: 0x2 1 -->
+</UL>DS, ES, SS<!-- lm: 0x2 17 -->
+<UL> Data selector for the base of the
+linear address space<!-- lm: 0x2 1 -->
+</UL>FS<!-- lm: 0x2 17 -->
+<UL> Data selector for the thread information
+block<!-- lm: 0x2 1 -->
+</UL>GS<!-- lm: 0x2 17 -->
+<UL> 0<!-- lm: 0x2 1 -->
+</UL>EAX, EBX<!-- lm: 0x2 17 -->
+<UL> 0<!-- lm: 0x2 1 -->
+</UL>ECX, EDX<!-- lm: 0x2 17 -->
+<UL> 0<!-- lm: 0x2 1 -->
+</UL>ESI, EDI<!-- lm: 0x2 17 -->
+<UL> 0<!-- lm: 0x2 1 -->
+</UL>EBP<!-- lm: 0x2 17 -->
+<UL> 0<!-- lm: 0x2 1 -->
+</UL>[ESP+0]<!-- lm: 0x2 17 -->
+<UL> Return address to the routine that
+calls <A HREF="460_L2_DosExit.html">DosExit</A><!-- lm: 0x2 1 -->
+</UL>[ESP+4]<!-- lm: 0x2 17 -->
+<UL> Module handle for the program module
+<!-- lm: 0x2 1 -->
+</UL>[ESP+8]<!-- lm: 0x2 17 -->
+<UL> 0<!-- lm: 0x2 1 -->
+</UL>[ESP+12]<!-- lm: 0x2 17 -->
+<UL> Address of the environment data object
+<!-- lm: 0x2 1 -->
+</UL>[ESP+16]<!-- lm: 0x2 17 -->
+<UL> Offset to the command line in the
+environment data object.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="455_L2H_DosExecPgmParameters.html">[Back: DosExecPgm - Parameters]</A> <BR>
+<A HREF="457_L2H_DosExecPgmRelatedFun.html">[Next: DosExecPgm - Related Functions]</A> 
+</BODY>
+</HTML>

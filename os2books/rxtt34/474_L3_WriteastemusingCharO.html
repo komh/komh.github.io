@@ -1,0 +1,126 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Write a stem using CharOut()</TITLE>
+</HEAD>
+<BODY>
+<H1>Write a stem using CharOut()</H1><!-- entering slot 492 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* function: Write a stem into a file                                 */
+/*                                                                    */
+/* call:     rxWriteStem = stem_with_the_lines                        */
+/*           call RxWriteTextFile fileName  {, lineSep } {,noEmpty}   */
+/*                                                                    */
+/* where:    rxWriteStem - name of the stem with the file contents    */
+/*                        The name MUST end with a dot!               */
+/*           fileName - name of the file to write                     */
+/*           LineSep - line separator chars                           */
+/*                     (def.: "0D0A"x)                                */
+/*           noEmpty - if 1 empty lines are not written               */
+/*                     (def.: 0)                                      */
+/*                                                                    */
+/* returns:                                                           */
+/*           0 -&gt; ok                                                  */
+/*           1 -&gt; parameter missing                                   */
+/*           2 -&gt; could not write the whole file                      */
+/*           3 -&gt; variable referenced in RxWriteStem is invalid       */
+/*           4 -&gt; NOTREADY condition occured                          */
+/*           5 -&gt; ERROR condition occured                             */
+/*           6 -&gt; FAILURE condition occured                           */
+/*           7 -&gt; unexpected condition occured                        */
+/*                                                                    */
+RxWriteTextFile: PROCEDURE expose (RxWriteStem) (exposeList)
+
+                    /* install local error handlers                   */
+  SIGNAL ON  NOTREADY Name RxWriteTextFileError
+  SIGNAL ON  ERROR    Name RxWriteTextFileError
+  SIGNAL ON  FAILURE  Name RxWriteTextFileError
+
+                    /* init the return code                           */
+  thisRC = 3
+                    /* check the name of the variable for the         */
+                    /* result                                         */
+  if  symbol( rxWriteStem || 0 ) = 'VAR' &amp; right( rxWriteStem,1 ) = '.' then
+  do
+                    /* get the parameter                              */
+    parse arg fileName , lineSep, noEmpty
+
+                    /* remove leading and trailing blanks from the    */
+                    /* parameter                                      */
+    fileName = strip( fileName )
+    lineSep = strip( lineSep )
+
+                    /* use default line separator if necessary        */
+    if arg( 2, 'o' ) = 1 "" then
+      lineSep = d2c(13) || d2c(10)
+
+    if noEmpty = "" then
+      noEmpty = 0
+
+                    /* set the return code                            */
+    thisRC = 1
+
+    if fileName &lt;&gt; "" then
+    do
+                    /* copy the stem into a variable                  */
+      fileContents = ''
+      do i = 1 to value( RxWriteStem || 0 )
+        curLine = value( RxWriteStem || i )
+        if noEmpty = 1 &amp; curLine = '' then
+          iterate
+        fileContents = fileContents || curLine || lineSep
+      end /* do lineCount = 1 to value( RxWriteStem || 0 ) */
+
+                    /* open the file                                  */
+      call stream fileName, "c", "OPEN WRITE"
+                    /* write the complete file using CharOut()        */
+      tRC = CharOut( fileName, fileContents, 1 )
+                    /* close the file                                 */
+      call stream fileName, "c", "CLOSE"
+      if tRC &lt;&gt; 0 | result &lt;&gt; 'READY:' then
+        thisRC = 2
+      else
+        thisRC = 0
+
+    end /* if filename &lt;&gt; "" then */
+  end /* if */
+
+RETURN thisRC
+
+/* error exit for RxWriteTextFile                                     */
+
+RxWriteTextFileError:
+                    /* turn off the condition that caused the error   */
+  INTERPRET 'SIGNAL OFF ' condition( 'C' )
+
+  curCondition = condition('C')
+  select
+    when curCondition = 'NOTREADY' then
+      thisRC = 4
+    when curCondition = 'ERROR' then
+      thisRC = 5
+    when curCondition = 'FAILURE' then
+      thisRC = 6
+    otherwise
+      thisRC = 7
+  end /* select */
+
+                    /* close the file                                 */
+  call stream fileName, 'c', 'CLOSE'
+
+return thisRC
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="473_L3_ReadatextfileusingCh.html">[Back: Read a textfile using CharIn()]</A> <BR>
+<A HREF="475_L3_ExpandthefunctionFIL.html">[Next: Expand the function FILESPEC]</A> 
+</BODY>
+</HTML>

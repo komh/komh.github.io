@@ -1,0 +1,233 @@
+<HTML>
+<HEAD>
+<TITLE>Opening Files</TITLE>
+</HEAD>
+<BODY>
+<H1>Opening Files</H1><!-- entering slot 935 -->
+<P>
+Before performing input or output operations on a file, you must open the
+file and obtain a file handle. You obtain a file handle by using<A><!-- external link: 1D 9F C3 FC --> DosOpen</A>.
+This function opens the specified file and returns a file handle for it.
+<A><!-- external link: 1D 9F C3 55 -->DosOpen</A> can also be used to create
+new  files.
+<P>
+<A><!-- external link: 1D 9F C3 55 -->DosOpen</A> establishes a connection
+betwee n a file object and an application. This connection is in the form
+of a 32-bit identifier called a<I> file handle</I>, which is used to refer
+to the file object and any information associated with it. DosOpen returns
+a handle that is used in other file system calls to gain access to the object.
+The file object can be a new file, an existing file, or a replacement for
+an existing file. It can also be a character device, a block device, or
+the client end of a named pipe. The type of object is determined by the
+file name you pass to DosOpen.
+<P>
+<B>Note: </B> If the object is a named pipe, it must be in a listening state
+for DosOpen to be successful.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+The following code fragment shows the use of DosOpen to:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Open the existing file SAMPLE.TXT for reading<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Put the file handle into the<I> hf</I> variable<!-- lm: 0x2 1 -->
+</UL>
+<PRE>    #define INCL_DOSFILEMGR   /* File System values */    #include &lt;os2.h&gt;
+
+    HFILE   hf;
+    ULONG   ulAction;
+    APIRET  ulrc;
+
+    ulrc = DosOpen("SAMPLE.TXT",       /* Name of file to open      */
+                   &amp;hf,                /* Address of file handle    */
+                   &amp;ulAction,          /* Action taken              */
+                   0,                  /* Size of file              */
+                   FILE_NORMAL,        /* File attribute            */
+                   FILE_OPEN,          /* Open the file             */
+                   OPEN_ACCESS_READONLY |
+                   OPEN_SHARE_DENYNONE,
+                   (PEAOP2) NULL);     /* Extended attribute buffer */
+
+</PRE>
+
+<P>
+If DosOpen successfully opens the file, it copies the file handle to the
+<I>hf</I> variable and copies a value to the<I> ulAction</I> variable indicating
+what action was taken (for example, FILE_EXISTED for "existing file opened").
+A file size is not needed to open an existing file, so the fourth argument
+is 0. The fifth argument, FILE_NORMAL, specifies the normal file attribute.
+The sixth argument, FILE_OPEN, directs DosOpen to open the file if it exists
+or return an error if it does not exist. The seventh argument directs DosOpen
+to open the file for reading only and enables other applications to open
+the file even while the current application has it open. The final argument
+is a pointer to a structure containing information on extended attributes.
+If the file has no extended attributes, this argument must be NULL.
+<P>
+<A><!-- external link: 1D 9F C3 55 -->DosOpen</A> returns 0 if it successfully
+op ens the file. Applications use the file handle in subsequent functions
+to read data from the file or to check the status and other file characteristics.
+If DosOpen fails to open the file, it returns an error value.
+<P>
+When you open a file you must specify whether you want to read from the
+file, write to it, or both read and write. Also, since more than one application
+might attempt to open the same file, you must also specify whether you want
+to allow other processes to have access to the file while you have it open.
+A file that is shared can be shared for reading only, writing only, or reading
+and writing. A file that is not shared cannot be opened by another application
+(or more than once by the first application) until it has been closed by
+the first application.
+<P>
+An application defines its file access rights (that is, I/O it needs to
+perform on a file) by<!-- entering slot 936 --> setting the appropriate
+file access mode field in the file open-mode parameter. An application accesses
+a file as:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Read-only<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Write-only<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Read/write<!-- lm: 0x2 1 -->
+</UL>
+<P>
+An application defines what I/O operations other processes can perform on
+a file by setting the appropriate sharing mode field in the<I> OpenMode
+</I>parameter. Other processes are granted:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Deny read/write access<!-- lm: 0x2 3 --> <!-- lm: 0x2 6 -->
+<UL>Deny
+write access<!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL>Deny read access<!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL>Deny neither read or write access (deny none)
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+File sharing requires cooperation between the sharing processes. For example,
+if process A calls<A><!-- external link: 1D 9F C3 57 --> DosOpen</A> to
+open a file with Deny Write sharing and process B calls<A><!-- external link: 1D 9F C3 57 --> DosOpen
+</A>to open the same file with Read/Write access, the DosOpen call made
+by process B fails.
+<P>
+You indicate whether or not you want to permit another application to access
+your file by combining an OPEN_ACCESS_ value and an OPEN_SHARE_ value from
+the following list:
+<P>
+<B>File Access and Sharing Rights</B>
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³Value                         ³Meaning                       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³OPEN_ACCESS_READONLY          ³Open a file for reading.      ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³OPEN_ACCESS_WRITEONLY         ³Open a file for writing.      ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³OPEN_ACCESS_READWRITE         ³Open a file for reading and   ³
+³                              ³writing.                      ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³OPEN_SHARE_DENYREADWRITE      ³Open a file for exclusive use,³
+³                              ³denying other processes read  ³
+³                              ³and write access.             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³OPEN_SHARE_DENYWRITE          ³Deny other processes write    ³
+³                              ³access to a file.             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³OPEN_SHARE_DENYREAD           ³Deny other processes read     ³
+³                              ³access to a file.             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³OPEN_SHARE_DENYNONE           ³Open a file with no sharing   ³
+³                              ³restrictions, granting read   ³
+³                              ³and write access to all       ³
+³                              ³processes.                    ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+In general, you can combine any access method (read, write, or read and
+write) with any sharing method (deny reading, deny writing, deny reading
+and writing, or grant any access). Some combinations have to be handled
+carefully, however, such as opening a file for writing without denying other
+processes access to it.
+<P>
+<B>Note: </B> For named pipes, the access and sharing modes must be consistent
+with those specified by<A><!-- external link: 1D 71 C3 FC --> DosCreateNPipe</A>.
+<!-- lm: 0x2 1 -->
+<P>
+
+<P>
+Other characteristics of the file handle that can be set:
+<P>
+<B>File Handle Characteristics</B>
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Flag           ³Purpose                       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Inheritance    ³Handle is inherited by a child³
+³               ³process created with          ³
+³               ³<A><!-- external link: 1D 83 C3 56 -->DosExecPgm</A>, or is private to  ³
+³               ³the calling process.          ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Write-Through  ³Actual I/O for synchronous    ³
+³               ³writes is not guaranteed as   ³
+³               ³complete or is guaranteed as  ³
+³               ³complete before the write     ³
+³               ³returns.                      ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Fail-Errors    ³Media errors are reported by  ³
+³               ³the system critical error     ³
+³               ³handler, or by the            ³
+³               ³application.                  ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³DASD           ³The file name parameter is the³
+³               ³name of a file or device      ³
+³               ³opened in the normal way, or a³
+³               ³drive specification for a     ³
+³               ³fixed disk or diskette drive. ³
+³               ³The DASD flag can be set for  ³
+³               ³direct access to an entire    ³
+³               ³disk or diskette volume,      ³
+³               ³independent of the file       ³
+³               ³system. When the DASD flag is ³
+³               ³set, the handle returned by   ³
+³               ³<A><!-- external link: 1D 9F C3 57 -->DosOpen</A> represents the logical³
+³               ³volume as a single file. To   ³
+³               ³block other processes from    ³
+³               ³accessing the logical volume, ³
+³               ³a <A><!-- external link: 1D 7A C3 55 -->DosDevIOCtl</A> Category 8,     ³
+³               ³Function 0 call should be made³
+³               ³using the handle returned by  ³
+³               ³DosOpen. The DASD flag should ³
+³               ³be set only by systems        ³
+³               ³programs, not by applications.³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Cache          ³The file system caches or does³
+³               ³not cache data for I/O        ³
+³               ³operations on the file. This  ³
+³               ³flag is advisory only.        ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+See the DosOpen material in the<I> Control Program Programming Reference
+</I>for details of these characteristics.
+<P>
+After an object has<!-- entering slot 937 --> been opened, its file handle
+state flags can be queried by calling<A><!-- external link: 1D C1 C3 17 --> DosQueryFHState
+</A>and reset by calling<A><!-- external link: 1D E8 C3 FC --> DosSetFHState</A>.
+See <A HREF="920_L3_DeterminingandSettin.html">Determining and Setting the
+State of a File or Device Handle</A> for information on determining the
+state of a file handle.
+<P>
+When a child process inherits a file handle, it also inherits the sharing
+and access rights of the file.
+<P>
+You cannot use metacharacters (global file name characters; * and ?) in
+file names you supply to DosOpen.
+
+<P><HR>
+
+<A HREF="913_L3_CreatingFiles.html">[Back: Creating Files]</A> <BR>
+<A HREF="915_L3_ReadingfromFiles.html">[Next: Reading from Files]</A> 
+</BODY>
+</HTML>

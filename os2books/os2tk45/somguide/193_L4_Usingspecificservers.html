@@ -1,0 +1,83 @@
+<HTML>
+<HEAD>
+<TITLE>Using specific servers</TITLE>
+</HEAD>
+<BODY>
+<H1>Using specific servers</H1><!-- entering slot 230 -->
+<P>
+In DSOM, the process that manages a target object is called the object's
+<I>server.</I> Servers are implemented as programs that use SOM classes.
+ Server implementations are registered with DSOM in an Implementation Repository.
+The<I> Implementation Repository</I> is a database queried by clients in
+order to find desired servers, and queried by DSOM in order to activate
+those servers upon demand.
+<P>
+The example above placed no constraints on the DSOM Object Manager as to
+where the remote "Stack" object should be created. The<B> somdNewObject
+</B>call creates a remote object of a specified class in an arbitrary server
+that implements that class. However, the DSOM Object Manager provides methods
+for finding specific servers.
+<P>
+For example, the client program above can be modified slightly to find a
+specific server named "StackServer", which has already been registered in
+DSOM's Implementation Repository.  (Note that the programmer knew or discovered
+that the "StackServer" server implementation supports the "Stack" class.)
+ The highlighted lines below show the changes that were made:
+<PRE>#include &lt;somd.h&gt;
+#include &lt;stack.h&gt;
+
+int main(int argc, char *argv[]) {
+        Stack stk;
+        Environment e;
+        <B>SOMDServer server;</B>
+
+        SOM_InitEnvironment(&amp;e);
+        SOMD_Init(&amp;e);
+
+        <B>server =
+          _somdFindServerByName(SOMD_ObjectMgr, &amp;e, "StackServer");
+        stk = _somdCreateObj(server, &amp;e, "Stack", "");</B>
+
+        _push(stk,&amp;e,100);
+        _push(stk,&amp;e,200);
+        _pop(stk,&amp;e);
+        if (!_empty(stk,&amp;e)) somPrintf("Top: %d\n", _top(stk,&amp;e));
+
+        <B>_somdDeleteObj(server, &amp;e, stk);
+        _somdReleaseObject(SOMD_ObjectMgr, &amp;e, stk);
+        _somdReleaseObject(SOMD_ObjectMgr, &amp;e, server);</B>
+        SOMD_Uninit(&amp;e);
+        SOM_UninitEnvironment(&amp;e);
+
+        return(0);
+}
+</PRE>
+
+<P>
+This version of the program replaces the<B> somdNewObject</B> operation
+with calls to<B> somdFindServerByName</B> and<B> somdCreateObj</B>. The
+<B>somdFindServerByName</B> method consults the Implementation Repository
+to find the DSOM server implementation whose name is "StackServer", and
+creates a<I> server proxy,</I> which provides a connection to that server.
+Every DSOM server process has a<I> server object</I> that defines methods
+to assist in the creation and management of objects in that server. Server
+objects must be instances of<B> SOMDServer</B> or one of its subclasses.
+The<B> somdFindServerByName</B> returns a proxy to the<B> SOMDServer</B> object
+in the named server.
+<P>
+Once the client has the server proxy, it can create and destroy objects
+in that server. The<B> somdCreateObj</B> call creates an object of the class
+"Stack" in the server named "StackServer".
+<P>
+To free the remote "Stack" object, the example shows a<B> somdDeleteObj
+</B>request on the stack object's server. Next,<B> somdReleaseObject</B> requests
+are made on the DSOM Object Manager, to free the stack proxy and the server
+proxy in the client. (Note that these three calls are equivalent to the
+<B>somdDestroyObject</B> call in the previous example.)
+
+<P><HR>
+
+<A HREF="192_L3_Clientprogramusingar.html">[Back: Client program using a remote stack]</A> <BR>
+<A HREF="194_L3_Anoteonfindingexisti.html">[Next: A note on finding existing objects]</A> 
+</BODY>
+</HTML>

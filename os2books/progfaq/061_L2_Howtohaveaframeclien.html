@@ -1,0 +1,102 @@
+<HTML>
+<HEAD>
+<TITLE>How to have a frame/client and still have a std window?</TITLE>
+</HEAD>
+<BODY>
+<H1>How to have a frame/client and still have a std window?</H1><!-- entering slot 72 -->
+<PRE> FRAMECDATA fcdata;
+
+ fcdata.cb	      = sizeof( FRAMECDATA );
+ fcdata.flCreateFlags = FCF_TASKLIST | FCF_MENU, etc.;
+ fcdata.hmodResources = 0; // or the hmod of the DLL containing the resources
+ fcdata.idResources   = ID_RESOURCES;  // ID of the resources, as usual
+
+ hwndFrame = WinCreateWindow( HWND_DESKTOP, WC_FRAME, NULL, 0, 0, 0, 0, 0,
+                              NULLHANDLE, HWND_TOP, ID_RESOURCES,
+                              &amp;fcdata, NULL);
+
+ hwndClient = WinCreateWindow( hwndFrame, szClientClass, NULL, 0, 0, 0, 0, 0,
+                               NULLHANDLE, HWND_TOP, FID_CLIENT, NULL, NULL );
+
+ WinSetWindowPos( hwndFrame, HWND_TOP, x, y, cx, cy,
+                  SWP_ZORDER | SWP_SIZE | SWP_MOVE |
+                  SWP_SHOW | SWP_ACTIVATE );
+</PRE>
+
+<P>
+If you want to then add new controls, like the system menu, you would do
+this:
+<PRE> fcdata.flCreateFlags = FCF_SYSMENU;
+ WinCreateFrameControls( hwndFrame, &amp;fcdata, NULL );
+ WinSendMsg( hwndFrame, WM_UPDATEFRAME,
+             MPFROMLONG( FCF_SYSMENU ), NULL );
+</PRE>
+
+<P>
+The same thing applies to all the other controls like FCF_SIZEBORDER, FCF_TITLEBAR,
+FCF_HORZSCROLL, FCF_MINMAX, etc. You could also OR more than one together
+if you wanted to add more than one frame control in the same shot. On the
+titlebar, you need to also send this message:
+<PRE> WinSendMsg( WinWindowFromID( hwndFrame, FID_TITLEBAR ),
+             TBM_SETHILITE, MPFROMSHORT( TRUE ), NULL );
+</PRE>
+
+<P>
+If you want to delete frame controls, you would do this (assuming system
+menu):
+<PRE> WinDestroyWindow( WinWindowFromID( hwndFrame, FID_SYSMENU ) );
+ WinSendMsg( hwndFrame, WM_UPDATEFRAME,
+             MPFROMLONG( FCF_SYSMENU ), NULL );
+</PRE>
+
+<P>
+Unfortunately this doesn't fit completely well with OOP, since the controls
+really are not themselves objects independent of the frame window. One of
+the problems here is that in order to make them independent objects, you
+need to know the internals of the frame window proc. For instance, you would
+think that the MIN and MAX are two WC_BUTTON controls, but they are really
+one menu with two bitmap menuitems (at least in 1.x they were). So if you
+were to do a WinCreateWindow for either, you'd have to know where to get
+the bitmaps, and hope that doesn't change.
+<P>
+Similarly you'd have to be able to construct the system menu after creating
+a WC_MENU window. This isn't a tough feat, but if a later version of OS/2
+adds a new menu item to the system menu, you'd have to become aware of it.
+
+<P>
+The titlebar and the scrollbars aren't a problem since they have their own
+public window classes - WC_TITLEBAR and WC_SCROLLBAR respectively. You can,
+for instance, do a WinCreateWindow( ..., WC_SCROLLBAR,..., FID_HORZSCROLL,
+..), then send the frame a WM_UPDATEFRAME message for FCF_HORZSCROLL and
+this would work. But there is no WC_SIZEBORDER so you couldn't use this
+method to add the sizing border later. So for the sizing border you need
+to use the method I first posted above.
+<P>
+I spoke too soon about the sizing border. If you want to add or remove it
+from a frame window, you need to add or remove the FS_SIZEBORDER style from
+the frame, then send the frame an UPDATEFRAME message for FCF_SIZEBORDER.
+
+<P>
+To change the style, here is a technique that John Webb just turned me on
+to. To add the style:
+<PRE> WinSetWindowBits( hwndFrame, QWL_STYLE, FS_SIZEBORDER, FS_SIZEBORDER );
+</PRE>
+
+<P>
+To remove it:
+<PRE> WinSetWindowBits( hwndFrame QWL_STYLE, 0, FS_SIZEBORDER );
+</PRE>
+
+<P>
+Also, if you want to add or remove just one of the MIN or the MAX, you basically
+need to get the window handle of the MINMAX menu, then do a MM_<!-- entering slot 73 -->REMOVEITEMfortheoneyouwanttoremove
+.Ididthisin1 . xbuthaven ' tyetin2 . 0 .
+<P>
+Credit:  Rick Fishman 
+
+<P><HR>
+
+<A HREF="060_L2_HowdoIcreateastatusb.html">[Back: How do I create a status bar at the bottom of my window?]</A> <BR>
+<A HREF="062_L2_HowdoIuseprintfinaPM.html">[Next: How do I use printf() in a PM program?]</A> 
+</BODY>
+</HTML>

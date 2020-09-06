@@ -1,0 +1,64 @@
+<HTML>
+<HEAD>
+<TITLE>How do I get a list of fonts?</TITLE>
+</HEAD>
+<BODY>
+<H1>How do I get a list of fonts?</H1><!-- entering slot 91 -->
+<P>
+Shown is code for For v1.3.  Petzold has had a nice series on fonts in PC
+MAG from about Nov 92-June 93.
+<PRE>#define INCL_DEV
+#define INCL_DOSMEMMGR
+#define INCL_GPILCIDS
+#define INCL_WINWINDOWMGR
+#define INCL_WINLISTBOXES
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+
+VOID EXPENTRY FntQueryList(hwnd)
+HWND hwnd; // listbox handle
+  {
+  PFONTMETRICS pfm;
+  HDC          hdc;
+  HPS          hps;
+  LONG         alDevInfo[2];
+  LONG         lFonts;
+  LONG         lFontCnt = 0L;
+  CHAR         pch[64];
+  SEL          sel;
+  USHORT       i;
+
+  hdc = WinOpenWindowDC(hwnd);
+  DevQueryCaps(hdc, CAPS_HORIZONTAL_FONT_RES, 2L, alDevInfo);
+  hps = WinGetPS(hwnd);
+  lFonts = GpiQueryFonts(hps, QF_PUBLIC, (PSZ)0, &amp;lFontCnt,
+                         (LONG)sizeof(FONTMETRICS), (PFONTMETRICS)0 );
+  DosAllocSeg((USHORT)lFonts * sizeof(FONTMETRICS), &amp;sel, SEG_NONSHARED);
+  pfm = (PFONTMETRICS)MAKEP(sel, 0);
+  GpiQueryFonts(hps, QF_PUBLIC, (PSZ)0, &amp;lFonts,
+                (LONG)sizeof(FONTMETRICS), pfm );
+  for (i = 0; i &lt; (USHORT)lFonts; i++) {
+    if (!(pfm[i].fsDefn &amp; FM_DEFN_OUTLINE)) {
+      if ((pfm[i].sXDeviceRes == (SHORT)alDevInfo[0]) &amp;&amp;
+          (pfm[i].sYDeviceRes == (SHORT)alDevInfo[1]) ) {
+            sprintf(pch, "%2d.%s",
+                    pfm[i].sNominalPointSize / 10,
+                    pfm[i].szFacename );
+        WinSendMsg(hwnd, LM_INSERTITEM,
+                   MPFROMSHORT(LIT_END), MPFROMP(pch) );
+        }
+      }
+    }
+  DosFreeSeg(sel);
+  WinReleasePS(hps);
+  return;
+  }
+</PRE>
+ 
+
+<P><HR>
+
+<A HREF="076_L2_HowdoIattachInstance.html">[Back: How do I attach Instance data to window created with WinCreateStdWindow?]</A> <BR>
+<A HREF="078_L2_HowdoIcreateafolderi.html">[Next: How do I create a folder in C and put my pgm in it?]</A> 
+</BODY>
+</HTML>

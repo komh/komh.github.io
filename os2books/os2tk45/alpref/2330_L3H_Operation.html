@@ -1,0 +1,435 @@
+<HTML XPOS=RIGHT YPOS=BOTTOM WIDTH=70% HEIGHT=60%HIDDEN>
+<HEAD>
+<!-- extra bytes: 0B 00 44 02 00 08 00 11 46 00 3C 00 38 27 --><TITLE>Operation</TITLE>
+</HEAD>
+<BODY>
+<H1>Operation</H1><!-- entering slot 2345 -->
+<P>
+
+<P>
+<B>Note: </B> The following operational description applies not only to
+the above instructions but also to external interrupts and exceptions. IF
+PE = 0
+<BR>
+THEN CALL REAL-ADDRESS-MODE;
+<BR>
+ELSE
+<BR>
+ CALL PROTECTED-MODE;
+<BR>
+ IF task gate
+<BR>
+ THEN CALL TASK-GATE;
+<BR>
+ ELSE
+<BR>
+ CALL TRAP-OR-INT-GATE; (* PE=1, int/trap gate *)
+<BR>
+ IF code segment is non-conforming AND DPL &lt; CPL
+<BR>
+ THEN
+<BR>
+  IF VM=0
+<BR>
+  THEN CALL INT-TO-INNER-PRIV; (*PE=1,int/trap gate,DPL&lt;CPL,VM=0*)
+<BR>
+  ELSE CALL INT-FROM-V86-MODE; (* PE=1, int/trap gate, DPL&lt;CPL,
+<BR>
+         VM=1 *)
+<BR>
+  FI;
+<BR>
+  ELSE (* PE=1, int/trap gate, DPL ò CPL *)
+<BR>
+   IF code segment is conforming OR code segment DPL = CPL
+<BR>
+  THEN CALL INT-TO-SAME-PRIV;
+<BR>
+  ELSE #GP(CS selector + EXT); (* PE=1, int/trap gate, DPL&gt;CPL *)
+<BR>
+   FI;
+<BR>
+   FI;
+<BR>
+  FI;
+<BR>
+FI;
+<BR>
+END;
+<BR>
+
+<BR>
+REAL-ADDRESS-MODE PROC
+<BR>
+ Push (FLAGS);
+<BR>
+ IF  0; (* Clear interrupt flag *)
+<BR>
+ TF  0; (* Clear trap flag *)
+<BR>
+ Push(CS);
+<BR>
+ Push(IP);
+<BR>
+ (* No error codes are pushed *)
+<BR>
+ CS  IDT[Interrupt number * 4].selector;
+<BR>
+ IP  IDT[Interrupt number * 4].offset;
+<BR>
+(* Start processing in real address mode *)
+<BR>
+REAL-ADDRESS-MODE ENDPROC
+<BR>
+
+<BR>
+PROTECTED-MODE PROC
+<BR>
+ Interrupt vector must be within IDT table limits,
+<BR>
+   else #GP(vector number * 8+2+EXT);
+<BR>
+ Descriptor AR byte must indicate interrupt gate, trap gate, or task gate,
+<BR>
+   else #GP(vector number * 8+2+EXT);
+<BR>
+ IF software interrupt (* i.e. caused by INT n, INT 3, or INTO *)
+<BR>
+ THEN
+<BR>
+  IF gate descriptor DPL&lt;CPL
+<BR>
+  THEN #GP(vector number * 8+2+EXT); (* PE=1, DPL&lt;CPL, software interrupt
+*)
+<BR>
+  FI;
+<BR>
+ FI;
+<BR>
+ Gate must be present, else #NP(vector number * 8+2+EXT);
+<BR>
+PROTECTED-MODE ENDPROC
+<BR>
+
+<BR>
+TRAP-OR-INT-GATE PROC
+<BR>
+ Examine CS selector and descriptor given in the gate descriptor;
+<BR>
+ Selector must be non-null, else #GP (EXT);
+<BR>
+ Selector must be within its descriptor table limits
+<BR>
+  ELSE #GP(selector+EXT);
+<BR>
+ Descriptor AR byte must indicate code segment
+<BR>
+  ELSE #GP(selector + EXT);
+<BR>
+ Segment must be present, else #NP(selector+EXT);
+<BR>
+TRAP-OR-INT-GATE ENDPROC
+<BR>
+
+<BR>
+INT-TO-INNER-PRIV PROC
+<BR>
+ (* PE=1, DPL&lt;CPL and non-conforming, (* PE=1, int/trap gate, DPL&lt;CPL,
+VM=0 *)
+<BR>
+ Check selector and descriptor for new stack in current TSS;
+<BR>
+  Selector must be non-null, else #TS(EXT);
+<BR>
+  Selector index must be within its descriptor table limits
+<BR>
+   ELSE #TS(SS selector+EXT);
+<BR>
+  Selector's RPL must equal DPL of code segment, else #TS(SS
+<BR>
+   selector+EXT);
+<BR>
+  Stack segment DPL must equal DPL of code segment, else #TS(SS
+<BR>
+   selector+EXT);
+<BR>
+  Descriptor must indicate writable data segment, else #TS(SS
+<BR>
+   selector+EXT);
+<BR>
+  Segment must be present, else #SS (SS selector+EXT);
+<BR>
+ If 32-bit gate
+<BR>
+ THEN New stack must have room for 20 bytes else #SS(0)
+<BR>
+ ELSE New stack must have room for 10 bytes else #SS(0)
+<BR>
+ FI;
+<BR>
+ Instruction pointer must be within CS segment boundaries else #GP(0);
+<BR>
+ Load new SS and eSP value from TSS;
+<BR>
+ If 32-bit gate
+<BR>
+  THEN CS:EIP  selector:offset from gate;
+<BR>
+ ELSE CS:IP  selector:offset from gate;
+<BR>
+ FI;
+<BR>
+ Load CS descriptor into invisible portion of CS register;
+<BR>
+ Load SS descriptor into invisible portion of SS register;
+<BR>
+ IF 32-bit gate
+<BR>
+THEN
+<BR>
+  Push (long pointer to old stack) (* 3 words padded to 4 *);
+<BR>
+  Push (EFLAGS);
+<BR>
+  Push (long pointer to return location) (* 3 words padded to 4 *);
+<BR>
+ELSE
+<BR>
+  Push (long pointer to old stack) (* 2 words *);
+<BR>
+  Push (FLAGS);
+<BR>
+  Push (long pointer to return location) (* 2 words *);
+<BR>
+ FI;
+<BR>
+ Set CPL to new code segment DPL;
+<BR>
+ Set RPL of CS to CPL;
+<BR>
+ IF interrupt gate THEN IF  0 (* interrupt flag to 0 (disable) *); FI;
+<BR>
+ TF  0;
+<BR>
+ NT  0;
+<BR>
+INT-FROM-INNER-PRIV ENDPROC
+<BR>
+
+<BR>
+INT-FROM-V86-MODE PROC
+<BR>
+ Check selector and descriptor for new stack in current TSS;
+<BR>
+ Selector must be non-null, else #TS(EXT);
+<BR>
+ Selector index must be within its descriptor table limits
+<BR>
+  ELSE #TS(SS selector+EXT);
+<BR>
+ Selector's RPL must equal DPL of code segment, else #TS(SS
+<BR>
+  selector+EXT);
+<BR>
+ Stack segment DPL must equal DPL of code segment, else #TS(SS
+<BR>
+  selector+EXT);
+<BR>
+ Descriptor must indicate writable data segment, else #TS(SS
+<BR>
+  selector+EXT);
+<BR>
+ Segment must be present, else #SS(SS selector+EXT);
+<BR>
+ IF 32-bit gate
+<BR>
+  THEN New stack must have room for 20 bytes else #SS(0)
+<BR>
+  ELSE New stack must have room for 10 bytes else #SS(0)
+<BR>
+ FI;
+<BR>
+ Instruction pointer must be within CS segment boundaries else #GP(0);
+<BR>
+ IF IOPL &lt; 3
+<BR>
+ THEN
+<BR>
+  #GP(0); (*V86 monitor trap: PE=1,int/trap gate, DPL&lt;CPL, VM=1, IOPL&lt;3*)
+<BR>
+ ELSE (* IOPL=3 *)
+<BR>
+  IF GATE'S_DPL = 3
+<BR>
+  THEN
+<BR>
+   IF TARGET'S_CPL &lt;&gt; 0
+<BR>
+   THEN #GP(0);
+<BR>
+   ELSE
+<BR>
+    TempEFlags  EFLAGS;
+<BR>
+    VM  0;
+<BR>
+    TF  0;
+<BR>
+    IF service through Interrupt Gate
+<BR>
+      THEN IF  0;
+<BR>
+    FI;
+<BR>
+    TempSS  SS;
+<BR>
+    TempESP  ESP;
+<BR>
+    SS  TSS.SS0; (* Change to level 0 stack segment *)
+<BR>
+  ESP  TSS.ESP0; (* Change to level 0 stack pointer *)
+<BR>
+  Push(GS); (* padded to two words *)
+<BR>
+    Push(FS); (* padded to two words *)
+<BR>
+  Push(DS); (* padded to two words *)
+<BR>
+  Push(ES); (* padded to two words *)
+<BR>
+  GS  0; (* segment registers nullified - invalid in
+<BR>
+    protected mode *)
+<BR>
+    FS  0;
+<BR>
+  DS  0;
+<BR>
+  ES  0;
+<BR>
+  Push(TempSS); (* Padded to two words *)
+<BR>
+  Push(TempESP);
+<BR>
+  Push(TempEFlags);
+<BR>
+  Push(CS); (* Padded to two words *)
+<BR>
+  Push(EIP);
+<BR>
+    CS:EIP  selector:offset from interrupt gate;
+<BR>
+    (* Starts processing of new routine in Protected Mode *)
+<BR>
+   FI;
+<BR>
+  ELSE (* GATE'S_DPL &lt;&gt; 3 *)
+<BR>
+   #GP(0);
+<BR>
+  FI;
+<BR>
+ FI;
+<BR>
+INT-FROM-V86-MODE ENDPROC
+<BR>
+
+<BR>
+INT-TO-SAME-PRIV PROC
+<BR>
+  (* PE=1, DPL=CPL or conforming segment *)
+<BR>
+ IF 32-bit gate
+<BR>
+ THEN Current stack limits must allow pushing 10 bytes, else #SS(0);
+<BR>
+ ELSE Current stack limits must allow pushing 6 bytes, else #SS(0);
+<BR>
+ FI;
+<BR>
+
+<BR>
+IF interrupt was caused by exception with error code
+<BR>
+THEN Stack limits must allow push to two more bytes;
+<BR>
+ELSE #SS(0);
+<BR>
+FI;
+<BR>
+Instruction pointer must be in CS limit, else #GP(0);
+<BR>
+IF 32-bit gate
+<BR>
+THEN
+<BR>
+ Push (EFLAGS);
+<BR>
+ Push (long pointer to return location); (* 3 words padded to 4 *)
+<BR>
+ CS:EIP  selector:offset from gate;
+<BR>
+ELSE (* 16-bit gate *)
+<BR>
+ Push (FLAGS);
+<BR>
+ Push (long pointer to return location); (* 2 words *)
+<BR>
+ CS:IP  selector:offset from gate;
+<BR>
+FI;
+<BR>
+Load CS descriptor into invisible portion of CS register;
+<BR>
+ Set the RPL field of CS to CPL;
+<BR>
+ Push (error code); (* if any *)
+<BR>
+ IF interrupt gate THEN IF  0; FI;
+<BR>
+ TF  0;
+<BR>
+ NT  0;
+<BR>
+INT-TO-SAME-PRIV ENDPROC
+<BR>
+
+<BR>
+TASK-GATE PROC (* PE=1, task gate *)
+<BR>
+ Examine selector to TSS, given in task gate descriptor;
+<BR>
+  Must specify global in the local/global bit, else #TS(TSS selector);
+<BR>
+  Index must be within GDT limits, else #TS(TSS selector);
+<BR>
+  AR byte must specify available TSS (bottom bits 00001);
+<BR>
+   else #TS(TSS selector);
+<BR>
+  TSS must be present, else #NP(TSS selector);
+<BR>
+ SWITCH-TASKS with nesting to TSS;
+<BR>
+ IF interrupt was caused by fault with error code
+<BR>
+ THEN
+<BR>
+  Stack limits must allow push of two more bytes, else #SS(0);
+<BR>
+  Push error code onto stack;
+<BR>
+ FI;
+<BR>
+ Instruction pointer must be in CS limit, else #GP(0);
+<BR>
+TASK-GATE ENDPROC
+<BR>
+
+
+<P><HR>
+
+<A HREF="2329_L3H_Description.html">[Back: Description]</A> <BR>
+<A HREF="2331_L3H_DecisionTable.html">[Next: Decision Table]</A> 
+</BODY>
+</HTML>

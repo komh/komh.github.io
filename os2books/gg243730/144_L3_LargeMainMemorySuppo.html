@@ -1,0 +1,89 @@
+<HTML>
+<HEAD>
+<TITLE>Large Main Memory Support</TITLE>
+</HEAD>
+<BODY>
+<H1>Large Main Memory Support</H1><!-- entering slot 159 -->
+<P>
+The Intel 80386 and 80486 families of microprocessors are capable of addressing
+64TB of virtual memory. At present, OS/2 Version 2.0 has the capability
+of supporting up to 4GB of virtual memory and 4GB of real memory. In order
+to support more than 16MB of memory however, certain requirements must be
+met.
+<P>
+Firstly, the OS/2 V2.0 physical memory manager needs to know how much memory
+is present. This is done during kernel initialization by calling the BIOS
+interrupt 15 with subfunction code x'88'.  This call will return the total
+amount of memory present. If the BIOS supports interrupt 15 with subfunction
+code x'C7', "return memory map information", then this function will be
+used to return an array giving the layout of the different levels of memory;
+for example, system board memory and adapter memory available in the machine,
+together with address ranges for the different memory types. Should the
+function not be present, the interrupt will return with the carry flag set.
+ Support for this function is not mandatory. Information obtained is used
+by OS/2 V2.0 to prioritize the areas of physical memory that are allocated
+first.
+<P>
+The second requirement for supporting more than 16MB is that the paging
+device fixed disk controller can support data transfers to or from memory
+locations above the 16MB line. This ability usually requires the availability
+of a DMA controller with a 32-bit addressing capability, either on the system
+board or on a busmaster SCSI adapter. To determine whether this DMA is available,
+the disk device driver level is queried. If it is a level 3 device driver,
+it is further interrogated to find out if the DMA that the disk controller
+uses has support for 32-bit addressing. If this second requirement is satisfied
+and the disk controller can handle 32-bit addresses larger than 16MB, then
+all of memory is used by OS/2 for programs and data.  If it cannot, then
+the OS/2 page manager allocates all of the memory above 16MB as a paging
+cache to be used before paging to the disk. This substitution is a good
+use of the memory above 16MB, but not as good as using it directly.
+<P>
+A final requirement for supporting more than 16MB is that the machine's
+ABIOS is capable of handling requests with addresses above the 16MB line.
+
+<P>
+Presently in the IBM PS/2 range, only the Models 90 and 95 have support
+for more than 16MB of memory and when using 8MB SIMMs will support up to
+64MB. Machines using 80386SX, 80386SL or 80386SLC processors are not able
+to support more than 16MB as they only support 24-bit addressing external
+to the processor.
+<P>
+If OS/2 V2.0 detects the presence of a device that does not support 32-bit
+addressing, and if support for more than 16MB is enabled, it will ensure
+that buffers used by that device's driver are locked below the 16MB line
+during I/O operations.  Level 3 device drivers are then given a permanent
+buffer below the 16MB line. For level 1 and 2 device drivers the OS/2 V2.0
+virtual memory manager, when requested to lock a user buffer for that device,
+will move the buffer below the 16MB line.
+<P>
+The only device for which 32-bit addressing support is mandatory is the
+paging device.  Pages are written to or read from their exact physical location
+in memory and are not moved before I/O takes place.  Should paging be disabled
+by specifying<B> MEMMAN=NOSWAP</B> in the<B> CONFIG.SYS</B>, then more than
+16MB can be supported<!-- entering slot 160 --> even though there is no
+disk subsystem support for it.
+<P>
+When determining whether an OEM machine will support more than 16MB, the
+considerations are:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Is the BIOS/ABIOS in the machine capable of supporting
+the memory size?<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Is the BIOS capable of telling OS/2 that more than
+16MB is present in the machine?<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->If paging is enabled, does the paging device support
+32-bit addressing?<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->If the paging device does support 32-bit addressing,
+does its device driver have the capability of responding correctly to OS/2
+V2.0 with this information?<!-- lm: 0x2 0 -->
+<BR>
+
+
+<P><HR>
+
+<A HREF="143_L2_HardwareSupportLevel.html">[Back: Hardware Support Levels]</A> <BR>
+<A HREF="145_L3_MicroprocessorSuppor.html">[Next: Microprocessor Support]</A> 
+</BODY>
+</HTML>

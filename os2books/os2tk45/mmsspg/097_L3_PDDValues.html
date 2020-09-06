@@ -1,0 +1,61 @@
+<HTML>
+<HEAD>
+<TITLE>PDD Values</TITLE>
+</HEAD>
+<BODY>
+<H1>PDD Values</H1><!-- entering slot 119 -->
+<P>
+The stream handler passes a pointer to the PDD on DDCMD_SETUP. This points
+to a value used by the PDD for setting the referenced time of the PDD. We
+do not always want the PDD to start its time at 0 every time the stream
+handler does a start, because the stream handler might have performed a
+seek in the stream. The PDD might have played a minute of data and then
+seeked backwards to maybe the 30-second mark in the data. If we issue a
+start, we do not want the PDD to think it is starting from zero again when
+it is really starting from the 30-second mark in that stream.
+<P>
+DDCMD_CONTROL has an important NOTIFY subfunction, which is used for cuepoint
+or event detection. The stream handler supports events in cuepoints-an application
+request to be notified when a particular location in the file is reached
+or a specific time period has elapsed. The stream handler uses two methods
+for detecting how much time has elapsed:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Using DDCMD_CONTROL NOTIFY, the stream handler
+requests to be notified by the PDD at a particular time and passes a pointer
+to the cue time.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->The stream handler determines the time internally.
+This method is not as precise as the first method, because only the PDD
+knows the real time.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+For example, suppose the stream handler does a DDCMD_CONTROL NOTIFY at one
+minute. If the PDD supports precise event detection, it must accept this
+request and put it into a queue somewhere, preferably a linked list. This
+linked list will have the time of one minute so that during the streaming
+process, the PDD occasionally checks to see whether it is at the one minute
+mark.  When this event occurs, the PDD calls back on an SHD_REPORT_EVENT.
+Then, the programmer can free up that event detection linked list node.
+
+<P>
+Keep in mind that the PDD should have the capability to queue these requests
+because there may additional requests. For example, an application might
+request to be notified at the one-minute mark, next at a minute and a half,
+and possibly every five minutes.
+<P>
+If the PDD does not support event detection, then when it gets called on
+a DDCMD_CONTROL NOTIFY, he responds ERROR_INVALID_REQUEST.  This response
+tells the stream handler that it must do the event detection itself.
+<P>
+<B>Note: </B> Refer to the<I> OS/2 Multimedia Programming Reference</I> for
+the return codes for the interfaces of the IDC.<!-- lm: 0x2 1 -->
+<P>
+ 
+
+<P><HR>
+
+<A HREF="096_L3_StreamHandlerValues.html">[Back: Stream Handler Values]</A> <BR>
+<A HREF="098_L2_PerformanceTuningthe.html">[Next: Performance-Tuning the Sync/Stream Manager]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,184 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Source code of ConvIni.CMD - part 1</TITLE>
+</HEAD>
+<BODY>
+<H1>Source code of ConvIni.CMD - part 1</H1><!-- entering slot 594 -->
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* ConvIni - convert an INI file to a REXX program                    */
+/*                                                                    */
+/* (c) Copyright Bernd Schemmer 1996                                  */
+/*                                                                    */
+/* Author:                                                            */
+/*   Bernd Schemmer                                                   */
+/*   Stalburgstr. 14                                                  */
+/*   D-60318 Frankfurt am Main                                        */
+/*   Germany                                                          */
+/*   Bernd.Schemmer@gmx.de                                            */
+/*                                                                    */
+/* History:                                                           */
+/*   02.11.1996 /bs v1.00                                             */
+/*     - initial release                                              */
+/*                                                                    */
+/* Distribution:                                                      */
+/*   This code may be distributed freely and used in other programs.  */
+/*   Please give credit where credit is due.                          */
+/*   If you need further help, feel free to contact me at the address */
+/*   noted above.                                                     */
+/*                                                                    */
+/* Description:                                                       */
+/*   Convert an INI file or parts of it to a REXX program to recreate */
+/*   the INI file or parts of it                                      */
+/*                                                                    */
+/*                                                                    */
+/* Usage:                                                             */
+/*   ConvIni iniFile rexxPrg [{app1} {...} {app#} |#1-#2]             */
+/*           {/L:logfile} {/H} {/Silent} {/NoSound} {/NoAnsi}         */
+/*           {/Trace}                                                 */
+/*                                                                    */
+/* Where:                                                             */
+/*   IniFile    - fully qualified name of the INI file                */
+/*                or 'USER' for the file OS2.INI                      */
+/*                or 'SYSTEM' for the file OS2SYS.INI                 */
+/*                                                                    */
+/*   rexxPrg    - fully qualified name of the output REXX program     */
+/*                ConvIni does not override an existing program!      */
+/*                                                                    */
+/*   app1... app#                                                     */
+/*              - Application entries to write to the REXX program    */
+/*                (surround entries with imbedded blanks with " or ') */
+/*                or #1-#2 where #1 is the number of the first        */
+/*                application to convert and #2 is the number of the  */
+/*                last application to convert. Use -1 for #2 to match */
+/*                the number of applications in the file.             */
+/*                This parameter is optional, if it is ommitted,      */
+/*                ConvIni writes the data of all applications to      */
+/*                the output file.                                    */
+/*                                                                    */
+/*   /L:logFile - logfile is the name of the logfile :-)              */
+/*                This parameter is case-sensitive!                   */
+/*                def.: do not use a logfile                          */
+/*                                                                    */
+/*   /H         - show usage, you may also use                        */
+/*                /h, /?, /HELP, -h, -H, -HELP or -?                  */
+/*                                                                    */
+/*   /Silent    - suppress all messages (except error messages)       */
+/*                You should also use the parameter /L:logfile if you */
+/*                use this parameter!                                 */
+/*                You may also set the environment variable SILENT to */
+/*                "1" to suppress all messages.                       */
+/*                                                                    */
+/*   /NoSound   - suppress all sounds. You may also set the           */
+/*                environment variable SOUND to "0" to suppress the   */
+/*                sounds.                                             */
+/*                                                                    */
+/*   /NoAnsi    - do not use ANSI codes. You may also set the         */
+/*                environment variable ANSI to "0" to suppress the    */
+/*                use of ANSI codes.                                  */
+/*                                                                    */
+/*   /Trace     - turn TRACE on before calling MAIN. You may also     */
+/*                set the environment variable RXTTRACE to ON to      */
+/*                turn the TRACE mode for MAIN on.                    */
+/*                                                                    */
+/*                                                                    */
+/* returncodes:                                                       */
+/*      0 - execution okay                                            */
+/*      1 - parameter missing                                         */
+/*      2 - ini file not found                                        */
+/*      3 - REXX program already exist                                */
+/*      4 - Error reading the ini file                                */
+/*                                                                    */
+/*    240 ... 252                                                     */
+/*          reserved for the runtime system                           */
+/*    253 - syntax help called (parameter /h)                         */
+/*    254 - user break (CTRL-C)                                       */
+/*    255 - internal runtime system error                             */
+/*                                                                    */
+/* Notes:                                                             */
+/*   Ensure that no othter application uses the INI file to convert   */
+/*   while ConvIni is running!                                        */
+/*                                                                    */
+/*   To speed up the program I strongly suggest that you use an INI   */
+/*   file on a RAM Disk!                                              */
+/*                                                                    */
+/*   Be aware, that the size of the REXX program to recreate the      */
+/*   OS2.INI can be 3 MB and greater!                                 */
+/*                                                                    */
+/*   Due to a bug in the SysIni function it may not be possible to    */
+/*   convert a big INI file with one call.                            */
+/*   In this case you may use <!-- entering slot 595 -->more than one call to ConvIni and merge */
+/*   the resulting CMD files.                                         */
+/*                                                                    */
+/*   Example:                                                         */
+/*     You have an INI file called myfile.ini with 500 applications.  */
+/*     To convert it use the following calls                          */
+/*                                                                    */
+/*       ConvIni myfile.ini myPrg1.cmd 1-200                          */
+/*       ConvIni myfile.ini myPrg2.cmd 201-400                        */
+/*       ConvIni myfile.ini myPrg3.cmd 401-500                        */
+/*                                                                    */
+/*     Now merge the stems from myPrg1.cmd, myPrg2.cmd and myPrg3.cmd */
+/*     into one stem.                                                 */
+/*     Note that you must use a new session for every call to         */
+/*     ConvIni.                                                       */
+/*                                                                    */
+/*                                                                    */
+/* Based on TEMPLATE.CMD v3.05, TEMPLATE is (c) 1996 Bernd Schemmer,  */
+/* Stalburgstr 14, 60318 Frankfurt, Germany, Bernd.Schemmer@gmx.de    */
+/* ------------------------------------------------------------------ */
+
+  call trace 'off'      /* turn interactive trace off                 */
+
+                  global. = ''  /* init the stem global. with ''      */
+
+/*** change the following values to your need                       ***/
+
+         global.__Version = 1.0          /* Version of YOUR program   */
+
+       global.__SignOnMsg = 1   /* set to 0 if you do not want the    */
+                                /* program start and end messages     */
+
+         global.__NeedCID = 0   /* set to 1 if you need CID support   */
+
+      global.__NeedColors = 1   /* set to 1 if you want colored msgs  */
+
+  global.__NeedPatchCheck = 0   /* set to 1 if you want the program   */
+                                /* to search for a patched version of */
+                                /* this program                       */
+
+              /* set default values for EXPOSELIST if necessary       */
+/*             exposeList = ''                                        */
+
+              /* name of the routine for the message handling         */
+              /* Note: Use '' for hardcoded messages                  */
+/*          global.__GetMsg = ''                                      */
+
+             /* base number for the message numbers (def.: 1000)      */
+/*          global.__BaseMsgNo = 1000                                 */
+
+             /* parameter for convini (used in ShowUsage)             */
+  global.__MyParms = 'iniFile rexxPrg [{app1} {...} {app#} | #1-#2]'
+
+
+             /* note: set the variable prog.__STDOUT to "STDERR:"     */
+             /*       or "NUL" if your program is a filter program!   */
+
+  prog.__STDOUT = 'STDOUT'        /* necessary for Object REXX        */
+  prog.__STDERR = 'STDOUT'        /* necessary for Object REXX        */
+                                                                   /*!*/
+/***                End of variables to change                      ***/
+/*      HINT: The further program code is in the function MAIN        */
+
+/***        End of Part 1 of the source code of TEMPLATE.CMD        ***/
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="552_L3_ConvIniCMD.html">[Back: ConvIni.CMD]</A> <BR>
+<A HREF="554_L4_SourcecodeofConvIniC.html">[Next: Source code of ConvIni.CMD - part 4]</A> 
+</BODY>
+</HTML>

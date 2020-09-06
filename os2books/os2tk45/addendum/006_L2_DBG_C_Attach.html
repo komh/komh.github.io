@@ -1,0 +1,136 @@
+<HTML>
+<HEAD>
+<TITLE>DBG_C_Attach</TITLE>
+</HEAD>
+<BODY>
+<H1>DBG_C_Attach</H1><!-- entering slot 6 -->
+<P>
+<B> Debug Command 33  Debug Attach Command</B>
+<P>
+<B>Parameters</B><!-- lm: 0x2 1 -->
+<UL>
+<P>
+Addr<!-- lm: 0x2 8 -->
+<UL> Possible values are shown in the list below
+ <!-- lm: 0x2 8 -->
+<P>
+0x00000000<!-- lm: 0x2 23 -->
+<UL> The default action is to sever the connection
+between the debugger and the program being debugged, if a system resource
+is being held.<!-- lm: 0x2 8 -->
+</UL> 0x00000001<!-- lm: 0x2 23 -->
+<UL> The
+sever action is not wanted between the debugger and the program being debugged.
+<!-- lm: 0x2 8 --><!-- lm: 0x2 1 -->
+</UL>Pid<!-- lm: 0x2 8 -->
+<UL> Process
+ID of debuggee<!-- lm: 0x2 1 -->
+</UL> Tid<!-- lm: 0x2 8 -->
+<UL> Reserved,
+must be zero<!-- lm: 0x2 1 -->
+</UL> Cmd<!-- lm: 0x2 8 -->
+<UL> DBG_C_Attach
+<!-- lm: 0x2 1 -->
+</UL>Value<!-- lm: 0x2 8 -->
+<UL> Debugging Level Number
+
+<P>
+The only permitted debugging level number is shown in the following list
+ <!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 17 --><LI>DBG_L_386<!-- lm: 0x2 8 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+This must be the first DosDebug command called when dynamically attaching
+to a process. No other DosDebug command will be accepted until the debugging
+connection has been established except for DBG_C_RegDebug to register a
+JIT (Just-in-time) debugger on a per-process basis and DBG_C_QueryDebug
+to query the JIT debug information. See DBG_C_RegDebug and DBG_C_QueryDebug
+for more information.
+<P>
+<B>Returns</B>
+<P>
+This command establishes a debugging connection. It must be the initial
+command, since it verifies the buffer format for the rest of the connection.
+
+<P>
+Because DosDebug usually cannot be ported to new machines without changing
+the format of the buffer, this command is needed to establish that the debugger
+is capable of handling the desired buffer format.
+<P>
+If the requested debugging level is not supported, an error is returned,
+and the connection is not made. This gives the debugger a chance to try
+again or to start automatically a different debugger process that uses a
+different buffer format.
+<P>
+For this command, the machine-independent and PID portion of the buffer
+is examined. This portion includes the Pid, Tid, Cmd, and Value fields.
+This makes it possible to port the DosDebug buffer from one machine to another
+without returning an error to the debugger on the initial DosDebug command.
+
+<P>
+The only DosDebug notifications that are returned by this command are DBG_N_Success
+and DBG_N_Error.
+<P>
+<B>Restrictions</B>
+<P>
+This DBG_C_Attach command does not require that the session for the program
+being debugged tohave been started with EXEC_TRACE, or SSF_TRACEOPT_XXX
+option by DosExecPgm or DosStartSession, as DBG_C_Connect requires.
+<P>
+If a connection to the program being debugged is established by a debugger,
+then another debug session cannot attach to the program being debugged while
+the first debugger is attached.
+<P>
+<B>Remarks</B>
+<P>
+If<I> Addr</I> is not 0, the connection between the debugger and the program
+being debugged is not severed. If any threads of the program being debugged,
+other than the thread that encountered the debug event, are holding system
+semaphores, they will be allowed to run until they release the semaphores.
+They will then be stopped, and the notification will be delivered.
+<P>
+If the thread encountering the debug event is holding a system semaphore,
+the connection between the debugger and the program being debugged is severed
+by terminating the program being debugged and returning a DBG_N_Error notification
+to the debugger with the value field set to 0 and the register set filled
+in. No further DosDebug commands will be accepted by the program being debugged,
+nor will it generate any other notifications.
+<P>
+If a DBG_C_Stop is issued, and a thread owning a system semaphore is about
+to generate a DBG_N_AsyncStop notification, it will be allowed to continue
+execution until it releases the semaphore. It will then be stopped, and
+the notification will be delivered. This is the only exception to the severing
+of the debugger/debugbee rule.
+<P>
+If<I> Addr</I> is set to 0, the connection between the debugger and the
+program being debugged is severed if a system resource is being held, in
+which case DosDebug returns <!-- lm: 0x2 1 -->
+<P>
+Tid<!-- lm: 0x2 8 -->
+<UL> Thread owning semaphore<!-- lm: 0x2 1 -->
+</UL> Cmd
+<!-- lm: 0x2 8 -->
+<UL>DBG_N_Error<!-- lm: 0x2 1 -->
+</UL> Value<!-- lm: 0x2 8 -->
+<UL> ERROR_EXCL_SEM_ALREADY_OWNED
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+If the debugger needs to present some information to the user or use the
+thread holding the system resource, the debugger must terminate the program
+being debugged. Any other action might<!-- entering slot 7 --> result in
+a system halt.
+<P>
+Upon attach to a process, a series of notifications will occur. The notifications
+include the current EXE module notification, thread (all that exist in the
+debuggee) create notifications, and currently loaded modules (DLLs) notifications.
+The notifications occur as DBG_NPModuleLoad, DBG_N_ThreadCreate, etc, just
+as they do with the DBG_C_Connect command.
+
+<P><HR>
+
+<A HREF="005_L1_DosDebugCommands.html">[Back: DosDebug Commands]</A> <BR>
+<A HREF="007_L2_DBG_C_Detach.html">[Next: DBG_C_Detach]</A> 
+</BODY>
+</HTML>

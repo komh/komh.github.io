@@ -1,0 +1,64 @@
+<HTML>
+<HEAD>
+<TITLE>VBIOS Device Driver</TITLE>
+</HEAD>
+<BODY>
+<H1>VBIOS Device Driver</H1><!-- entering slot 161 -->
+<P>
+The VBIOS virtual device driver is like any other base virtual device driver
+except that it is loaded before any other virtual device drivers.  This
+driver is loaded and initialized first, so that other virtual device drivers
+can use services provided by VBIOS.
+<P>
+The system BIOS reserves physical memory for the interrupt vector table,
+ROM and EBIOS data areas.  This reservation is done by an indication in
+the<I> arena info</I> data structure passed to the kernel. These physical
+pages are treated as "unavailable" by the virtual memory manager.
+<P>
+During virtual device driver initialization, the physical interrupt vector
+table and ROM data area (previously allocated/reserved by the BIOS) are
+mapped with the<B> VDHMapMem()</B> function.  VBIOS also installs hooks
+which cause its own VDM creation handler to be invoked, and an I/O hooking
+routine to be invoked when all virtual device drivers have been initialized
+for a particular VDM.
+<P>
+Space is also reserved for the EBIOS data area (if the machine is a PS/2)
+and the system ROM linear address ranges.  This allows virtual device drivers
+to use and modify this information globally (affecting all VDMs created
+thereafter).
+<P>
+The following steps are taken when initializing the BIOS for a newly created
+VDM:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Map the CBIOS system area to the VDM address
+space, using the<B> VDHMapMem()</B> service.<!-- lm: 0x2 0 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 4 -->Allocate memory for the interrupt vector table
+and ROM BIOS data area.<!-- lm: 0x2 0 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 4 -->Map and copy the physical interrupt vector table
+and ROM BIOS data area into the VDMs linear address space.<!-- lm: 0x2 0 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 4 -->Allocate memory for the extended BIOS data area
+in the VDM's linear address space (only on PS/2s).<!-- lm: 0x2 0 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 4 -->Map and copy the physical extended BIOS data
+area into the linear address space.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+When VBIOS's VDM_CREATE_DONE handler is called (after all virtual device
+drivers' VDM_CREATE handlers have been invoked), VBIOS attempts to install
+I/O hook routines for the serial and parallel ports COMx and LPTx.  These
+hook routines will take effect<I> only</I> if the virtual COM device driver
+or the virtual printer device driver have not successfully hooked the I/O
+ports. VBIOS I/O hook routines are used only to display pop-up messages
+when the device is not virtualized, and to terminate the VDM on user request.
+
+
+<P><HR>
+
+<A HREF="152_L2_StandardVirtualDevic.html">[Back: Standard Virtual Device Drivers]</A> <BR>
+<A HREF="154_L3_VirtualCMOSDeviceDri.html">[Next: Virtual CMOS Device Driver]</A> 
+</BODY>
+</HTML>

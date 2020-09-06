@@ -1,0 +1,72 @@
+<HTML>
+<HEAD>
+<TITLE>On-The-Spot Conversion in DBCS PM</TITLE>
+</HEAD>
+<BODY>
+<H1>On-The-Spot Conversion in DBCS PM</H1><!-- entering slot 74 -->
+<P>
+Generally, the on-the-spot conversion is preferred to the fixed-position
+conversion.  To support it, your program should properly handle<B> WM_QUERYCONVERTPOS</B>,
+which is sent by the system to the application when the user tries to enter
+the conversion mode.  The first message parameter contains<I> pointer</I> to
+<B>cursorpos</B> (RECTL) and the second message parameter is reserved.  The
+application can specify its intention on DBCS input method by replying to
+this message as follows:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->If you accept entering the conversion mode, return
+value<B> QCP_CONVERT</B> (USHORT) with ;<!-- lm: 0x2 7 -->
+<UL>
+<P>
+ a.<!-- lm: 0x2 11 -->
+<UL>If you prefer the on-the-spot conversion, update
+<B>xLeft</B> and<B> yBottom</B> of<B> cursorpos</B> to the bottom-left corner
+of the text cursor position in window coordinate.<!-- lm: 0x2 7 -->
+</UL>
+b.<!-- lm: 0x2 11 -->
+<UL>If you prefer the fixed-position conversion, update
+<B>xLeft</B> and<B> yBottom</B> of<B> cursorpos</B> to (-1,-1).<!-- lm: 0x2 6 --><!-- lm: 0x2 2 -->
+</UL>
+2.<!-- lm: 0x2 6 -->
+<UL>If you want to inhibit to enter the conversion
+mode, return value<B> QCP_NOCONVERT</B>.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The above process 1.a. is for the on-the-spot conversion and 1.b. is for
+the fixed-position conversion.  The single line, multi-line, and prompted
+entry field control (<B>WC_ENTRYFIELD</B>,<B> WC_MLE</B> and<B> WC_COMBOBOX</B>)
+support the on-the-spot conversion.
+<P>
+The next code fragment is a sample AVIO application supporting the on-the-spot
+conversion.
+<PRE>case WM_QUERYCONVERTPOS:    VioGetCurPos( &amp;cpQuery.y, &amp;cpQuery.x, hpsVio );
+    VioGetOrg( &amp;Origin.y, &amp;Origin.x, hpsVio);
+    WinQueryWindowRect( hwnd, &amp;rcl );
+    ((PRECTL)mp1)-&gt;xLeft   = (cpQuery.x - Origin.x) * DevCell.cx;
+    ((PRECTL)mp1)-&gt;yBottom =
+            rcl.yTop-((cpQuery.y-Origin.y+1)*DevCell.cy);
+    ((PRECTL)mp1)-&gt;xRight  = ((PRECTL)mp1)-&gt;xLeft + DevCell.cx;
+    ((PRECTL)mp1)-&gt;yTop    = ((PRECTL)mp1)-&gt;yBottom + DevCell.cy;
+    return (MPARAM)QCP_CONVERT;
+    break;
+</PRE>
+
+<P>
+<B>Note: </B><!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->If the user chooses the fixed-position conversion
+(using PM Control Panel), his/her choice takes higher priority even when
+your program chooses the on-the-spot conversion.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->For "entry field","combo box" and "multiple line
+entry field", application programs does not need to handle WM_QUERYCONVERTPOS.
+These controls handle WM_QUERYCONVERTPOS as default behavior.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="068_L5_MDIMultipleDocumentI.html">[Back: MDI (Multiple-Document Interface)]</A> <BR>
+<A HREF="070_L3_WM_CHAR.html">[Next: WM_CHAR]</A> 
+</BODY>
+</HTML>

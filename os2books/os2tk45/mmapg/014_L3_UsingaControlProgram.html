@@ -1,0 +1,178 @@
+<HTML>
+<HEAD>
+<TITLE>Using a Control Program Queue for Notifications</TITLE>
+</HEAD>
+<BODY>
+<H1>Using a Control Program Queue for Notifications</H1><!-- entering slot 17 -->
+<P>
+An OS/2 application that does not have a PM window, and therefore cannot
+use a PM message queue for receiving notification messages, can use an OS/2
+Control Program queue instead. The Control Program queue method of notification
+should also be considered for time-critical PM applications, because it
+is faster than using the PM message queue.
+<P>
+To receive notifications on a Control Program queue, the application must
+specify the MCI_DOS_QUEUE flag with the MCI_OPEN command message when using
+mciSendCommand (or the<B> dosqueue</B> keyword with the<B> open</B> command
+when using mciSendString). This flag indicates that the window handle specified
+for receiving notification messages is actually a handle to a Control Program
+queue, not a PM window.
+<P>
+The application issues DosReadQueue, which mimics the PM message queue function
+by blocking until there is something in the queue to process. To place a
+notification message in the queue, the system issues DosWriteQueue and specifies
+the queue handle given to it by the application.
+<P>
+The syntax for Control Program queues and PM message queues varies slightly.
+A typical PM message queue process function has the following four parameters:
+
+<PRE>HWND         hwnd   /* Window handle       */
+ULONG        msg    /* Notification type   */
+MPARAM       mp1    /* Message parameter 1 */
+MPARAM       mp2    /* Message parameter 2 */
+</PRE>
+
+<P>
+The DosReadQueue call has eight parameters. The system uses the first four
+parameters of DosReadQueue in the same manner as a PM message queue process
+function.
+<PRE>HQUEUE       hq     /* Queue handle */
+PREQUESTDATA pRD    /* Pointer to REQUESTDATA */
+PULONG       pmp1   /* Pointer to mp1 information */
+PPVOID       pmp2   /* Pointer to mp2 information */
+</PRE>
+
+<P>
+The second parameter of DosReadQueue points to the REQUESTDATA structure,
+which contains a<I> ulData</I> field. This field corresponds to the<I> msg
+</I>field of PM message queues. The application can use the remaining parameters
+of DosReadQueue for its own purposes.
+<P>
+The following example code illustrates how an application can use Control
+Program queue functions to handle multimedia notification messages.
+<PRE>{
+ PID      OwnerPID=0;
+ HQUEUE   QHandle =0;
+ char     ch, retstring[100], QueueName[100];
+
+ strcpy(QueueName, "\\QUEUES\\");
+ if (argc == 2) strcat(QueueName, argv[1]);
+ else           strcat(QueueName, "DEFAULT");
+ if (DosCreateQueue(&amp;QHandle, QUE_FIFO, QueueName)) return(1L);
+ if (DosOpenQueue(&amp;OwnerPID, &amp;QHandle, QueueName))  return(1L);
+ _beginthread( QMonitor, (PVOID)NULL, 65536L, (PVOID)QHandle);
+ SendString((LPSTR)"open d:\\mmos2\\sounds\\applause.wav shareable
+             dosqueue wait alias a",
+            (LPSTR)retstring, 100,
+            (HWND)QHandle, 0);
+ SendString((LPSTR)"setpositionadvise a on every 3000 wait",
+            (LPSTR)retstring, 100,
+            (HWND)QHandle, 0);
+ SendString((LPSTR)"play a notify", (LPSTR)retstring, 100, (HWND)QHandle, 0);
+ ch=(char)getch();
+ SendString((LPSTR)"close a wait", (LPSTR)retstring, 100, (HWND)QHandle, 0);
+ DosCloseQueue(QHandle);
+ return(0L);
+}
+
+VOID _Optlink QMonitor( PVOID qh)
+{
+ APIRET      rc=0;
+ BYTE        Priority;
+ REQUESTDATA RD;
+ ULONG       msg, mp1, mp2;
+
+ printf("QMonitor Started!\n");
+ while (1)
+  {
+   DosReadQueue((HQUEUE)qh, &amp;RD, (PULONG)&amp;mp1, (PPVOID)&amp;mp2, 0L, (BOOL32)0,
+                &amp;Priority, (HEV)0);
+   switch(RD.ulData)
+     {
+       case MM_MCINOTIFY:
+          printf("   msg=MM_MCINOTIFY:\n");
+          printf("   mp1=%d\n",mp1);
+          printf("   mp2=%d\n",mp2);
+          break;
+       case MM_MCIPASSDEVICE:
+          printf("   msg=MM_MCIPASSDEVICE:\n");
+          printf("   Device id=%d\n",mp1);
+          switch (mp2)
+            {
+              case MCI_LOSING_<!-- entering slot 18 -->USE:
+                 printf("   MCI_LOSING_USE:\n");
+                 break;
+              case MCI_GAINING_USE:
+                 printf("   MCI_GAINING_USE:\n");
+                 break;
+              default:
+                 printf("   mp2=%d\n",mp2);
+                 break;
+            }
+          break;
+       case MM_MCIPOSITIONCHANGE:
+          printf("   msg=MM_MCIPOSITIONCHANGE:\n");
+          printf("   mp1=%d\n",mp1);
+          printf("   mp2=%d\n",mp2);
+          break;
+       case MM_MCICUEPOINT:
+          printf("   msg=MM_MCICUEPOINT:\n");
+          printf("   mp1=%d\n",mp1);
+          printf("   mp2=%d\n",mp2);
+          break;
+       case MM_MCIPLAYLISTMESSAGE:
+          printf("   msg=MM_MCIPLAYLISTMESSAGE:\n");
+          printf("   mp1=%d\n",mp1);
+          printf("   mp2=%d\n",mp2);
+          break;
+       case MM_MCIEVENT:
+          printf("   msg=MM_MCIEVENT:\n");
+          printf("   mp1=%d\n",mp1);
+          printf("   mp2=%d\n",mp2);
+          break;
+       default:
+          printf("   msg=%d\n",RD.ulData);
+          printf("   mp1=%d\n",mp1);
+          printf("   mp2=%d\n",mp2);
+          break;
+     }
+  }   /* endwhile */
+ return;
+}
+
+
+VOID SendString( LPSTR string, LPSTR retstring, ULONG retsize, HWND Handle,
+                 ULONG userparm)
+{
+ ULONG rc;
+ rc=mciSendString(string, retstring, retsize, Handle, userparm);
+ if (rc) printf("Error: (%s) rc=%d\n",string,rc);
+ return;
+}
+/* QUEUE.H */
+#define INCL_BASE
+#define INCL_32
+
+#include&lt;os2.h&gt;
+#include&lt;os2me.h&gt;
+#include&lt;mmioos2.h&gt;
+#include&lt;stdio.h&gt;
+#include&lt;stdlib.h&gt;
+#include&lt;conio.h&gt;
+
+int           main(int argc, char *argv[], char *envp[]);
+VOID          SendString(LPSTR string,
+                         LPSTR retstring,
+                         ULONG retsize,
+                         HWND Handle,
+                         ULONG userparm);
+VOID _Optlink QMonitor( PVOID qh);
+</PRE>
+
+
+<P><HR>
+
+<A HREF="013_L3_OS2MultimediaNotific.html">[Back: OS/2 Multimedia Notification Messages]</A> <BR>
+<A HREF="015_L3_TimeFormatsforDevice.html">[Next: Time Formats for Device Commands]</A> 
+</BODY>
+</HTML>

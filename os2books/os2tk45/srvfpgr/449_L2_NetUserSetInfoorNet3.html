@@ -1,0 +1,529 @@
+<HTML>
+<HEAD>
+<TITLE>NetUserSetInfo or Net32UserSetInfo</TITLE>
+</HEAD>
+<BODY>
+<H1>NetUserSetInfo or Net32UserSetInfo</H1><!-- entering slot 593 -->NetUserSetInfo or Net32UserSetInfo
+<P>
+The NetUserSetInfo API modifies user information, such as passwords and
+access authority.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Restrictions
+<P>
+<!-- lm: 0x2 10 -->
+<UL><B>LAN Server and OS/2 Warp Server Only</B>
+<P>
+This API can be called from DLS and OS/2 workstations, but only DLS workstations
+can issue this call to a remote LAN Server workstation.  DLS workstations
+can issue this call locally only if the Peer service is started.
+<P>
+Users with administrator authority have full to access the NetUserSetInfo
+APIs and can set fields for any user account, such as required passwords
+or access privileges.  Most of the functions provided by NetUserSetInfo
+require Administrator authority; for instance, changing a password for any
+account, including one's own, requires administrator authority.
+<P>
+However, NetUserSetInfo does allow User authority access to three fields
+in the UAS database, but only for the account of the user issuing the call.
+These fields are set one at a time according to the<I> parmnum</I> parameter,
+as described below.
+<P>
+NULL_USERSETINFO_PASSWD must be used with the<I> parmnum</I> 0 option if
+the user does not want the password to be changed.
+<P>
+This API cannot change the privilege of or disable the last account in the
+database with administrator privilege; if you attempt either of these, the
+function fails and the error NERR_LastAdmin is returned.
+<P>
+<B>Directory and Security Server Only</B>
+<P>
+Authority is based on ACLs rather than privilege level. Permissions vary
+according to<I> parmnum</I>.  This API never returns NERR_LastAdmin.
+<P>
+NULL_USERSETINFO_PASSWD must be used with the<I> parmnum</I> 0 option if
+the user does not want the password to be changed.<!-- lm: 0x2 1 -->
+</UL> Syntax
+
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>#include &lt;netcons.h&gt;
+#include &lt;access.h&gt;
+#include &lt;lsdceerr.h&gt;        /* DSS only */
+ 
+NetUserSetInfo(<I>pszTarget</I>, <I>pszUserID</I>, <I>usLevel</I>,
+               <I>buf</I>, <I>usBuflen</I>, <I>parmnum</I>);   /* 16 bit */
+ 
+Net32UserSetInfo(<I>pszTarget</I>, <I>pszUserID</I>, <I>ulLevel</I>,
+               <I>buf</I>, <I>ulBuflen</I>, <I>parmnum</I>,
+               <I>pStatusbuf</I>);             /* 32 bit */
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Parameters
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+See <A HREF="021_L2_CommonParameterDefin.html">Common Parameter Definitions
+</A>for descriptions of parameters not defined here.<!-- lm: 0x2 10 -->
+<P>
+<I>sLevel</I> or<I> ulLevel</I><!-- lm: 0x12 20 -->
+<UL> (16-bit short or
+32-bit unsigned long) can be 1 or 2 or for DSS level 201 specifying which
+data structure to use, as described in <A HREF="416_L3_UserAccountInformati.html">User
+Account Information Level 1</A> and <A HREF="417_L3_UserAccountInformati.html">User
+Account Information Level 2</A>.<!-- lm: 0x2 10 -->
+</UL><I> parmnum</I><!-- lm: 0x12 20 -->
+<UL> (16-bit
+short or 32-bit unsigned long) specifies whether the entire data structure
+or only a single field in the data structure is to be passed. If this parameter
+is 0, the entire data structure is passed. Otherwise,<I> parmnum</I> can
+be set to one of the following values to pass only a single field. ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+<BR>
+³ SYMBOLIC CONSTANT     ³ VALUE ³ DATA STRUCTURE FIELD           ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_ALL        ³ 0   ³ user_info_X                ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_NAME        ³ 1   ³ usriX_name                ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_PAD        ³ 2   ³ usriX_pad_1                ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_PASSWD       ³ 3   ³ usriX_password              ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_PRIV        ³ 5   ³ usriX_priv                ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_DIR        ³ 6   ³ usriX_home_dir              ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_COMMENT      ³ 7   ³ usriX_comment               ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_USER_FLAGS     ³ 8   ³ usriX_flags                ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_SCRIPT_PATH    ³ 9   ³ usriX_script_path             ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_AUTH_FLAGS     ³ 10   ³ usriX_auth_flags             ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_<!-- entering slot 594 -->FULL _ NAME    ³11  ³usriX _ full _
+name             ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_USR_COMMENT    ³ 12   ³ usriX_usr_comment             ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_PARMS       ³ 13   ³ usriX_parms                ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_WORKSTATIONS    ³ 14   ³ usriX_workstations            ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_ACCT_EXPIRES    ³ 17   ³ usriX_acct_expires            ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_MAX_STORAGE    ³ 18   ³ usriX_max_storage             ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_UNITS_PER_WEEK   ³ 19   ³ usriX_units_per_week           ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_LOGON_HOURS    ³ 20   ³ usriX_logon_hours             ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_LOGON_SERVER    ³ 23   ³ usriX_logon_server            ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_COUNTRY_CODE    ³ 24   ³ usriX_country_code            ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_CODE_PAGE     ³ 25   ³ usriX_code_page              ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_PASSWD_EXPIRED   ³ 100  ³ usriX_password_age            ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_DEFAULT_REALM   ³ 200  ³ usriX_default_realm            ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_PRIMARY_GROUP   ³ 201  ³ usriX_dce_primary_group          ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_POLICY_GROUP    ³ 202  ³ usriX_dce_policy_group          ³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+<BR>
+³ SYMBOLIC CONSTANT     ³ VALUE ³ DATA STRUCTURE FIELD           ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PARMNUM_PWSTRENGTH_SERVER ³ 204  ³ usriX_pwstrength_server          ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NOTES:                                    ³
+<BR>
+³                                        ³
+<BR>
+³   X = 1 or 2                                ³
+<BR>
+³                                        ³
+<BR>
+³   When parmnum is set to PARMNUM_PASSWD_EXPIRED, the password age can
+be  ³
+<BR>
+³   changed in one of two ways:                        ³
+<BR>
+³                                        ³
+<BR>
+³   1.  If 0 is passed in the buffer, the password age is revived.      ³
+
+<BR>
+³   2.  If a non-zero value is passed in the buffer, the password is forced
+ ³
+<BR>
+³     to expire and the user must change the password at next logon.    ³
+
+<BR>
+³                                        ³
+<BR>
+³   The password age must be expired before it can be revived.  If you try
+ ³
+<BR>
+³   to revive an active password, NetUserSetInfo has no effect.        ³
+<BR>
+³                                        ³
+<BR>
+³   Administrator authority is required for all parmnum values, except when
+ ³
+<BR>
+³   the following fields are set for a user's own account:          ³
+<BR>
+³                                        ³
+<BR>
+³   usriX_usr_comment   (parmnum =  7)                   ³
+<BR>
+³   usriX_parms      (parmnum = 13)                   ³
+<BR>
+³   usriX_country_code   (parmnum = 24)                   ³
+<BR>
+³   usriX_code_page    (parmnum = 25)                   ³
+<BR>
+³                                        ³
+<BR>
+³ The following symbolic constants support DLS Peer services:          ³
+<BR>
+³                                        ³
+<BR>
+³   PARMNUM_ALL                                ³
+<BR>
+³   PARMNUM_PASSWD                              ³
+<BR>
+³   PARMNUM_PRIV                               ³
+<BR>
+³   PARMNUM_COMMENT                              ³
+<BR>
+³   PARMNUM_USER_FLAGS                            ³
+<BR>
+³   PARMNUM_AUTH_FLAGS                            ³
+<BR>
+³   PARMNUM_FULL_NAME                             ³
+<BR>
+³   PARMNUM_USR_COMMENT                            ³
+<BR>
+³   PARMNUM_ACCT_EXPIRES                           ³
+<BR>
+³   PARMNUM_COUNTRY_CODE                           ³
+<BR>
+³   PARMNUM_CODE_PAGE                             ³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+<!-- lm: 0x2 10 -->
+</UL><!-- lm: 0x2 1 -->
+</UL>Return Codes
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+The following table lists the return codes most significant to this API.
+ (See <A HREF="462_L1_APIReturnCodes.html">API Return Codes</A> for a complete
+list of return codes.) ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³SYMBOLICCONSTANT
+    ³VALUE³MEANING                ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_Success         ³ 0   ³ No errors were encountered.       ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_ACCESS_DENIED     ³ 5   ³ Administrator privilege is required.  ³
+
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_NOT_ENOUGH_MEMORY   ³ 8   ³ Sufficient memory is not available.
+  ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_NOT_SUPPORTED     ³ 50   ³ This request is not supported by the
+ ³
+<BR>
+³               ³    ³ network.                ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_BAD_NETPATH      ³ 53   ³ The network path cannot be found.    ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_NETWORK_ACCESS_DENIED ³ 65   ³ Network access is denied.        ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_BAD_NET_NAME      ³ 67   ³ This network name cannot be found.   ³
+
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_INVALID_PARAMETER   ³ 87   ³ At least one parameter value is not
+  ³
+<BR>
+³               ³    ³ valid.                 ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_INVALID_LEVEL     ³ 124  ³ The ul/usLevel parameter is not valid.
+³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_NetNotStarted      ³ 2102  ³ The<!-- entering slot 595 --> redirector
+NETWKSTA.200 has not   ³
+<BR>
+³               ³    ³ been started.              ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_RemoteOnly       ³ 2106  ³ This operation is not supported on   ³
+
+<BR>
+³               ³    ³ workstations.              ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_BufTooSmall       ³ 2123  ³ The buffer is too small for fixed-   ³
+
+<BR>
+³               ³    ³ length data.              ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_OS2IoctlError      ³ 2134  ³ An internal error occurred when     ³
+<BR>
+³               ³    ³ calling the workstation driver.     ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_WkstaNotStarted     ³ 2138  ³ The Requester service has not been
+  ³
+<BR>
+³               ³    ³ started.                ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_InternalError      ³ 2140  ³ An internal error has occurred.     ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_BadTransactConfig    ³ 2141  ³ The server is not configured for 
+ ³
+<BR>
+³               ³    ³ transactions.              ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_InvalidAPI       ³ 2142  ³ The requested API is not supported on
+ ³
+<BR>
+³               ³    ³ the remote server.           ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_BadPassword       ³ 2203  ³ The specified password is not valid.
+ ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_ACFNotFound       ³ 2219  ³ The NET.ACC file is missing.      ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_GroupNotFound      ³ 2220  ³ The group does not exist.        ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_UserNotFound      ³ 2221  ³ The user name cannot be found.     ³
+
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_NotPrimary       ³ 2226  ³ The UAS database is replicant and does
+³
+<BR>
+³               ³    ³ not allow updates.           ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_ACFNotLoaded      ³ 2227  ³ The UAS database has not been started.
+³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_ACFFileIOFail      ³ 2229  ³ An error was encountered in accessing
+ ³
+<BR>
+³               ³    ³ the accounts database.         ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_SpeGroupOp       ³ 2234  ³ This operation is not allowed on this
+ ³
+<BR>
+³               ³    ³ special group.             ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_PasswordTooShort    ³ 2245  ³ The password is shorter than required.
+³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_InvalidDatabase     ³ 2247  ³ The UAS database file is damaged. 
+ ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_InvalidComputer     ³ 2351  ³ The specified computer name is not
+  ³
+<BR>
+³               ³    ³ valid.                 ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_LastAdmin        ³ 2452  ³ The last administrator cannot be    ³
+
+<BR>
+³               ³    ³ deleted.                ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_CanNotGrowUASFile    ³ 2456  ³ It is not possible to enlarge the
+UAS  ³
+<BR>
+³               ³    ³ file.                  ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_DCEError        ³ 7500  ³ DCE error status returned.       ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_DCEErrorLogged     ³ 7501  ³ DCE error status has been logged.  
+³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+<BR>
+³ SYMBOLIC CONSTANT      ³ VALUE ³ MEANING                 ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_AuthTicketExpired    ³ 7511  ³ The user's DCE authorization ticket
+  ³
+<BR>
+³               ³    ³ has expired.              ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_RegistryNotFound    ³ 7512  ³ Unable to contact the DCE security
+  ³
+<BR>
+³               ³    ³ registry.                ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_UserNotInResdom     ³ 7513  ³ The user is not a member of the speci-
+³
+<BR>
+³               ³    ³ fied resource domain.          ³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+
+<P>
+Other codes could be returned from the following functions:<!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 -->DosAllocSeg<!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 -->DosChgFilePtr<!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 -->DosDevIOCtl<!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 -->DosFsCtl<!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 -->DosGetShrSeg<!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 -->DosNewSize<!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 -->DosQFileInfo<!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 -->DosRead<!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 -->DosWrite<!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="448_L2_NetUserSetGroupsorNe.html">[Back: NetUserSetGroups or Net32UserSetGroups]</A> <BR>
+<A HREF="450_L3_RelatedInformation.html">[Next: Related Information]</A> 
+</BODY>
+</HTML>

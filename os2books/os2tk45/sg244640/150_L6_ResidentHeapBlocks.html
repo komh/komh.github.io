@@ -1,0 +1,273 @@
+<HTML>
+<HEAD>
+<TITLE>Resident Heap Blocks</TITLE>
+</HEAD>
+<BODY>
+<H1>Resident Heap Blocks</H1><!-- entering slot 187 -->
+<P>
+Kernel resident heap blocks are of two types, regular and attributed.
+<P>
+Regular blocks are the simplest and most common type. They have the form:
+
+<PRE>&lt;simple header&gt;&lt;data&gt;
+
+&lt;simple header&gt; is a dword (32-bits) having the following layout
+
+&lt;owner&gt;&lt;prev block free flag&gt;&lt;size in dwords&gt;&lt;yielded flag&gt;&lt;type flag&gt;
+
+Field           Bits            Description
+
+owner           31-16           Owner of heap block.  This is
+                                either a system owner (value between
+                                0xff2d and 0xfff8, or a
+                                memory handle/pseudo handle such as
+                                an MTE pseudo-handle.
+previous block  15              1 if previous block is free, else 0
+free flag
+size in dwords  14-2            Size of the block including the
+                                header in dwords.
+yielded flag    1               1 if a free block search yielded
+                                the CPU while looking at this block,
+                                else 0
+type flag       0               0 (indicates Regular Block)
+
+</PRE>
+ 
+<P>
+Extended blocks contain a two-part header and have the following form: 
+<PRE>
+&lt;size header&gt;&lt;data&gt;&lt;header extension&gt;
+
+&lt;size header&gt; is a dword (32-bits) having the following layout
+
+&lt;extra flags&gt;&lt;size in dwords&gt;&lt;yielded flag&gt;&lt;type flag&gt;.
+
+Field           Bits            Description
+
+extra flags     31-24           Additional flags.
+                                Bit 31 - set if block is free
+                                Bit 30 - set if prev block is free
+                                Bits 29-24 - reserved and 0
+size in dwords  23-2            Size of the block including the
+                                header in dwords.
+yielded flag    1               1 if a free block search yielded
+                                the CPU while looking at this block,
+                                else 0
+type flag       0               1 (indicates Extended Block)
+
+&lt;data&gt; is the data area available for use by the client and is
+always dword granular and dword aligned.
+
+&lt;header extension&gt; is a dword-granular structure containing
+the following information
+
+&lt;owner&gt;&lt;selector&gt;&lt;hmte&gt;&lt;pad&gt;
+
+Field           Bits            Description
+
+owner           63-48           Owner of heap block.  This is
+                                either a system owner (value between
+                                0xff2d and 0xfff8, or a
+                                memory handle/pseudo handle such as
+                                an MTE pseudo-handle.
+selector        47-32           GDT selector mapping block's data
+                                else null.
+
+hmte            31-16           hmte associated with this heap block?
+
+pad             15-0            padding for double word alignment
+</PRE>
+
+<P>
+When a block is free, its data portion contains additional information.
+ The first two dwords contain forward and backward pointers to the next
+and previous blocks on the free list.  The last dword contains a copy of
+the previous block pointer.  Note that extended free blocks do not have
+an owner field, so bit 31 of their header is set indicating that they are
+free.
+<P>
+The<B> hmte</B> field of the header extension is no longer used for any
+specific purpose.
+<P>
+<U><I>Now for an example of a regular heap block.</I></U>
+<PRE># .s 47
+Current slot number: 0047
+
+# .pb #
+ Slot  Sta BlockID  Name     Type        Addr        Symbol
+ 0047# blk fe04c8e8 PMSHL32
+
+# .m %fe04c8e8
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0003 %fef1f04c 00001000 %fdf1f000 001 0002 0020 0000 0000 0003 0000      =0000
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 0003  0003 ff08  0000 ffec 0000  0000 00  06 00 00 vmkrhrw
+# dd %fe04c8e8-10
+%fe04c8d8  00031c3f 00000000 00000000 ffc20010
+%fe04c8e8  00000010 00000000 fe040001 ffc20010
+%fe04c8f8  00000010 00000000 fe040001 ffe900a8
+%fe04c908  fe0c767c fe0c0ee0 00000000 00000000
+%fe04c918  00000000 00000000 00000000 00000000
+%fe04c928  00000000 00000000 00000000 00000000
+%fe04c938  00000000 00000000 00000000 00000000
+%fe04c948  00000000 00000000 00000000 00000000
+
+# .mo <!-- entering slot 188 -->ffc2
+ffc2 semstruc
+
+# .d sem32 %fe04c8e8
+
+       Type: Private Event
+       Flags: Reset
+       pMuxQ: 00000000
+  Post Count: 0000
+  Open Count: 0001
+ Create Addr: 0010fe04
+
+# .p#
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 0047# 000d 000a 000d 0004 blk 0200 7bd1f000 7bdfa188 7bde06b8      11 PMSHL32
+
+
+</PRE>
+
+<P>
+In this example we are interested in slot 47. Its BlockId is owned by<B> vmkrhrw
+</B>
+<P>
+We dump the heap block from 0x10 bytes before the start.
+<P>
+Note that the low order bit of the header is 0, therefore a regular block.
+
+<P>
+Since the two low order bit are flags and the size is in double words we
+conveniently ignore these to obtain the size in bytes, which happens to
+be 0x10.
+<P>
+The block is owned by ffc2, which .mo tells us is<B> semstruc</B>.
+<P>
+This is very good news because all the semstruc owner relates to the 32-bit
+semaphore APIs. The .D command formats these for us.
+<P>
+Finally note that if we attempt to look at this from the application perspective
+we see from .P that the TSD is swapped out (Disp is blank). This means that
+the user registers for slot 47 can't be loaded. Furthermore attempts to
+look at the registers are unpredictable as DF and KDB will have not changed
+the values since they last loaded registers.
+<P>
+This is a case where BlockId analysis will give us a clue even if the application
+data is unavailable.
+<P>
+<U><I>Lastly we look at an extended heap block.</I></U>
+<PRE># .s 4b
+Current slot number: 004b
+
+# .pb #
+ Slot  Sta BlockID  Name     Type        Addr        Symbol
+ 004b# blk 21a0ade0 WKSTAHLP
+
+# .m 21a0:ade0
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0003 %fef1f04c 00001000 %fdf1f000 001 0002 0020 0000 0000 0003 0000      =0000
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 0003  0003 ff08  0000 ffec 0000  0000 00  06 00 00 vmkrhrw
+
+# dg 21a0
+21a0  Code    Bas=fe070000 Lim=0000bd5b DPL=0 P  RE    A
+
+# dd %fe070000-10
+%fe06fff0  00000000 00000000 fe06fd72 4000bd6d
+%fe070000  10d0006b 9090cbcb 9090cb90 000af390
+%fe070010  3c600104 6aec8b55 8d026a01 <!-- entering slot 189 -->16ebd866
+%fe070020  6aec8b55 8d026a02 0aebd866 6aec8b55
+%fe070030  8d026a00 46c6d866 561e00ee 21906857
+%fe070040  1e7ec41f f714568b 750001c2 568b520e
+%fe070050  27e2830e 29558826 2605eb5a 002945c6
+%fe070060  4000c2f7 c0330574 f70d39e9 748000c2
+
+# dd %fe070000-4+bd6c-10
+%fe07bd58  fee2e9de 00000000 ff4c21a0 fdf1ff32
+%fe07bd68  ffe9008c fe06fd70 fe02aa70 00000000
+%fe07bd78  00000000 00000000 00000000 00000000
+%fe07bd88  00000000 00000000 00000000 00000000
+%fe07bd98  00000000 00000000 00000000 00000000
+%fe07bda8  fe07bd6a ffe90048 00000201 00000000
+%fe07bdb8  00000000 00000000 00000000 02010000
+%fe07bdc8  00000000 00000000 00000000 000000ed
+#
+
+# .mo ff4c
+ff4c fsd5
+
+# .lml
+hmte=0982 pmte=%fe0e1a14 mflags=0408b186 e:\ibmlan\netlib\spl1a.dll
+hmte=097e pmte=%fe0e1a54 mflags=0408b186 e:\ibmlan\netlib\lrhm1.dll
+hmte=0979 pmte=%fe0e1bac mflags=0408b186 e:\ibmlan\netlib\lrns1.dll
+hmte=096b pmte=%fe0e1d60 mflags=0408b186 e:\ibmlan\netlib\netibm.dll
+hmte=0164 pmte=%fe02cc40 mflags=0498b1c8 e:\os2\dll\sysmono.fon
+.
+.
+.
+.
+hmte=0181 pmte=%fe02ccb0 mflags=4498b1d5 e:\os2\dll\pmatm.dll
+hmte=031b pmte=%fe02af18 mflags=0428a1c9 e:\ibmlan\netprog\netwksta.200
+hmte=0306 pmte=%fe059f90 mflags=0428a1c9 e:\netware\nwifs.ifs
+hmte=0160 pmte=%fe01ff4c mflags=0428a1c9 d:\dataex2\iwsfsd2.ifs
+hmte=0117 pmte=%fdf5df60 mflags=0428a1c9 e:\os2\cdfs.ifs
+hmte=00d2 pmte=%fdf53990 mflags=0428a1c9 e:\os2\hpfs.ifs
+
+
+# .lmo 31b
+hmte=031b pmte=%fe02af18 mflags=0428a1c9 e:\ibmlan\netprog\netwksta.200
+seg  sect psiz vsiz hob  sel  flags
+0001 0003 2a8a ffdc 0000 2190 8d41 data prel rel
+0002 0019 1d93 1d94 0000 2198 8d60 code shr prel rel
+0003 0028 bd5c bd5c 0000 21a0 8d60 code shr prel rel
+0004 0088 fd62 fd62 0000 21a8 8d60 code shr prel rel
+0005 0108 606a 606a 0000 21b0 8d60 code shr prel rel
+0006 0139 3492 3492 0000 21b8 8d60 code shr prel rel
+0007 0154 002e 002f 0000 21c0 8c41 data prel
+0008 0155 04bb 04bb 0000 21c8 8d60 code shr prel rel
+#
+</PRE>
+
+<P>
+What does BlockId 0x21a0ade0 represent?
+<P>
+We assume selector:offset and discover the owner is<B> vmkshrw</B>.
+<P>
+We dump the descriptor for selector 21a0 to find its base address.
+<P>
+Next we dump 0x10 bytes before the descriptor base to see the heap block
+header.
+<P>
+In this example the low order bit of the header is 1 so we have to look
+at the header extension for the owner information.
+<P>
+Adding the length to the base and backing off 0x10 bytes again we uncover
+the block header extension.
+<P>
+<B>Note: </B>
+<P>
+The following short cut could have been used:
+<PRE>   dd %(21a0:0)-4+bd6c-10
+</PRE>
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+In this case the owner is ff4c or<B> fsd5</B>. This is the 5th FSD to initialise.
+
+<P>
+We list the FSDs by using .LML and pick the 5th<!-- entering slot 190 --> from
+the bottom. This turns out to be<B> netwksta.200.</B>
+
+<P><HR>
+
+<A HREF="149_L6_SwappableHeapBlocks.html">[Back: Swappable Heap Blocks]</A> <BR>
+<A HREF="151_L5_BlockingonaChildWait.html">[Next: Blocking on a ChildWait]</A> 
+</BODY>
+</HTML>

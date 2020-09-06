@@ -1,0 +1,309 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Documentation for the new REXXUTIL functions</TITLE>
+</HEAD>
+<BODY>
+<H1>Documentation for the new REXXUTIL functions</H1><!-- entering slot 338 -->
+<P>
+This section contains the documentation for the new functions in the REXXUTIL.DLL
+from <A HREF="269_L1_HintsforObjectREXX.html">Object-Oriented REXX</A> from
+18 May 1999 (The documentation is missing in the file REXX.INF).
+<PRE> 
+
+ SysDumpVariables
+ ----------------
+
+ Syntax:    result = SysDumpVariables([filename])
+
+ Params:    filename - name of the file where variables are appended to
+                       (dump is written to STDOUT if omitted)
+
+ Function:  This function dumps all variables in the current scope either
+            to the specified file (new data will be appended) or to STDOUT
+            if the filename parameter is omitted. The format of the data
+            is (one variable per line):
+                 Name=MYVAR, Value="This is the content of MYVAR"
+
+            Examples:
+               Call SysDumpVariables "MyVars.Lst" /* append vars to file */
+               Call SysDumpVariables              /* list vars on STDOUT */
+
+ Return:    0 - dump completed OK
+            -1 - failure during dump
+
+
+
+ SysSetFileDateTime
+ ------------------
+
+ Syntax:    result = SysSetFileDateTime(filename [,newdate] [,newtime])
+
+ Params:    filename - name of the file to update
+            newdate  - new date to set in format YYYY-MM-DD
+               OS/2: (YYYY &gt; 1980)
+               Win: (YYYY &gt; 1800)
+               AIX/Linux: (YYYY &gt; 1900)
+            newtime  - new time to set in format HH:MM:SS (24 hr format)
+
+ Function:  This function can be used to modify the "Last Modified"
+            Date of the specified file. If no new date or new time is
+            specified then the file date and time will be set to the
+            current time (TOUCH). If only one of date or time is omitted
+            then this parameter will be left unchanged.
+
+            For OS/2 and Windows NT the filename may also specify a directory
+            name. This does not work with Windows 95/98 or AIX/Linux however.
+
+            The file you want to change must not be opened by another process
+            or at least it must allow shared writes in order to update the
+            timestamp.
+
+            Examples:
+               Call SysSetFileDateTime "MyFile.Log"  /* touch file */
+               Call SysSetFileDateTime "MyFile.Log", "1998-12-17"
+               Call SysSetFileDateTime "MyFile.Log",, "16:37:21"
+               Call SysSetFileDateTime "MyFile.Log", "1998-12-17", "16:37:21"
+
+               Call SysSetFileDateTime "C:\MyDir"    /* touch dir on OS/2, NT */
+
+ Return:    0 - file date/time was updated correctly
+            -1 - failure attribute update
+
+
+
+ SysGetFileDateTime
+ ------------------
+
+ Syntax:    result = SysGetFileDateTime(filename [,timesel])
+
+ Params:    filename - name of the file to query
+            timesel  - What filetime to query: CREATE/ACCESS/WRITE
+
+ Function:  The function call returns the selected file date time attribute
+            of the specified file if this is supported by the operating
+            and file system (e.g. FAT does not provide Create/Access). The
+            selector for the time to be returned can be abbreviated with
+            its first character.
+
+            For OS/2 and Windows NT the filename may also specify a directory
+            name. This does not work with Windows 95/98 or AIX/Linux however.
+
+            The file you want to query must not be opened by another process
+            or at least it must allow shared reads in order to query the
+            timestamp.
+
+            Examples:
+               Say "File creation time:" SysGetFileDateTime("MyFile.Log", "C")
+               Say "File last access time:" SysGetFileDateTime("MyFile.Log", "A")
+               Say "File last update time:" SysGetFileDateTime("MyFile.Log", "W")
+
+               Say "Directory creation time:" SysGetFileDateTime("C:\MyDir", "C")
+
+ Return:    -1 - file date/time query failed
+            other - date and time as YYYY-MM-DD HH:MM:SS
+
+
+
+ SysStemCopy
+ -----------
+
+ Syntax:    result = SysStemCopy(fromstem, tostem, [from], [to], [count] [,insert])
+
+ Params:    fromstem - name of source stem
+            tostem - - name of target stem
+            from  - first index in source stem to copy
+            to - position where items are copied/inserted in target stem
+            count - number of items to copy/insert
+            insert - 'I' to indicate insert instead of 'O' overwrite
+
+ Function:  Copy elements from the source stem to the target stem. Elements
+            in the source stem are copied starting at the from index (<!-- entering slot 339 -->default 1)
+            into the target stem beginning at the to index (default 1). The number
+            of items to copy to the target stem can be specified with count (default
+            is to copy all items in the source stem). You can optionally specify that
+            the items should be inserted into the target stem at the position and the
+            existing items will be shifted to the back accordingly.
+
+            This function operates only on stem arrays that specify the number of
+            elements in stem.0 and all elements must be numbered from 1 to n with
+            no omitted index.
+
+            Examples:
+               Source.0 = 3
+               Source.1 = "Hello"
+               Source.2 = "from"
+               Source.3 = "REXX"
+               Call SysStemCopy "Source.", "Target."
+
+               Call SysStemCopy "Source.", "Target.", 1, 5, 2, "I"
+
+ Return:    0 - stem copy was successful
+            -1 - stem copy failed
+
+
+
+ SysStemDelete
+ -------------
+
+ Syntax:    result = SysStemDelete(stem, startitem [,itemcount])
+
+ Params:    stem - name of stem where item will be deleted
+            startitem - index of item to delete
+            itemcount - number of items to delete if more than 1
+
+ Function:  Deletes the specified item at index startitem in the stem.
+            If more than one item is to be deleted then the count of
+            items can be specified as the third parameter. After deleting
+            the requested items the stem will be compacted, that means
+            items following the deleted items will be shifted up into the
+            vacant positions.
+
+            This function operates only on stem arrays that specify the number of
+            elements in stem.0 and all elements must be numbered from 1 to n with
+            no omitted index.
+
+            Examples:
+
+               Call SysStemDelete "MyStem.", 5
+
+               Call SysStemDelete "MyStem.", 5, 4
+
+ Return:    0 - delete was successful
+            -1 - delete failed
+
+
+
+ SysStemInsert
+ -------------
+
+ Syntax:    result = SysStemInsert(stem, position, value)
+
+ Params:    stem - name of stem where item will be inserted
+            position - index where new item will be inserted
+            value - new item value
+
+ Function:  A new item will be inserted at the specified position in
+            the stem. All existing items in the stem from the specified
+            position will be shifted up by one to make room for the new
+            item.
+
+            This function operates only on stem arrays that specify the number of
+            elements in stem.0 and all elements must be numbered from 1 to n with
+            no omitted index.
+
+            Example:
+               Call SysStemInsert "MyStem.", 5, "New value for item 5"
+
+ Return:    0 - insert was successful
+            -1 - insert failed
+
+
+
+ SysStemSort
+ -----------
+
+ Syntax:    result = SysStemSort(stem, order, type, start, end,
+                                 firstcol, lastcol)
+
+ Params:    stem - name of stem to sort
+            order - 'A' or 'D' for sort order (default: ascending)
+            type - 'C', 'I'  for comparision type (case/ignore, default: case)
+            start - first index to sort (default: 1)
+            end - last index to sort (default: last item)
+            firstcol - first column to use as sort key (default: 1)
+            lastcol - last column to use as sort key (default: last column)
+
+ Function:  This call sorts all or the specified items in the stem.
+            Sort order can be specified as ascending or descending, comparison
+            type can respect or ignore the case of the strings being compared.
+            The sorting can further be narrowed by specifying the first and last
+            item to be sorted or by specifying the columns used as the sorting
+            key. The sort uses a quicksort algorithm, so the order of equal
+            elements according to the sort key is undetermined.
+
+            This function operates only on stem arrays that specify the number of
+            elements in stem.0 and all elements must be numbered from 1 to n with
+            no omitted index.
+
+            Examples:
+               /* sort all elements descending, use cols 5 to 10 as key */
+               Call SysStemSort "MyStem.", "D",,,,5, 10
+
+               /* sort all elements ascending, ignore the case */
+               Call SysStemSort "MyStem.", "A", "I"
+
+               /* sort elements 10 to 20 ascending, use cols 1 to 10 as key */
+               Call SysStemSort "MyStem.",,,10, 20, 1, 10
+
+ Return:    0 - sort was successful
+            -1 - sort failed
+
+
+ SysVersion
+ ----------
+
+ Syntax:    result = SysVersion()
+
+ Params:    None
+
+ Function:  This function returns a string to identify the operating system
+            and its version. The returned string contains an identifier for
+            the operating system as the first word and then the version in
+            the second word.
+
+            Examples:
+               Say SysVersion()       /* show OS and version */
+
+ Return:    Operating system and version
+
+            Possible output for operating systems supported by Object REXX:
+
+               Say SysVersion()   -&gt;  "WindowsNT 4.00"
+               Say SysVersion()   -&gt;  "OS/2 2.40"
+               Say SysVersion()   -&gt;  "AIX 4.2"
+               Say SysVersion()   -&gt;  "Linux 2.0.34"
+
+ Note:      This function can be used to replace the operating system specific
+            functions SysOS2Ver(), SysWinVer(), and SysLinVer().
+
+
+ SysUtilVersion
+ --------------
+
+ Syntax:    result = SysUtilVersion()
+
+ Params:    None
+
+ Function:  This function returns a version number that identifies the current
+            level of the REXX Utilities package. This can be used to verify
+            that certain functions are available.
+
+            Examples:
+
+            Since this function was not part of the original packaging a
+            sample logic to check for a certain level of REXXUTIL could look
+            like this:
+
+               If RxFuncQuery("SysUtilVersion") = 1 |,
+                  SysUtilVersion() &lt; "2.00" Then
+                    Say "<!-- entering slot 340 -->Your REXXUTIL.DLL is not at the current level"
+
+            If a specific function should be used that was added at a later
+            REXXUTIL level a similar check can be performed by querying that
+            function:
+
+               If RxFuncQuery("SysSetFileDateTime") = 1 Then
+                 Say "Your REXXUTIL.DLL is not at the current level"
+
+ Return:    REXXUTIL version number in the format (n.mm)
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="327_L2_NewREXXUTILfunctions.html">[Back: New REXXUTIL functions in Object REXX]</A> <BR>
+<A HREF="329_L1_ChangetheWPSwithREXX.html">[Next: Change the WPS with REXX]</A> 
+</BODY>
+</HTML>

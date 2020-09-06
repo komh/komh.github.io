@@ -1,0 +1,136 @@
+<HTML>
+<HEAD>
+<TITLE>Allowing a user to perform on-the-spot conversion</TITLE>
+</HEAD>
+<BODY>
+<H1>Allowing a user to perform on-the-spot conversion</H1><!-- entering slot 30 -->
+<PRE>旼컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴커
+쿛rocess a WM_QUERYCONVERTPOS message to allow a user to perform       �
+쿞BCS-DBCS conversion at the spot where the cursor is located.         �
+읕컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴켸
+</PRE>
+
+<P>
+The<B> WM_QUERYCONVERTPOS</B> message is sent to the window when the end
+user tries to enter DBCS conversion mode. The message is sent to verify
+whether it is allowed to enter the conversion mode, and query the position
+of the conversion window. The parameters and return value of the message
+are as follows:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+param1<!-- lm: 0x11 11 -->
+<UL> pCursorPos (PRECTL)<!-- lm: 0x2 13 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 16 -->If the conversion is not allowed, do not modify the
+parameter.<!-- lm: 0x2 13 -->
+<P>
+<LI><!-- lm: 0x2 16 -->If the on-the-spot conversion is to be performed,
+update xLeft and yBottom of pCursorPos with the bottom-left corner of the
+text cursor position in window coordinate.<!-- lm: 0x2 13 -->
+<P>
+<LI><!-- lm: 0x2 16 -->If the fixed-position conversion is to be performed,
+update both xLeft and yBottom of pCursorPos with -1.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL> param2
+<!-- lm: 0x11 11 -->
+<UL>reserved.<!-- lm: 0x2 1 -->
+</UL> Returns<!-- lm: 0x11 11 -->
+<UL> usCode
+(USHORT)<!-- lm: 0x2 13 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 16 -->Return QCP_CONVERT if the conversion is allowed.
+<!-- lm: 0x2 13 -->
+<P>
+<LI><!-- lm: 0x2 16 -->Return QCP_NOCONVERT if the conversion is not allowed.
+<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+The default window procedure will assume the fixed-position conversion.
+ The pre-defined window controls handle this message according to their
+characteristics. For instance, the Frame Control window procedure returns
+QCP_NOCONVERT. On the contrary, the Entry Field Control window procedure
+provides the on-the-spot conversion as default. Refer to<I> "OS/2 Technical
+Library Presentation Manager Programming Reference vol.3"</I> for the detail
+of the behavior of each control.
+<P>
+On-The-Spot conversion (Intermediate result) shows how the On-the-spot conversion
+is performed on a PM screen.  A user inputs a word using its pronunciation
+into a small window opened at the current cursor position, window of which
+back ground color is black. An intermediate result of DBCS conversion is
+displayed at the small window each time the user pushes the conversion key.
+
+<P>
+Fixed-Position conversion (Intermediate result) shows the Fixed-Position
+conversion. See the intermediate result is shown at the bottom of the window,
+where we called the status line.
+<P>
+On both conversions, DBCS characters are put into the application window
+after the user pushes the enter key (Conversion result). On - The - Spotconversion(
+Intermediateresult )
+<BR>
+<!-- Unable to decode bitmap format --><IMG SRC="027_L3_Allowingausertoperfo_3.gif" WIDTH=434 HEIGHT=241 ALIGN=center>
+<BR>
+Fixed-Position conversion (Intermediate result)
+<BR>
+<!-- Unable to decode bitmap format --><IMG SRC="027_L3_Allowingausertoperfo_4.gif" WIDTH=434 HEIGHT=241 ALIGN=center>
+<BR>
+Conversion result
+<BR>
+<!-- Unable to decode bitmap format --><IMG SRC="027_L3_Allowingausertoperfo_5.gif" WIDTH=434 HEIGHT=241 ALIGN=center>
+<P>
+Allowing on-the-spot conversion (source: MISCEDIT.C) is a source code example
+how the WM_QUERYCONVERTPOS message is to be treated.
+<BR>
+Allowing on-the-spot conversion (source: MISCEDIT.C)
+<BR>
+
+<PRE>typedef struct CurPos
+{
+  USHORT usCharNum;     /* on which character...  */
+  USHORT usLineNum;     /* of which line ?        */
+  POINTL ptlCursor;     /* cursor position in pel */
+  LONG   cx;            /* cursor size            */
+  LONG   cy;
+} CURPOS;
+   ...
+MRESULT EXPENTRY editorWinProc( HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2)
+{
+static BOOL flSpot = FALSE;     /* indicates if on-the-spot is performed */
+   ...
+   switch( msg )
+   {
+   ...
+      case WM_QUERYCONVERTPOS:
+      {
+       PRECTL pCurPos;
+
+          pCurPos = (PRECTL)PVOIDFROMMP(mp1);
+          if( flSpot == TRUE )
+          {
+             /* set on-the-spot conversion if the flag is on */
+             pCurPos-&gt;xLeft   = curpos.ptlCursor.x;
+             pCurPos-&gt;yBottom = curpos.ptlCursor.y;
+             pCurPos-&gt;xRight  =  0;
+             pCurPos-&gt;yTop    =  0;
+          }
+          else
+          {
+             /* set fixed-position conversion if the flag is off */
+             pCurPos-&gt;xLeft   = -1;
+             pCurPos-&gt;yBottom = -1;
+             pCurPos-&gt;xRight  =  0;
+             pCurPos-&gt;yTop    =  0;
+          }
+          return (MRESULT)QCP_CONVERT;  /* allow conversion */
+      }
+   ...
+</PRE>
+
+
+<P><HR>
+
+<A HREF="026_L3_Addingastatuslinetoa.html">[Back: Adding a status line to a window]</A> <BR>
+<A HREF="028_L3_ProcessingDBCSinputf.html">[Next: Processing DBCS input from a keyboard]</A> 
+</BODY>
+</HTML>

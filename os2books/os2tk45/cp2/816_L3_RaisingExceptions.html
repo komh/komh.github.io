@@ -1,0 +1,76 @@
+<HTML>
+<HEAD>
+<TITLE>Raising Exceptions</TITLE>
+</HEAD>
+<BODY>
+<H1>Raising Exceptions</H1><!-- entering slot 834 -->
+<P>
+Asynchronous exceptions that have been deferred in a must-complete section
+are dispatched automatically by the system when the thread exits the must-complete
+section. However, a synchronous exception that has been deferred must be
+raised by calling<A><!-- external link: 1D D6 C3 FC --> DosRaiseException</A>.
+
+<P>
+<A><!-- external link: 1D D6 C3 40 -->DosRaiseException</A> can also be
+used to simulate either an asynchronous or synchronous exception. For example,
+a floating point emulator (a program that emulates a numeric coprocessor)
+can use this function to simulate an NPX exception.
+<P>
+Raising a software exception captures the machine state of the current thread
+in a ContextRecord data structure. The ExceptionAddress field of <A HREF="184_L2_EXCEPTIONREPORTRECOR.html">EXCEPTIONREPORTRECORD
+</A>is set to the return address of the caller, as are the corresponding
+fields of the ContextRecord data structure. The system then calls each exception
+handler on the list, passing each a pointer to <A HREF="184_L2_EXCEPTIONREPORTRECOR.html">EXCEPTIONREPORTRECORD
+</A>and the created ContextRecord data structures. In the case of a continuable
+exception for which XCPT_CONTINUE_EXECUTION is returned,<A><!-- external link: 1D D6 C3 40 --> DosRaiseException
+</A>restores the potentially modified context back into the machine before
+returning. Note that control cannot return to the caller of<A><!-- external link: 1D D6 C3 40 --> DosRaiseException
+</A>if the instruction pointer in ContextRecord has been modified.
+<P>
+The caller of<A><!-- external link: 1D D6 C3 40 --> DosRaiseException</A> can
+set the EH_NONCONTINUABLE bit in the flags field of the <A HREF="184_L2_EXCEPTIONREPORTRECOR.html">EXCEPTIONREPORTRECORD
+</A>data structure. By doing so, the caller guarantees that it is never
+returned to after the call to<A><!-- external link: 1D D6 C3 FC --> DosRaiseException</A>.
+Note that once set, the EH_NONCONTINUABLE bit cannot be modified by any
+exception handler. The system will enforce this.
+<P>
+Following are some possible scenarios that might occur after a call to<A><!-- external link: 1D D6 C3 40 --> DosRaiseException
+</A>has been made:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->If one of the exception handlers returns from a continuable
+exception with a status of XCPT_CONTINUE_EXECUTION,<A><!-- external link: 1D D6 C3 40 --> DosRaiseException
+</A>returns NO_ERROR to the caller, and the thread resumes execution.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If one of the exception handlers returns from a noncontinuable
+exception with a status of XCPT_CONTINUE_EXECUTION, the process is terminated,
+because it is illegal to return XCPT_CONTINUE_EXECUTION from a noncontinuable
+exception.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If none of the exception handlers in the thread's
+chain of handlers returns with a status of XCPT_CONTINUE_EXECUTION, then
+the action taken depends on the exception number:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->If the exception number indicates a user-assigned
+exception or an unassigned system exception, the process is terminated.
+<!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 11 -->If the exception number is assigned to a system exception,
+and CS:EIP points to 32-bit code, no 16-bit handlers are called and the
+system default action is taken. Depending on which system exception has
+been raised, the default action is either to terminate the process, or to
+continue execution of the thread with NO_ERROR returned to the caller.<!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 11 -->If the exception number is assigned to a system exception
+that maps to a 16-bit exception and CS:EIP points to 16-bit code, a 16-bit
+exception handler is called, if one is registered. Otherwise OS/2 takes
+the default action.<!-- lm: 0x2 6 --><!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="815_L4_SendingSignalExcepti.html">[Back: Sending Signal Exceptions]</A> <BR>
+<A HREF="817_L3_UserDefinedException.html">[Next: User-Defined Exceptions]</A> 
+</BODY>
+</HTML>

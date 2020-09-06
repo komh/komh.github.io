@@ -1,0 +1,171 @@
+<HTML>
+<HEAD>
+<TITLE>Managing Paging</TITLE>
+</HEAD>
+<BODY>
+<H1>Managing Paging</H1><!-- entering slot 90 -->
+<P>
+Pages can have the following types:<!-- lm: 0x2 0 -->
+<P>
+<B>Fixed</B><!-- lm: 0x2 17 -->
+<UL> These are pages that are permanently
+resident in storage.  They may not be moved or swapped out to secondary
+storage.<!-- lm: 0x2 0 -->
+</UL><B> Swappable</B><!-- lm: 0x2 17 -->
+<UL> When
+there is a shortage of physical memory, these pages can be swapped to disk.
+<!-- lm: 0x2 0 -->
+</UL><B>Discardable</B><!-- lm: 0x2 17 -->
+<UL> It is
+possible to reload these pages from either an EXE or a  DLL file. When memory
+becomes overcommitted, space used for discardable pages can be freed up,
+and when the pages are required again they are loaded from the original
+file.<!-- lm: 0x2 0 -->
+</UL><B> Invalid</B><!-- lm: 0x2 17 -->
+<UL> These
+are pages that have been allocated but not committed.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+The operating system needs information over and above that contained in
+the page directories and the page tables to manage the paging process. OS/2
+V2.0 builds three arrays of data structures that represent:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Committed pages in the process and system address
+spaces<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Pages in physical memory<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Pages held on secondary storage.<!-- lm: 0x2 0 -->
+<P>
+The following sections describe these arrays and the way in which OS/2 V2.0
+uses them.
+<P>
+<B>Virtual Pages</B>
+<P>
+A virtual page structure (VP) is allocated whenever a page is committed
+in response to an application request.  No physical memory is allocated
+for the page at this time.  The PTE is updated to point to the VP but the
+present bit in the page table is<I> not</I> set. When the page is first
+referenced, a page fault occurs.  The allocation of physical memory is left
+to the last possible moment.
+<P>
+The virtual page structure describes the current disposition of a page.
+When a page fault occurs, the virtual memory manager obtains the address
+of the VP from the page table entry, and uses the information held in the
+VP to determine the required action which must be taken to resolve the page
+fault. The possible actions are:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->The page manager will provide a page, initialized
+to zeros if required<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->The page will be loaded from an EXE or DLL file<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->The page will be loaded from the swap file on secondary
+storage.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+If the page is to be loaded from an EXE or DLL, the VP contains a pointer
+to the loader block. If from the swap file, it points to a page in the swap
+file.
+<P>
+<B>Page Frames</B>
+<P>
+A page frame (PF) exists for each page of physical memory in the system.
+ Page frames are stored in an array, which is indexed by the physical frame
+number within the system.
+<P>
+A page frame may have one of three states:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><I>Free</I>, in which case the page frame is available
+for allocation to a process in the system.  The page frame addresses of
+all the free pages in the system are held in a doubly linked list known
+as the<I> free list</I>, with PFs for fast planar memory at one end of the
+list, and PFs for the slower memory on adapters at the other end.  This
+permits the allocation of faster memory before the slower memory.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><I>In-use</I>, in which case the page has been allocated
+to the current process in the system.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><I>Idle</I>, in which case the page frame has been
+allocated to a process, but no page table entries for the current process
+reference this frame. This lack of reference normally indicates that the
+process, which is using the page, has been switched out; that is, the process
+is<I> not</I> the current process.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+When the system is overcommitted, the number of free and idle page frames
+begins to fall.  When it reaches a threshold level, pages are migrated from
+the in-use state to the idle state by a <A HREF="328_L2_pageager.html"><B>page
+ager</B></A>. The page ager looks for pages that have not been accessed
+since the last time the page ager ran.  The ager examines the accessed bit
+in the PTE.  If clear, it marks the page not present.  If a page is referenced
+by more than one PTE, a shared page, all PTEs must be marked not present
+before the page is placed on the idle list. The<I> idle list</I> is also
+a doubly linked list and least recently used (LRU) entries are at one end
+of the list and most recently used (MRU) entries are at the other end of
+the list.
+<P>
+Pages are also classified as<I> dirty</I> or<I><!-- entering slot 91 --> clean</I>.
+ A dirty page is one that has been written to and must have its contents
+swapped to disk before it can be allocated to another process.  A clean
+page does not need to be swapped out, since it typically contains code or
+read-only data, which can be reloaded from the original file on disk.  It
+could also be that a copy of the page currently exists in the swap file.
+
+<P>
+Placing a page frame on the<I> idle list</I> does not destroy its contents.
+ The page frame is only reused when the operating system is forced to<I> steal
+</I>a page frame from the<I> idle list</I> in order to accommodate the loading
+of a page after a page fault. The swapping of an idle swappable page to
+disk is also usually delayed until there is a need to reuse the page frame
+to satisfy a page fault.  To take advantage of the capability of certain
+I/O adapters to chain operations, other pages on the idle list may be swapped
+out at the same time.
+<P>
+<B>Swap Frames</B>
+<P>
+A swap frame (SF) is similar to a page frame except that an SF refers to
+a slot in the swap file, which can be used to hold a page when main storage
+becomes overcommitted. The swap frame array is used to control allocation
+of space in the swap file. If the<B> SWAP</B> option is present on the<B> MEMMAN
+</B>statement in the CONFIG.SYS, the SWAPPER.DAT file will be created in
+the directory pointed to in the<B> SWAPPATH</B> statement.  The initial
+size of the file is 512KB.
+<P>
+The size of the swap file is determined by the amount of memory overcommitment
+in the system.  The algorithm used in this calculation takes into account
+the amount of storage needed for all the fixed pages and swappable pages
+in the system and the amount by which this exceeds the physical storage
+installed in the system.  The memory overcommitment is recalculated each
+time pages are committed.  It should not be necessary to increase the size
+of the swap file each time pages are committed because of the fact that
+increases to the swap file will always be in steps of 512KB.
+<P>
+However allocation of VPs to SFs does not take place when the page is committed.
+All the operating system ensures at this time is that there will be space
+in the swap file for the page when it becomes necessary to swap it out.
+ The SF is allocated to the page when it is first selected from the idle
+list for swapping.  When the page is swapped back in, the SF will not be
+immediately freed up, but a link to the VP is maintained. If the page is
+then again selected for swapping out before it has been changed, it will
+not be necessary to write it to disk as a copy of it still exists in the
+swap file.
+<P>
+The OS/2 V2.0 swap file can also decrease in size.  Decrements to the size
+of the swap file will be in 512KB blocks. When the overcommitment calculation
+indicates that the swap file is too large by one or more multiples of 512KB,
+the area at the end of the swap file is marked for shrinking. No new allocations
+of SFs in the area marked for shrinking will take place.  When all SFs in
+the shrinkable area are free, the swap file is reduced in size. No attempt
+is made to force the freeing of SFs in this area; consequently there can
+be a longish delay in the swap file becoming eligible for shrinking and
+the shrinking actually taking place.
+
+<P><HR>
+
+<A HREF="084_L3_AddressTranslation.html">[Back: Address Translation]</A> <BR>
+<A HREF="086_L3_ProcessingPageFaults.html">[Next: Processing Page Faults]</A> 
+</BODY>
+</HTML>

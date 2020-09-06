@@ -1,0 +1,61 @@
+<HTML>
+<HEAD>
+<TITLE>Drawing in a Window</TITLE>
+</HEAD>
+<BODY>
+<H1>Drawing in a Window</H1><!-- entering slot 54 -->
+<P>
+Ideally, all drawing in a window occurs as a result of an application's
+processing a WM_PAINT message.  Applications maintain an internal representation
+of what must be displayed in the window, such as text or a linked list of
+graphics objects, and use the WM_PAINT message as a cue to display a visual
+representation of that data in the window.
+<P>
+To route all display output through the WM_PAINT message, an application
+must not draw on the screen at the time its data changes.  Instead, it must
+update the internal representation of the data and call the WinInvalidateRect
+or WinInvalidateRegion functions to invalidate the portion of the window
+that must be redrawn.  Sometimes it is much more efficient to draw directly
+in a window without relying on the WM_PAINT message-for example, when drawing
+and redrawing an object for a user who is using the mouse to drag or size
+the object.
+<P>
+If a window has the WS_SYNCPAINT or CS_SYNCPAINT style, invalidating a portion
+of the window causes a WM_PAINT message to be sent to the window immediately.
+ Essentially, sending a message is like making a function call; the actions
+corresponding to the WM_PAINT message are carried out before the call that
+caused the invalidation returns-that is to say, the painting is synchronous.
+
+<P>
+If the window does not have the WS_SYNCPAINT or CS_SYNCPAINT style, invalidating
+a portion of the window causes the invalidated region to be added to the
+window's update region.  The next time the application calls the WinGetMsg
+or WinPeekMsg functions, the application is sent a WM_PAINT message.  If
+there are many messages in the queue, the painting occurs after the invalidation-that
+is, the painting is asynchronous.  A WM_PAINT message is not posted to the
+queue in this case, so all invalidation operations since the last WM_PAINT
+message are consolidated into a single WM_PAINT message the next time the
+application has no messages in the queue.
+<P>
+There are advantages to both synchronous and asynchronous painting.  Windows
+that have simple painting functions should be painted synchronously.  Most
+of the system-defined control windows, such as buttons and frame controls,
+are painted synchronously because they can be painted quickly without interfering
+with the responsiveness of the program.  Windows that require more time-consuming
+painting operations should be painted asynchronously so that the painting
+can be initiated only when there are no other pending messages that might
+otherwise be blocked while waiting for the window to be painted.  Also,
+a window that uses an incremental approach to invalidating small portions
+of itself usually should allow those operations to consolidate into a single
+asynchronous WM_PAINT message, rather than a series of synchronous WM_PAINT
+messages. If necessary, an application can call the WinUpdateWindow function
+to cause an asynchronous window to update itself without going through the
+event loop.  WinUpdateWindow sends a WM_PAINT message directly to the window
+if the window's update region is not empty.
+
+<P><HR>
+
+<A HREF="053_L2_StrategiesforPaintin.html">[Back: Strategies for Painting and Drawing]</A> <BR>
+<A HREF="055_L3_TheWM_PAINTMessage.html">[Next: The WM_PAINT Message]</A> 
+</BODY>
+</HTML>

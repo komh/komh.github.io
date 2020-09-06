@@ -1,0 +1,180 @@
+<HTML>
+<HEAD>
+<TITLE>select()</TITLE>
+</HEAD>
+<BODY>
+<H1>select()</H1><!-- entering slot 219 -->
+<P>
+The socket call gets read, write, and exception status on a group of sockets.
+
+<P>
+The BSD version monitors the activity on sockets by specifying an array
+(fd_set) of socket numbers for which the caller wants to read the data,
+write the data, and check exception-pending conditions. The BSD version
+provides FD_SET, FD_CLR, FD_ISSET, and FD_ZERO macros to add or delete socket
+numbers from the array.
+<P>
+<B>Syntax</B>
+<PRE>#include &lt;types.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;sys\time.h&gt;
+int select(<I>nfds</I>, <I>readfds</I>, <I>writefds</I>, <I>exceptfds</I>, <I>timeout</I>)
+int <I>nfds</I>;
+fd_set *<I>readfds</I>;
+fd_set *<I>writefds</I>;
+fd_set *<I>exceptfds</I>;
+struct timeval *<I>timeout</I>;
+</PRE>
+
+<P>
+<B>Parameters</B><!-- lm: 0x2 0 -->
+<P>
+<I>nfds</I><!-- lm: 0x11 2 -->
+<UL> This parameter is unused; it is maintained
+for compatibility with BSD.<!-- lm: 0x2 0 -->
+</UL><I> readfds</I><!-- lm: 0x11 2 -->
+<UL> Pointer
+to a list of descriptors to be checked for reading.<!-- lm: 0x2 0 -->
+</UL><I> writefds
+</I><!-- lm: 0x11 2 -->
+<UL>Pointer to a list of descriptors to be checked
+for writing.<!-- lm: 0x2 0 -->
+</UL><I> exceptfds</I><!-- lm: 0x11 2 -->
+<UL> Pointer
+to a list of descriptors to be checked for exception-pending conditions.
+For networking services sockets, the only exception-pending condition is
+out-of-band data in the receive buffer.<!-- lm: 0x2 0 -->
+</UL><I> timeout
+</I><!-- lm: 0x11 2 -->
+<UL>Pointer to the time to wait for the select()
+call to complete.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>Description</B>
+<P>
+This call monitors activity on a set of different sockets until a timeout
+expires, to see if any sockets are ready for reading or writing, or if any
+exception-pending conditions are pending.
+<P>
+Reinitializing<I> readfds</I>,<I> writefds</I>, and<I> exceptfds</I> every
+time select() is called is required.
+<P>
+If timeout is a NULL pointer, the call blocks indefinitely until one of
+the requested conditions is satisfied. If timeout is non-NULL, it specifies
+the maximum time to wait for the call to complete. To poll a set of sockets,
+the timeout pointer should point to a zeroed timeval structure. The timeval
+structure is defined in the &lt;SYS\TIME.H&gt; header file and contains
+the following fields:
+<PRE>struct timeval {       long tv_sec;  /* Number of seconds */
+       long tv_usec; /* Number of microseconds */
+}
+</PRE>
+
+<P>
+An fd_set is made up of an array of integers. Macros are provided to manipulate
+the array.<!-- lm: 0x2 0 -->
+<P>
+<B>Macro</B><!-- lm: 0x2 40 -->
+<UL><B>Description</B><!-- lm: 0x2 0 -->
+</UL>FD
+_ SET (<I> socket ,array _ address</I> )<!-- lm: 0x12 40 -->
+<UL>Addsthesockettothelistpointedtoby<I>array
+_ address</I> .<!-- lm: 0x2 0 -->
+</UL>FD _ CLR (<I> socket ,array _ address
+</I>)<!-- lm: 0x12 40 -->
+<UL>Removesthesocketfromthelist .<!-- lm: 0x2 0 -->
+</UL>FD
+_ ISSET (<I> socket ,array _ address</I> )<!-- lm: 0x12 40 -->
+<UL>Returnstrueifthedescriptorispartofthearray
+;otherwise ,returnsfalse .<!-- lm: 0x2 0 -->
+</UL>FD _ ZERO (<I> socket
+,array _ address</I> )<!-- lm: 0x12 40 -->
+<UL>Clearstheentirearrayforallsocketdescriptors
+.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+
+<P>
+<B>Note: </B> For macros FD_SET, FD_CLR, FD_ISSET, and FD_ZERO, define the
+parameters<I> socket</I> and<I> array_address</I> in the following manner:
+
+<PRE>int <I>socket</I>;struct fd_set *<I>array_address</I>;
+</PRE>
+<!-- lm: 0x2 0 -->
+<P>
+
+<P>
+Setting any of the descriptor pointers to zero indicates that no checks
+are to be made for the conditions. For example, setting<I> exceptfds</I> to
+be a NULL pointer causes the select call to check for only read and write
+conditions.
+<P>
+<B>Return Values</B>
+<P>
+The total number of ready sockets (in all arrays) is returned. The value
+-1 indicates an error. The value 0 indicates an expired time limit. If the
+return value is greater than 0, the socket descriptors in each array that
+are not ready are removed from the array and fd_array is rearranged so that
+the ready sockets are at the top. The<I> fd_count</I> parameter is adjusted
+accordingly and returned. You can get the specific error code by calling
+sock_errno() or psock_errno().<!-- lm: 0x2 0 -->
+<P>
+<B>sock_errno() Value</B><!-- lm: 0x2 25 -->
+<UL><B>Description</B><!-- lm: 0x2 0 -->
+</UL>SOCENOTSOCK<!-- lm: 0x12 25 -->
+<UL>The<I>s</I>parameterisnotavalidsocketdescriptor
+.<!-- lm: 0x2 0 -->
+</UL>SOCEFAULT<!-- lm: 0x12 25 -->
+<UL>Theaddressisnotvalid .<!-- lm: 0x2 0 -->
+</UL>SOCEINVAL<!-- lm: 0x12 25 -->
+<UL>Invalidargument .<!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>Examples</B>
+<P>
+Following is an example of the select() call.
+<P>
+
+<PRE>...fd_set readsocks;
+fd_set writesocks;
+fd_set exceptsocks;
+struct timeval timeout;
+int number_found;
+...
+/* add socket to read/write/except arrays.  To add descriptor s use
+ *   FD_SET (s, &amp;readsocks);
+ *
+ */
+...
+number_found = select(0,&amp;readsocks, &amp;writesocks,
+                      &amp;exceptsocks, &amp;timeout);
+
+</PRE>
+
+<P>
+<B><!-- entering slot 220 -->Related Calls</B><!-- lm: 0x2 5 -->
+<UL>
+<P>
+<A HREF="179_L2_accept.html">accept()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="180_L2_accept_and_recv.html">accept_and_recv()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="183_L2_connect.html">connect()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="190_L2_os2_select.html">os2_select()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="193_L2_recv.html">recv()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="198_L2_send.html">send()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="205_L2_sock_errno.html">sock_errno()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="206_L2_socket.html">socket()</A><!-- lm: 0x2 0 -->
+</UL>
+
+<P><HR>
+
+<A HREF="196_L2_removesocketfromlist.html">[Back: removesocketfromlist()]</A> <BR>
+<A HREF="198_L2_send.html">[Next: send()]</A> 
+</BODY>
+</HTML>

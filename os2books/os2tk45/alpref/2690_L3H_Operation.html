@@ -1,0 +1,272 @@
+<HTML XPOS=RIGHT YPOS=BOTTOM WIDTH=70% HEIGHT=60%HIDDEN>
+<HEAD>
+<!-- extra bytes: 0B 00 44 02 00 08 00 11 46 00 3C 00 38 27 --><TITLE>Operation</TITLE>
+</HEAD>
+<BODY>
+<H1>Operation</H1><!-- entering slot 2705 -->IF instruction = near RET
+<BR>
+THEN;
+<BR>
+  IF OperandSize = 16
+<BR>
+  THEN
+<BR>
+   IP  Pop();
+<BR>
+   EIP  EIP AND 0000FFFFH;
+<BR>
+  ELSE (* OperandSize = 32 *)
+<BR>
+   EIP  Pop();
+<BR>
+ FI;
+<BR>
+ IF instruction has immediate operand THEN eSP  eSP + imm16; FI;
+<BR>
+FI;
+<BR>
+
+<BR>
+IF (PE = 0 OR (PE = 1 AND VM = 1))
+<BR>
+  (* real mode or virtual 8086 mode *)
+<BR>
+  AND instruction = far RET
+<BR>
+THEN;
+<BR>
+  IF OperandSize = 16
+<BR>
+  THEN
+<BR>
+   IP  Pop();
+<BR>
+   EIP  EIP AND 0000FFFFH;
+<BR>
+   CS  Pop(); (* 16-bit pop *)
+<BR>
+  ELSE (* OperandSize = 32 *)
+<BR>
+   EIP  Pop ();
+<BR>
+   CS  Pop(); (* 32-bit pop, high-order 16-bits discarded *)
+<BR>
+  FI;
+<BR>
+  IF instruction has immediate operand THEN eSP  eSP + imm16; FI;
+<BR>
+FI;
+<BR>
+
+<BR>
+IF (PE = 1 AND VM = 0) (* Protected mode, not V86 mode *)
+<BR>
+  AND instruction = far RET
+<BR>
+THEN
+<BR>
+  IF OperandSize=32
+<BR>
+  THEN Third word on stack must be within stack limits else #SS(0);
+<BR>
+  ELSE Second word on stack must be within stack limits else #SS(0);
+<BR>
+  FI;
+<BR>
+  Return selector RPL must be ó CPL ELSE #GP(return selector)
+<BR>
+  IF return selector RPL = CPL
+<BR>
+  THEN GOTO SAME-LEVEL;
+<BR>
+  ELSE GOTO OUTER-PRIVILEGE-LEVEL;
+<BR>
+  FI;
+<BR>
+FI;
+<BR>
+
+<BR>
+SAME-LEVEL:
+<BR>
+  Return selector must be non-null ELSE #GP(0)
+<BR>
+  Selector index must be within its descriptor table limits ELSE
+<BR>
+   #GP(selector)
+<BR>
+  Descriptor AR byte must indicate code segment ELSE #GP(selector)
+<BR>
+  IF non-conforming
+<BR>
+  THEN code segment DPL must equal CPL;
+<BR>
+  ELSE #GP(selector);
+<BR>
+  FI;
+<BR>
+  IF conforming
+<BR>
+  THEN code segment DPL must be ó CPL;
+<BR>
+  ELSE #GP(selector);
+<BR>
+  FI;
+<BR>
+  Code segment must be present ELSE #NP(selector);
+<BR>
+  Top word on stack must be within stack limits ELSE #SS(0);
+<BR>
+  IP must be in code segment limit ELSE #GP(0);
+<BR>
+  IF OperandSize=32
+<BR>
+  THEN
+<BR>
+   Load CS:EIP from stack
+<BR>
+   Load CS register with descriptor
+<BR>
+   Increment eSP by 8 plus the immediate offset if it exists
+<BR>
+  ELSE (* OperandSize=16 *)
+<BR>
+   Load CS:IP from stack
+<BR>
+   Load CS register with descriptor
+<BR>
+   Increment eSP by 4 plus the immediate offset if it exists
+<BR>
+  FI;
+<BR>
+
+<BR>
+OUTER-PRIVILEGE-LEVEL:
+<BR>
+  IF OperandSize=32
+<BR>
+  THEN Top (16+immediate) bytes on stack must be within stack limits
+<BR>
+   ELSE #SS(0);
+<BR>
+  ELSE Top (8+immmediate) bytes on stack must be within stack limits ELSE
+
+<BR>
+   #SS(0);
+<BR>
+  FI;
+<BR>
+  Examine return CS selector and associated descriptor:
+<BR>
+   Selector must be non-null ELSE #GP(0);
+<BR>
+   Selector index must be within its descriptor table limits ELSE
+<BR>
+     #GP(selector)
+<BR>
+   Descriptor AR byte must indicate code segment ELSE #GP(selector);
+<BR>
+   IF non-conforming
+<BR>
+   THEN code segment DPL must equal return selector RPL
+<BR>
+   ELSE #GP(selector);
+<BR>
+   FI;
+<BR>
+
+<BR>
+   IF conforming
+<BR>
+   THEN code segment DPL must be ó return selector RPL;
+<BR>
+   ELSE #GP(selector);
+<BR>
+   FI;
+<BR>
+   Segment must be present ELSE #NP(selector)
+<BR>
+  Examine return SS selector and associated descriptor:
+<BR>
+   Selector must be non-null ELSE #GP(0);
+<BR>
+   Selector index must be within its descriptor table limits
+<BR>
+     ELSE #GP(selector);
+<BR>
+   Selector RPL must equal the RPL of the return CS selector ELSE
+<BR>
+     #GP(selector);
+<BR>
+   Descriptor AR byte must indicate a writable data segment ELSE
+<BR>
+     #GP(selector);
+<BR>
+   Descriptor DPL must equal the RPL of the return CS selector ELSE
+<BR>
+     #GP(selector);
+<BR>
+   Segment must be present ELSE #NP(selector);
+<BR>
+  IP must be in code segment limit ELSE #GP(0);
+<BR>
+  Set CPL to the RPL of the return CS selector;
+<BR>
+  IF OperandSize=32
+<BR>
+  THEN
+<BR>
+   Load CS:EIP from stack;
+<BR>
+   Set CS RPL to CPL;
+<BR>
+   Increment eSP by 8 plus the immediate offset if it exists;
+<BR>
+   Load SS:eSP from stack;
+<BR>
+  ELSE (* OperandSize=16 *)
+<BR>
+   Load CS:IP from stack;
+<BR>
+   Set CS RPL to CPL;
+<BR>
+   Increment eSP by 4 plus the immediate offset if it exists;
+<BR>
+   Load SS:eSP from stack;
+<BR>
+  FI;
+<BR>
+  Load the CS register with the return CS descriptor;
+<BR>
+  Load the SS register with the return SS descriptor;
+<BR>
+  For each of ES, FS, GS, and DS
+<BR>
+  DO
+<BR>
+   IF the current register setting is not valid for the outer level,
+<BR>
+     set the register to null (selector  AR  0);
+<BR>
+   To be valid, the register setting must satisfy the following properties:
+<BR>
+     Selector index must be within descriptor table limits;
+<BR>
+     Descriptor AR byte must indicate data or readable code segment;
+<BR>
+     IF segment is data or non-conforming code, THEN
+<BR>
+      DPL must be ò CPL, or DPL must be ò RPL;
+<BR>
+     FI;
+<BR>
+  OD;
+<BR>
+
+
+<P><HR>
+
+<A HREF="2689_L3H_Description.html">[Back: Description]</A> <BR>
+<A HREF="2691_L3H_ProtectedModeExcepti.html">[Next: Protected Mode Exceptions]</A> 
+</BODY>
+</HTML>

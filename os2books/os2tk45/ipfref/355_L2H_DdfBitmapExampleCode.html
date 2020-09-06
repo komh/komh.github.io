@@ -1,0 +1,131 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DdfBitmap - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DdfBitmap - Example Code</H1><!-- entering slot 372 -->
+<P>
+After initializing a DDF buffer with <A HREF="390_L2_DdfInitialize.html">DdfInitialize</A>,
+the example obtains a device context (DevOpenDC), creates a presentation
+space (GpiCreatePS), and loads a bit map (GpiLoadBitmap). It then uses DdfBitmap
+to place a reference to the bit map in the DDF buffer. For a more detailed
+example and discussion of initializing DDF, see the <A HREF="390_L2_DdfInitialize.html">DdfInitialize
+</A>sample.
+<PRE>#define INCL_WINWINDOWMGR       /* General window management     */
+#define INCL_WINMESSAGEMGR      /* Message management            */
+#define INCL_GPICONTROL         /* Basic PS control              */
+#define INCL_GPIBITMAPS         /* Bit maps and Pel Operations   */
+#define INCL_GPIPRIMITIVES      /* Drawing Primitives/Attributes */
+#define INCL_DDF                /* Dynamic Data Facility         */
+#include &lt;os2.h&gt;
+#include &lt;pmhelp.h&gt;
+
+#define ACVP_HAB  12
+#define BM_HPS    16
+#define BM_HDC    20
+#define BM_HWND   24
+#define ID_LEFT   255
+
+MRESULT WindowProc( HWND hwnd, ULONG ulMsg, MPARAM mp1, MPARAM mp2 )
+{
+    HWND    hwndParent;     /* parent window                        */
+    HWND    hwndInstance;   /* help instance window                 */
+    HDDF    hDdf;           /* DDF handle                           */
+    HDC     hdc;            /* device context handle                */
+    HPS     hps;            /* presentation space handle            */
+    HAB     hab;            /* anchor block handle                  */
+    SIZEL   sizel = {0L,0L};/* size of new PS                       */
+    HBITMAP hBitmap;        /* bit map handle                       */
+    HMODULE hModule;        /* module handle                        */
+
+    switch( ulMsg )
+    {
+    case HM_QUERY_DDF_DATA:
+        hwndParent = WinQueryWindow( hwnd, QW_PARENT );
+        hwndParent = WinQueryWindow( hwndParent, QW_PARENT );
+        hwndInstance = (HWND)WinSendMsg( hwndParent, HM_QUERY,
+                                 MPFROMSHORT( HMQW_INSTANCE ), NULL );
+
+        /* Allocate 1K Buffer (default)  */
+        hDdf = DdfInitialize(
+                       hwndInstance,  /* Handle of help instance */
+                       0L,            /* Default buffer size     */
+                       0L             /* Default increment       */
+                       );
+
+        if (hDdf == NULLHANDLE)       /* Check return code       */
+        {
+            return (MRESULT)FALSE;
+        }
+
+        /* get module handle for bit map */
+        DosQueryModuleHandle("bitmap", &amp;hModule);
+        if (hModule == NULLHANDLE)
+        {
+            return (MRESULT)FALSE;
+        }
+
+        /* get hab for this window */
+        if ((hab = (HAB)WinQueryWindowULong(hwnd, ACVP_HAB)) == NULLHANDLE)
+        {
+            return (MRESULT)FALSE;
+        }
+
+        /* create a device context */
+        if ((hdc = DevOpenDC(hab, OD_MEMORY, "*", 0L,
+                            (PDEVOPENDATA)NULL, (HDC)NULL)) == NULLHANDLE)
+        {
+           return (MRESULT)FALSE;
+        }
+
+        /* save hdc in reserved word */
+        WinSetWindowULong(hwnd, BM_HDC, (ULONG)hdc);
+
+        /* create a noncached micro presentation space */
+        /* and associate it with the window */
+        if ((hps = GpiCreatePS(hab, hdc, &amp;sizel,
+                   PU_PELS | GPIF_DEFAULT
+                   | GPIT_MICRO | GPIA_ASSOC)) == NULLHANDLE)
+        {
+           return (MRESULT)FALSE;
+        }
+
+        /* save hps in reserved word */
+        WinSetWindowULong(hwnd, BM_HPS, (ULONG)hps);
+
+        /* Load the Bit map to display */
+        if ((hBitmap = GpiLoadBitmap(hps, hModule, ID_LEFT, 300L,
+                                     300L)) == NULLHANDLE)
+        {
+            return (MRESULT)FALSE;
+        }
+
+        /* save bit map hwnd in reserved word */
+        WinSetWindowULong(hwnd, BM_HWND, (ULONG)hBitmap);
+
+        /* Display the bit map align left */
+        if (!DdfBitmap(hDdf, hBitmap, ART_LEFT))
+        {
+            return (MRESULT)FALSE;
+        }
+
+        return (MRESULT)hDdf;
+
+    case WM_CLOSE:
+        /* release PS, DC, and bit map */
+        GpiDestroyPS((HPS)WinQueryWindowULong(hwnd, BM_HPS));
+        DevCloseDC((HDC)WinQueryWindowULong(hwnd, BM_HDC));
+        GpiDeleteBitmap((HBITMAP)WinQueryWindowULong(hwnd, BM_HWND));
+        WinDestroyWindow(WinQueryWindow(hwnd, QW_PARENT));
+        return (MRESULT)TRUE;
+    }
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="354_L2H_DdfBitmapRelatedFunc.html">[Back: DdfBitmap - Related Functions]</A> <BR>
+<A HREF="356_L2H_DdfBitmapTopics.html">[Next: DdfBitmap - Topics]</A> 
+</BODY>
+</HTML>

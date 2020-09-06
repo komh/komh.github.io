@@ -1,0 +1,67 @@
+<HTML>
+<HEAD>
+<TITLE>Guard Page Exception Handler</TITLE>
+</HEAD>
+<BODY>
+<H1>Guard Page Exception Handler</H1><!-- entering slot 21 -->
+<PRE>ULONG GPHandler(PEXCEPTIONREPORTRECORD pX)
+{
+      ULONG ulAttribs;                       /* Memory attributes        */
+      ULONG ulSize;                          /* Range in pages           */
+
+      if (pX-&gt;ExceptionNum ==                /* If guard page exception  */
+          XCPT_GUARD_PAGE_VIOLATION)
+         {
+            ulSize=1L;                       /* One page                 */
+            DosQueryMem(                     /* Query memory attributes  */
+               (PVOID)pX-&gt;ExceptionInfo[1],  /* Page base address        */
+               &amp;ulSize,                      /* Single page              */
+               &amp;ulAttribs);                  /* Memory attributes        */
+            if (((ulAttrs &amp; PAG_FREE) ||     /* If page is available     */
+                (ulAttrs &amp; PAG_COMMIT))==0)  /* but is not committed     */
+               {
+               DosSetMem(                    /* Commit page              */
+                  (PVOID)pX-&gt;ExceptionInfo[1], /* Page base address      */
+                  1L,                        /* Single page only         */
+                  PAG_DEFAULT |              /* Default attributes       */
+                  PAG_COMMIT);               /* Set commit flag          */
+               return(XCPT_CONTINUE_EXECUTION); /* Done                  */
+               }
+         }
+      if (pX-&gt;ExceptionNum ==                /* If access violation      */
+          XCPT_ACCESS_VIOLATION)
+         {
+         if (pX-&gt;ExceptionInfo[1])           /* If page address not NULL */
+            {
+            ulSize=1L;                       /* One page                 */
+            DosQueryMem(                     /* Query memory attributes  */
+               (PVOID)pX-&gt;ExceptionInfo[1],  /* Page base address        */
+               &amp;ulSize,                      /* Single page              */
+               &amp;ulAttribs);                  /* Memory attributes        */
+            if (((ulAttrs &amp; PAG_FREE) ||     /* If page is available     */
+                (ulAttrs &amp; PAG_COMMIT))==0)  /* but is not committed     */
+               {
+               DosSetMem(                    /* Commit page              */
+                  (PVOID)pX-&gt;ExceptionInfo[1], /* Page base address      */
+                  1L,                        /* Single page only         */
+                  PAG_DEFAULT |              /* Default attributes       */
+                  PAG_COMMIT);               /* Set commit flag          */
+               return(XCPT_CONTINUE_EXECUTION); /* Done                  */
+               }
+            }
+         }
+      return(XCPT_CONTINUE_SEARCH);          /* Chain to next handler if */
+}                                            /* any other exception      */
+</PRE>
+
+<P>
+This exception handler also handles the situation where an application writes
+directly to an uncommitted page rather than to the guard page, as is possible
+with non-sequential write operations.
+
+<P><HR>
+
+<A HREF="019_L2_UsingaGuardPageWitha.html">[Back: Using a Guard Page With a Memory Object]</A> <BR>
+<A HREF="021_L2_RegisteringaGuardPag.html">[Next: Registering a Guard Page Exception Handler]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,183 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Get the display resolution</TITLE>
+</HEAD>
+<BODY>
+<H1>Get the display resolution</H1><!-- entering slot 357 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+File      OS2.INI
+<BR>
+Application  PM_DISPLAYDRIVERS
+<BR>
+Key      DEFAULTSYSTEMRESOLUTION
+<BR>
+Value     "xxxxyyyydddd????????"x
+<BR>
+       xxxx = horizontal resolution
+<BR>
+       yyyy = vertical resolution
+<BR>
+       dddd = color depth
+<BR>
+       ???? = unknown value
+<BR>
+       (all values in LSB format)
+<BR>
+Description  contains the current
+<BR>
+       display resolution
+<BR>
+Created    <A HREF="1040_L0_.html">?</A>
+<BR>
+Deleted    <A HREF="1040_L0_.html">?</A>
+<BR>
+
+<P>
+
+<P>
+File      OS2.INI
+<BR>
+Application  PM_DISPLAYDRIVERS
+<BR>
+Key      RESOLUTION_CHANGED
+<BR>
+Value     "3100"x
+<BR>
+Description  display resolution change is
+<BR>
+       pending if this key exists
+<BR>
+Created    after changing the current resolution
+<BR>
+       using the System object
+<BR>
+Deleted    after the next reboot
+<BR>
+
+<P>
+
+<P>
+Following is an example program using the known values of these entries
+to get the current display resolution.
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* sample program to get the current display resolution               */
+/*                                                                    */
+
+                    /* load the necessary REXXUTIL function           */
+  call rxFuncAdd "SysIni", "REXXUTIL", "SysIni"
+
+                    /* get the resolution                             */
+  parse value GetDisplayResolution() with ,
+        xResolution yResolution ColorDepth resolutionChangePending
+
+                    /* display the results                            */
+  say "Your current display resolution is " || ,
+      XResolution || "x" || YResolution || "x" || ColorDepth
+
+                    /* check if the resolution is already valid       */
+  if resolutionChangePending = 1 then
+  do
+    say ""
+    say "Note: You've changed the resolution but not rebooted until now."
+    say "      So maybe the resolution mentioned above is only valid after"
+    say "      the next reboot!"
+  end /* if */
+
+exit 0
+
+/* ------------------------------------------------------------------ */
+/* function: Get the current display resolution                       */
+/*                                                                    */
+/* call:     GetDisplayResolution                                     */
+/*                                                                    */
+/* returns:  xValue yValue depth changePending                        */
+/*                                                                    */
+/* where:    xValue - horizontal size                                 */
+/*           yValue - vertical size                                   */
+/*           depth  - colorDepth                                      */
+/*           changePending - 1 : the resolution was changed but no    */
+/*                               reboot occurred until now            */
+/*                           0 : the resolution is active             */
+/*                                                                    */
+/* note:     unknown1 and unknown2 are unknown values in the INI file */
+/*           entry (see below).                                       */
+/*           This routine needs the REXXUTIL function SYSINI and the  */
+/*           subroutine LSB2MSB                                       */
+/*                                                                    */
+GetDisplayResolution: PROCEDURE
+
+                    /* init the return code                           */
+  parse value 0 0 0 0 with xValue yValue colorDepth changePending
+
+                    /* install a local error handler                  */
+  signal on syntax name GetDisplayValueError
+                                   /* get the current resolution      */
+  resolutionEntryInBin = SysIni( "USER" ,,
+                                 "PM_DISPLAYDRIVERS" ,,
+                                 "DEFAULTSYSTEMRESOLUTION" )
+
+                    /* check, if a resolution change is pending       */
+  resolutionChangePending = SysIni( "USER" ,,
+                                    "PM_DISPLAYDRIVERS" ,,
+                                    "RESOLUTION_CHANGED" )
+   if resolutionChangePending = "1" || "00"x then
+     resolutionChangePending = 1
+   else
+     resolutionChangePending = 0
+
+                    /* convert the value into a hex string            */
+  resolutionEntryInHex = c2x( resolutionEntryInBin )
+
+  parse var resolutionEntryInHex  1 xValue  ,
+                                  9 yValue  ,
+                                 17 ColorDepth ,
+                                 25 unknown1 ,
+                                 33 unknown2
+
+                    /* convert the values into decimal values         */
+  xValue     = x2d( LSB2MSB( xValue ) )
+  yValue     = x2d( LSB2MSB( yValue ) )
+  ColorDepth = x2d( LSB2MSB( ColorDepth ) )
+
+                    /* not returned or used in this version           */
+  unknown1   = x2d( LSB2MSB( unknown1 ) )
+  unknown2   = x2d( LSB2MSB( unknown2 ) )
+
+                    /* this label is only used by the local error     */
+                    /* handler                                        */
+GetDisplayValueError:
+  return xValue yValue colorDepth resolutionChangePending
+
+/* ------------------------------------------------------------------ */
+/* function: Convert a WORD or DWORD from LSB format to MSB format    */
+/*           and vice versa                                           */
+/*                                                                    */
+/* call:     LSB2MSB inputHexString                                   */
+/*                                                                    */
+/* where:    inputHexstring - input value as hexstring                */
+/*                            (e.g. "3412", "78563412")               */
+/*                                                                    */
+/* output:   value in MSB format as hexstring                         */
+/*           (e.g. "1234", "12345678")                                */
+/*                                                                    */
+LSB2MSB: PROCEDURE
+  HexZiffer = arg(1)                                         /* v3.00 */
+  Len = Length(HexZiffer)                                    /* v3.00 */
+  If (Len // 2) then                                         /* v3.00 */
+     HexZiffer = Right(HexZiffer, Len + 1, '0')              /* v3.00 */
+  RETURN strip( translate( "12345678",,                      /* v3.00 */
+                           HexZiffer, "78563412" ) )         /* v3.00 */
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="345_L4_Changingthedefaultfo.html">[Back: Changing the default font]</A> <BR>
+<A HREF="347_L4_ListallWPSknownobjec.html">[Next: List all WPS known object IDs]</A> 
+</BODY>
+</HTML>

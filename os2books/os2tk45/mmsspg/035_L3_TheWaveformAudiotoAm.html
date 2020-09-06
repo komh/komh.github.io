@@ -1,0 +1,67 @@
+<HTML>
+<HEAD>
+<TITLE>The Waveform Audio to Amp-Mixer Connection</TITLE>
+</HEAD>
+<BODY>
+<H1>The Waveform Audio to Amp-Mixer Connection</H1><!-- entering slot 40 -->
+<P>
+Because its primary purpose is to play and record waveform data, the waveform
+audio MCD routes an MCI_SET application request to set audio attributes.
+ The waveform audio MCD can route requests to the amp mixer because a default
+logical connection exists from the waveform audio MCD to the ampmixer MCD.
+
+<P>
+A default connection is the name of a connected device, while a device-context
+connection is the actual handle to a particular instance of an opened device.
+The waveaudio device has a default connection to an ampmixer device.  When
+the waveaudio device is opened, it automatically opens the ampmix device
+creating an instance of each device.  Since devices may be shared in OS/2
+multimedia, the waveaudio device can be opened again by another application
+and two new instances are created.  While the default connection is the
+same in both cases, the device context connections are different.
+<P>
+The code fragment in the following example illustrates how the waveaudio
+device gets a default connection and opens an associated amp mixer.  The
+waveform audio MCD uses the device handle of the amp mixer to route any
+requests to change the volume.
+<P>
+An application can retrieve the amp mixer handle by issuing the MCI_CONNECTION
+message.  This is necessary if the application needs to use any advanced
+audio shaping functions such as treble, bass, balance, and so on.
+<PRE>  ulpInstance-&gt;usWaveDeviceID = pDrvOpenParams-&gt;usDeviceID;
+
+  ulDeviceTypeID = MAKEULONG ( MCI_DEVTYPE_WAVEFORM_AUDIO,
+                               pDrvOpenParams-&gt;usDeviceOrd);
+  /******************************************************
+  * Ensure that the INI file contains the right device id
+  ******************************************************/
+
+  if ( pDrvOpenParams-&gt;usDeviceType != MCI_DEVTYPE_WAVEFORM_AUDIO )
+     {
+     return ( MCIERR_INI_FILE );
+     }
+
+  usConnLength = sizeof(DEFAULTCONNECTIONS2);
+
+  ulrc =  mciQueryDefaultConnections ( ulDeviceTypeID,
+                                       &amp;DefCon,
+                                       &amp;usConnLength);
+  /******************************************************
+  * Ensure that the INI file says that we are connected
+  * to an amp mixer.  If it says that we are connected
+  * to ourselves, return an error.
+  ******************************************************/
+  if ( ULONG_LOWD( DefCon.dwDeviceTypeID2 ) == MCI_DEVTYPE_WAVEFORM_AUDIO )
+     {
+     return ( MCIERR_INI_FILE );
+     }
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="034_L2_ControllingaStreamin.html">[Back: Controlling a Streaming Device: Waveform Audio MCD]</A> <BR>
+<A HREF="036_L3_MMIOOperations.html">[Next: MMIO Operations]</A> 
+</BODY>
+</HTML>

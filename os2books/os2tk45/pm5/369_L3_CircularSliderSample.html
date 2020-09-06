@@ -1,0 +1,204 @@
+<HTML>
+<HEAD>
+<TITLE>Circular Slider Sample</TITLE>
+</HEAD>
+<BODY>
+<H1>Circular Slider Sample</H1><!-- entering slot 370 -->
+<P>
+The following is a complete coding example for adding a circular slider,
+and includes the following files:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->CIRCLE.C<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->CIRCLE.RC<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->CIRCLE.H<!-- lm: 0x2 1 -->
+</UL>
+<PRE>================CIRCLE.C
+================
+#define  INCL_WIN
+
+#include &lt;os2.h&gt;
+#include "circle.h"
+
+/* Procedure Prototype */
+MRESULT EXPENTRY MyWindowProc(HWND hwnd,ULONG msg,MPARAM mp1,MPARAM mp2);
+MRESULT EXPENTRY MainProc(HWND hwnd,ULONG msg,MPARAM mp1,MPARAM mp2);
+
+/* Global Variables */
+HAB     hab;
+HMQ     hmq;
+QMSG    qmsg;
+HWND    hwndFrame;
+ULONG   flCreate;
+HWND    hwndClient;
+
+INT main(VOID)
+{
+  /* Convert system pointer into hourglass pointer */
+  WinSetPointer(HWND_DESKTOP,
+    WinQuerySysPointer(HWND_DESKTOP,SPTR_WAIT,FALSE));
+
+  hab = WinInitialize(0);
+  hmq = WinCreateMsgQueue(hab,0);
+
+  WinRegisterClass(hab,"Client",MainProc,CS_SIZEREDRAW,0);
+
+  flCreate = FCF_SYSMENU       |
+             FCF_SIZEBORDER    |
+             FCF_TITLEBAR      |
+             FCF_MENU          |
+             FCF_MINMAX        |
+             FCF_SHELLPOSITION |
+             FCF_TASKLIST;
+
+  hwndFrame = WinCreateStdWindow(HWND_DESKTOP,
+                                 WS_VISIBLE,
+                                 &amp;flCreate,
+                                 "Client",
+                                 "My Dial",
+                                 0L, 0,
+                                 MAIN_FRAME,
+                                 &amp;hwndClient);
+
+  /* Convert system pointer into arrow pointer */
+  WinSetPointer(HWND_DESKTOP,
+    WinQuerySysPointer(HWND_DESKTOP,SPTR_ARROW,FALSE));
+
+  while (WinGetMsg(hab,&amp;qmsg,0,0,0))WinDispatchMsg(hab,&amp;qmsg);
+
+  WinDestroyWindow(hwndFrame);
+  WinDestroyMsgQueue(hmq);
+  WinTerminate(hab);
+
+  /* Beep when done */
+  DosBeep(750,500);
+  return(0);
+}
+
+MRESULT EXPENTRY MainProc(HWND hwnd,ULONG msg,MPARAM mp1,MPARAM mp2)
+{
+    HPS     hps;
+    static  HWND hwndCirc;
+    SWP     swp;
+    switch(msg)
+
+    {
+        case WM_CLOSE:
+            WinPostMsg(hwnd,WM_QUIT,0L,0L);
+            return ((MRESULT)NULL);
+
+        case WM_COMMAND:
+            /* Exit option was selected in the menu bar */
+            switch(SHORT1FROMMP(mp1))
+            {
+                case IDM_FILEEXIT:
+                    WinPostMsg(hwnd,WM_QUIT,0L,0L);
+                    return ((MRESULT)NULL);
+            }
+            return ((MRESULT)NULL);
+
+        case WM_CONTROL:
+            /* Process circular slider notification messages */
+            if (SHORT1FROMMP(mp1) == ID_DIAL)
+            {
+              switch (SHORT2FROMMP(mp1))
+              {
+               /* Notification codes can be specified here */
+              }
+            }
+            /* Default processing for other control window ids */
+            return (WinDefWindowProc(hwnd,msg,mp1,mp2));
+
+        case WM_CREATE:
+            /* Create circular slider control */
+            hwndCirc = WinCreateWindow(hwnd,
+                        WC_CIRCULARSLIDER,
+                        "My Dial Window",
+                        WS_VISIBLE,
+                        0, 0, 0, 0,          /* Position &amp; size      */
+                        hwnd,                /* Client window        */
+                        HWND_TOP,
+                        ID_DIAL,
+                        NULL,NULL);
+
+            /* Specify range of values for circular slider */
+            WinSendMsg (hwndCirc,
+                        CSM_SETRANGE,
+                        MPFROMLONG(0L),
+                        MPFROMLONG(100L));
+
+            /* Specify scroll &amp; tick mark increments */
+            WinSendMsg (hwndCirc,
+                        CSM_SETINCREMENT,
+                        MPFROMLONG(10L),
+                        MPFROMLONG(2L));
+
+            /* Set initial value */
+            WinSendMsg (hwndCirc,
+                        CSM_SETVALUE,
+                        MPFROMLONG(80L),
+                        NULL);
+
+            return (MRESULT)FALSE;
+
+        case WM_SIZE:
+            /* The frame window has changed in size */
+            /* Recalculate size of circular slider  */
+            WinQueryWindowPos(hwnd,&amp;swp);
+            WinSetWindowPos(hwndCirc,
+                            HWND_TOP,
+                            0, 0,
+                            swp.cx,
+                            swp.cy,
+                            SWP_MOVE |
+                            SWP_SIZE);
+            return (MRESULT)NULL;
+
+        case WM_PAINT:
+            hps = WinBeginPaint(hwnd,0,NULL);
+            WinEndPaint(hps);
+            return (MRESULT)NULL;
+
+        default:
+            return (WinDefWindowProc(hwnd,msg,mp1,mp2));
+    }
+}
+
+================
+ CIRCLE.RC
+================
+#include &lt;os2.h&gt;
+#include "circle.h"
+
+ACCELTABLE MAIN_FRAME
+{
+        VK_F3, IDM_FILEEXIT, VIRTUALKEY
+}
+
+MENU    MAIN_FRAME
+{
+    SUBMENU         "~File",            IDM_FILEMENU
+    {
+        MENUITEM    "E~xit\tF3",        IDM_FILEEXIT
+    }
+}
+
+================
+CIRCLE.H
+================
+#define MAIN_FRAME    255
+#define IDM_FILEMENU  256
+#define IDM_FILEEXIT  257
+#define ID_DIAL       258
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="368_L3_CreatingaCircularSli.html">[Back: Creating a Circular Slider]</A> <BR>
+<A HREF="370_L2_GraphicalUserInterfa.html">[Next: Graphical User Interface Support for Slider Controls]</A> 
+</BODY>
+</HTML>

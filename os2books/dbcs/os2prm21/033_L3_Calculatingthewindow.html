@@ -1,0 +1,81 @@
+<HTML>
+<HEAD>
+<TITLE>Calculating the window coordinate</TITLE>
+</HEAD>
+<BODY>
+<H1>Calculating the window coordinate</H1><!-- entering slot 38 -->
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³To calculate the window coordinate of your execution environment, use ³
+³WinQuerySysValue and obtain a resolution of the display.              ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+DBCS OS/2 supports various display resolutions just like on SBCS OS/2.  To
+draw graphical objects on PS/55 the way they are shown on PS/2, you need
+to calculates the window coordinate for PS/55.  For this purpose, you need
+to know the display resolution of the run-time environment.  Use<B> WinQuerySysValue
+</B>to obtain its value.
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Use GpiQueryFontMetrics to find the font size at the runtime          ³
+³environment.                                                          ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+To calculate how many characters you can present in a PM control such as
+a list-box, you need to know the width and the height of the current font.
+This can be obtained by using<B> GpiQueryFontMetrics</B>.
+<BR>
+Calculating a window size (source: MISCMAIN.C)
+<BR>
+
+<PRE>   ...
+static LONG desk_cx, desk_cy;
+   ...
+
+    GetFontSize( hpsMain, &amp;lAveWidth, &amp;lFontHeight );
+
+    hwndFrame = WinQueryWindow(hwnd, QW_PARENT);
+
+    <B>desk_cx = WinQuerySysValue( HWND_DESKTOP, SV_CXSCREEN )</B>;
+    <B>desk_cy = WinQuerySysValue( HWND_DESKTOP, SV_CYSCREEN )</B>;
+
+    /* set window width to show MAIN_WIN_WIDTH SBCS characters */
+    cx = (lAveWidth*MAIN_WIN_WIDTH&gt;desk_cx) ? desk_cx : lAveWidth*MAIN_WIN_WIDTH;
+
+    /* set window height large enough to show a string pointed to by sText.*/
+    cy = (((strlen(sText)/MAIN_WIN_WIDTH)+10)*lFontHeight&gt;desk_cy) ?
+          desk_cy : ((strlen(sText)/MAIN_WIN_WIDTH) + 10)*lFontHeight;
+
+    x = (cx&lt;desk_cx) ? (desk_cx-cx)/2 : 0;
+    y = (cy&lt;desk_cy) ? (desk_cy-cy)/2 : 0;
+
+    WinSetWindowPos(hwndFrame,
+                    HWND_BOTTOM,
+                    x, y, cx, cy,
+                    SWP_MOVE | SWP_SIZE | SWP_ACTIVATE);
+   ...
+/************************************************/
+/* GetFontSize:                                 */
+/* Get the following system value from PM APIs. */
+/*   Average character width                    */
+/*   Character height                           */
+/************************************************/
+void GetFontSize(HPS hps, LONG *lWidth, LONG *lHeight)
+{
+  FONTMETRICS fm;
+
+  <B>GpiQueryFontMetrics(hps, (LONG)sizeof(FONTMETRICS), &amp;fm)</B>;
+  *lWidth = fm.lAveCharWidth;
+  *lHeight = fm.lMaxBaselineExt + fm.lExternalLeading;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="032_L3_Findingavailablefont.html">[Back: Finding available fonts on DBCS OS/2]</A> <BR>
+<A HREF="034_L3_UsingFontDialogcontr.html">[Next: Using Font Dialog control]</A> 
+</BODY>
+</HTML>

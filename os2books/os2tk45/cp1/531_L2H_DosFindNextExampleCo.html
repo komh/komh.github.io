@@ -1,0 +1,69 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosFindNext - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosFindNext - Example Code</H1><!-- entering slot 539 -->
+<P>
+This example lists all the normal files that are in the directory from where
+the example is invoked.
+<PRE> #define INCL_DOSFILEMGR   /* File Manager values */
+ #define INCL_DOSERRORS    /* DOS error values */
+ #include &lt;os2.h&gt;
+ #include &lt;stdio.h&gt;
+
+ int main (VOID) {
+    HDIR          hdirFindHandle = HDIR_CREATE;
+    FILEFINDBUF3  FindBuffer     = {0};      /* Returned from FindFirst/Next */
+    ULONG         ulResultBufLen = sizeof(FILEFINDBUF3);
+    ULONG         ulFindCount    = 1;        /* Look for 1 file at a time    */
+    APIRET        rc             = NO_ERROR; /* Return code                  */
+
+    rc = DosFindFirst( "*.*",                /* File pattern - all files     */
+                       &amp;hdirFindHandle,      /* Directory search handle      */
+                       FILE_NORMAL,          /* Search attribute             */
+                       &amp;FindBuffer,          /* Result buffer                */
+                       ulResultBufLen,       /* Result buffer length         */
+                       &amp;ulFindCount,         /* Number of entries to find    */
+                       FIL_STANDARD);        /* Return level 1 file info     */
+
+    if (rc != NO_ERROR) {
+       printf("DosFindFirst error: return code = %u\n",rc);
+       return 1;
+    } else {
+       printf ("%s\n", FindBuffer.achName);   /* Print file name             */
+    } /* endif */
+
+    /* Keep finding the next file until there are no more files */
+    while (rc != ERROR_NO_MORE_FILES) {
+       ulFindCount = 1;                      /* Reset find count.            */
+
+       rc = DosFindNext(hdirFindHandle,      /* Directory handle             */
+                        &amp;FindBuffer,         /* Result buffer                */
+                        ulResultBufLen,      /* Result buffer length         */
+                        &amp;ulFindCount);       /* Number of entries to find    */
+
+       if (rc != NO_ERROR &amp;&amp; rc != ERROR_NO_MORE_FILES) {
+          printf("DosFindNext error: return code = %u\n",rc);
+          return 1;
+       } else {
+          printf ("%s\n", FindBuffer.achName);    /* Print file name */
+       }
+    } /* endwhile */
+
+    rc = DosFindClose(hdirFindHandle);    /* Close our directory handle */
+    if (rc != NO_ERROR) {
+       printf("DosFindClose error: return code = %u\n",rc);
+       return 1;
+    }
+    return NO_ERROR;
+ }
+</PRE>
+
+
+<P><HR>
+
+<A HREF="530_L2H_DosFindNextRelatedFu.html">[Back: DosFindNext - Related Functions]</A> <BR>
+<A HREF="532_L2H_DosFindNextTopics.html">[Next: DosFindNext - Topics]</A> 
+</BODY>
+</HTML>

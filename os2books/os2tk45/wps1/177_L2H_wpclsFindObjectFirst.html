@@ -1,0 +1,106 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>wpclsFindObjectFirst - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>wpclsFindObjectFirst - Example Code</H1><!-- entering slot 192 -->
+<P>
+
+<P>
+This example code finds all folders contained in the Desktop subtree.
+<PRE>VOID  clsFindEverybody(SOMAny *self)
+{
+  BOOL      rc;                 /* Return from methods                 */
+  HFIND     hFind = 0;          /* Handle for repeated finds           */
+  CLASS     Class[2];           /* List of classes to look for         */
+  OBJECT    Object[10];         /* Objects returned from search        */
+  ULONG     ulCount = 10;       /* Count of objects to find or found   */
+  WPFolder  *folder = 0;        /* Pointer to folder for search        */
+  ULONG     errorid = 0;        /* Error returned from previous search */
+  CHAR      sz[CCHMAXPATH];     /* Title string to look for            */
+  PSZ       title = sz;
+  Class[0] = _WPFolder;
+  Class[1] = NULL;
+
+  /* Get the pointer to the Desktop */
+  folder = _wpclsQueryFolder(_WPFolder, "&lt;WP_DESKTOP&gt;", TRUE);
+
+  /* Reset the error indicators */
+  _wpclsSetError(_WPObject, 0);
+
+  rc = 0;
+  /* Attempt to find the first 10 objects matching the criteria */
+  ulCount = 10;
+  rc = _wpclsFindObjectFirst(_WPObject,   /* Class self pointer                */
+                             Class,       /* Pointer to array of class objects */
+                             &amp;hFind,      /* Handle for wpclsFindObjectNext    */
+                             NULL,        /* Find EVERYTHING                   */
+                             folder,      /* Pointer to folder of interest     */
+                             TRUE,        /* Search all folders in tree        */
+                             NULL,        /* No extended criteria              */
+                             Object,      /* Array of object pointers          */
+                             &amp;ulCount);   /* Number requested and number found */
+
+  /* Get the errorid */
+  errorid = _wpclsQueryError(_WPObject);
+
+  if ((!rc &amp;&amp; (errorid == WPERR_BUFFER_OVERFLOW)) || rc)
+  {
+    /* Process the objects found here */
+  }
+  else
+  {
+    somPrintf(" _wpclsFindObjectFirst failed, errorid=%u\n", errorid);
+    return;
+  } /* endif */
+
+  do
+  {
+    /* Reset error indicators */
+    _wpclsSetError(_WPObject, 0);
+
+    rc = 0;
+    /* Look for the next 10 objects */
+    ulCount = 10;
+    rc = _wpclsFindObjectNext(_WPObject,  /* Self                      */
+                              hFind,      /* Handle from previous Find */
+                              Object,     /* Objects found             */
+                              &amp;ulCount ); /* Number to look for.       */
+                                          /* On return, number found   */
+    errorid = _wpclsQueryError(_WPObject);
+    if ((!rc &amp;&amp; (errorid == WPERR_BUFFER_OVERFLOW)) || rc)
+    {
+      /* Process all objects found here */
+    }
+    else
+    {
+      somPrintf("_wpclsFindObjectNext failed, errorid=%u\n", errorid);
+      return;
+    } /* endif */
+  }
+  while (errorid == WPERR_BUFFER_OVERFLOW);
+
+  /* Reset the error indicators */
+  _wpclsSetError(_WPObject, 0);
+
+  rc = 0;
+  /* Indicate find complete */
+  rc =_wpclsFindObjectEnd(_WPObject, hFind);
+  if (!rc)
+  {
+    errorid = _wpclsQueryError(_WPObject);
+    somPrintf("_wpclsFindObjectEnd failed, errorid=%u\n", errorid);
+    return;
+  }
+  return;
+}
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="176_L2H_wpclsFindObjectFirst.html">[Back: wpclsFindObjectFirst - Related Methods]</A> <BR>
+<A HREF="178_L2H_wpclsFindObjectFirst.html">[Next: wpclsFindObjectFirst - Topics]</A> 
+</BODY>
+</HTML>

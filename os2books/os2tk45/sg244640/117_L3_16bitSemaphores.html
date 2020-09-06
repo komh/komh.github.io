@@ -1,0 +1,81 @@
+<HTML>
+<HEAD>
+<TITLE>16-bit Semaphores</TITLE>
+</HEAD>
+<BODY>
+<H1>16-bit Semaphores</H1><!-- entering slot 143 --><!-- lm: 0x2 6 -->
+<UL>
+<P>
+There are three types of 16-bit semaphores, namely system, RAM, and fast-safe
+RAM semaphores. There are compromises involved in using each.<!-- lm: 0x2 6 -->
+<P>
+System Semaphores<!-- lm: 0x2 1 -->
+</UL> These are the most robust of the
+three, and have the most overhead.
+<P>
+One thread must create the semaphore, with DosCreateSem, which has a name
+in a format similar to a file name, but in root directory 'SEM'. Other threads
+must open it with DosOpenSem to get its handle.
+<P>
+Use is to issue DosSemRequest, use the resource, and then to issue DosSemClear
+so that other threads can access the resource. All threads should issue
+DosCloseSem before ending.
+<P>
+If a thread ends while owning a system semaphore, the first requestor is
+given a return code that indicates the situation, so that it is warned of
+a possibly incomplete update, and may take whatever action is necessary
+to recover, or terminate.
+<P>
+To find out which thread owns a system semaphore, display a word at the
+address provided in the blocking data. The address will be a logical address
+using a GDT selector, generally 400:xxxx. The 12 low order bits are the
+slot number of the thread which owns the semaphore. If unowned, the value
+is zero.<!-- lm: 0x2 6 -->
+<UL>
+<P>
+RAM Semaphores (RamSems)<!-- lm: 0x2 1 -->
+</UL> At the opposite end of
+the scale is the extremely fast RamSem. Most of the speed comes from the
+following facts:<!-- lm: 0x2 11 -->
+<UL>
+<P>
+API's use the address of the RamSem as the handle.<!-- lm: 0x2 11 -->
+<P>
+OS/2 assumes a RamSem is local to a process.<!-- lm: 0x2 11 -->
+<P>
+OS/2 does absolutely no accounting for a RamSem.<!-- lm: 0x2 11 -->
+<P>
+OS/2 can not provide any recovery for a RamSem.<!-- lm: 0x2 6 --><!-- lm: 0x2 1 -->
+</UL> A
+RamSem is owned by a user thread if the first byte is hex 'FF', otherwise
+it is not owned by a user thread.  Unless you have a trace, there is no
+way to determine which thread owns a RamSem.<!-- lm: 0x2 6 -->
+<UL>
+<P>
+Fast-Safe RAM Semaphores (FSRamSems)<!-- lm: 0x2 1 -->
+</UL> The FSRamSem
+is a compromise between the two earlier types.
+<P>
+The FSRamSem is nothing more than a structure which includes a RamSem. The
+fields of the structure record the process ID (PID) and thread ID (TID)
+of the thread which owns the semaphore, or zero if unowned.  They also include
+a use count, which is incremented if the owning thread again requests the
+semaphore. This allows recursive functions to serialize without being blocked,
+waiting for a resource the thread already owns.
+<P>
+The DosFSRamSemRequest API is used to request the semaphore. It returns
+when the resource is owned by the thread.
+<P>
+The DosFSRamSemClear API is used to release the semaphore. If the use count
+is not zero after being decremented, the semaphore is NOT released. There
+must be as many 'Clear' as 'Request' API calls to actually release the semaphore,
+and allow other threads to compete for it.<!-- lm: 0x2 1 -->
+<BR>
+
+
+<P><HR>
+
+<A HREF="116_L2_Semaphores.html">[Back: Semaphores]</A> <BR>
+<A HREF="118_L3_32bitSemaphores.html">[Next: 32-bit Semaphores]</A> 
+</BODY>
+</HTML>

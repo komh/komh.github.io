@@ -1,0 +1,106 @@
+<HTML>
+<HEAD>
+<TITLE>Parameter List</TITLE>
+</HEAD>
+<BODY>
+<H1>Parameter List</H1><!-- entering slot 754 -->
+<P>
+The optional<I> Parameter-List</I> defines the parameters that the caller
+passes to the procedure on the run-time stack.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B>Syntax</B><!-- lm: 0x2 11 -->
+<UL>
+<P>
+
+<PRE>[, [<I>LineBreak</I>]] <I>Parm-List</I>
+</PRE>
+<!-- lm: 0x2 16 -->
+<UL>
+<P>
+<B><I>Parm-List:</B></I><!-- lm: 0x2 21 -->
+<UL>
+<BR>
+<I>Parm-Spec</I> [, [<I>LineBreak</I>]<I> Parm-Spec</I> ...]<!-- lm: 0x2 21 -->
+<BR>
+<!-- lm: 0x2 16 --><!-- lm: 0x2 11 --><!-- lm: 0x2 16 -->
+</UL><B><I>Parm-Spec:
+</B></I><!-- lm: 0x2 21 -->
+<UL>
+<BR>
+<I>Parameter-Name</I> [:<I>Type</I>]<!-- lm: 0x2 21 -->
+<BR>
+<!-- lm: 0x2 16 --><!-- lm: 0x2 11 -->
+</UL>The introductory comma in front
+of the<I> Parm-List</I> is only required if a<I> LineBreak</I> is used to
+put the first<I> Parm-Spec</I> on the line following the<B> PROC</B> directive.
+
+<P>
+The optional<I> LineBreak</I> entry allows you to end a<I> Parm-Spec</I> entry
+with a comma, enter an optional <A HREF="663_L3_Comments.html"><I>EndOfLine-Comment
+</I></A>followed by a physical<I> NewLine</I> character, then continue the
+<I>Parm-List</I> on the next line.<!-- lm: 0x2 1 -->
+</UL><B> Remarks</B><!-- lm: 0x2 11 -->
+<UL>
+<P>
+Each<I> Parameter-Name</I> is defined as a <A HREF="162_L5_NumericEquateName.html"><I>Numeric-EquateName
+</I></A>that is visible only from within the body of the procedure.  The
+value assigned to the parameter name is an expression that defines the parameter
+type and its location on the stack relative to the value of the<I> frame
+pointer</I> (the BP or EBP register).  The assembler automatically calculates
+the correct offset value based upon the size of the parameter type.
+<P>
+The<I> Type</I> field is specified as a <A HREF="256_L2_TypeDeclarations.html"><I>Type-Declaration
+</I></A>and defines the data type associated with the<I> Parameter-Name</I>.
+ If this field is omitted, the data type defaults to<B> WORD</B> if the
+procedure is defined within a<B> USE16</B> segment, and<B> DWORD</B> if
+the procedure is defined within a<B> USE32</B> segment.
+<P>
+The programmer can read from and store into the locations defined by the
+<I>Parm-Spec</I> entries as though they were regular named variables, but
+if the parameter names are to be combined in indexed expressions with other
+registers, the normal rules for specifying<B> BP</B>- and<B> EBP</B>-relative
+expressions must be followed.<!-- lm: 0x2 1 -->
+</UL><B> Example</B><!-- lm: 0x2 11 -->
+<UL>
+<P>
+This example defines a<B> ReadBuffer</B> procedure to accept four arguments
+passed on the stack.
+<PRE>        .386                      ; Assemble for 32-bit processors
+        .model flat,syscall       ; OS/2 programming model/calling convention
+
+        EXTERN DosRead:PROC       ; OS/2 DosRead() API
+        INCLUDELIB os2386.lib     ; This lets us link to the API
+
+        .code                     ; Open the code segment
+
+;------------------------------------------------------------------------------
+; Call operating system to read input into a buffer
+;------------------------------------------------------------------------------
+ReadBuffer PROC,                  ; need comma to continue the PROC statement
+              hFile:dword,        ; parm 1: Read handle
+              pBuffer:ptr byte,   ; parm 2: Address of input buffer
+              cbRead:dword,       ; parm 3: Size of input buffer
+              pulActual:ptr dword ; parm 4: Address of byte count from read
+
+        ; set up to call the OS/2 DosRead entry point
+
+        PUSH  pulActual           ; arg 4
+        PUSH  cbRead              ; arg 3
+        PUSH  pBuffer             ; arg 2
+        PUSH  hFile               ; arg 1
+        CALL  DosRead             ; Invoke syscall (SYSTEM) function
+        ADD   ESP,DWORD * 4       ; Remove the four parameters we pushed
+                                  ;   onto the stack for the DosRead call
+        RET
+ReadBuffer    ENDP
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="747_L4_RegisterList.html">[Back: Register List]</A> <BR>
+<A HREF="749_L3_LOCALDefineLocalProc.html">[Next: LOCAL (Define Local Procedure Variables)]</A> 
+</BODY>
+</HTML>

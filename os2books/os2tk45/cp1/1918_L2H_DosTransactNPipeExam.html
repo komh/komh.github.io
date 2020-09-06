@@ -1,0 +1,73 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosTransactNPipe - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosTransactNPipe - Example Code</H1><!-- entering slot 1938 -->
+<P>
+This example handles the client side of a pipe. It opens an existing named
+pipe, sends a message to the host, and reads the host reply using the DosTransactNP
+function.
+<P>
+Before running this example, compile and run the example code shown in the
+DosConnectNPipe, DosCreateNPipe, DosDisConnectNPipe, or DosSetNPipeSem functions,
+which handles the host side of the pipe.
+<PRE>#define INCL_DOSFILEMGR       /* DOS File Manager values */
+#define INCL_DOSNMPIPES       /* DOS Named Pipes values */
+#define INCL_DOSSEMAPHORES    /* DOS Semaphore values */
+#define INCL_DOSERRORS        /* DOS Error values */
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+
+int main(VOID) {
+   APIRET   rc                     = NO_ERROR;   /* Return code */
+   CHAR     outmsg[256]            = "";         /* Output message buffer */
+   CHAR     inmsg[256]             = "";         /* Input message buffer */
+   HFILE    PipeHandle             = NULLHANDLE; /* Pipe handle */
+   PIPEINFO PipeBuffer[4]          = {{0}};
+   struct   _AVAILDATA  BytesAvail = {0};
+   UCHAR    Buffer[200]            = {0};
+   ULONG    bytes                  = 0;
+   ULONG    Action                 = 0;
+   PIPESEMSTATE infobuf[3]         = {{0}};
+
+   rc = DosOpen("\\PIPE\\EXAMPLE", &amp;PipeHandle, &amp;Action, 0, 0, FILE_OPEN,
+                OPEN_ACCESS_READWRITE | OPEN_SHARE_DENYREADWRITE |
+                OPEN_FLAGS_FAIL_ON_ERROR, NULL);
+   if (rc != NO_ERROR) {
+      printf("DosOpen error: error code = %u\n", rc);
+      return 1;
+   }  else printf("Connected to Pipe.\n");
+
+   printf("Enter message to send to PIPEHOST: ");
+
+   fflush(NULL);   /* Force above printf to output device */
+   gets(outmsg);
+
+   rc = DosTransactNPipe(PipeHandle,          /* Handle of duplex pipe */
+                         outmsg,              /* Output message buffer */
+                         strlen(outmsg),      /* Size of output message */
+                         inmsg,               /* Input message buffer */
+                         sizeof(inmsg),       /* SIze of input buffer */
+                         &amp;bytes);             /* Number of bytes read */
+   if (rc != NO_ERROR) {
+      printf("DosTransactNPipe error: error code = %u\n", rc);
+      return 1;
+   }
+
+   printf("\nMessage received from PIPEHOST: %s\n\n", inmsg);
+
+   printf("...Disconnected\n");
+   return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1917_L2H_DosTransactNPipeRela.html">[Back: DosTransactNPipe - Related Functions]</A> <BR>
+<A HREF="1919_L2H_DosTransactNPipeTopi.html">[Next: DosTransactNPipe - Topics]</A> 
+</BODY>
+</HTML>

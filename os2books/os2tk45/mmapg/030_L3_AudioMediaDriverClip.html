@@ -1,0 +1,199 @@
+<HTML>
+<HEAD>
+<TITLE>Audio Media Driver Clipboard Commands</TITLE>
+</HEAD>
+<BODY>
+<H1>Audio Media Driver Clipboard Commands</H1><!-- entering slot 36 -->
+<P>
+The data that the buffer or clipboard contains will be defined differently
+for each media driver.
+<P>
+The following formula is necessary to allocate memory for digital audio
+clipboard operations:
+<BR>
+(BitsPerSample/8) x (SamplesPerSecond) x (Channels) x (Seconds)
+<BR>
+
+<BR>
+
+<P>
+Therefore, if an application is to copy 20 seconds of a 16-bit, 44 kHz,
+mono file into the clipboard using the caller's buffer; 1,764,000 bytes
+((16/8) x (44100) x (1) x (20)) must be allocated and placed in the<I> pBuff
+</I>field of the MCI_EDIT_PARMS structure.  For MCI_CUT, MCI_COPY, and MCI_PASTE,
+if MCI_TO_BUFFER or MCI_FROM_BUFFER is passed in, then the<I> pBuff</I> field
+should contain a valid pointer.
+<P>
+MCI_STATUS_CLIPBOARD returns MCI_TRUE if digital audio is in the clipboard;
+otherwise it returns MCI_FALSE. MCI_CUT removes the specified range and
+places the data in the buffer or clipboard.  The position of the media will
+either be the from position if MCI_FROM is specified or the previous position
+if MCI_FROM is not specified.  If the buffer is not large enough for the
+data an MCIERR_INVALID_BUFFER is returned.  The units of MCI_FROM and MCI_TO
+must be supplied in the currently selected time format.  If neither MCI_FROM
+or MCI_TO are specified, the operation will start from the current file
+position and continue to the end of the file. If audio data is already in
+the clipboard, it will be overwritten.
+<P>
+<B>Note: </B> The clipboard contents are emptied before the cut occurs.
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+MCI_COPY copies the specified range and places the data in the buffer or
+clipboard.  The position of the media remains the same as it was before
+the copy operation.
+<P>
+MCI_PASTE deletes the selected range if the differences between the from
+and to position are greater than zero, then inserts the data provided in
+the buffer or clipboard.  The media position will be at the end of what
+was pasted into the file.  If neither MCI_FROM or MCI_TO are specified,
+MCI_PASTE inserts the clipboard contents at the current position. MCI_CONVERT_FORMAT
+converts the data that was in the clipboard to the destination file format.
+The following data format conversions can be performed:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->16-bit to 8-bit resolution/8-bit to 16-bit resolution
+<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->11.025 kHz, 22.05 kHz, and 44.1 kHz to any of the
+following sampling rates: 11.025 kHz, 22.05 kHz, or 44.1 kHz<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->mono to stereo/stereo to mono<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Note: </B> The MCI_CONVERT_FORMAT flag supports only the Pulse Code Modulation
+(PCM) format. The data format conversion can take a while to complete. If
+the notify flag is specified, the application is notified when the conversion
+is completed.<!-- lm: 0x2 1 -->
+<P>
+
+<P>
+The following code fragment shows an example of the use of MCI_COPY and
+MCI_PASTE.
+<PRE>ULONG weMciCopy( HWND hwnd, ULONG ulMarkedStartBytes,
+                 ULONG ulMarkedEndBytes,  USHORT usDeviceID )
+   {
+   ULONG          ulFlags;
+   MCI_EDIT_PARMS mcieditstr;
+   ULONG          ulResult;
+
+   ulResult = 0L;
+
+   /*
+    * First, set all fields of the MCI_EDIT_PARMS structure to 0.
+    */
+   memset( &amp;mcieditstr, '\0', sizeof(MCI_EDIT_PARMS) );
+
+   /*
+    * The flags are NOTIFY, FROM, and TO.
+    */
+   ulFlags = 0L;
+   ulFlags |= MCI_NOTIFY |
+              MCI_FROM |
+              MCI_TO;
+
+   mcieditstr.ulCallback = (ULONG)hwnd;
+
+   /*
+    * Set the from and to items to the beginning and end
+    * of the selected area.
+    */
+   mcieditstr.ulFrom = ulMarkedStartBytes;
+
+   mcieditstr.ulTo = ulMarkedEndBytes;
+
+   ulResult = mciSendCommand( usDeviceID,
+                              MCI_COPY,
+                              ulFlags,
+                              (ULONG)&amp;mcieditstr,
+                              0 );
+
+   return( ulResult );
+   {
+
+ULONG weMciPaste( HWND hwnd, ULONG ulMarkedStartBytes,
+                  ULONG ulMarkedEndBytes,  USHORT usDeviceID )
+   {
+   ULONG          ulFlags;
+   MCI_EDIT_PARMS mcieditstr;
+   ULONG          ulResult;
+
+   ulResult = 0L;
+
+   /*
+    * First, set all fields of the MCI_EDIT_PARMS structure to 0.
+    */
+   memset( &amp;mcieditstr, '\0', sizeof(MCI_EDIT_PARMS) );
+
+   mcieditstr.ulCallback = (ULONG)hwnd;
+
+   ulFlags = 0L;
+
+   /*
+    * If there is an area of wave selected, then the flags are NOTIFY,
+    * FROM, TO, and CONVERT_FORMAT.
+    */
+   if( ulMarkedEndBytes &gt; ulMarkedStartBytes )
+      {
+      ulFlags |= MCI_NOTIFY |
+                 MCI_FROM |
+                 MCI_TO |
+                 MCI_CONVERT_FORMAT;
+
+      /*
+       * Set the from and to items to the beginning and end
+       * of the selected area.
+       */
+      mcieditstr.ulFrom = ulMarkedStartBytes;
+
+      mcieditstr.ulTo = ulMarkedEndBytes;
+      }
+   else
+      {
+      /*
+       * Otherwise, nothing in the wave is selected so the flags are
+       * only NOTIFY and CONVERT_FORMAT.
+       */
+      ulFlags |= MCI_NOTIFY |
+                 MCI_CONVERT_FORMAT;
+
+      /*
+       * Because this is a paste operation without FROM/TO,
+       * we have to <!-- entering slot 37 -->SEEK so that the media position is set
+       * to the place that we want to paste.
+       */
+      if( ulResult = weMciCall( hwnd,
+                                MCI_SEEK ) )
+         return( ulResult );
+      }
+   ulResult = mciSendCommand( usDeviceID,
+                              MCI_PASTE,
+                              ulFlags,
+                              (ULONG)&amp;mcieditstr,
+                              0 );
+
+   return( ulResult );
+   {
+
+</PRE>
+
+<P>
+The following is an example of using the command string interface with editing
+commands to create a repeating sound.
+<PRE>open test.wav alias a wait
+copy a from 0 to 3000 wait
+seek a to end
+paste a wait
+paste a wait
+paste a wait
+</PRE>
+
+
+<P><HR>
+
+<A HREF="029_L3_ClipboardandResource.html">[Back: Clipboard and Resource Formats]</A> <BR>
+<A HREF="031_L2_DeviceSharingByAppli.html">[Next: Device Sharing By Applications]</A> 
+</BODY>
+</HTML>

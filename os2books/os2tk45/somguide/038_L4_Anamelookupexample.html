@@ -1,0 +1,149 @@
+<HTML>
+<HEAD>
+<TITLE>A name-lookup example</TITLE>
+</HEAD>
+<BODY>
+<H1>A name-lookup example</H1><!-- entering slot 53 -->
+<P>
+The following example shows the use of name-lookup by a SOM client programmer.
+Name-lookup resolution is appropriate when a programmer knows that an object
+will respond to a method of some given name, but does not know enough about
+the type of the object to use offset method resolution. How can this happen?
+It normally happens when a programmer wants to write generic code, using
+methods of the same name and signature that are applicable to different
+classes of objects, and yet these classes have no common ancestor that introduces
+the method. This can easily occur in single-inheritance systems (such as
+Smalltalk and SOM release 1) and can also happen in multiple-inheritance
+systems such as SOM release 2-when class hierarchies designed by different
+people are brought together for clients' use.
+<P>
+If multiple inheritance is available, it is always possible to create a
+common class ancestor into which methods of this kind can be migrated. A
+refactoring of this kind often implements a semantically pleasing generalization
+that unifies common features of two previously unrelated class hierarchies.
+This step is most practical, however, when it does not require the redefinition
+or recompilation of current applications that use offset resolution. SOM
+is unique in that it allows this.
+<P>
+However, such refactoring must redefine the classes that originally introduced
+the common methods (so the methods can be inherited from the new "unifying"
+class instead). A client programmer who simply wants to create an application
+may not control the implementations of the classes. Thus, the use of name-lookup
+method resolution seems the best alternative for programmers who do not
+want to define new classes, but simply to make use of available ones.
+<P>
+For example, assume the existence of two different SOM classes, "classX"
+and "classY", whose only common ancestor is<B> SOMObject</B>, and who both
+introduce a method named "reduce" that accepts a<I> string</I> as an argument
+and returns a<I> long</I>. We assume that the classes were not designed
+in conjunction with each other. As a result, it is unlikely that the "reduce"
+method was defined with a<B> namelookup</B> modifier. The following figure
+illustrates the class hierarchy for this example.<!-- Unable to decode bitmap format --><IMG SRC="038_L4_Anamelookupexample_0.gif" WIDTH=492 HEIGHT=377 ALIGN=center>
+<P>
+Following is a C++ generic procedure that uses name-lookup method resolution
+to invoke the "reduce" method on its argument, which may be either of type
+"classX" or "classY". Note that there is no reason to include classY's usage
+bindings, since the typedef provided for the "reduce" method procedure in
+"classX" is sufficient for invoking the method procedure, independently
+of whether the target object is of type "classX" or "classY".
+<PRE>   #include &lt;classX.xh&gt; // use classX's method proc typedef
+
+   // this procedure can be invoked on a target of type
+   // classX or classY.
+
+   long generic_reduce1(SOMObject *target, string arg)
+   {
+      somTD_classX_reduce reduceProc = (somTD_classX_reduce)
+    <B>  somResolveByName</B>(target, "reduce");
+      return reduceProc(target, arg);
+   }
+</PRE>
+
+<P>
+On the other hand, If the classes were designed in conjunction with each
+other, and the class designer felt that programmers might want to write
+generic code appropriate to either class of object, the<B> namelookup</B> modifier
+might have been<!-- entering slot 54 --> used. This is a possibility in
+SOM release 2, even with multiple inheritance, but it is much more likely
+that the class designer would use multiple inheritance to introduce the
+reduce method in a separate class, and then use this other class as a parent
+for both classX and classY (thereby allowing the use of offset resolution).
+
+<P>
+In any case, if the "reduce" method in "classX" were defined as a<B> namelookup
+</B>method, the following code would be appropriate.  Note that the name-lookup
+support provided by "classX" usage bindings is still appropriate for use
+on targets that do not have type "classX".  As a result, the "reduce" method
+introduced by "classY" need not have been defined as a<B> namelookup</B> method.
+
+<PRE>   #include &lt;classX.xh&gt; // use classX's name-lookup support
+
+   // this procedure can be invoked on a target of type
+   // classX or classY.
+
+   long generic_reduce2(SOMObject *target, string arg)
+   {
+       return <B>lookup_reduce</B>(target, arg);
+   }
+</PRE>
+
+<P>
+<U><I>For non-C/C++  programmers:</I></U>  Name-lookup  resolution is useful
+for non-C/C++ programmers when the type of an object on which a method must
+be invoked is not known at compile time or when method tokens cannot be
+directly accessed by the programmer. To invoke a method using name-lookup
+resolution when not using the C or C++ usage bindings, use the<B> somResolveByName
+</B>procedure to acquire a procedure pointer. How the programmer indicates
+the method arguments and the linkage convention in this case is compiler
+specific.
+<P>
+The<B> somResolveByName</B>  procedure takes as arguments a pointer to the
+object on which the method is to be invoked and the name of the method,
+as a string. It returns a pointer to the method's procedure (or NULL if
+the method is not supported by the object). The method can then be invoked
+by calling the method procedure, passing the method's receiver, the<B> Environment
+</B>pointer (if necessary), the<B> context</B> argument (if necessary),
+and the rest of the method's arguments, if any. (See the section above for
+C programmers; the arguments to a method procedure are the same as the arguments
+passed to the long-form C-language method-invocation macro for that method.)
+
+<P>
+As an example of invoking methods using name-lookup resolution using the
+procedure<B> somResolveByName</B>, the following steps are used to create
+an instance of a SOM Class<I> X</I> in Smalltalk:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Initialize the SOM run-time environment (if it
+is not already initialized) using the<B> somEnvironmentNew</B> function.
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->If the class object for class<I> X</I> has not
+yet been created, use<B> somResolveByName</B> with the arguments<B> SOMClassMgrObject
+</B>(returned by<B> somEnvironmentNew</B> in step 1) and the string<I> "somFindClass",
+</I>to obtain a method procedure pointer for the<B> somFindClass</B> method.
+Use the method procedure for<B> somFindClass</B> to create the class object
+for class<I> X</I>: Call the method procedure with these four arguments:
+<B>SOMClassMgrObject</B>; the variable holding class<I> X</I> 's<B> somId
+</B>(the result of calling the<B> somIdFromString</B> function with argument
+<I>"X"</I>); and the major and minor version numbers for class<I> X</I> (or
+zero). The result is the class object for class<I> X</I>.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Use<B> somResolveByName</B> with arguments the
+class object for<I> X</I> (returned by<B> somFindClass</B> in step 2) and
+the string<I> "somNew"</I>, to obtain a method procedure pointer for method
+<B>somNew</B>. (This<B> somNew</B> method is used to create instances of
+a class.)<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Call the method procedure for<B> somNew</B> (using
+the method procedure pointer obtained in step 3) with the class object for
+<I>X</I> (returned by<B> somFindClass</B> in step 3) as the argument. The
+result is a new instance of class<I> X.</I> How the programmer indicates
+the method arguments and the linkage convention is compiler-specific.<!-- lm: 0x2 1 -->
+</UL> 
+
+<P><HR>
+
+<A HREF="037_L4_Usingnamelookupmetho.html">[Back: Using name-lookup method resolution]</A> <BR>
+<A HREF="039_L4_Obtainingamethodspro.html">[Next: Obtaining a method's procedure pointer]</A> 
+</BODY>
+</HTML>

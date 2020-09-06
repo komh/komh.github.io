@@ -1,0 +1,206 @@
+<HTML>
+<HEAD>
+<TITLE>fdopen - Associates Input Or Output With File</TITLE>
+</HEAD>
+<BODY>
+<H1>fdopen - Associates Input Or Output With File</H1><!-- entering slot 117 -->fdopen - Associates Input Or Output With File
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>#include &lt;stdio.h&gt;
+FILE *fdopen(int <I>handle</I>, char <I>*type</I>);
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Description
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+fdopen associates an input or output stream with the file identified by
+<I>handle</I>. The<I> type</I> variable is a character string specifying
+the type of access requested for the stream.<B><!-- lm: 0x2 10 -->
+<P>
+Mode<!-- lm: 0x2 26 -->
+<UL> Description</B><!-- lm: 0x2 10 -->
+</UL> r
+<!-- lm: 0x12 26 -->
+<UL>Create a stream to read a text file. The file pointer
+is set to the beginning of the file.<!-- lm: 0x2 10 -->
+</UL> w<!-- lm: 0x12 26 -->
+<UL> Create
+a stream to write to a text file. The file pointer is set to the beginning
+of the file.<!-- lm: 0x2 10 -->
+</UL> a<!-- lm: 0x12 26 -->
+<UL> Create
+a stream to write, in append mode, at the end of the text file. The file
+pointer is set to the end of the file.<!-- lm: 0x2 10 -->
+</UL> r+<!-- lm: 0x12 26 -->
+<UL> Create
+a stream for reading and writing a text file. The file pointer is set to
+the beginning of the file.<!-- lm: 0x2 10 -->
+</UL> w+<!-- lm: 0x12 26 -->
+<UL> Create
+a stream for reading and writing a text file. The file pointer is set to
+the beginning of the file.<!-- lm: 0x2 10 -->
+</UL> a+<!-- lm: 0x12 26 -->
+<UL> Create
+a stream for reading or writing, in append mode, at the end of the text
+file. The file pointer is set to the end of the file.<!-- lm: 0x2 10 -->
+</UL> rb
+<!-- lm: 0x12 26 -->
+<UL>Create a stream to read a binary file. The file
+pointer is set to the beginning of the file.<!-- lm: 0x2 10 -->
+</UL> wb
+<!-- lm: 0x12 26 -->
+<UL>Create a stream to write to a binary file. The
+file pointer is set to the beginning of the file.<!-- lm: 0x2 10 -->
+</UL> ab
+<!-- lm: 0x12 26 -->
+<UL>Create a stream to write to a binary file in append
+mode. The file pointer is set to the end of the file.<!-- lm: 0x2 10 -->
+</UL> r+b
+<I>or</I> rb+<!-- lm: 0x12 26 -->
+<UL> Create a stream for reading and writing
+a binary file. The file pointer is set to the beginning of the file.<!-- lm: 0x2 10 -->
+</UL> w+b
+<I>or</I> wb+<!-- lm: 0x12 26 -->
+<UL> Create a stream for reading and writing
+a binary file. The file pointer is set to the beginning of the file.<!-- lm: 0x2 10 -->
+</UL> a+b
+<I>or</I> ab+<!-- lm: 0x12 26 -->
+<UL> Create a stream for reading and writing
+to a binary file in append mode. The file pointer is set to the end of the
+file.<!-- lm: 0x2 10 -->
+</UL>
+<P>
+<B>Warning:</B> Use the w, w+, wb, wb+, and w+b modes with care; they can
+destroy existing files.
+<P>
+
+<P>
+The specified<I> type</I> must be compatible with the access mode you used
+to open the file. If the file was opened with the O_APPEND FLAG, the stream
+mode must be r, a, a+, rb, ab, a+b, or ab+.
+<P>
+When you open a file with a, a+, ab, a+b, or ab+ as the value of<I> type</I>,
+all write operations take place at the end of the file. Although you can
+reposition the file pointer using fseek or rewind, the file pointer always
+moves back to the end of the file before the system carries out any write
+operation. This action prevents you from writing over existing data.
+<P>
+When you specify any of the types containing +, you can read from and write
+to the file, and the file is open for update. However, when switching from
+reading to writing or from writing to reading, you must include an intervening
+fseek, fsetpos, or rewind operation. You can specify the current file position
+with fseek.
+<P>
+In accessing text files, carriage-return line-feed (CR-LF) combinations
+are translated into a single line feed (LF) on input; LF characters are
+translated to CR-LF combinations on output. Accesses to binary files suppress
+all of these translations. (See "Stream Processing" in the<I> VisualAge
+C++ Programming Guide</I> for the differences between text and binary streams.)
+
+<P>
+If fdopen returns NULL, use close to close the file. If fdopen is successful,
+you must use fclose to close the stream and file.<!-- lm: 0x2 1 -->
+</UL> Returns
+
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+fdopen returns a pointer to a file structure that can be used to access
+the open file. A NULL pointer return value indicates an error.<!-- lm: 0x2 1 -->
+</UL> Example
+Code
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+This example opens the file sample.dat and associates a stream with the
+file using fdopen. It then reads from the stream into the buffer.
+<PRE>#include &lt;io.h&gt;#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;fcntl.h&gt;
+#include &lt;string.h&gt;
+
+int main(void)
+{
+   long length;
+   int fh;
+   char buffer[20];
+   FILE *fp;
+
+   memset(buffer, '\0', 20);                              /* Initialize buffer*/
+   printf("\nCreating sample.dat.\n");
+   system("echo Sample Program &gt; sample.dat");
+   if (-1 == (fh = open("sample.dat", O_RDWR|O_APPEND))) {
+      perror("Unable to open sample.dat");
+      return EXIT_FAILURE;
+   }
+   if (NULL == (fp = fdopen(fh, "r"))) {
+      perror("fdopen failed");
+      close(fh);
+      return EXIT_FAILURE;
+   }
+   if (7 != fread(buffer, 1, 7, fp)) {
+      perror("fread failed");
+      fclose(fp);
+      return EXIT_FAILURE;
+   }
+   printf("Successfully read from the stream the following:\n%s.\n", buffer);
+   fclose(fp);
+   return 0;
+
+   /****************************************************************************
+      The output should be:
+
+      Creating sample.dat.
+      Successfully read from the stream the following:
+      Sample .
+   ****************************************************************************/
+}
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Related Information
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+<!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 --><A HREF="084_L2_closeCloseFileAssoci.html">close
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="089_L2_creatCreateNewFile.html">creat</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="109_L2_fcloseCloseStream.html">fclose</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="126_L2_fopenOpenFiles.html">fopen</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="137_L2_fseekRepositionFileP.html">fseek
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="138_L2_fsetposSetFilePositi.html">fsetpos
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="205_L2_openOpenFile.html">open</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="227_L2_rewindAdjustCurrentF.html">rewind
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="243_L2__sopenOpenSharedFile.html"><LI>sopen
+</A><!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="111_L2__fcvtConvertFloating.html">[Back: _fcvt - Convert Floating-Point to String]</A> <BR>
+<A HREF="113_L2_feofTestEndofFileInd.html">[Next: feof - Test End-of-File Indicator]</A> 
+</BODY>
+</HTML>

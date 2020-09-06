@@ -1,0 +1,224 @@
+<HTML>
+<HEAD>
+<TITLE>.MK - Display Memory Lock Information Records (VMLKI)</TITLE>
+</HEAD>
+<BODY>
+<H1>.MK - Display Memory Lock Information Records (VMLKI)</H1><!-- entering slot 512 --><!-- Unable to decode bitmap format --><IMG SRC="355_L3_MKDisplayMemoryLockI_134.gif" WIDTH=32 HEIGHT=32><!-- Unable to decode bitmap format --><IMG SRC="355_L3_MKDisplayMemoryLockI_135.gif" WIDTH=32 HEIGHT=32>
+(not supported in 2.1 versions or early 3.0 versions of the Dump Formatter)
+
+<P>
+Display memory lock information records.
+<P>
+<B>Note: </B>
+<P>
+This command was implemented by <A HREF="3251_L0_.html">feature 82818</A> for
+the<B> ALLSTRICT</B> and<B> HSTRICT</B> kernels only. It is not available
+is either of the GA versions for OS/2 Warp V3.0 or OS/2 V2.11.
+<P>
+After OS/2 Warp V3.0 fix pack 40 and OS/2 Warp V4.0 fix pack 10<B> .MK</B> may
+be enabled under the<B> RETAIL</B> kernel by means of the<B> LOCKS</B> option
+of the <A HREF="3075_L2_RASKDATA.html">RASKDATA CONFIG.SYS statement.</A>.
+
+<P>
+Under the<B> ALLSTRICT</B> and<B> HSTRICT</B> kernels<B> .MK</B> may be
+disabled by specifying the<B> NLOCKS</B> option of the<B> RASKDATA</B> statement.
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+<U><I>Syntax:</I></U>
+<PRE>ÄÄÄÄ.MK ÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+              ÀÄÄ hob ÄÄÄÄÂÄÄÄÄÄÄÄÄ´
+                          ÀÄÄ Ln ÄÄÙ
+</PRE>
+
+<P>
+<U><I>Parameters:</I></U><!-- lm: 0x2 1 -->
+<P>
+<I>none</I><!-- lm: 0x11 11 -->
+<UL> Lists all lock information records
+for all memory objects with locked records.<!-- lm: 0x2 1 -->
+</UL><B> L</B><B><I>n
+</B></I><!-- lm: 0x11 11 -->
+<UL>Specifies the number of lock information
+records to display for a a given<B> hob</B>.<!-- lm: 0x2 1 -->
+</UL><B><I> <A HREF="3350_L0_.html">hob
+</A></B></I><!-- lm: 0x11 11 -->
+<UL>Specifies the handle of a specific
+object record whose lock information records are to be formatted.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<U><I>Results &amp; Notes:</I></U>
+<P>
+Lock information records are maintained for outstanding memory locks in
+memory lock information records (<B>VMLIs</B>) which are located at the
+address given by global variable:
+<PRE><B>_pVMLIHead</B></PRE>
+
+<P>
+When a memory lock request is successfully executed a lock handle is returned
+to the caller for later use when unlocking memory. The lock handle normally
+resides in the caller's storage. It comprises a concatenation of:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+the requestor's<B> hptda</B><!-- lm: 0x2 6 -->
+<P>
+the<B> hob</B> whose pages are being locked<!-- lm: 0x2 6 -->
+<P>
+the page number<!-- lm: 0x2 6 -->
+<P>
+the number of pages<!-- lm: 0x2 6 -->
+<P>
+request flags<!-- lm: 0x2 1 -->
+</UL>
+<P>
+In addition a check-sum or signature is calculated from these values and
+stored with the lock handle.
+<P>
+The<B> VMLI</B> is a copy of the constituents of the lock handle that resides
+in system memory.In addition it includes:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+the requestor's return address<!-- lm: 0x2 6 -->
+<P>
+a pointer to the next<B> VMLI</B><!-- lm: 0x2 6 -->
+<P>
+a pointer to the requestor's lock handle<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The<B> .MK</B> command formats the contents of the<B> VMLI</B> then re-calculates
+the signature. The calculated and saved signatures should be identical.
+
+<P>
+Next the lock handle is accessed. If it differs from the corresponding<B> VMLI
+</B>then it too is formatted and the signature is re-calculated and displayed.
+ If either the formatted lock handle and corresponding<B> VMLI</B>  or the
+calculated and extracted signatures disagree then a problem may be indicated.
+For example, an overlayed or freed lock handle.  However, there is no requirement
+for lock requestors to retain their lock handles in their original locations.
+
+<P>
+<B>Warning:</B>
+<P>
+Prior to fix pack 29 for Warp V3, the Kernel Debugger can trap when attempting
+to format lock handles from freed memory. This is fixed in the Kernel Debugger
+and incorporated into the Dump Formatter in defect 155843 from fix pack
+29 for Warp V3 and base Warp V4.
+<P>
+
+<P>
+<B>Note: </B>
+<P>
+When feature 82818 is present<B> VMLI</B> records are automatically formatted
+when displaying memory object records with locked pages, using the <A HREF="361_L3_MOFormatMemoryObject.html">.MO
+command</A>.<!-- lm: 0x2 1 -->
+<P>
+
+<P>
+Output from the<B> .MK</B> command appears as follows: 
+<PRE>---------------------------------------------------------------------------
+##.mk
+   pvmli    cs    eip     phlock   cpg      va    flg  hptda hob <!-- entering slot 513 -->sig  csig
+ %fe679f1c 0170 fffa015d %fd17d480 0001 %013f1000 0003 0091 0424 18aa 18aa
+ %fe68a1dc 0170 fffa015d %fd17d468 0001 %013f1000 0003 0091 0424 18aa 18aa
+ %fe74539c 0170 fff3e551 %ffe006ff 0002 %fff33000 0001 02f7 0016 0252 0252
+ %fe712c54 0170 fff3e551 %ffe00577 0003 %fff38000 0001 02f7 0016 0258 0258
+ %fe761e0c 0908 00000878 %7b6b7d0c 0001 %ffee9000 0005 0091 0190 011f 011f
+                                   0000 %4c800000 0ff0 0001 0000 0000 d7f5
+ %fe777e18 0908 00000841 %7b6b7d0c 0006 %ffeea000 0005 0091 0227 01bc 01bc
+                                   0000 %4c800000 0ff0 0001 0000 0000 d7f5
+ %fe777e3c 0908 00000809 %7b6b7d0c 0001 %ffef0000 0005 0091 022c 01c2 01c2
+                                   0000 %4c800000 0ff0 0001 0000 0000 d7f5
+ %fe777e60 0908 0000072b %7c224066 0002 %17c40000 0005 0091 0199 7e72 7e72
+ %fe777e84 0908 0000072b %7c224058 0001 %7a022000 0001 0091 0168 a224 a224
+ %fe777ef8 0908 000006ee %7c22403c 0001 %7a022000 0001 0091 0168 a224 a224
+ %fe777f28 0908 000006ee %7c22404a 0002 %17c80000 0005 0091 0196 7eaf 7eaf
+ %fe777f4c 0908 000000a5 %7c22402e 0001 %fe763000 0005 0091 0003 e80c e80c
+
+---------------------------------------------------------------------------
+</PRE>
+ 
+<P>
+The field headings have the following meaning:<!-- lm: 0x2 1 -->
+<P>
+<B>pvmli</B><!-- lm: 0x11 11 -->
+<UL> Address of the<B> VMLI</B> record.
+<!-- lm: 0x2 1 -->
+</UL><B>cs</B><!-- lm: 0x11 11 -->
+<UL> Code selector
+of the requestor of the memory locking function. For calls made through
+a<B> DevHlp</B> request this is taken from<B> TCBpDHRetAddr</B> (<B>TCB
+</B>+ 0x74). For internal requests the immediate caller of<B> _VmLockMem
+</B>is displayed.
+<P>
+A blank value indicates information from the lock handle is being formatted,
+because it does not agree with the corresponding<B> VMLI</B>. See note above.
+
+<P>
+If the lock request was made by a 16-bit caller then the 16-bit far return
+address is contained with in the<B> eip</B> only and the<B> cs</B> value
+is the next word from the stack following the return address.<!-- lm: 0x2 1 -->
+</UL><B> eip
+</B><!-- lm: 0x11 11 -->
+<UL>The instruction pointer of the requestor of
+the memory locking function. For calls made through a<B> DevHlp</B> request
+this is taken from<B> TCBpDHRetAddr</B> (<B>TCB</B> + 0x74). For internal
+requests the immediate caller of<B> _VmLockMem</B> is displayed.
+<P>
+A blank value indicates information from the lock handle is being formatted,
+because it does not agree with the corresponding<B> VMLI</B>. See note above.
+<!-- lm: 0x2 1 -->
+</UL><B>phlock</B><!-- lm: 0x11 11 -->
+<UL> The address
+of the lock handle buffer supplied by with the lock request.<!-- lm: 0x2 1 -->
+</UL><B> cpg
+</B><!-- lm: 0x11 11 -->
+<UL>The number of contiguous pages locked.<!-- lm: 0x2 1 -->
+</UL><B> va
+</B><!-- lm: 0x11 11 -->
+<UL>The linear address of the first page locked.
+<!-- lm: 0x2 1 -->
+</UL><B>flg</B><!-- lm: 0x11 11 -->
+<UL> The flags saved
+from the lock request.
+<P>
+The following bit settings are defined:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³<I>Bit value</I> ³<I>Description</I>                             ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³0x01      ³Lock is a long-term                     ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³0x02      ³Verify lock call                        ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³0x04      ³Lock originated from a DevHlp           ³
+ÀÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL><B>hptda</B><!-- lm: 0x11 11 -->
+<UL> The <A HREF="3352_L0_.html">hptda
+</A>of the lock requestor.<!-- lm: 0x2 1 -->
+</UL><B> hob</B><!-- lm: 0x11 11 -->
+<UL> The
+handle of the associated memory object record, some of whose pages are.
+See the <A HREF="361_L3_MOFormatMemoryObject.html"><B>.MO</B></A>  command.
+<!-- lm: 0x2 1 -->
+</UL><B>sig</B><!-- lm: 0x11 11 -->
+<UL> The signature
+value extracted from the<B> VMLI</B> or lock handle.<!-- lm: 0x2 1 -->
+</UL><B> csig
+</B><!-- lm: 0x11 11 -->
+<UL>The recalculated signature based on information
+saved in the<B> VMLI</B> or lock handle.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+For related information see also the <A HREF="233_L3_VirtualMemoryManagem.html">Virtual
+Memory Lock Trace</A>.
+
+<P><HR>
+
+<A HREF="354_L4_MCOutputFieldDescrip.html">[Back: .MC Output Field Descriptions]</A> <BR>
+<A HREF="356_L3_MLFormatMemoryAliasR.html">[Next: .ML - Format Memory Alias Records (VMAL)]</A> 
+</BODY>
+</HTML>

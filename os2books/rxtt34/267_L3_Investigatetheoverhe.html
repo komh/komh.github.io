@@ -1,0 +1,296 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Investigate the overheads of function calls</TITLE>
+</HEAD>
+<BODY>
+<H1>Investigate the overheads of function calls</H1><!-- entering slot 267 -->
+<P>
+<B>Investigate the overheads of function calls</B>
+<P>
+Author: Arthur Pool (see <A HREF="958_L2H_EMailaddressesP.html">EMail Addresses</A>)
+
+<P>
+(Statements in green color [like this] are comments from Bernd Schemmer)
+
+<P>
+(Use the <A HREF="268_L3_Testprogramtotestthe.html">included REXX program
+</A>to run the test described in this text on your PC)
+<P>
+In the OS/2 operating system, there are several different ways a REXX program
+can call a function coded in REXX, each of which has implications for both
+performance and maintainability.
+<P>
+These options are discussed (briefly) in the <A HREF="995_L1_REXX&OS2onlinehelp.html">WARP
+REXX on-line information</A> (at least, in WARP Connect V3), which says
+(inter alia):
+<P>
+"... internal labels take first precedence, then built-in functions, and
+finally external functions. External functions and subroutines have a system-defined
+search order. REXX searches for external functions in the following order:
+<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Functions that have been loaded into the macrospace
+for pre-order execution<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Functions that are part of a function package
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->REXX functions in the current directory, with
+the current extension<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->REXX functions along environment PATH, with the
+current extension<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->REXX functions in the current directory, with
+the default extension<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->REXX functions along environment PATH, with the
+default extension<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Functions that have been loaded into the macrospace
+for post-order execution.<!-- lm: 0x2 1 -->
+</UL>"
+<P>
+In practice then, the options, and their implications, are:
+<P>
+[1] Include the source code for the function in the primary source file.
+This should provide the best performance. However, if the function is to
+be called by more than one<B><I> primary</B></I> REXX program, this approach
+is undesirable in that it requires duplication of code, with consequent
+maintenance problems.
+<P>
+[2] Load the macro function into a REXX<B><I> MacroSpace</B></I>. This can
+be achieved using the<B><I> RexxAddMacro</B></I> call from<B><I> C</B></I>,
+or using the<B><I> RxAddMacro</B></I> function provided in the <A HREF="774_L3_RXUpowerfulDLLforREX.html">RXU
+utility package</A> (I understand that WARP 4 (Merlin) provides a similar
+function in the REXXUTIL package but I have no experience with that; see
+<A HREF="327_L2_NewREXXUTILfunctions.html">New REXXUTIL functions in Object
+REXX</A>, <A HREF="312_L3_Thefunctionstoworkon.html">The functions to work
+on the macro space</A>, and <A HREF="555_L3_LoadMaccmd.html">LoadMac.cmd
+</A>for information about the REXXUTIL DLL included in Object REXX ). This
+approach is more or less equivalent to the<B><I> EXECLOAD</B></I> facility
+in VM/CMS. This approach should provide performance somewhere between the
+preceding and following approaches. It does however have some management
+costs:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->you have to explicitly load the function into
+the macrospace - if you don't, you'll simply execute the copy from disk,
+which will be much slower;<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->you have to also ensure that the macrospace copy
+is unloaded and reloaded whenever the function's source file is modified
+- if you don't you'll be executing an out-of-date copy.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+As noted above, functions can be loaded in either of two ways:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Loaded into the MacroSpace for pre-order execution
+(executed<B> before</B> disk-based files) - this should produce better performance
+than using disk-based functions.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Loaded into the MacroSpace for post-order execution
+(executed<B> after</B> disk-based files) - this should produce worse performance
+than using disk-based functions (below).<!-- lm: 0x2 1 -->
+</UL>
+<P>
+However, it is worthwhile to consider the meaning of<B><I> current extension
+</B></I>and<B><I> default extension</B></I>. When a function is loaded into
+the MacroSpace, it can be loaded with an extension (eg,<B><I> .CMD</B></I>)
+or<!-- entering slot 268 --> without an extension. In these tests, as the
+primary REXX file had an extension of<B><I> .CMD</B></I>, it appears that
+the<B><I> current extension</B></I> is<B><I> .CMD</B></I>. We therefore
+measured the performance of functions loaded into the MacroSpace (and called)
+with an extension of<B><I> .CMD</B></I> and also without an extension.
+<P>
+Note however that in general one would prefer to load functons without extension
+so that they are equally accessible to REXX programs with any extension
+- whether called from REXX command files (.CMD), THE macros (.THE), or from
+other environments. It's also cumbersome to have to specify the extension
+when invoking the macro.
+<P>
+We measured 4 sub-cases:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+<LI>2a] MacroSpace function, pre-order, .CMD extension;<!-- lm: 0x2 6 -->
+<P>
+<LI>2b] MacroSpace function, pre-order, no extension;<!-- lm: 0x2 6 -->
+<P>
+<LI>2c] MacroSpace function, post-order, .CMD extension;<!-- lm: 0x2 6 -->
+<P>
+<LI>2d] MacroSpace function, post-order, no extension;<!-- lm: 0x2 6 -->
+<P>
+<LI><LI><LI>Leave the source code as a separate file, which is invoked anew
+for each call to the function. Although ideal in terms of maintenance, this
+approach will not produce good performance. In practice, disk caching will
+reduce the impact of all function calls after the first. Also, the performance
+will be affected by whether the source file is in the current directory,
+or how far the system has to search along the PATH string before it finds
+the source file. We therefore test these sub-categories:<!-- lm: 0x2 6 -->
+<P>
+<LI>3a] source file in the<B> current</B> directory;<!-- lm: 0x2 6 -->
+<P>
+<LI>3b] source file in a directory at the<B> start</B> of the PATH string.
+<!-- lm: 0x2 6 -->
+<P>
+<LI>3c] source file in a directory at the<B> end</B> of the PATH string.
+<!-- lm: 0x2 6 -->
+<P>
+<LI>3d] source file in a directory at the<B> end</B> of the PATH string,
+without EAs. (See below for the rationale for test [3d].)<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Following are some measurements of elapsed time (in seconds) for 255 function
+calls using these various approaches (use the included <A HREF="268_L3_Testprogramtotestthe.html">test
+program</A> to run this tests on your PC).
+<PRE> [C:\Usr\AFP\SW\Testing]REXX_Function_Call_Performance 255
+
+ [1]                             function in the source program:      0.88
+ [2a]            MacroSpace function, pre-order, .CMD extension:      2.06
+ [2b]              MacroSpace function, pre-order, no extension:      2.13
+ [2c]           MacroSpace function, post-order, .CMD extension:     91.09
+ [2d]             MacroSpace function, post-order, no extension:    180.87
+ [3a]   function in an external source file - CURRENT directory:     10.28
+ [3b]       function in an external source file - START of PATH:     12.66
+ [3c]         function in an external source file - END of PATH:     55.25
+ [3d] function in an external source file - END of PATH, no EAs:     42.12
+
+[C:\Usr\AFP\SW\Testing]
+</PRE>
+
+<P>
+Notes:
+<P>
+1) The function used was:
+<PRE> 
+      REXX_Function_Call_Performance_1:
+        return arg(1)**arg(1)
+</PRE>
+
+<P>
+2) These measurements were on a 80486-DX4 with OS/2 Warp Connect (Blue Box)
+with no service applied, using (obviously) HPFS.
+<P>
+(Results on a P133 with 32 MB RAM and OS/2 WARP 4 with Fixpack #7 and Object
+REXX with HPFS:
+<PRE> 
+D:\...\DEVELOP\REXX\FWTOOLS\REXXTT\Test&gt;REXX_Function_Call_Performance 255
+
+ [1]                             function in the source program:      0.15
+ [2a]            MacroSpace function, pre-order, .CMD extension:      0.48
+ [2b]              MacroSpace function, pre-order, no extension:      0.49
+ [2c]           MacroSpace function, post-order, .CMD extension:      4.70
+ [2d]             MacroSpace function, post-order, no extension:     <!-- entering slot 269 -->11.77
+ [3a]   function in an external source file - CURRENT directory:      2.12
+ [3b]       function in an external source file - START of PATH:      2.53
+ [3c]         function in an external source file - END of PATH:      5.82
+ [3d] function in an external source file - END of PATH, no EAs:      7.75
+</PRE>
+
+<P>
+)
+<P>
+(Results on a P266 with 160 MB RAM and OS/2 WARP 4 with Fixpack #12 and
+Object REXX with HPFS:
+<PRE> 
+
+D:\...\DEVELOP\REXX\FWTOOLS\REXXTT\Test&gt;REXX_Function_Call_Performance.CMD 255
+
+ [1]                             function in the source program:      0.04
+ [2a]            MacroSpace function, pre-order, .CMD extension:      0.17
+ [2b]              MacroSpace function, pre-order, no extension:      0.17
+ [2c]           MacroSpace function, post-order, .CMD extension:      2.46
+ [2d]             MacroSpace function, post-order, no extension:      6.61
+ [3a]   function in an external source file - CURRENT directory:      0.81
+ [3b]       function in an external source file - START of PATH:      1.08
+ [3c]         function in an external source file - END of PATH:      2.98
+ [3d] function in an external source file - END of PATH, no EAs:      3.46
+</PRE>
+
+<P>
+)
+<P>
+Conclusions:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->As expected, including the function in the primary
+source file was fastest.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Loading the function in the MacroSpace for pre-order
+execution is slower than including the function in the primary program,
+but much faster than invoking from a disk file.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Loading the function in the MacroSpace with an
+extension of<B><I> .CMD</B></I> is faster than loading without any extension,
+most notably when loaded for post-order execution, presumably because the
+first search is for macros with a<B><I> .CMD</B></I> extension. Note however
+that to achieve this performance, the extension must be specified both when
+the file is loaded and when the function is invoked - somewhat cumbersome,
+and probably of marginal benefit in the case of pre-order execution except
+in the most extreme cases.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->When loading automatically from a disk file,
+the position of the function's source file in the PATH string can have a
+significant effect on performance - and the presence of network drives in
+the PATH string is likely to exacerbate the effect.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Loading in the MacroSpace for post-order execution
+is very slow. This slow performance can be partly explained because the
+system searches every directory in the search path (twice if the function
+is loaded without any extension), fails to find the function as an separate
+external file, and then finally looks in the MacroSpace (where it finds
+the function).<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Even allowing for the preceding item, note that
+the performance of functions loaded in the MacroSpace for post-order execution
+is much slower in all cases than those loaded from disk (even when the source
+file's directory is at the<B> end</B> of the PATH string).
+<BR>
+Why is this?
+<BR>
+I thought that perhaps it was because the version loaded into the MacroSpace
+does not include the semi-compiled version which REXX normally stores in
+the Extended Attributes (EAs), but test [3d] shows that this alone does
+not explain the poor performance of tests [2c] and [2d]
+<BR>
+(The macro space contains<B> only</B> the tokenized code.)<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Test [3d] (see above) strips the EAs from the
+function's source file and makes it read-only (which prevents REXX from
+attaching the semi-compiled form to the source file) to compare the performance
+of an external source file without the benefit of the semi-compiled form.
+Surprisingly, this version is faster than test [3c]! Unlikely though it
+seems, the semi-compiled form appears to be of no benefit in this test!
+Perhaps because the external function is quite small and relatively simple,
+the<!-- entering slot 270 --> additional overhead of accessing and loading
+the EAs outweighs the benefit of the semi-compiled form?
+<BR>
+(I think the answer to this question is Yes. In addition, this is also dependent
+from the processor and harddisk used; see results for the P133 above.)
+<BR>
+In any case, the poor performance of tests [2c] and [2d] remains a puzzle.
+
+<BR>
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Loading in the MacroSpace for pre-order execution
+therefore appears to be generally a good compromise - fairly good performance,
+easy to maintain, but has some management overheads.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+History:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Sent to THElist 1998-03-16<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Updated copy sent to THElist 1998-08-03<!-- lm: 0x2 1 -->
+</UL> 
+
+<P><HR>
+
+<A HREF="266_L3_UsingtheREXXMacroSpa.html">[Back: Using the REXX Macro Space]</A> <BR>
+<A HREF="268_L3_Testprogramtotestthe.html">[Next: Test program to test the overheads of function calls]</A> 
+</BODY>
+</HTML>

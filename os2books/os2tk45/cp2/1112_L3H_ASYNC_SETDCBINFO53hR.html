@@ -1,0 +1,1008 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>ASYNC_SETDCBINFO (53h) - Remarks</TITLE>
+</HEAD>
+<BODY>
+<H1>ASYNC_SETDCBINFO (53h) - Remarks</H1><!-- entering slot 1141 -->
+<P>
+If a general failure error is not returned, then the actions described below
+are taken by the physical device driver.  Notice that all reserved bit fields
+that are specified as<I> Set to 0</I> must be set to zero on entry to the
+physical device driver, or a general failure error results.  The same applies
+to the NULL Data Packet pointer.
+<P>
+The general DCB parameter access functions, ASYNC_SETDCBINFO and <A HREF="1220_L3_ASYNC_GETDCBINFO73hQ.html">ASYNC_GETDCBINFO
+</A>are used:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->For Automatic Transmit Flow Control (start/stop transmit,
+when XON/XOFF character received)<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->For Automatic Receive Flow Control (transmit XON/XOFF,
+when receive buffer fills or empties)<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->To determine XON/XOFF characters<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->For DTR Control mode (enable/disable/input handshaking)
+<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->For RTS Control mode (enable/disable/input handshaking/toggling
+on transmit)<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->For output handshaking using CTS/DSR/DCD (control
+signal determines when to transmit)<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->For input sensitivity using DSR (reception of data
+controlled by DSR)<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->For error replacement character and processing<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->For break replacement character and processing<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->For null stripping<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->To Receive or Transmit Timeout processing<!-- lm: 0x2 1 -->
+</UL>
+<P>
+To maintain upward compatibility, the application should call <A HREF="1220_L3_ASYNC_GETDCBINFO73hQ.html">ASYNC_GETDCBINFO
+</A>before Function 53h is used.  This allows the<I> reserved</I> bits to
+be set correctly in a future release of the physical device driver.  By
+doing the return first, the application maintains the state of the physical
+device driver for a mode that the application is not aware of.
+<P>
+<B>Note 1</B>
+<P>
+Control of DTR and RTS.  The physical device driver allows the caller to
+automatically control the setting of Data Terminal Ready (DTR) and Request
+To Send (RTS) through the RTS Control mode and the DTR Control mode settings
+of ASYNC_SETDCBINFO.  The application can also request manual control over
+these modem control signals.  The ways in which these signals can be controlled
+are as follows:
+<P>
+<B>Set RTS Control Mode to Toggling on Transmit:</B>  If the Flags2 bits
+7, 6 are set to 1, then the physical device driver is in the automatic control
+mode of RTS.  When the physical device driver is initialized, the RTS Control
+mode is enabled; therefore, initially the device driver is not in the automatic
+control mode of RTS.  Notice that this mode of operation of the physical
+device driver should be enabled only when the system is attached to devices
+that do not present data to the system receive hardware when RTS is<I> on</I>.
+ In this mode, the device driver:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Always turns on RTS, if a break is being transmitted.
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Does not turn RTS<I> off</I> until the transmit hardware
+has emptied its buffers, once data is in the transmit hardware buffer.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Turns on RTS, if not already<I> on</I>, when there
+is data in the physical device driver transmit queue or when there is an
+outstanding WRITE request packet.  The following are two exceptions:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->The physical device driver is allowed to transmit,
+even if Automatic Transmit/Receive Flow Control (XON/XOFF) is enabled.  The
+physical device driver needs to turn on RTS momentarily to transmit a character
+immediately, if not normally allowed to transmit due to Automatic Transmit/Receive
+Flow Control.<!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 11 -->The physical device driver is allowed to transmit
+because it was not told to behave as if an XOFF had been received (Function
+47h). The physical device driver needs to turn on RTS momentarily to transmit
+a character immediate, if not normally transmitting due to XOFF flow control
+considerations.  Also, the physical device driver needs to turn on RTS momentarily
+to transmit an XON or XOFF due to Automatic Receive Flow Control, if not
+normally transmitting due to XOFF flow control considerations.<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>Turns
+off RTS, if not already<I> off</I>, when one of the following conditions
+is TRUE:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->There is no data in the physical device driver transmit
+queue (and no data in Write requests in progress), there are no queued Write
+requests, and the transmit hardware has physically transmitted (at the physical
+RS232 interface) all the data that it has been given.<!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 11 -->The physical device driver is not allowed to transmit
+because Automatic Transmit/Receive Flow Control (XON/XOFF) is enabled or
+because the driver was asked to behave as if an XOFF had been received (Function
+47h).  The physical device driver needs to turn on RTS to transmit a character
+immediately or XON/XOFF, because of Automatic Receive Flow Control (XON/XOFF).
+ RTS is never turned<I> off</I> until the transmit hardware has physically
+transmitted all the data that it has been given.<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>When
+this function is enabled, the physical device driver controls RTS, as determined
+by the above<!-- entering slot 1142 --> description.<!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>If
+this function is disabled because a new RTS Control mode is chosen, then
+the new RTS Control mode determines the state of the RTS.<!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>The
+device driver does not examine any other modem control signals before it
+turns RTS<I> off</I> or<I> on</I>.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+An OPEN request packet does not cause the physical device driver to change
+its RTS Control mode.  The physical device driver maintains the state of
+this mode of operation across OPEN request packets.  When the physical device
+driver is in the RTS Control mode<I> toggling on transmit</I>, then it does
+not allow the application to control RTS by using <A HREF="1067_L3_ASYNC_SETMODEMCTRL46.html">ASYNC_SETMODEMCTRL</A>.
+
+<P>
+<B>Set DTR and RTS Control Mode to Input Handshaking:</B>  When the Flags1
+bits 1, 0 are set to 1, 0, the DTR Control mode is set to input handshaking.
+ Setting bits 7, 6 of Flags2 to 1, 0 sets the RTS Control mode to input
+handshaking.  When the physical device driver is initialized, the RTS and
+DTR Control modes are enabled; so initially the device driver is not in
+the automatic control mode of RTS and DTR. Notice that this mode of operation
+of the physical device driver is set only when there is the possibility
+of a physical device driver receive queue overrun, and the system is attached
+to data terminal equipment that stops transmitting data when the appropriate
+modem control signals are turned<I> off</I>.
+<P>
+Because the Input Handshaking mode can be set for RTS, DTR, or both, the
+DTR and RTS Control modes are processed independently. In Input Handshaking
+mode, the physical device driver:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Turns the appropriate modem control signals<I> on
+</I>when the device driver receive queue is less than half-full<!-- lm: 0x2 3 --> <!-- lm: 0x2 6 -->
+<UL>Turns
+the appropriate modem control signals<I> off</I> when the device driver
+receive queue is almost full<!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL>Does not monitor the value of the appropriate
+modem control signals (when this mode is first set and the queue size is
+between half-full and almost full)<!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL>Determines the correct value of the modem control
+signals when this function is enabled, and controls them accordingly.
+<P>
+If this function is disabled by choosing a new RTS or DTR Control mode,
+then the new control mode determines the state of the RTS or DTR.<!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL>Does not examine any other modem control signals
+before controlling DTR or RTS<!-- lm: 0x2 1 -->
+</UL>
+<P>
+An OPEN request packet does not cause the physical device driver to change
+its RTS and DTR Control modes.  The driver maintains the state of these
+modes of operation across OPEN request packets.  When the physical device
+driver is in the RTS Control mode input handshaking, it does not allow the
+application to control RTS through Function 46h. When the physical device
+driver is in the DTR Control mode input handshaking, it does not allow the
+application to control DTR through Function 46h.
+<P>
+<B>Set DTR and RTS Control Mode to Enable or Disable:</B>  OPEN processing
+has the following settings:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Flags1 bits 1, 0 are set to 0, 0.  DTR Control mode
+is disabled.<!-- lm: 0x2 3 --> <!-- lm: 0x2 6 -->
+<UL>Flags1 bits 1, 0
+are set to 0, 1.  DTR Control mode is enabled.<!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL>Flags2 bits 7, 6 are set to 0, 0.  RTS Control
+mode is disabled.<!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL>Flags2 bits 7, 6 are set to 0, 1.  RTS Control
+mode is enabled.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+When the physical device driver is initialized, the RTS and DTR Control
+modes are enabled, but the value of the modem control signals is<I> off
+</I>until the port gets an OPEN request packet.  An OPEN request packet
+does not cause the physical device driver to change its RTS and DTR Control
+modes.  The driver maintains the state of these modes of operation across
+OPEN request packets.
+<P>
+Because Enable or Disable modes can be set for either RTS, DTR, or both,
+the DTR and RTS Control modes are processed independently. If the RTS Control
+mode is disabled when the physical device driver receives an OPEN request
+packet, and the device is not already open (from a First Level Open), the
+RTS modem control signal is kept (turned)<I> off</I> during the OPEN processing.
+ If the RTS Control mode is enabled when the physical device driver receives
+an OPEN request packet, and the device is not already open, the RTS modem
+control signal is turned<I> on</I> during the OPEN processing.
+<P>
+If the RTS Control mode is set to disable and the previous mode was not
+disable, the RTS modem control signal is turned<I> off</I>. If the RTS Control
+mode is set to disable and the previous mode was also disable, this IOCtl
+has no effect on the RTS modem control signal.
+<P>
+If the RTS Control mode is set to enable and the previous mode was not enable
+the RTS modem control signal is turned<I> on</I>. If the RTS Control mode
+is set to enable and the previous mode was also enable, this IOCtl has no
+effect on the RTS modem control signal.
+<P>
+
+<P>
+The following tables summarize the above information:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³From Control Mode   ³To Control Mode     ³Effect on Control   ³
+³                    ³                    ³Signal              ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Disable             ³Disable             ³None                ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Disable             ³Enable              ³Turn ON             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Disable             ³Input handshaking   ³Modem control signal³
+³                    ³                    ³controlled          ³
+³                    ³                    ³automatically       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Enable              ³Disable             ³Turn OFF            ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Enable              ³Enable              ³None                ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Enable              ³Input handshaking   ³Modem control signal³
+³                    ³                    ³controlled          ³
+³                    ³                    ³automatically       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Input handshaking   ³Disable             ³Turn OFF            ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Input handshaking   ³Enable              ³Turn ON             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Input handshaking   ³Input handshaking   ³Modem control signal³
+³                    ³                    ³controlled          ³
+³                    ³                    ³automatically       ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³From Control Mode   ³To Control Mode     ³Effect on Control   ³
+³                    ³                    ³Signal              ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Disable             ³Toggle on transmit  ³Modem control signal³
+³                    ³                    ³controlled          ³
+³                    ³                    ³automatically       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Enable              ³Toggle on transmit  ³Modem control signal³
+³                    ³                    ³controlled          ³
+³                    ³                    ³automatically       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Input handshaking   ³Disable             ³Modem control signal³
+³                    ³                    ³controlled          ³
+³                    ³                    ³automatically       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Toggle on transmit  ³Disable             ³Turn OFF            ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Toggle on transmit  ³Enable              ³Turn ON             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Toggle on transmit  ³Input handshaking   ³Modem control signal³
+³                    ³                    ³controlled          ³
+³                    ³                    ³automatically       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Toggle on transmit  ³Toggle on transmit  ³Modem control signal³
+³                    ³                    ³controlled          ³
+³                    ³                    ³automatically       ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+Because the initial Control mode of the physical device driver is enabled
+for RTS and DTR, both modem control signals are turned<I> on</I> when the
+port is first opened.  If the physical device driver receives an OPEN request
+packet, and the device is already open, the physical device driver does
+not alter the value of the RTS and DTR modem control signals, regardless
+of the control mode.
+<P>
+The application can explicitly turn DTR or RTS<I> on</I> or<I> off</I> with
+Function 46h.  If the Control mode of RTS is not enable or disable, the
+application cannot control RTS with Function 46h because the physical device
+driver is controlling the signal automatically using toggling on transmit
+or input handshaking. If the control mode of DTR is not enable or disable,
+the application cannot control DTR with Function 46h because the device
+drive is controlling the signal automatically using input handshaking.
+<P>
+In CLOSE processing, when the physical device driver receives a CLOSE request
+packet and the COM device is still open, the physical device driver does
+not change the values of DTR or RTS.  If the port is not open (from a Last
+Level Close) after processing a Close request, then, at the end of CLOSE
+processing, the device driver turns RTS and DTR<I> off</I> after waiting
+the appropriate amount of time.
+<P>
+<B>Note 2</B>
+<P>
+Automatic Flow Control (XON/XOFF).  If bit 0 of Flags2 is set, the device
+driver is enabled for Automatic Transmit Flow Control.  If bit 1 is set,
+the physical device driver is enabled for Automatic Receive Flow Control.
+ When the physical device driver is initialized, these bits are reset, so
+the physical device driver is not enabled for automatic transmit or receive
+flow control.
+<P>
+An OPEN request packet does not cause the physical device driver to change
+the enabling or disabling state of Automatic Transmit/Receive Flow Control.
+If Automatic  Transmit Flow Control is enabled and the COM device is not
+already open, an OPEN request packet causes the physical device driver to
+act as if it<!-- entering slot 1143 --> had not received an XOFF. This OPEN
+also causes the device driver to act as if it has not transmitted an XOFF,
+if Automatic Receive Flow Control is enabled.
+<P>
+<B>Automatic Transmit Flow Control (XON/XOFF):</B>  When XON and XOFF flow
+control during transmission is enabled, the device driver stops sending
+data to the transmit hardware when an XOFF is received, and resumes sending
+data to the transmit hardware when an XON is received.
+<P>
+<B>Note: </B> Although the physical device driver can transmit XON or XOFF,
+there are reasons why it might not be able to transmit an XON or XOFF.  For
+example, it might be transmitting break or invalid output handshaking on
+modem control signals.  Also, there are reasons not related to Automatic
+Transmit/Receive Flow Control why the physical device driver might not be
+able to resume transmitting data.  See <A HREF="1154_L3_ASYNC_GETCOMMSTATUS6.html">ASYNC_GETCOMMSTATUS</A>.
+<!-- lm: 0x2 1 -->
+<P>
+
+<P>
+However, the physical device driver still continues to transmit characters
+as a result of the transmit immediate requests (see <A HREF="1051_L3_ASYNC_TRANSMITIMM44h.html">ASYNC_TRANSMITIMM</A>).
+The physical device driver also transmits XON and XOFF because of Automatic
+Receive Flow Control. When the physical device driver is in this mode, it
+does not pass received XON and XOFF characters to the application.  Instead,
+the physical device driver acts upon receiving those characters and discards
+them.
+<P>
+The physical device driver can transmit additional characters before it
+recognizes an XOFF character that is in the receive buffer of the hardware
+but that it has not read. The extent of this scenario is minimized, but
+the combined transmit/receive Advanced BIOS request block is still used
+on systems that support ABIOS.  If the system is relatively slow in responding
+to interrupts compared to the current bit rate, receive buffer overruns
+might not occur, but the physical device driver might seem slow in responding
+to an XOFF character.
+<P>
+If Automatic Transmit Flow Control is disabled (after being currently enabled),
+and transmission was not occurring because an XOFF was received or at the
+request of <A HREF="1076_L3_ASYNC_STOPTRANSMIT47.html">ASYNC_STOPTRANSMIT</A>,
+then transmission is resumed.  It is the responsibility of the application
+to make sure that the port is closed properly so that the physical device
+driver cannot transmit characters after the port is reopened.
+<P>
+Output handshaking, using modem control signals, is one way that the physical
+device driver can be told to stop transmitting.  See Note 3.
+<P>
+<B>Automatic Receive Flow Control (XON/XOFF):</B>  When XON and XOFF flow
+control during receive is enabled, the device driver transmits an XOFF when
+its receive queue gets almost full and an XON when its receive queue is
+about half-full.
+<P>
+When the COM device driver is in Normal mode of Automatic Receive Flow Control
+after the XOFF is sent, it sends no characters until the amount of data
+in its receive queue is reduced; then it sends an XON. This is to accommodate
+those systems that interpret the first character received after an XOFF
+as an XON, regardless of what the character actually is.  The physical device
+driver transmits characters as a result of the transmit immediate request
+(Function 44h).
+<P>
+When the COM device driver is in the Full Duplex mode of Automatic Receive
+Flow Control after the XOFF is sent, it continues to send characters even
+though the receive queue remains almost full.  This mode of the physical
+device driver is set by using bit 5 of Flags2.
+<P>
+The physical device driver cannot transmit an XOFF or XON if it is transmitting
+a break.  Also, if the physical device driver is enabled for output handshaking
+with certain modem control signals and those modem control signals are not
+<I>on</I>, it cannot automatically transmit an XON or XOFF.<I> Note that
+a deadlock can occur if the physical device driver tries to transmit an
+XON and cannot.</I>  The physical device driver will continue to transmit
+an XOFF or XON when transmit conditions permit, assuming the receive queue
+conditions still warrant it.
+<P>
+The physical device driver does not monitor characters being transmitted
+by WRITE request packets to see if any of them are XON or XOFF.  It also
+does not monitor characters transmitted immediately.  For example, the device
+driver does not stop transmitting characters if the application causes it
+to explicitly transmit an XOFF.
+<P>
+If Automatic Receive Flow Control is enabled (after being currently disabled),
+the physical device driver immediately checks the receive queue level to
+see if an XOFF needs to be transmitted.  An XON is never transmitted immediately
+when this function is enabled.  The physical device driver automatically
+transmits an XON character<I> only</I> after it has automatically transmitted
+an XOFF character.
+<P>
+If Automatic Receive Flow Control is disabled (after being currently enabled)
+and transmission was not occurring because of the automatic transmission
+of an XOFF character (in the Normal mode of Automatic Receive Flow Control
+only), the physical device driver transmits an XON  and transmission is
+resumed, if possible.  Notice that transmission might not be taking place
+for other reasons (see <A HREF="1154_L3_ASYNC_GETCOMMSTATUS6.html">ASYNC_GETCOMMSTATUS</A>).
+
+<P>
+If Normal Automatic Receive Flow Control is currently enabled and transmission
+is not occurring because of the automatic transmission of an XOFF character,
+then when the physical device driver is called to enable Full-Duplex Automatic
+Receive Flow Control, the physical device driver immediately begins sending
+data regardless of the state of the receive queue.  An XON character is
+sent only when the receive queue becomes half-full.
+<P>
+If the physical device driver has previously automatically transmitted an
+XOFF and a CLOSE request packet is received, and, after processing this
+Close request the port will not be open, the physical device driver automatically
+transmits an XON, if possible.  It is the responsibility of the application
+to make sure that the port is closed properly so that the physical device
+driver cannot transmit characters after the port is reopened.
+<P>
+Input handshaking using modem control signals is one way that the device
+driver can tell another device to stop transmitting.  See Note 1.
+<P>
+<B>XON and XOFF Characters:</B>  The<!-- entering slot 1144 --> value of
+these bytes in the device control block determine the value of the XON and
+XOFF characters used for automatic transmit and receive flow control.  When
+the XON and XOFF characters are referred to in the Category 01h IOCtls,
+the reference is to the value of the XON and XOFF characters as determined
+by this IOCtl.
+<P>
+When the physical device driver is first initialized, the XON character
+is 11h and the XOFF character is 13h.  An OPEN request packet, when the
+COM device is not already open, causes the XON character to be set to 11h
+and the XOFF character to be set to 13h.  If the XON and XOFF characters
+are set equal with this IOCtl, the results are<I> undefined</I>.
+<P>
+<B>Note 3</B>
+<P>
+Output Handshaking Using CTS, DSR, and DCD.  Bits 3, 4, and 5 of Flags1
+control Output Handshaking Using CTS, DSR, and DCD, respectively. If the
+bit is set, output handshaking for the appropriate modem control signal
+is enabled.  Output Handshaking mode can be enabled for any combination
+of CTS, DSR, or DCD because bits 3, 4, and 5 of Flags1 can be set independently.
+ The data is not transmitted unless all the lines enabled for output handshaking
+are up.
+<P>
+When the physical device driver is initialized, bits 3 and 4 of Flags1 are
+set, and bit 5 of Flags1 is reset.  Therefore, initially the device driver
+is enabled for output handshaking using CTS and DSR, but disabled for output
+handshaking using DCD.  Except for attachment to special devices or special
+cables, output handshaking using DCD should not be enabled.
+<P>
+Disabling Output Handshaking Using CTS or DSR causes unexpected results
+when the system is attached to data terminal devices or to data communications
+devices that toggle CTS or DSR.  If the device driver is enabled for this
+mode of operation, it is affected in the following manner if the appropriate
+modem signals are<I> off</I>:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->The physical device driver is unable to move data
+from the physical device driver transmit queue to the transmit hardware.
+<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->The physical device driver is unable to transmit a
+character immediately (Function 44h) so the character is "remembered" by
+the device driver.<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->The physical device driver is unable to automatically
+transmit XONs and XOFFs.  (The physical device driver might try to transmit
+XONs and XOFFs as a result of Automatic Receive Flow Control enabled.)<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->The physical device driver generates a break immediately,
+if requested.<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->The value of CTS, DSR, and DCD does not affect how
+the physical device driver controls RTS and DTR.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+An OPEN request packet does not cause the physical device driver to change
+the value of bits 3, 4, and 5 of Flags1.  It maintains the state of this
+mode of operation across OPEN request packets.
+<P>
+On devices with a transmit holding register and transmit shift register,
+the transmit holding register is always given another character to transmit
+when it empties (even though a character can still be in the transmit shift
+register) unless the physical device driver determines that it is no longer
+allowed to transmit.  The physical device driver always attempts to detect
+a change in the modem status signals (CTS, DSR, DCD) before transmitting
+more data.
+<P>
+<B>Note 4</B>
+<P>
+Input Sensitivity Using DSR.  Bit 6 of Flags1 controls input sensitivity
+using DSR.  If the bit is set, input sensitivity using DSR is enabled.  When
+the physical device driver is initialized, bit 6 of Flags1 is set; so initially
+the physical device driver is enabled for input sensitivity using DSR.
+<P>
+<B>Note: </B> Disabling input sensitivity using DSR causes unexpected results
+when the system is attached to data terminal devices or to data communications
+devices that toggle DSR when they generate spurious data that the system
+should not receive.<!-- lm: 0x2 1 -->
+<P>
+
+<P>
+If the physical device driver is enabled for this mode of operation, it
+throws away all data input from the receive hardware when DSR is<I> off</I>.
+ If the physical device driver processes a change in the DSR modem control
+signal from<I> on</I> to<I> off</I> or from<I> off</I> to<I> on</I> at the
+same time that it inputs a character from the receive hardware, then it
+still accepts the last characters.  This can cause the physical device driver
+to attempt to process invalid data for one service period of the receive
+hardware.  Therefore, it is required that the change in the modem control
+signal be processed<I> before</I> the physical device driver attempts to
+receive data from the receive hardware (see Note 3), or that the received
+data be saved until a change in modem status (during the same hardware service
+instance) is determined.
+<P>
+An OPEN request packet does not cause the physical device driver to change
+the value of bit 6 of Flags1.  The physical device driver maintains the
+state of this mode of operation across OPEN request packets.
+<P>
+<B>Note 5</B>
+<P>
+Error Replacement Character.  The Flags2 bit 2 controls the enabling of
+error replacement character processing.  If set, processing is enabled.
+ When the physical device driver is initialized, this bit is reset, so initially
+the physical device driver is not enabled for the error replacement character.
+ When the COM device is not already open, an OPEN request packet causes
+this bit to be reset, disabling error replacement character processing.
+
+<P>
+When the physical device driver is initialized, the error replacement character
+is 00h.  When the COM device is not already open an OPEN request packet
+causes the error replacement character to be set back to 00h.
+<P>
+If error replacement character processing is disabled, the following applies:
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->If a parity or framing error occurs and the character
+with the error is available in the receive hardware buffer, it is placed
+in the device driver receive queue.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If a hardware or receive queue overrun occurs, nothing
+is placed into the receive queue to<!-- entering slot 1145 --> designate
+an overrun.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+If error replacement character processing is enabled, the following applies:
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->If a parity or framing error occurs, the error replacement
+character (if available) is placed into the physical device driver receive
+queue instead of the character in the receive hardware buffer.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If a hardware buffer overrun occurs, the error replacement
+character is placed into the physical device driver receive queue to mark
+the position where the receive overrun occurred.  If valid data is in the
+receive hardware buffer, it is placed into the device driver receive queue.
+ The processing of the valid data takes place after the hardware buffer
+overrun condition is recorded in the device driver receive queue.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If a physical device driver receive queue overrun
+occurs, the last character in the receive queue is replaced with the error
+replacement character.  This allows the application to know the position
+where the error occurred.  This error replacement, if enabled, always takes
+precedence over an error replacement or break replacement event that occurred
+for the same character.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Regardless of whether error replacement character processing is enabled,
+null stripping and checking for XON/XOFF characters does not occur if the
+character had an error.  This IOCtl can be used to change the error replacement
+character by changing the byte representing the error replacement character.
+
+<P>
+<B>Note 6</B>
+<P>
+Null Stripping.  Bit 3 in Flags2 controls the enabling of null stripping
+processing.  If set, null stripping processing is enabled. When the physical
+device driver is initialized, this bit is reset, so initially the physical
+device driver is not enabled for null stripping.  When the COM device is
+not already open an OPEN request packet causes this bit to be reset, disabling
+null stripping.
+<P>
+If the physical device driver is enabled for null stripping when characters
+are read in from the receive hardware, any<I> non-error</I> or<I> non-break
+</I>characters with a value of 00h are discarded, not checked (even if the
+XON or XOFF character has been set to 00h), and not placed into the physical
+device driver receive queue.
+<P>
+<B>Note: </B> Simultaneously setting the XON or XOFF character to 00h, enabling
+Automatic Transmit Flow Control, and enabling null stripping can cause unexpected
+results, but is not considered an error condition by the physical device
+driver error checking logic.<!-- lm: 0x2 1 -->
+<P>
+
+<P>
+<B>Note 7</B>
+<P>
+Break Replacement Character.  Bit 4 in Flags2 controls the enabling of break
+replacement character processing.  If set, processing is enabled.  When
+the physical device driver is initialized, this bit is reset, so initially
+the physical device driver is not enabled for the break replacement character.
+
+<P>
+When the COM device is not already open, an OPEN request packet causes this
+bit to be reset, disabling break replacement character processing.  When
+the physical device driver is initialized, the break replacement character
+is 00h.  When the COM device is not already open, an OPEN request packet
+causes the break replacement character to be reset back to 00h.
+<P>
+If break replacement character processing is disabled, the device driver
+does not place any character in the physical device driver receive queue
+when it detects a break condition on the line.  A detected break condition
+has no effect on XON/XOFF detection.  If break replacement character processing
+is enabled, and if the physical device driver detects a break condition,
+it places the break replacement character in the device driver receive queue.
+
+<P>
+If break replacement character processing is enabled, null stripping and
+checking for XON/XOFF characters do not operate on the break replacement
+character.  This IOCtl can be used to change the break replacement character
+by changing the byte representing the break replacement character.
+<P>
+If a parity or framing error is generated due to the reception of a break,
+error replacement processing is not performed (except for the<I> overrun
+</I>condition); instead, break replacement processing is performed.
+<P>
+<B>Note 8</B>
+<P>
+Write Timeout.  Bit 0 in Flags3 controls the characteristics of Write Timeout
+processing.  If the bit is 0, Write Timeout processing uses the value in
+the Write Timeout WORD in the device control block.  If the bit is 1, Write
+Timeout processing is infinite timeout.
+<P>
+The value in the Write Timeout WORD is in .01 second units, based on 0 (where
+0 = .01 seconds).  The physical device driver is considered to be doing
+Normal Write Timeout processing when the Write Timeout WORD is used.
+<P>
+During Normal Write Timeout processing, if the physical device driver does
+not give any data to the transmit hardware from the transmit queue within
+the period of time specified by the Write Timeout WORD, the request is completed.
+ The accuracy of the timeout period can be determined by the request packet,
+which is blocked in the device driver, and by how long it takes for the
+thread to be dispatched once it is made ready by the expiration of the timeout
+period.  The accuracy of the timeout period can also be determined by the
+accuracy of the device driver timer tick processing.  If any data has been
+given to the transmit hardware in that timeout period, the device driver
+waits again for the specified period of time to see if any more data has
+been transmitted.
+<P>
+If the timeout period is changed by this IOCtl to Infinite Timeout, the
+new time can take effect immediately or it can take effect after the next
+character is written.
+<P>
+During Write Infinite Timeout processing, the request is not completed until
+all the data from the request has been given to the transmit hardware.  The
+thread of the Write request does not return to the system until the request
+is completed.  The physical device driver checks at least every minute to
+see if an IOCtl has changed the Write Timeout processing characteristics.
+ This can occur almost immediately (accuracy can be determined by the request
+packet, which is blocked, or by device driver timer ticks), and ensures
+that the device driver periodically checks to see if Write Infinite Timeout
+processing has been changed to Normal Write Timeout processing. The Write
+Timeout characteristics can be changed in the middle of the processing of
+a Write request and the new timeout attribute is guaranteed to eventually
+take effect.  When the physical device driver is initialized, Normal Write
+Timeout processing is in effect.
+<P>
+When the physical device driver receives an OPEN request packet for the
+port and the port is not already open, the value in the Write Timeout WORD
+is set to one minute.  The current Write Timeout processing characteristics
+(normal or infinite) are not affected.
+<P>
+<B>Note<!-- entering slot 1146 --> 9</B>
+<P>
+Read Timeout.  Bits 2, 1 of Flags3 control the Read Timeout processing characteristics
+of the physical device driver.  The three possible types of Read Timeout
+processing are:<!-- lm: 0x2 1 -->
+<P>
+Normal<!-- lm: 0x2 22 -->
+<UL> Bits 2, 1 = 0, 1<!-- lm: 0x2 1 -->
+</UL>Wait-For-Something<!-- lm: 0x2 22 -->
+<UL> Bits 2, 1 = 1, 0<!-- lm: 0x2 1 -->
+</UL>No-Wait<!-- lm: 0x2 22 -->
+<UL> Bits 2, 1 = 1, 1<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The value in the Read Timeout WORD is in .01 second units, based on 0 (where
+0 = .01 seconds).  The physical device driver uses the value in the Read
+Timeout WORD for Normal and Wait-For-Something Read Timeout processing.
+ The accuracy of the time interval can be determined by the request, which
+is blocked in the physical device driver, or by the device driver timer
+ticks.
+<P>
+If the physical device driver is doing Normal Read Timeout processing, the
+device driver waits for the amount of time specified in the Read Timeout
+WORD. The request is completed after that interval of time elapses if no
+more data has been received for the request.  If any data is received by
+the physical device driver from the receive hardware for the request (including
+XON/XOFF characters), it waits the specified period of time is for more
+data to arrive.  However, in the following two cases, the current interval
+of time will continue to be waited on without starting to wait from the
+beginning of the interval again:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->If input sensitivity using DSR is enabled and the
+value of the DSR modem control signal causes input data to be thrown away.
+ See Note 4.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If null stripping is enabled and a null character
+is stripped. See Note 6.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+If the physical device driver is doing No-Wait Read Timeout processing,
+it does not wait for any data to be available in the receive queue. When
+the physical device driver begins to try to move data from the receive queue
+to the request, the request is completed.  Whatever data is available in
+the receive queue at that time is moved to the request.
+<P>
+If the physical device driver is doing Wait-For-Something Read Timeout processing,
+the physical device driver processes the request initially as if it had
+No-Wait Timeout processing.  If no data was available at the time the request
+would have completed due to No-Wait processing, the request is not completed.
+ Instead, it waits for some data to be available before completing the request.
+ However, the physical device driver does enter Normal Read Timeout processing
+for this request.  Therefore, if no data is available after the Normal Timeout
+processing interval, then the request is completed anyway.  The request
+never waits longer than it would have due to Normal Read Timeout processing.
+
+<P>
+The Read Timeout processing characteristics that apply to a given Read request
+are not determined until the physical device driver begins processing that
+request.  At that time, a change to the Read Timeout processing characteristics
+of the physical device driver between Wait-For-Something and Normal Timeout
+processing might take effect for the current Read request being processed.
+ If the timeout period is changed by this IOCtl, the new timeout period
+might take effect immediately or it might take effect after the next character
+is received from the receive hardware.  When the physical device driver
+is initialized, Normal Read Timeout processing is in effect.
+<P>
+When the physical device driver receives an OPEN request packet for the
+port and the port is not already open, the value in the Read Timeout WORD
+is set to one minute and Normal Read Timeout processing characteristics
+are put into effect.
+<P>
+<B>Note 10</B>
+<P>
+Extended Hardware Buffering.  This refers to the capability of the COM port's
+serial controller device to buffer up to 16 characters in its internal hardware
+Receive and Transmit buffers.  This buffering capability allows the device
+to relieve the operating system of the high overhead associated with servicing
+per-character receive and transmit hardware interrupts.
+<P>
+On COM ports with a serial controller device that does not support Extended
+Hardware Buffering, bits 3 and 4 of DCB Flags3 are always set to 0, indicating
+that the device does not support Extended Hardware Buffering.  This value
+is always valid and ignored as input to Function 53h.  If the device does
+not support Extended Hardware Buffering and the application attempts to
+set any of the Flags3 bits 3-7, this IOCtl fails and a general failure error
+results.
+<P>
+Applications must first call <A HREF="1220_L3_ASYNC_GETDCBINFO73hQ.html">ASYNC_GETDCBINFO
+</A>to determine whether the device<!-- entering slot 1147 --> supports
+Extended Hardware Buffering<I> before</I> calling Function 53h.
+<P>
+When in conventional Programmed Input/Output (PIO) mode or when the Enhanced
+mode is disabled through <A HREF="1114_L3_ASYNC_SETENHANCEDMOD.html">ASYNC_SETENHANCEDMODEPARMS</A>,
+the physical ASYNC device driver defaults the setting of the Extended Hardware
+Buffering parameter to Automatic Protocol Override. This system default
+can be changed by manipulating bits 3 and 4 in the Flags3 parameter of Function
+53h.  An application or subsystem can manually control this feature by setting
+Extended Hardware Buffering enabled and by manipulating the Receive Trigger
+Level and Transmit Buffer Load Count parameters.  An application or subsystem
+can also set the serial device to run in Character mode by setting Extended
+Hardware Buffering disabled.  The three settings for this feature are described
+below.
+<P>
+<B><I>Automatic Protocol Override (System Default)</B></I>:  In any system
+configuration where a COM port's serial controller correctly supports Extended
+Hardware Buffering, the physical device driver initializes that COM port
+to enable Automatic Protocol Override mode. This mode of the physical ASYNC
+device driver is defined with respect to the following device driver protocols:
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Output Handshaking Using CTS, DSR, DCD<!-- lm: 0x2 3 --> <!-- lm: 0x2 6 -->
+<UL>Automatic
+Transmit Flow Control<!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL>Input Sensitivity Using DSR<!-- lm: 0x2 1 -->
+</UL>
+<P>
+When any one or more of the above protocols are enabled, the Automatic Protocol
+Override feature causes the Extended Hardware Buffering not to fully exploit
+the maximum potential performance benefit of the serial controller.  Depending
+on which protocols are enabled, the physical device driver automatically
+adjusts either, or both, the Receive Trigger Level and Transmit Buffer Load
+Count.  The following descriptions identify the changes that each of the
+above protocols causes when Automatic Protocol Override mode is active:
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Output Handshaking Using CTS, DSR (Default<I> on</I>)
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Output Handshaking Using DCD (Default<I> off</I>).
+ When either of these handshaking protocols is enabled, the physical ASYNC
+device driver, under Automatic Protocol Override, sets the Transmit Buffer
+Load Count to 1.  This means that it services transmit interrupts one character
+at a time.  When these protocols are disabled, the device driver fully exploits
+the Extended Hardware Buffering capabilities of the serial controller by
+transmitting 16 characters per interrupt.  The Receive Trigger Level is
+not affected by these protocols in Automatic Protocol Override mode.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Automatic Transmit Flow Control (Default<I> off</I>).
+ When this protocol is enabled, the physical ASYNC device driver, under
+Automatic Protocol Override, sets the Receive Trigger Level and the Transmit
+Buffer Load Count to 1.  This means that it services both receive and transmit
+interrupts one character at a time.  When these protocols are disabled,
+the physical device driver fully exploits the Extended Hardware Buffering
+capabilities of the serial controller by transmitting 16 characters per
+interrupt and setting the Receive Trigger Level to<I> 8</I>.  (The physical
+device driver is given at least 8 characters on each Receive Data Available
+interrupt.)<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Input Sensitivity Using DSR (Default<I> on</I>).  When
+this protocol is enabled, the Automatic Protocol Override feature of the
+ASYNC device driver sets the Receive Trigger Level to 1, by default, on
+the respective COM port, forcing the physical device driver to service all
+characters received one character at a time.  The Transmit Buffer Load Count
+is not affected by this protocol.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+With all of the above listed protocols, Automatic Protocol Override allows
+the serial controller to remain in its FIFO-mode setting, although it is
+not fully exploiting the potential performance benefit from the Extended
+Hardware Buffering capability.  The extended Receive Hardware Buffering
+capability remains active so that receive hardware overrun errors are much
+less likely to occur.
+<P>
+When Automatic Protocol Override mode is enabled, setting the DCB Flags3
+bits for manipulating Receive Trigger Level and Transmit Buffer Load Count
+(bits 5, 6, and 7) has no effect.  Automatic Protocol Override fully overrides
+any manual settings the application or subsystem might attempt to set.
+<P>
+<B>Note: </B> Having any of the above protocols enabled can significantly
+alter system performance characteristics with respect to activity on an
+asynchronous communications port.  This is particularly true where the COM
+port is running at a high bit rate (2400 bps or higher) or where multiple
+COM ports are performing asynchronous I/O.  This is a factor to consider
+when configuring a system to perform multiple serial port I/O or when developing
+an application that requires high speed asynchronous communications.  Disabling
+the above protocols or setting the Device Control Block parameters to Extended
+Hardware Buffering enabled allows the physical device driver to fully exploit
+the serial controller's capability to its maximum benefit.<!-- lm: 0x2 1 -->
+<P>
+
+<P>
+<B><I>Extended Hardware Buffering Enabled</B></I>
+<P>
+Setting this mode cancels the effects of Automatic Protocol Override and
+enables the user to fully use the Extended Hardware Buffering capabilities
+of the physical device driver.  The Receive Trigger Level should be set
+to 8. (the physical device driver receives 8 characters per interrupt) and
+the Transmit Buffer Load Count should be set to 16 (the physical device
+driver<!-- entering slot 1148 --> transmits 16 characters per interrupt).
+
+<P>
+Setting this mode in conjunction with any of the following device driver
+protocols can alter the behavior of that protocol in a significant manner:
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Output Handshaking using CTS, DSR, DCD<!-- lm: 0x2 3 --> <!-- lm: 0x2 6 -->
+<UL>Automatic
+Transmit Flow Control<!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL>Input Sensitivity using DSR<!-- lm: 0x2 1 -->
+</UL>
+<P>
+For information on these protocols, refer to the description in the<I> OS/2
+Input/Output Device Driver Reference</I>.
+<P>
+<B><I>Extended Hardware Buffering Disabled</B></I>
+<P>
+Setting this mode completely disables the Extended Hardware Buffering capabilities
+of the serial port controller.  This mode places the serial port device
+into Character mode (that is, the physical device driver services both transmit
+and receive interrupts one character at a time).  This effectively eliminates
+any special considerations that might have been necessary when performing
+asynchronous communications with Extended Hardware Buffering enabled or
+with the Automatic Protocol Override mode active.
+<P>
+On any COM port that is serviced by a serial controller that does not support
+FIFO mode, the physical device driver is always set to Extended Hardware
+Buffering disabled.  Attempts to set Extended Hardware Buffering enabled
+or to enable the Automatic Protocol Override mode are ignored (no error
+returned). Whenever <A HREF="1220_L3_ASYNC_GETDCBINFO73hQ.html">ASYNC_GETDCBINFO
+</A>is called, the bits in DCB Flags3 identify the true state of Extended
+Hardware Buffering on these devices as disable.
+<P>
+<B>Note: </B> Setting the physical device driver to run with Extended Hardware
+Buffering disabled can significantly alter the system performance characteristics,
+particularly with respect to asynchronous communications I/O throughput.
+ This is especially true where the COM port is running at a high bit rate
+(2400 bps or higher) or where multiple COM ports are performing asynchronous
+I/O.<!-- lm: 0x2 1 -->
+<P>
+
+<P>
+<B>Note 11</B>
+<P>
+Receive Trigger Level.  This represents the number of characters that must
+be received by a serial port controller that supports Extended Hardware
+Buffering before that device generates a receive hardware interrupt.  For
+example, with Extended Hardware Buffering enabled, assume the Receive Trigger
+Level is set to 8 characters.  This means that a receive hardware interrupt
+occurs once for every 8 characters received at that COM port.  On COM ports
+with a serial controller device that does not support Extended Hardware
+Buffering, bits 5 and 6 of DCB Flags3 are always set to 0, indicating that
+the device is in Character mode (Receive Trigger Level=1).
+<P>
+The default state for bits 5 and 6 of DCB Flags3 is zero, indicating that
+the Automatic Protocol Override mode is active and that other device driver
+protocols are enabled, which forces Automatic Protocol Override to keep
+Receive Trigger Level set to 1.
+<P>
+When the physical device driver is operating in Automatic Protocol Override
+mode, setting the Receive Trigger Level has no effect.  This parameter setting
+is completely ignored unless DCB Flags3 bits 3 and 4 are set to Extended
+Hardware Buffering enabled.
+<P>
+<B>Note: </B> System performance and asynchronous communications I/O throughput
+can be significantly degraded by setting Receive Trigger Level to 1 on COM
+ports whose serial controller device is capable of supporting Extended Hardware
+Buffering.  This is particularly true where a COM port is sending and receiving
+data at high bit rates (over 2400 bps) or where multiple COM ports are simultaneously
+engaged in asynchronous communications.
+<P>
+Setting the Receive Trigger Level to 14 characters can increase the probability
+of getting receive hardware overrun errors.  This is most likely where a
+COM port is sending and receiving data at high bit rates (over 2400 bps)
+or where multiple COM ports are simultaneously engaged in asynchronous communications.
+<!-- lm: 0x2 1 -->
+<P>
+
+<P>
+<A HREF="1220_L3_ASYNC_GETDCBINFO73hQ.html">ASYNC_GETDCBINFO</A> always
+gives the actual current setting of the Receive Trigger Level, regardless
+of the setting of the Extended Hardware Buffering mode.  In Enhanced mode,
+the Receive Trigger Level setting is ignored and the ASYNC device drive
+automatically sets the value for maximum operational efficiency.  In this
+case, the Receive Trigger Level chosen by the physical ASYNC device driver
+is not reflected in Function 73h.  The value that the user has specified
+for the Receive Trigger Level in this IOCtl is returned, even though it
+is ignored.
+<P>
+<B>Note 12</B>
+<P>
+Transmit Buffer Load Count<!-- entering slot 1149 --> refers to the number
+of characters that the physical ASYNC device driver gives to a COM port's
+serial controller transmit hardware on the occurrence of a transmit hardware
+interrupt.  On COM ports with a serial controller device that does not support
+Extended Hardware Buffering, bit 7 of DCB Flags3 is always set to 0, indicating
+that the device is in Character mode (Transmit Buffer Load Count=1).
+<P>
+Normally, when the serial controller supports Extended Hardware Buffering
+and the physical device driver protocols are set to fully use this hardware
+capability, the Transmit Buffer Load Count is set to 16 characters.  This
+means that every time the physical device driver gets control of the serial
+controller on the occurrence of a transmit hardware interrupt, 16 characters
+are placed in the serial controller's transmit buffer.
+<P>
+There might be situations where an application or communications subsystem
+needs to control the flow of data manually during a communications session.
+ Setting the Transmit Buffer Load count to 1 character ensures that the
+physical device driver has control of the serial controller every time a
+character is transmitted.
+<P>
+When the physical device driver is operating in Automatic Protocol Override
+mode, setting the Transmit Buffer Load Count has no effect. This parameter
+setting is completely ignored unless DCB Flags3 bits 3 and 4 are set to
+Extended Hardware Buffering enabled.
+<P>
+<B>Note: </B> System performance and asynchronous communications I/O throughput
+can be significantly degraded by setting Transmit Buffer Load Count to 1
+on COM ports whose serial controller device is capable of supporting Extended
+Hardware Buffering.  This is particularly true where a COM port is sending
+and receiving data at high bit rates (over 2400 bps) or where multiple COM
+ports are simultaneously engaged in asynchronous communications.<!-- lm: 0x2 1 -->
+<P>
+
+
+<P><HR>
+
+<A HREF="1111_L3H_ASYNC_SETDCBINFO53hR.html">[Back: ASYNC_SETDCBINFO (53h) - Returns]</A> <BR>
+<A HREF="1113_L3H_ASYNC_SETDCBINFO53h.html">[Next: ASYNC_SETDCBINFO (53h) -]</A> 
+</BODY>
+</HTML>

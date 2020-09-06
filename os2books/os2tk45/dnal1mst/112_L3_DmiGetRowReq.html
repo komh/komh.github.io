@@ -1,0 +1,168 @@
+<HTML>
+<HEAD>
+<TITLE>DmiGetRowReq</TITLE>
+</HEAD>
+<BODY>
+<H1>DmiGetRowReq</H1><!-- entering slot 116 -->
+<P>
+The following Get commands use the DmiSetAttributeReq command block:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->DmiGetRowCmd<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->DmiGetFirstRowCmd<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->DmiGetNextRowCmd<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The format for the command block is: ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³Table39
+.DmiGetRowReqCommandBlock                    ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ OFFSET     ³ SIZE      ³ TYPE      ³ VARIABLE NAME         ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 0       ³ 64       ³ STRUCT     ³ DmiMgmtCommand        ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 64       ³ 4       ³ INT      ³ iComponentId         ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 68       ³ 4       ³ INT      ³ iGroupId           ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 72       ³ 4       ³ INT      ³ iGroupKeyCount        ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 76       ³ 4       ³ OFFSET     ³ oGroupKeyList         ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 80       ³ 4       ³ INT      ³ iAttributeId         ³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+<B><!-- lm: 0x2 1 -->
+<P>
+Variable Name<!-- lm: 0x2 21 -->
+<UL> Variable Description</B><!-- lm: 0x2 1 -->
+</UL> DmiMgmtCommand
+<!-- lm: 0x12 21 -->
+<UL>The command block.  The values of iCommand are:
+<!-- lm: 0x2 21 -->
+<P>
+DmiGetRowCmd<!-- lm: 0x2 51 -->
+<UL> 0x304<!-- lm: 0x2 21 -->
+</UL>DmiGetFirstRowCmd<!-- lm: 0x2 51 -->
+<UL> 0x305<!-- lm: 0x2 21 -->
+</UL>DmiGetNextRowCmd<!-- lm: 0x2 51 -->
+<UL> 0x306<!-- lm: 0x2 21 --><!-- lm: 0x2 1 -->
+</UL> iComponentId
+<!-- lm: 0x12 21 -->
+<UL>The ID of the desired component.<!-- lm: 0x2 1 -->
+</UL> iGroupId
+<!-- lm: 0x12 21 -->
+<UL>The ID of the desired group.<!-- lm: 0x2 1 -->
+</UL> iGroupKeyCount
+<!-- lm: 0x12 21 -->
+<UL>The number of DmiGroupKeyData blocks pointed to
+by oGroupKeyList.<!-- lm: 0x2 1 -->
+</UL> oGroupKeyList<!-- lm: 0x12 21 -->
+<UL> Offset
+to a list of DmiGroupKeyData blocks. iGroupKeyCount is the number of blocks
+in the list.<!-- lm: 0x2 1 -->
+</UL> iAttributeId<!-- lm: 0x12 21 -->
+<UL> The
+attribute ID just before the attribute ID where the Get Row command should
+start. Use zero to start at the first attribute in the group. This is generally
+used when the confirm buffer is too small and the service layer has more
+information than will fit in the buffer. Upon return, the service layer
+updates this field with the last attribute returned and sets iStatus to
+1 to indicate that there is more information than the confirm buffer could
+hold.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Issuing DmiGetRowReq displays an example of how to issue the DmiGetRowReq
+command to the MI. IssuingDmiGetRowReq
+<BR>
+
+<PRE>ULONG IssueGetRow(ULONG CompID,ULONG GroupID,DMI_GetRowCnf_t *Row)   // get the list group started
+{
+DMI_GetRowReq_t *GetRow;    // command block to use
+DMI_GroupKeyData_t *NewKey, *ThisKey;
+USHORT x;  // just a counter
+char *Working;
+DMI_STRING *Work;
+DMI_UNSIGNED Size;
+ULONG RC;
+
+    GetRow = (DMI_GetRowReq_t *)malloc(4000);
+    memset((void *)GetRow,0,sizeof(DMI_GetRowReq_t));
+    GetRow-&gt;iGroupId = GroupID;
+    GetRow-&gt;iComponentId = CompID;
+    GetRow-&gt;DmiMgmtCommand.iLevelCheck = DMI_LEVEL_CHECK;
+    GetRow-&gt;DmiMgmtCommand.iMgmtHandle = YOUR_MGMT_HANDLE;          // set the app handle
+    GetRow-&gt;DmiMgmtCommand.iCmdHandle =  YOUR_COMMAND_HANDLE;       // point to the addinfo block
+    GetRow-&gt;DmiMgmtCommand.iCnfBufLen = 8000UL;                     // set the size of the response
+    GetRow-&gt;DmiMgmtCommand.pCnfBuf = (void *)malloc(8000UL);        // set up the response buffer
+    GetRow-&gt;DmiMgmtCommand.iRequestCount = 1;
+    GetRow-&gt;DmiMgmtCommand.iCmdLen = 4000L;
+    if(Row == (DMI_GetRowCnf_t *)NULL) GetRow-&gt;DmiMgmtCommand.iCommand = DmiGetFirstRowCmd;  // set the
+                                                                                             // command
+    else{
+        GetRow-&gt;DmiMgmtCommand.iCommand = DmiGetNextRowCmd;   // get the next row in the table
+        ThisKey = (DMI_GroupKeyData_t *)((char *)Row + Row-&gt;oGroupKeyList);
+        NewKey = (DMI_GroupKeyData_t *)((char *)GetRow + sizeof(DMI_GetRowReq_t));
+        GetRow-&gt;oGroupKeyList = sizeof(DMI_GetRowReq_t);
+        GetRow-&gt;iGroupKeyCount = Row-&gt;iGroupKeyCount;
+        Working = (char *)((char *)NewKey + (Row-&gt;iGroupKeyCount * sizeof(DMI_GroupKeyData_t)));
+        for(x = 0;x != Row-&gt;iGroupKeyCount;x++,ThisKey++,NewKey++){
+            memcpy(NewKey,ThisKey,sizeof(DMI_GroupKeyData_t));   // move the key block over
+            switch(ThisKey-&gt;iAttributeType){   // switch on the data type
+                case MIF_COUNTER:
+                case MIF_COUNTER64:
+                case MIF_GAUGE:
+                case MIF_INT:
+                case MIF_INTEGER64:
+                    Size = sizeof(DMI_UNSIGNED);
+                    goto FinishGroup;
+                case MIF_DATE:
+                    Size = sizeof(DMI_TimeStamp_t);
+                    goto FinishGroup;
+                case MIF_DISPLAYSTRING:
+                case MIF_OCTETSTRING:
+                    Work = (DMI_STRING *)((char *)Row + ThisKey-&gt;oKeyValue);
+                    Size = (Work-&gt;length + sizeof(DMI_UNSIGNED));
+                    FinishGroup:
+                    memcpy(Working,(char *)((char *)Row + ThisKey-&gt;oKeyValue),Size);
+                    NewKey-&gt;oKeyValue = (DMI_OFFSET)((char *)Working - (char *)GetRow);
+                    Working += Size;
+                    break;
+                case MIF_UNKNOWN_DATA_TYPE:    // this is the error case
+                default:
+                    break;
+            }
+        }
+    }
+    if((RC = DmiInvoke((DMI_MgmtCommand_t *)GetRow)) != SLERR_NO_ERROR) {   // ask for the <!-- entering slot 117 -->description
+        free(GetRow-&gt;DmiMgmtCommand.pCnfBuf);
+        free(GetRow);
+        free((char *)Handle);   // free up the add information (AddInfo) block
+    }
+    return RC;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="111_L3_DmiSetAttributeReq.html">[Back: DmiSetAttributeReq]</A> <BR>
+<A HREF="113_L3_DmiGetRowCnf.html">[Next: DmiGetRowCnf]</A> 
+</BODY>
+</HTML>

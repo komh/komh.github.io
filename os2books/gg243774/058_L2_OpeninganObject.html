@@ -1,0 +1,74 @@
+<HTML>
+<HEAD>
+<TITLE>Opening an Object</TITLE>
+</HEAD>
+<BODY>
+<H1>Opening an Object</H1><!-- entering slot 60 -->
+<PRE>SOM_Scope HWND SOMLINK pwfolder_wpOpen(PWFolder *somSelf,
+                                       HWND hwndCnr,
+                                       ULONG ulView,
+                                       ULONG param)
+{
+    ULONG ulResult;
+    CHAR  szTitle[100];
+
+    PWFolderData *somThis =
+                 PWFolderGetData(somSelf);      /* Set instance data     */
+    PWFolderMethodDebug("PWFolder",             /* Set debug info        */
+                        "pwfolder_wpOpen");
+
+    if ((strcmp(_szCurrentPassword,             /* If not locked         */
+                _szPassword)) == 0)
+       return(parent_wpOpen(somSelf,            /* Allow open to proceed */
+                            hwndCnr,            /* in normal way, using  */
+                            ulView,             /* default processing    */
+                            param));
+
+    ulResult = WinDlgBox(HWND_DESKTOP,          /* Display p'word dialog */
+                         HWND_DESKTOP,          /* Desktop is owner      */
+                         dpPassword,            /* Dialog procedure      */
+                         hModule,               /* Module handle         */
+                         DLG_PASSWORD,          /* Dialog resource id    */
+                         (PVOID)somSelf);       /* Object pointer        */
+
+    if (ulResult == DID_OK)                     /* If not cancelled      */
+       {
+       if ((strcmp(_szCurrentPassword,          /* If correct password   */
+                   _szPassword)) == 0)
+          {
+          strcpy(szTitle,                       /* Get title string      */
+                 _wpQueryTitle(somSelf));
+          szTitle[strlen(szTitle)-9] = '\0';    /* Remove &lt;LOCKED&gt;       */
+          _wpSetTitle(somSelf,szTitle);         /* Reset title string    */
+
+          &lt;Set icon to unlocked state&gt;
+
+          return (parent_wpOpen(somSelf,        /* Allow default _wpOpen */
+                                hwndCnr,        /* processing to occur   */
+                                ulView,         /* by invoking parent's  */
+                                param));        /* method                */
+          }
+       else
+          {
+          WinMessageBox(HWND_DESKTOP,           /* Display message box   */
+             HWND_DESKTOP,
+             "Password incorrect. Folder remains locked.",
+             "Password Failed",
+             0, MB_OK | MB_CUAWARNING);
+          return((BOOL)0);                      /* Return FALSE          */
+          }
+       }
+}
+</PRE>
+
+<P>
+This example shows the<I> _wpOpen</I> method, which is called by the system
+when a view of an object is opened, being overridden to add password protection
+to a folder.
+
+<P><HR>
+
+<A HREF="057_L2_InitializingInstance.html">[Back: Initializing Instance Data]</A> <BR>
+<A HREF="059_L2_OpeningaCustomViewof.html">[Next: Opening a Custom View of an Object]</A> 
+</BODY>
+</HTML>

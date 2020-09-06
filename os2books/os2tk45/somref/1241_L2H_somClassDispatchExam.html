@@ -1,0 +1,79 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>somClassDispatch - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>somClassDispatch - Example Code</H1><!-- entering slot 1242 -->
+<P>
+Given class<I> Key</I> that has an attribute<I> keyval</I> of type<B> long
+</B>and an overridden method for<B> somPrintSelf</B> that prints the value
+of the attribute (as well as the information printed by<B> SOMObject</B>'s
+implementation of<B> somPrintSelf</B>), the following client code invokes
+methods on<I> Key</I> objects using<B> somDispatch</B> and<B> somClassDispatch</B>.
+(The<I> Key</I> class was defined with the<B> callstyle=oidl</B> class modifier,
+so the<B> Environment</B> argument is not required of its methods.)
+<PRE>#include &lt;key.h&gt;
+
+main()
+{
+  SOMObject obj;
+  long k1 = 7, k2;
+  Key *myKey = KeyNew();
+  somVaBuf vb;
+  va_list push, args;
+
+  somId setId = somIdFromString("_set_keyval");
+  somId getId = somIdFromString("_get_keyval");
+  somId prtId = somIdFromString("somPrintSelf");
+
+  vb = (somVaBuf)somVaBuf_create(NULL, 0);
+  somVaBuf_add(vb, (char *)&amp;myKey, tk_ulong);
+  somVaBuf_add(vb, (char *)&amp;k1, tk_long);
+  somVaBuf_get_valist(vb, &amp;args);
+
+
+  /* va_list invocation of setkey and getkey */
+  SOMObject_somDispatch(myKey, (somToken *)0, setId, args);
+  somVaBuf_get_valist(vb, &amp;args);
+  SOMObject_somDispatch(myKey, (somToken *)&amp;k2, getId, args);
+  printf("va_list _set_keyval and _get_keyval: %i\n", k2);
+
+  /* varargs invocation of setkey and getkey */
+  <B>_somDispatch</B>(myKey, (somToken *)0, setId, myKey, k1);
+  <B>_somDispatch</B>(myKey, (somToken *)&amp;k2, getId, myKey);
+  printf("varargs _set_keyval and _get_keyval: %i\n", k2);
+
+  /* illustrate somClassDispatch "casting" (use varargs form) */
+  printf("somPrintSelf on myKey as a Key:\n");
+  <B>_somClassDispatch</B>(myKey, _Key, (somToken *)&amp;obj, prtId, myKey, 0);
+
+  printf("somPrintSelf on myKey as a SOMObject:\n");
+  <B>_somClassDispatch</B>(myKey, _SOMObject, (somToken *)&amp;obj, prtId, myKe
+
+  SOMFree(setId);
+  SOMFree(getId);
+  SOMFree(prtId);
+  _somFree(myKey);
+
+  somVaBuf_destroy(vb);
+}
+</PRE>
+
+<P>
+This program produces the following output:
+<PRE>va_list _set_keyval and _get_keyval: 7
+varargs _set_keyval and _get_keyval: 7
+somPrintSelf on myKey as a Key:
+{An instance of class Key at address 2005B2F8}
+    -- with key value 7
+somPrintSelf on myKey as a SOMObject:
+{An instance of class Key at address 2005B2F8}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1240_L2H_somClassDispatchRela.html">[Back: somClassDispatch - Related Methods]</A> <BR>
+<A HREF="1242_L2H_somClassDispatchTopi.html">[Next: somClassDispatch - Topics]</A> 
+</BODY>
+</HTML>

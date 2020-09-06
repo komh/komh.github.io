@@ -1,0 +1,142 @@
+<HTML>
+<HEAD>
+<TITLE>WSASetBlockingHook()</TITLE>
+</HEAD>
+<BODY>
+<H1>WSASetBlockingHook()</H1><!-- entering slot 112 -->
+<P>
+<B>Description</B>
+<P>
+Establish an application-specific blocking hook function.
+<P>
+
+<PRE>#include &lt;winsock.h&gt;</PRE>
+ 
+<P>
+<B>FARPROC PASCAL FAR WSASetBlockingHook ( FARPROC</B><I> lpBlockFunc</I><B> );
+</B><!-- lm: 0x2 1 -->
+<UL>
+<P>
+<I>lpBlockFunc</I><!-- lm: 0x11 3 -->
+<UL> A pointer to the procedure instance
+address of the blocking function to be installed.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Remarks</B>
+<P>
+This function installs a new function which a Windows Sockets implementation
+should use to implement blocking socket function calls. A Windows Sockets
+implementation includes a default mechanism by which blocking socket functions
+are implemented.  The function<B> WSASetBlockingHook()</B> gives the application
+the ability to execute its own function at "blocking" time in place of the
+default function.
+<P>
+When an application invokes a blocking Windows Sockets API operation, the
+Windows Sockets implementation initiates the operation and then enters a
+loop which is equivalent to the following pseudocode:
+<P>
+
+<PRE>for(;;) {     /* flush messages for good user response */
+     while(BlockingHook())
+          ;
+     /* check for WSACancelBlockingCall() */
+     if(operation_cancelled())
+          break;
+     /* check to see if operation completed */
+     if(operation_complete())
+          break;     /* normal completion */
+}
+</PRE>
+
+<P>
+Note that Windows Sockets implementations may perform the above steps in
+a different order; for example, the check for operation complete may occur
+before calling the blocking hook.  The default<B> BlockingHook()</B> function
+is equivalent to:
+<P>
+
+<PRE>BOOL DefaultBlockingHook(void) {
+     MSG msg;
+     BOOL ret;
+     /* get the next message if any */
+     ret = (BOOL)PeekMessage(&amp;msg,NULL,0,0,PM_REMOVE);
+     /* if we got one, process it */
+     if (ret) {
+          TranslateMessage(&amp;msg);
+          DispatchMessage(&amp;msg);
+     }
+     /* TRUE if we got a message */
+     return ret;
+}
+</PRE>
+
+<P>
+The<B> WSASetBlockingHook()</B> function is provided to support those applications
+which require more complex message processing -- for example, those employing
+the MDI (multiple document interface) model.  It is not intended as a mechanism
+for performing general applications functions.  In particular, the only
+Windows Sockets API function which may be issued from a custom blocking
+hook function is <A HREF="087_L3_WSACancelBlockingCal.html">WSACancelBlockingCall()</A>,
+which will cause the blocking loop to terminate.
+<P>
+This function must be implemented on a per-task basis for non-multithreaded
+versions of Windows and on a per-thread basis for multithreaded versions
+of Windows such as Windows NT.  It thus provides for a particular task or
+thread to replace the blocking mechanism without affecting other tasks or
+threads.
+<P>
+In multithreaded versions of Windows, there is no default blocking hook--blocking
+calls block the thread that makes the call.  However, an application may
+install a specific blocking hook by calling<B> WSASetBlockingHook(). </B>
+<P>
+This allows easy portability of applications that depend on the blocking
+hook behavior.
+<P>
+
+<P>
+<B>Return Value</B>
+<P>
+The return value is a pointer to the procedure-instance of the previously
+installed blocking function.  The application or library that calls the
+<B>WSASetBlockingHook()</B> function should save this return value so that
+it can be restored if necessary.  (If "nesting" is not important, the application
+may simply discard the value returned by<B> WSASetBlockingHook()</B> and
+eventually use <A HREF="094_L3_WSAUnhookBlockingHoo.html">WSAUnhookBlockingHook()
+</A>to restore the default mechanism.)  If the operation fails, a NULL pointer
+is returned, and a specific error number may be retrieved by calling <A HREF="089_L3_WSAGetLastError.html">WSAGetLastError()</A>.
+
+<P>
+<B>Notes For Windows Sockets Suppliers</B>
+<P>
+This function must be implemented on a per-thread basis.  It thus provides
+for a particular thread to replace the blocking mechanism without affecting
+other threads.
+<P>
+<B>Error Codes</B>
+<P>
+<!-- lm: 0x2 1 -->
+<P>
+WSANOTINITIALISED<!-- lm: 0x11 11 -->
+<UL> A successful <A HREF="093_L3_WSAStartup.html">WSAStartup()
+</A>must occur before using this API.<!-- lm: 0x2 1 -->
+</UL> WSAENETDOWN
+<!-- lm: 0x11 11 -->
+<UL>The Windows Sockets implementation has detected
+that the network<!-- entering slot 113 --> subsystem has failed.<!-- lm: 0x2 1 -->
+</UL> WSAEINPROGRESS
+<!-- lm: 0x11 11 -->
+<UL>A blocking Windows Sockets operation is in progress.<!-- lm: 0x2 1 -->
+</UL> 
+<P>
+<B>See Also</B>
+<P>
+<A HREF="094_L3_WSAUnhookBlockingHoo.html">WSAUnhookBlockingHook()</A>
+<P>
+
+
+<P><HR>
+
+<A HREF="090_L3_WSAIsBlocking.html">[Back: WSAIsBlocking()]</A> <BR>
+<A HREF="092_L3_WSASetLastError.html">[Next: WSASetLastError()]</A> 
+</BODY>
+</HTML>

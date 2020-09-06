@@ -1,0 +1,75 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>SplEnumPort - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>SplEnumPort - Example Code</H1><!-- entering slot 1272 -->
+<P>
+This sample code will print out all the ports an associated information.
+ This is done at level 1, and for the local workstation.
+<PRE>#define INCL_DOSMEMMGR
+#define INCL_SPL
+#define INCL_SPLDOSPRINT
+#define INCL_SPLERRORS
+
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+
+INT main ()
+{
+   SPLERR splerr ;
+   ULONG  cbBuf ;
+   ULONG  cTotal;
+   ULONG  cReturned ;
+   ULONG  cbNeeded ;
+   ULONG  ulLevel = 1;
+   ULONG  i ;
+   PSZ    pszComputerName = NULL;
+   PVOID  pbuf ;
+   PPRPORTINFO1 pPort1 ;
+
+   splerr = SplEnumPort(pszComputerName, ulLevel, pbuf, 0L, /* cbBuf */
+                            &amp;cReturned, &amp;cTotal,
+                            &amp;cbNeeded, NULL) ;
+
+   if (splerr == ERROR_MORE_DATA || NERR_BufTooSmall )
+   {
+      if (!DosAllocMem( &amp;pbuf, cbNeeded,
+                        PAG_READ|PAG_WRITE|PAG_COMMIT) )
+      {
+          cbBuf = cbNeeded ;
+          splerr = SplEnumPort(pszComputerName, ulLevel, pbuf, cbBuf,
+                                  &amp;cReturned, &amp;cTotal,
+                                  &amp;cbNeeded, NULL) ;
+          if (splerr == 0L)
+          {
+             pPort1 = (PPRPORTINFO1)pbuf ;
+             printf("Port names: ");
+             for (i=0; i &lt; cReturned; i++)
+             {
+                printf("Port - %s, Driver - %s Path - %s\n              ",
+                       pPort1-&gt;pszPortName, pPort1-&gt;pszPortDriverName,
+                       pPort1-&gt;pszPortDriverPathName ) ;
+                pPort1++ ;
+             }
+             printf("\n");
+          }
+          DosFreeMem(pbuf) ;
+      }
+   }
+   else
+   {
+      printf("SplEnumPort splerr=%ld, \n",splerr) ;
+   }
+   DosExit( EXIT_PROCESS , 0 ) ;
+   return (splerr);
+}   /* end main */
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1260_L2H_SplEnumPortRelatedFu.html">[Back: SplEnumPort - Related Functions]</A> <BR>
+<A HREF="1262_L2H_SplEnumPortTopics.html">[Next: SplEnumPort - Topics]</A> 
+</BODY>
+</HTML>

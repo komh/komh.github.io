@@ -1,0 +1,108 @@
+<HTML>
+<HEAD>
+<TITLE>Message Loops</TITLE>
+</HEAD>
+<BODY>
+<H1>Message Loops</H1><!-- entering slot 1667 -->
+<P>
+Every application with a message queue is responsible for retrieving the
+messages from that queue.  An application can do this by using a message
+loop, usually in the application's main function, that retrieves messages
+from the message queue and dispatches them to the appropriate windows.  The
+message loop consists of two calls: one to the WinGetMsg function; the other
+to the WinDispatchMsg function.  The message loop has the following form:
+
+<P>
+
+<PRE>    HAB hab;
+    QMSG qmsg;
+
+    while (WinGetMsg(hab, &amp;qmsg, NULL, 0, 0))
+        WinDispatchMsg(hab, &amp;qmsg);
+
+</PRE>
+
+<P>
+An application starts the message loop after creating the message queue
+and at least one application window.  Once started, the message loop continues
+to retrieve messages from the message queue and to dispatch (send) them
+to the appropriate windows.  WinDispatchMsg sends each message to the window
+specified by the window handle in the message.
+<P>
+The following figure illustrates the typical routing of an input message
+through the operating system's and application's message loops.
+<PRE>            Mouse ÄÄÄ¿   ÚÄÄÄ Keystrokes
+                        
+                   ÚÄÁÄÄÄÁÄ¿
+                   ÃÄÄÄÄÄÄÄ´ System
+                   ÃÄÄÄÄÄÄÄ´ Event (time ordered)
+                   ÃÄÄÄÄÄÄÄ´ Queue
+                   ÀÄÄÄÂÄÄÄÙ
+                       ³
+                       
+                  ÚÄÄÄÄÁÄÄÄ¿
+                  ³ Input  ³ Scancode
+           ÚÄÄÄÄÄ´ Router ³ Translation
+           ³      ÀÄÄÄÄÄÄÄÄÙ
+           
+   ÚÄÄÄÄÄÄÄÁÄÄÄÄÄÄ¿
+   ³ Message      ³ Accelerator
+   ³ Preprocessor ³ Key Translation
+   ÀÄÄÄÄÄÄÄÂÄÄÄÄÄÄÙ
+ ÚÄ  ÄÄ  Ä  ÄÄ  ÄÄ  ÄÄ  ÄÄ  ÄÄ  ÄÄ  ÄÄ  Ä¿
+       ÚÄÄÄÁÄÄÄ¿
+ ³     ÃÄÄÄÄÄÄÄ´ Appl    Priority         ³
+       ÃÄÄÄÄÄÄÄ´ MssgQ   Ordered
+ ³     ÃÄÄÄÄÄÄÄ´                          ³
+       ÀÄÄÄÂÄÄÄÙ
+ ³         ÀÄÄÄÄÄÄÄÄ¿                     ³
+                    
+ ³          ÚÄÄÄÄÄÄÁÄWinGetMsgQ          ³
+                        WinDispatchMsg
+ ³          ³               ³             ³
+    App's   ³               
+ ³  Message ³         Window Procedure    ³
+    Loop    ³               ³
+ ³          ³                            ³
+            ÀÄÄÄÄÄÄÄÄÄÄÄreturn;
+ ÀÄ  ÄÄ  ÄÄ  ÄÄ  ÄÄ  ÄÄ  ÄÄ  ÄÄ  ÄÄ  ÄÄ  ÄÙ
+</PRE>
+
+<P>
+Input Message Processing Loop Only one message loop is needed for a message
+queue, even if the queue contains messages for more than one window. Each
+queue message is a QMSG structure that contains the handle of the window
+to which the message belongs.  WinDispatchMsg always dispatches the message
+to the proper window.  WinGetMsg retrieves messages from the queue in first-in,
+first-out (FIFO) order, so the messages are dispatched to windows in the
+same order they are received.
+<P>
+If there are no messages in the queue, the operating system temporarily
+stops processing the WinGetMsg function until a message arrives.  This means
+that processor time that, otherwise, would be spent waiting for a message
+can be given to the applications (or threads) that do have messages in their
+queues.
+<P>
+The message loop continues to retrieve and dispatch messages until WinGetMsg
+retrieves a WM_QUIT message.  This message causes the function to return
+FALSE, terminating the loop.  In most cases, terminating the message loop
+is the first step in terminating the application.  An application can terminate
+its own loop by posting the WM_QUIT message in its own queue.
+<P>
+An application can modify its message loop in a variety of ways.  For example,
+it can retrieve messages from the queue without dispatching them to a window.
+ This is useful for applications that post messages without specifying a
+window.  (These messages apply to the application rather than a specific
+window; they have NULL window handles.)  Also, an application can direct
+the WinGetMsg function to search for specific messages, leaving other messages
+in the queue.  This is useful for applications that temporarily need to
+bypass the usual FIFO order of the message queue.
+<P>
+
+
+<P><HR>
+
+<A HREF="1629_L3_MessageHandling.html">[Back: Message Handling]</A> <BR>
+<A HREF="1631_L4_WindowProcedures.html">[Next: Window Procedures]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,110 @@
+<HTML>
+<HEAD>
+<TITLE>HK_HELP - Help Hook</TITLE>
+</HEAD>
+<BODY>
+<H1>HK_HELP - Help Hook</H1><!-- entering slot 1588 -->
+<P>
+The<I> help hook</I> allows an application to include online help. The system
+calls a help hook function during the default processing of the WM_HELP
+message. Help processing is done in two stages: creating the WM_HELP message
+and calling the help hook. The WM_HELP message can come from the following
+sources:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->WM_CHAR message, after translation by an ACCEL data
+structure with the AF_HELP style. The default system accelerator table translates
+the F1 key into a help message. The WM_HELP message is posted to the current
+focus window, which can be a menu, a button, a frame, or your client window.
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Menu-bar selection, when the MIS_HELP style is specified
+for the menu-bar item. The WM_HELP message is posted to the current focus
+window.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Dialog-window push button, when the BS_HELP style
+is specified for the push button. The WM_HELP message is posted to the owner
+window of the button, which normally is the dialog window.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Message box, when the MB_HELP style is specified for
+the message box. The WM_HELP message is posted to the message box.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The WM_HELP message is posted to the current focus window. The default processing
+in WinDefWindowProc is to pass the message up to the parent window. If the
+message reaches the client window, it can be processed there. If the message
+reaches a frame window, the default frame-window procedure calls the help
+hook. The help hook is also called if a WM_HELP message is generated while
+the application is in menu mode, that is, while a selection is being made
+from a menu. The following code shows the syntax for a help hook function:
+
+<PRE>BOOL EXPENTRY HelpHook(HAB hab, ULONG usMode, ULONG idTopic,                       ULONG idSubTopic, PRECTL prcPosition)
+
+</PRE>
+
+<P>
+If a help hook function returns TRUE, the system does not call the next
+help hook function in the chain. If the function returns FALSE, the system
+calls the next help hook function in the chain. The arguments passed to
+the function provide contextual information, such as the screen coordinates
+of the focus window and whether the message originated in a message box
+or a menu.
+<P>
+The WM_HELP message often goes to a frame window instead of to the client
+window. The frame window processes a WM_HELP message as follows:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->If the window with the focus is the FID_CLIENT window,
+the frame window passes the WM_HELP message to the FID_CLIENT window.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If the parent of the window with the focus is the
+FID_CLIENT frame-control window, the frame window calls the help hook, specifying
+the following:
+<PRE>Mode     = HLPM_FRAME
+Topic    = frame-window identifier
+Subtopic = focus-window identifier
+Position = screen coordinates of focus window
+
+</PRE>
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If the parent of the focus window is not an FID_CLIENT
+window (it could be the frame window or a second-level dialog window), the
+frame window calls the help hook, specifying the following:
+<PRE>Mode     = HLPM_WINDOW
+Topic    = identifier of parent of focus window
+Subtopic = focus-window identifier
+Position = screen coordinates of focus window
+
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+An application receives the WM_HELP message in its dialog-window procedure.
+The application can ignore the message, in which case the frame-window action
+occurs as described, or the application can handle the WM_HELP message directly.
+
+<P>
+Menu windows receive a WM_HELP message when the user presses the Help accelerator
+key (F1 by default) while a menu is displayed. Menu windows process WM_HELP
+messages by calling the help hook, specifying the following:
+<PRE>Mode     = HLPM_MENUTopic    = identifier of pull-down menu
+Subtopic = identifier of selected item in pull-down menu
+Position = screen coordinates of selected item
+
+</PRE>
+
+<P>
+A help hook function should respond by displaying information about the
+selected menu item.
+<P>
+WinDefWindowProc processes WM_HELP messages by passing the message to the
+parent window. Typically, the message moves up the parent chain until it
+arrives at a frame window.
+
+<P><HR>
+
+<A HREF="1553_L4_HK_FLUSHBUFFlushBuff.html">[Back: HK_FLUSHBUF - Flush Buffer Hook]</A> <BR>
+<A HREF="1555_L4_HK_INPUTInputHook.html">[Next: HK_INPUT - Input Hook]</A> 
+</BODY>
+</HTML>

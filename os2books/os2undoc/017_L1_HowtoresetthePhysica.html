@@ -1,0 +1,49 @@
+<HTML>
+<HEAD>
+<TITLE>How to reset the Physical Palette</TITLE>
+</HEAD>
+<BODY>
+<H1>How to reset the Physical Palette</H1><!-- entering slot 19 -->Getting the 256-color mode palette manager to set
+itself up is not too hard, but getting it to reset itself to the default
+palette is not documented well. In the header file 'DIVE.H' is a nice piece
+of explanation:<!-- lm: 0x2 6 -->
+<UL>
+<PRE>Neither DiveSetSourcePalette nor DiveSetDestinationPalette API's will set
+the physical palette.  If your application MUST set the PHYSICAL palette,
+try using no more than 236 entries (the middle 236: 10-245, thus leaving
+the top and bottom 10 entries for the Workplace Shell).  If your
+application MUST use ALL 256 entries, it must do so as a full-screen
+(i.e. maximized) application.  Remember, No WM_REALIZEPALETTE message
+will be sent to other running applications, meaning they will not redraw
+and their colors will be all wrong.  It is not recommended that a
+developer use these commands:
+
+To set physical palette, do the following:
+
+   hps = WinGetPS ( HWND_DESKTOP );
+   hdc = GpiQueryDevice ( hps );
+   GpiCreateLogColorTable ( hps, LCOL_PURECOLOR | LCOL_REALIZABLE,
+      LCOLF_CONSECRGB, 0, 256, (PLONG)plRGB2Entries );
+   DiveSetPhysicalPalette ( hDiveInst, hdc );
+   GreRealizeColorTable ( hdc ) ;
+   WinInvalidateRect ( HWND_DESKTOP, (PRECTL)NULL, TRUE );
+   WinReleasePS ( hps );
+
+To reset physical palette, do the following:
+
+   hps = WinGetPS ( HWND_DESKTOP ) ;
+   hdc = GpiQueryDevice ( hps ) ;
+   GreUnrealizeColorTable ( hdc ) ;
+   WinInvalidateRect ( HWND_DESKTOP, (PRECTL)NULL, TRUE );
+   WinReleasePS ( hps ) ;
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>I have altered these examples slightly for clarity, replacing the Gre32Entry3
+function calls with macros defined in 'PMDDIM.H'. 
+
+<P><HR>
+
+<A HREF="016_L1_Undocumentedextensio.html">[Back: Undocumented extensions to Event Semaphores]</A> <BR>
+<A HREF="018_L1_ExtensionstoWinQuery.html">[Next: Extensions to WinQuerySysValue and WinSetSysValue]</A> 
+</BODY>
+</HTML>

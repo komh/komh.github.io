@@ -1,0 +1,75 @@
+<HTML>
+<HEAD>
+<TITLE>Coordinating Access to a Local Named Pipe with Semaphores</TITLE>
+</HEAD>
+<BODY>
+<H1>Coordinating Access to a Local Named Pipe with Semaphores</H1><!-- entering slot 63 -->
+<P>
+When a process writes to a named pipe, the process at the other end (or
+handle) of the pipe might require notification that data is available to
+be read. Similarly, when a process reads from a named pipe, the process
+at the other end might require notification that write space has become
+available. As long as the communicating processes are on the same computer
+system, shared event semaphores and muxwait semaphores can be used to provide
+this notification. Using shared semaphores for this purpose is more efficient
+than dedicating a thread to periodically poll each pipe, particularly when
+a server process is communicating with a large number of client processes.
+Whenever data is available in the pipe, the system posts a semaphore to
+the server or client (whichever is reading from the pipe). This means that
+the reading process can use DosWaitEventSem or<A><!-- external link: 1D 0C C4 3A --> DosWaitMuxWaitSem
+</A>to wait for data to arrive, rather than devote a thread to periodically
+polling the pipe.
+<P>
+A process associates a semaphore with a named pipe by using<A><!-- external link: 1D F1 C3 FC --> DosSetNPipeSem</A>.
+First, create an event semaphore with<A><!-- external link: 1D 6E C3 FC --> DosCreateEventSem</A>,
+specifying the initial state of the semaphore as<I> reset</I>. Then call
+<A><!-- external link: 1D F1 C3 38 -->DosSetNPipeSem</A> to attach the event
+semaphore to a particular named-pipe handle. Up to two event semaphores
+can be attached to each named pipe, one for the server process and one for
+the client process. If there is already a semaphore associated with one
+end of the pipe, that semaphore is replaced. A process can check the state
+of the semaphores by using<A><!-- external link: 1D CE C3 FC --> DosQueryNPipeSemState</A>.
+
+<P>
+The server or client process must then call DosWaitEventSem. The particular
+thread that calls this function will block until data is either read from
+or written to the pipe. At that time, the system posts the event semaphore,
+enabling the blocked thread to resume its execution.
+<P>
+If a process requires notification whenever any one of multiple named pipes
+has been written to or read from, it can either attach the same event semaphore
+to multiple pipes, or it can create a muxwait semaphore:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->If the same event semaphore is attached to multiple
+pipes, then the<I> KeyHandle</I> parameter of<A><!-- external link: 1D F1 C3 38 --> DosSetNPipeSem
+</A>is used to assign a unique value to each pipe. After the event semaphore
+has been posted, the process calls<A><!-- external link: 1D CE C3 FC --> DosQueryNPipeSemState</A>.
+This function returns information about each of the named pipes that are
+attached to the semaphore, including key-handle values. The calling process
+can use this information to determine which one of the named pipes has either
+data or write space available.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->To use a muxwait semaphore, a process first creates
+an event semaphore for each of the pipes that it wants to monitor. Each
+semaphore must then be attached to a pipe by calling<A><!-- external link: 1D F1 C3 FC --> DosSetNPipeSem</A>.
+Again, a unique key-handle value must be assigned to each pipe.
+<P>
+Next, the process calls DosCreateMuxWaitSem to create the muxwait semaphore,
+specifying DCMW_WAIT_ANY as one of the<I> flAttr</I> flags. The muxwait
+semaphore will consist of a linked list of the previously created event
+semaphores.
+<P>
+The process calls<A><!-- external link: 1D 0C C4 3A --> DosWaitMuxWaitSem
+</A>so that it will be notified the next time data is read from or written
+to any of the pipes. However, it must call<A><!-- external link: 1D CE C3 37 --> DosQueryNPipeSemState
+</A>to determine which one of the pipes is ready to be read from or written
+to.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="061_L4_FacilitatingTransact.html">[Back: Facilitating Transaction Processing]</A> <BR>
+<A HREF="063_L2_UsingUnnamedPipes.html">[Next: Using Unnamed Pipes]</A> 
+</BODY>
+</HTML>

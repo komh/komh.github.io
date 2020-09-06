@@ -1,0 +1,57 @@
+<HTML>
+<HEAD>
+<TITLE>Accessing a Windows Sockets DLL from an Intermediate DLL</TITLE>
+</HEAD>
+<BODY>
+<H1>Accessing a Windows Sockets DLL from an Intermediate DLL</H1><!-- entering slot 44 -->
+<P>
+A Windows Sockets DLL may be accessed both directly from an application
+and through an "intermediate" DLL.  An example of such an intermediate DLL
+would be a virtual network API layer that supports generalized network functionality
+for applications and uses Windows Sockets.  Such a DLL could be used by
+several applications simultaneously, and the DLL must take special precautions
+with respect to the<B> WSAStartup()</B> and<B> WSACleanup()</B> calls to
+ensure that these routines are called in the context of each task that will
+make Windows Sockets calls.  This is because the Windows Sockets DLL will
+need a call to<B> WSAStartup()</B> for each task in order to set up task-specific
+data structures, and a call to<B> WSACleanup()</B> to free any resources
+allocated for the task.
+<P>
+There are (at least) two ways to accomplish this.  The simplest method is
+for the intermediate DLL to have calls similiar to <A HREF="093_L3_WSAStartup.html">WSAStartup()
+</A>and <A HREF="088_L3_WSACleanup.html">WSACleanup()</A> that applications
+call as appropriate.  The DLL would then call <A HREF="093_L3_WSAStartup.html">WSAStartup()
+</A>or <A HREF="088_L3_WSACleanup.html">WSACleanup()</A> from within these
+routines.  Another mechanism is for the intermediate DLL to build a table
+of task handles, which are obtained from the<B> GetCurrentTask()</B> Windows
+API, and at each entry point into the intermediate DLL check whether <A HREF="093_L3_WSAStartup.html">WSAStartup()
+</A>has been called for the current task, then call <A HREF="093_L3_WSAStartup.html">WSAStartup()
+</A>if necessary.
+<P>
+If a DLL makes a blocking call and does not install its own blocking hook,
+then the DLL author must be aware that control may be returned to the application
+either by an application-installed blocking hook or by the default blocking
+hook.  Thus, it is possible that the application will cancel the DLL's blocking
+operation via <A HREF="087_L3_WSACancelBlockingCal.html">WSACancelBlockingCall()</A>.
+If this occurs, the DLL's blocking operation will fail with the error code
+WSAEINTR, and the DLL must return control to the calling task as quickly
+as possible, as the used has likely pressed a cancel or close button and
+the task has requested control of the CPU.  It is recommended that DLLs
+which make blocking calls install their own blocking hooks with <A HREF="091_L3_WSASetBlockingHook.html">WSASetBlockingHook()
+</A>to prevent unforeseen interactions between the application and the DLL.
+
+<P>
+Note that this is not necessary for DLLs in Windows NT because of its different
+process and DLL structure.  Under Windows NT, the intermediate DLL could
+simply call <A HREF="093_L3_WSAStartup.html">WSAStartup()</A> in its DLL
+initialization routine, which is called whenever a new process which uses
+the DLL starts.
+<P>
+
+
+<P><HR>
+
+<A HREF="041_L3_ErrorHandling.html">[Back: Error Handling]</A> <BR>
+<A HREF="043_L3_InternaluseofMessage.html">[Next: Internal use of Messages by Windows Sockets Implementations]</A> 
+</BODY>
+</HTML>

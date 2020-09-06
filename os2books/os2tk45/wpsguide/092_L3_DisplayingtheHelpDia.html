@@ -1,0 +1,121 @@
+<HTML>
+<HEAD>
+<TITLE>Displaying the Help Dialog for a Pop-Up Menu Item</TITLE>
+</HEAD>
+<BODY>
+<H1>Displaying the Help Dialog for a Pop-Up Menu Item</H1><!-- entering slot 98 -->
+<P>
+To display the Help dialog for a pop-up menu item, override wpMenuItemHelpSelected.
+Derived classes can override this method to:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Add the Help dialog for a new pop-up menu item<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Modify the Help dialog for an existing menu item.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The three following sample codes show how to override wpMenuItemHelpSelected.
+They present the class interface definition (IDL), source code (C), and
+Information Presentation Facility (IPF) files, respectively.
+<PRE>passthru: C.ih;   .
+   .
+   #define IDM_CLOSEVIEWS       (WPMENUID_USER+1)
+   #define ID_HELP_CLOSEVIEWS   257
+   .
+   .
+endpassthru;
+
+//# Method modifiers
+   .
+   .
+wpMenuItemHelpSelected: override;
+   .
+   .
+
+</PRE>
+
+<P>
+The following sample code shows the source code for MYOBJECT when using
+wpMenuItemHelpSelected:
+<PRE>/*
+ *  METHOD: wpMenuItemHelpSelected
+ *
+ *  DESCRIPTION:
+ *
+ *    Process the help submenu item that was added.
+ */
+SOM_Scope BOOL SOMLINK myobj_wpMenuItemHelpSelected(MYOBJECT *somSelf,
+                                                    ULONG MenuId)
+
+{
+  MYOBJECTData *somThis = MYOBJECTGetData(somSelf);
+  MYOBJECTMethodDebug("MYOBJECT","myobj_wpMenuItemHelpSelected");
+
+  switch(MenuId)
+  {
+    case IDM_CLOSEVIEWS:
+
+    /* Append the new help library onto the system library, by calling
+     * wpDisplayHelp(WPObject *self, ULONG HelpPanelId, PSZ HelpLibrary).
+     * wpDisplayhelp sends a message to the help manager to display the help
+     * panel.  ID_HELP_CLOSEVIEWS should have the same value as the resid in
+     * the Information Presentation Facilty (MYOBJECT.IPF), that is, in this
+     * particular case, ID_HELP_CLOSEVIEWS is defined as 257 and the resid
+     * for the context menu help item in MYOBJECT.IPF is also 257.
+     */
+
+    return(_wpDisplayHelp(somSelf,ID_HELP_CLOSEVIEWS,szHelpLibrary));
+    break;
+
+    default:
+    break;
+  }
+
+  /* Always return the parent's method in case of default */
+  return (parent_wpMenuItemHelpSelected(somSelf,MenuId));
+}
+
+</PRE>
+
+<P>
+The following sample code illustrates the OS/2 Information Presentation
+Facility (IPF) for the class MYOBJECT:
+<PRE>.*===============================================================*\
+.*                                                               *
+.* myobject.ipf - Information Tag Language file for the MYOBJECT *
+.*                Class sample application's help manager        *
+.*                                                               *
+.*===============================================================*/
+:userdoc.
+
+.*---------------------------------------------------------------*\
+.*  Default Help for MYOBJECT class                              *
+.*      res = ID_HELP_DEFAULT                                    *
+.*---------------------------------------------------------------*/
+:h1 res=256 name=ID_HELP_DEFAULT.MYOBJECT Class -- Help
+:i1 id=aboutMain.About MYOBJECT Class
+:p.This Class is a subclass of WPObject.
+
+.*---------------------------------------------------------------*\
+.*  Context Menu Item help                                       *
+.*      res = ID_HELP_CLOSEVIEWS                                 *
+.*---------------------------------------------------------------*/
+:h1 res=257 name=ID_HELP_CLOSEVIEWS.Close Views Menu Item
+:i1 id=IV.CloseViews
+:p.When this context menu item is chosen, all currently open views
+of this folder will be closed, except for the view that was
+initially opened.  If no views are currently open, then no action will
+be taken.
+
+:euserdoc.
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="091_L2_UsingHelpMethods.html">[Back: Using Help Methods]</A> <BR>
+<A HREF="093_L3_RequestingHelpfroman.html">[Next: Requesting Help from an Application Window]</A> 
+</BODY>
+</HTML>

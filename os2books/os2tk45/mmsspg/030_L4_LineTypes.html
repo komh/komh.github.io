@@ -1,0 +1,155 @@
+<HTML>
+<HEAD>
+<TITLE>Line Types</TITLE>
+</HEAD>
+<BODY>
+<H1>Line Types</H1><!-- entering slot 32 -->
+<P>
+The MDM string parser uses the Line_type to determine how to interpret each
+line. A command list begins with the MCI_COMMAND_HEAD Line_type and ends
+with the MCI_END_COMMAND Line_type.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+MCI_RETURN<!-- lm: 0x11 11 -->
+<UL> This Line_type indicates that the command
+provides return information. If used, MCI_RETURN must be the second entry
+in the command list.<!-- lm: 0x2 13 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 16 -->Column 1 contains<B> ""</B>.<!-- lm: 0x2 13 -->
+<BR>
+<LI><!-- lm: 0x2 16 -->Column 2 contains the type of return: integer or
+string.<!-- lm: 0x2 13 -->
+<BR>
+<LI><!-- lm: 0x2 16 -->Column 3 contains MCI_RETURN.<!-- lm: 0x2 11 -->
+</UL> A
+command returning an integer requires a ULONG for that return value. A command
+returning a string requires two ULONGs: the first ULONG is for a pointer
+to the return buffer, and the second ULONG is for the return buffer size.
+
+<P>
+The parser sends back return information in the<I> pszReturnString</I> and
+<I>usReturnLength</I> parameters of the mciSendString function. The above
+example shows how both types of returns are used.
+<P>
+The MCI_OPEN returns a ULONG value, and MCI_INFO returns data that is filled
+into the buffer pointed to by the pointer in the second ULONG of the command
+structure. (Remember that the first ULONG is always<I> hwndCallback</I>.)
+<!-- lm: 0x2 1 -->
+</UL>MCI_RETURN_TYPE<!-- lm: 0x11 11 -->
+<UL> This Line_type
+is used to convert return values into strings by the string parser.
+<PRE>   "",              MCI_TRUE_FALSE_RETURN, 0,    MCI_RETURN_TYPE,
+      "TRUE",       1L,                          MCI_RETURN_TYPE_STRING,
+      "FALSE",      0L,                          MCI_RETURN_TYPE_STRING,
+   "",              0L,                          MCI_END_RETURN_TYPE,
+</PRE>
+
+<P>
+The<I> flag_define</I> field for the return line is compared against the
+high-order word of the return code. If a match is found, then the parser
+tries to find a match for the<I> flag_define</I> field and the return value.
+ If a match is found for the return value, then the keyword string is returned
+to the application in the<I> pszReturnString</I> field of the mciSendString
+call.<!-- lm: 0x2 1 -->
+</UL> MCI_FLAG<!-- lm: 0x11 11 -->
+<UL> This Line_type
+is used to convert keywords to flag values for<I> ulParam1</I>. When more
+than one MCI_FLAG Line_type is encountered during the parsing of a command
+string, the<I> ulParam1</I> parameter is ORed with the<I> flag_define</I> field
+of the<I> Keyword_list</I>.<!-- lm: 0x2 1 -->
+</UL> MCI_STRING<!-- lm: 0x11 11 -->
+<UL> This
+Line_type is used for string values for a message. The string following
+the MCI_STRING keyword is copied into the command structure. MDM allocates
+memory to hold the string and put the address into the command structure.
+<!-- lm: 0x2 1 -->
+</UL>MCI_INTEGER<!-- lm: 0x11 11 -->
+<UL> This Line_type
+is used for integer values for a message. The integer following the MCI_INTEGER
+keyword is copied into the command structure. The integer value is converted
+from a string representation to a ULONG.<!-- lm: 0x2 1 -->
+</UL> MCI_CONSTANT
+<!-- lm: 0x11 11 -->
+<UL>This Line_type and the MCI_END_CONSTANT Line_type
+allow a set of possible keywords to represent a flag or integer. In the
+following example, any one of the time format values can be used as the
+value for the time format constant.
+<PRE>  "",                            MCI_SET_TIME_FORMAT,     MCI_CONSTANT,
+     "time format milliseconds", MCI_FORMAT_MILLISECONDS, MCI_INTEGER,
+     "time format ms",           MCI_FORMAT_MILLISECONDS, MCI_INTEGER,
+     "time format mmtime",       MCI_FORMAT_MMTIME,       MCI_INTEGER,
+  "",                            0L,                      MCI_END_CONSTANT,
+</PRE>
+
+<P>
+The value on the MCI_CONSTANT line_type is ORed with the<I> ulParam1</I> field.
+ The values on the MCI_INTEGER line_types within this constant block are
+copied into the command structure.  The constant block represents just one
+ULONG in the command structure.<!-- lm: 0x2 1 -->
+</UL> MCI_DEFAULT_STRING
+<!-- lm: 0x11 11 -->
+<UL>This Line_type and the MCI_DEFAULT_INTEGER Line_type
+provide the means for an unknown value to be used as a string or integer.
+For example the LOAD command (shown in the following example) uses a default
+string for the filename string.
+<PRE>"load",                          MCI_LOAD, 0,           MCI_COMMAND_HEAD,
+   "notify",                     MCI_NOTIFY,            MCI_FLAG,
+   "wait",                       MCI_WAIT,              MCI_FLAG,
+   "new",                        0L,                    MCI_FLAG,
+   "readonly",                   MCI_READONLY,          MCI_FLAG,
+   "",                           MCI_OPEN_ELEMENT,      MCI_DEFAULT_STRING,
+"",                              0L,                    MCI_END_COMMAND,
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>MCI_RECTL<!-- lm: 0x11 11 -->
+<UL> This Line_type
+specifies that RECTL data modifies the media control interface flag represented
+by the command list entry.  The second column of this entry contains the
+flag to set.  The data structure for the message command must reserve a
+ULONG to hold the integer value.<!-- lm: 0x2 1 -->
+</UL> MCI_OR<!-- lm: 0x11 11 -->
+<UL> This
+Line_type allows you to combine different line types within the same construct.
+The following shows an example of an MCI_OR entry used in the MCI_STATUS
+command list in the MDMCMD.RC file. Notice that the %<I>d</I> symbol can
+be used in a command list as an indicator to print the decimal value.
+<PRE>   "",              0L,                         MCI_OR,
+   "track",         MCI_TRACK,                  MCI_INTEGER,
+   "channel",       0L,                         MCI_CONSTANT,
+      "all",        MCI_STATUS_AUDIO_ALL,       MCI_INTEGER,
+      "left",       MCI_STATUS_AUDIO_LEFT,      MCI_INTEGER,
+      "right",      MCI_STATUS_AUDIO_RIGHT,     MCI_INTEGER,
+      "%d",         0L,                         MCI_INTEGER,
+   "",              0L,                         MCI_END_CONSTANT,
+   "",              0L,                         MCI_END_OR,
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>MCI_STRING_LIST<!-- lm: 0x11 11 -->
+<UL> Pointer
+to an array of pointers to strings in the list. For example, the following
+example code uses MCI_STRING_LIST to point to an array of pointers to device
+<!-- entering slot 33 -->identifiers.
+<PRE>"group",            MCI_GROUP, 0,               MCI_COMMAND_HEAD,
+   "delete",        MCI_GROUP_DELETE,           MCI_FLAG,
+   "nopiecemeal",   MCI_NOPIECEMEAL,            MCI_FLAG,
+   "synchronize",   MCI_SYNCHRONIZE,            MCI_FLAG,
+   "wait",          MCI_WAIT,                   MCI_FLAG,
+   "notify",        MCI_NOTIFY,                 MCI_FLAG,
+   "",              0L,                         MCI_INTEGER,
+   "",              0L,                         MCI_INTEGER,
+   "master",        MCI_GROUP_MASTER,           MCI_STRING,
+   "",              0L,                         MCI_STRING,
+   "",              0L,                         MCI_INTEGER,
+   "make",          MCI_GROUP_MAKE,             MCI_STRING_LIST,
+"",                 0L,                         MCI_END_COMMAND,
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="029_L3_CommandTableSyntax.html">[Back: Command Table Syntax]</A> <BR>
+<A HREF="031_L3_ParsingaCommandList.html">[Next: Parsing a Command List]</A> 
+</BODY>
+</HTML>

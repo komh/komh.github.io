@@ -1,0 +1,137 @@
+<HTML>
+<HEAD>
+<TITLE>Sample server using EMan</TITLE>
+</HEAD>
+<BODY>
+<H1>Sample server using EMan</H1><!-- entering slot 341 -->
+<P>
+The following server code has been distilled from one of the DSOM sample
+applications provided with SOMobjects Developer Toolkit. It is an example
+of a server which has an interval timer that signals another server (via
+DSOM) whenever its timer "pops". Thus, it is both a client (of the server
+it signals) and a server (because it can receive timer notifications from
+other servers).
+<P>
+The IDL for the server object class to be used by this server program is
+as follows. Note that the "noteTimeout" method is oneway, in order to avoid
+deadlock.
+<PRE>interface PeerServer :<B>SOMDServer</B>
+{ oneway void noteTimeout(in string serverName);
+  // Notification that a timer event occurred in server serverName
+};
+</PRE>
+
+<P>
+The example server program is outlined as follows. It is assumed that "eman.h"
+has been included by the program.<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Perform DSOM initialization up to, but not including,
+asking<B> SOMOA</B> to start handling requests.
+<PRE>MyEMan = SOMEEManNew();
+SOM_InitEnvironment(&amp;ev);
+SOM_InitEnvironment(&amp;peerEv);
+SOMD_Init(&amp;ev);
+
+somPrintf("What is the alias for this server? ");
+gets(thisServer);
+
+SOMD_ImplDefObject = _find_impldef_by_alias(SOMD_ImplRepObject,
+                                             &amp;ev, thisServer);
+SOMD_SOMOAObject = SOMOANew();
+_impl_is_ready(SOMD_SOMOAObject, &amp;ev, SOMD_ImplDefObject);
+</PRE>
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Register a "DSOM event" with EMan, having EMan callback
+to a procedure that asks the<B> SOMOA</B> to process any pending DSOM requests.
+
+<PRE>void SOMD_RegisterCallback(SOMEEman emanObj, EMRegProc *func);
+
+void DSOMEventCallBack (SOMEEvent event, void *eventData)
+{   Environment ev;
+    SOM_InitEnvironment(&amp;ev);
+    _execute_request_loop(SOMD_SOMOAObject, &amp;ev, SOMD_NO_WAIT);
+}
+
+SOMD_RegisterCallback (MyEMan, DSOMEventCallBack);
+</PRE>
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Ask user to provide "target server's alias", where
+the target server is that this server will signal when its timer "pops".
+Then get a proxy for that server.
+<PRE>somPrintf("What is the alias for the target server? ");
+gets(inbuf);
+RemotePeer = _somdFindServerByName(SOMD_ObjectMgr, &amp;ev, inbuf);
+</PRE>
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Ask user to provide the timer's interval (in milliseconds)
+
+<PRE>somPrintf("What is the timer interval, in milliseconds? ");
+gets(inbuf);
+Interval = atoi(inbuf);
+</PRE>
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Register a timer event with EMan, having EMan call
+back a procedure that will invoke the notification method on the target
+server.
+<PRE>void TimerEventCallBack (SOMEEvent event, void *eventData)
+{ Environment ev;
+  SOM_InitEnvironment(&amp;ev);
+  /* call the peer, with a oneway message */
+  _noteTimeout(RemotePeer, &amp;ev, thisServer);
+}
+
+data = SOMEEMRegisterDataNew();
+_someClearRegData(data, &amp;ev);
+_someSetRegDataEventMask(data, &amp;ev, EMTimerEvent, NULL);
+_someSetRegDataTimerInterval(data, &amp;ev, Interval);
+somPrintf("Type &lt;Enter&gt; key when ready to go: ");
+gets(inbuf);
+regId = _someRegisterProc(MyEMan, &amp;ev, data, TimerEventCallBack,
+                           NULL);
+
+</PRE>
+
+<P>
+<B>Important </B> Do not use<B> someRegister</B> or<B> someRegisterEV</B> to
+register "callback methods" that would be executed on proxy objects. Instead,
+write a callback routine that invokes the desired method on the proxy, like
+the one shown above, and register that routine using the method<B> someRegisterProc.
+</B><!-- lm: 0x2 6 -->
+<UL>
+<P>
+<B>Note: </B> EMan currently uses the methods<B> someRegister</B> and<B> someRegisterEv
+</B>to obtain the address of a method-procedure to call when a specified
+event occurs. If EMan directly calls the method-procedure versus<B> somDispatch,
+</B>the method call will not be forwarded to the remote object as desired.
+<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL>Start
+the EMan event processing loop.
+<PRE>_someProcessEvents(MyEMan, &amp;ev);
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Before the sample is run, two server implementations should be registered
+with<B> regimpl.</B> The implementations<!-- entering slot 342 --> are identical
+except for their aliases. One may be called "peerServer1" and the other
+"peerServer2". The "PeerServer" class should be specified as their server-object
+class.
+<P>
+Whenever peerServer1's timer pops, the Event Manager causes a method, "noteTimeout",
+to be sent to the server object in peerServer2. PeerServer2's server object
+executes this method by displaying a message on its window. Whenever peerServer2's
+timer pops, a similar sequence occurs with peerServer1. The two servers
+will run continuously until interrupted.
+
+<P><HR>
+
+<A HREF="298_L4_EventdrivenDSOMprogr.html">[Back: Event-driven DSOM programs using EMan]</A> <BR>
+<A HREF="300_L3_DynamicInvocationInt.html">[Next: Dynamic Invocation Interface]</A> 
+</BODY>
+</HTML>

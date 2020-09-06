@@ -1,0 +1,101 @@
+<HTML>
+<HEAD>
+<TITLE>Can a PM program tell if there's a previous instance of itself running?</TITLE>
+</HEAD>
+<BODY>
+<H1>Can a PM program tell if there's a previous instance of itself running?</H1><!-- entering slot 106 -->
+<P>
+Raja Thiagarajan (sthiagar@bronze.ucs.indiana.edu) writes:
+<P>
+<I>Can a PM program tell if there's a previous instance of itself running?
+ In Win3.x (but apparently NOT Win32), there's a hPrevInst handle; is there
+an OS/2 2.x equivalent?  Basically, I'm thinking in terms of a program that
+would try to borrow resources from a previous instance if a previous instance
+is running.  (Specifically, if my palette animation program gets started
+twice, the second instance oughta share palettes with the first instance!)
+</I>
+<P>
+What you're really asking is two questions:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->How can I determine if a previous instance of
+my application is already running?<!-- lm: 0x2 0 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 4 -->How can I share resources between multiple instances
+of my application?<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+There are some ways to achieve this; You can use semaphores or/and shared
+memory or the other method described below. Try to open your named semaphore,
+if it's there, your application is already running, else create a semaphore...
+To share data, use shared memory. There are some excellent examples in Schildt
+&amp; Goosey "OS/2 Programming".
+<BR>
+
+<P>
+To answer your first question, you need to enumerate all of the main windows
+present on the desktop, and figure out if any of them are yours. This is
+achieved using the following code:
+<PRE>HWND queryAppInstance(PCHAR pchClassWanted)
+{
+   HENUM heEnum;
+   HWND hwndTop;
+   HWND hwndClient;
+   CHAR achClass[256];
+
+   heEnum=WinBeginEnumWindows(HWND_DESKTOP);
+
+   hwndTop=WinGetNextWindow(heEnum);
+   while (hwndTop!=NULLHANDLE) {
+      hwndClient=WinWindowFromID(hwndTop,FID_CLIENT);
+      if (hwndClient!=NULLHANDLE) {
+         WinQueryClassName(hwndClient,sizeof(achClass),achClass);
+         if (strcmp(achClass,pchClassWanted)==0) {
+            WinEndEnumWindows(heEnum);
+            return hwndClient;
+         } /* endif */
+      } /* endif */
+
+      hwndTop=WinGetNextWindow(heEnum);
+   } /* endwhile */
+
+   WinEndEnumWindows(heEnum);
+   return NULLHANDLE;
+}
+</PRE>
+
+<P>
+To answer your second question, the only way that I know of to share resources
+is to place them in a DLL.  The procedure to do this is as follows:<!-- lm: 0x2 0 -->
+<P>
+o<!-- lm: 0x2 2 -->
+<UL>Create a dummy source file with an empty procedure
+in it.<!-- lm: 0x2 0 -->
+</UL>o<!-- lm: 0x2 2 -->
+<UL>Compile the source file and link as a DLL.
+<!-- lm: 0x2 0 -->
+</UL>o<!-- lm: 0x2 2 -->
+<UL>Add your resources to the DLL in the same manner
+as you would to an executable.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+Then, when your application starts, you simply call WinLoadLibrary  (the
+preferred way) or DosLoadModule to load the DLL.  These functions return
+a handle to the DLL which must then be used in any function which loads
+resources (e.g. GpiLoadBitmap, WinLoadPointer, etc.).
+<P>
+Note that this procedure does not require knowing the window handle of any
+previous instance of your application because OS/2 implements DLLs in a
+shared fashion (which I suspect is one of the reasons they were created
+in the first place).  All you need to know is the<!-- entering slot 107 --> name
+of the DLL.  This technique can also be used to share resources between
+different applications.
+<P>
+(Quoted almost directly from EDMI/2 Edition 1) 
+
+<P><HR>
+
+<A HREF="088_L2_HowdoIputbitmapsonbu.html">[Back: How do I put bitmaps on buttons?]</A> <BR>
+<A HREF="090_L2_Howtoavoidcrashwhenu.html">[Next: How to avoid crash when using Drag and Drop?]</A> 
+</BODY>
+</HTML>

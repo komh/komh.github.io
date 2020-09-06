@@ -1,0 +1,102 @@
+<HTML>
+<HEAD>
+<TITLE>Using Window Timers</TITLE>
+</HEAD>
+<BODY>
+<H1>Using Window Timers</H1><!-- entering slot 489 -->
+<P>
+There are two methods of using window timers.  In the first method, you
+start the timer by using the WinStartTimer function, supplying the window
+handle and timer identifier.  The function associates the timer with the
+specified window.  The following code fragment starts two timers:  the first
+timer is set for every half second (500 milliseconds); the second, for every
+two seconds (2000 milliseconds).
+<P>
+
+<PRE>
+    WinStartTimer(hab, /* Anchor-block handle */
+        hwnd,          /* Window handle       */
+        ID_TIMER1,     /* Timer identifier    */
+        500);          /* 500 milliseconds    */
+
+    WinStartTimer(hab, /* Anchor-block handle */
+        hwnd,          /* Window handle       */
+        ID_TIMER2,     /* Timer identifier    */
+        2000);         /* 2000 milliseconds   */
+
+</PRE>
+Once these timers are started, the WinDispatchMsg function dispatches WM_TIMER
+messages to the appropriate window.  To process these messages, add a WM_TIMER
+case to the window procedure for the given window.  By checking the first
+parameter of the WM_TIMER message, you can identify a particular timer,
+then carry out the actions related to it.  The following code fragment shows
+how to process WM_TIMER messages:
+<P>
+
+<PRE>
+    case WM_TIMER:
+        switch (SHORT1FROMMP(mp1)) { /* Obtains timer identifier */
+            case ID_TIMER1:
+                .
+                . /* Carry out timer-related tasks.              */
+                .
+                return 0;
+
+            case ID_TIMER2:
+                .
+                . /* Carry out timer-related tasks.              */
+                .
+                return 0;
+        }
+
+</PRE>
+
+<P>
+In the second method of using a timer, you specify NULL as the<I> hwnd</I> parameter
+of the WinStartTimer call.  The system starts a timer that has no associated
+window and assigns an arbitrary timer identifier.  The following code fragment
+starts two window timers using this method:
+<P>
+
+<PRE>    ULONG idTimer1, idTimer2;
+
+    idTimer1 = WinStartTimer(hab, (HWND) NULL, 0, 500);
+    idTimer2 = WinStartTimer(hab, (HWND) NULL, 0, 2000);
+
+</PRE>
+
+<P>
+These timers have no associated window, so the application must check the
+message queue for WM_TIMER messages and dispatch them to the appropriate
+window procedure.  The following code fragment shows a message loop that
+handles the window timers:
+<P>
+
+<PRE>    HWND hwndTimerHandler; /* Handle of window for timer messages */
+    QMSG qmsg;             /* Queue-message structure             */
+
+    while (WinGetMsg(hab, &amp;qmsg, (HWND) NULL, 0, 0)) {
+        if (qmsg.msg == WM_TIMER)
+            qmsg.hwnd = hwndTimerHandler;
+        WinDispatchMsg(hab, &amp;qmsg);
+    }
+
+</PRE>
+You can use the WinStopTimer function at any time to stop a timer.  The
+following code fragment demonstrates how to stop a timer:
+<P>
+
+<PRE>
+    WinStopTimer(hab, hwnd, ID_TIMER1);      /* Stops first timer */
+
+</PRE>
+
+<P>
+
+
+<P><HR>
+
+<A HREF="481_L2_AboutWindowTimers.html">[Back: About Window Timers]</A> <BR>
+<A HREF="483_L1_Appendices.html">[Next: Appendices]</A> 
+</BODY>
+</HTML>

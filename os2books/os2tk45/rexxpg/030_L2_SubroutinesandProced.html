@@ -1,0 +1,138 @@
+<HTML>
+<HEAD>
+<TITLE>Subroutines and Procedures</TITLE>
+</HEAD>
+<BODY>
+<H1>Subroutines and Procedures</H1><!-- entering slot 33 -->
+<P>
+In REXX you can write routines that make all variables accessible to the
+called routine. You can also write routines that hide the caller's variables.
+
+<P>
+Let's start with an example of a routine in which all variables are accessible:
+
+<PRE>/* Routine example                     */
+i=10               /* Initialize I     */
+call myroutine     /* Call routine     */
+say i              /* Displays 22      */
+exit               /* End main program */
+
+myroutine:         /* Label            */
+   i=i+12          /* Increment I      */
+return
+</PRE>
+
+<P>
+The CALL instruction calls routine MYROUTINE. A label (note the colon) marks
+the start of the routine. A RETURN instruction ends the routine. Notice
+that an EXIT statement is required in this case to end the main program.
+If EXIT is omitted, REXX assumes that the following instructions are part
+of your main program and will execute those instructions, producing interesting
+yet undesirable results. The SAY instruction displays 22 instead of 10 because
+the caller's variables are accessible to the routine.
+<P>
+You can return a result to the caller by placing an expression on the RETURN
+instruction, like this:
+<PRE>/* Routine with result                 */
+i=10               /* Initialize I     */
+call myroutine     /* Call routine     */
+say result         /* Displays 22      */
+exit               /* End main program */
+
+myroutine:         /* Label            */
+return i+12        /* Increment I      */
+</PRE>
+
+<P>
+The returned result is available to the caller in the special variable RESULT,
+as shown above. If your routine returns a result, you can call it as a function:
+
+<PRE>/* Routine with result called as function  */
+i=10               /* Initialize I         */
+say myroutine()    /* Displays 22          */
+exit               /* End main program     */
+
+myroutine:         /* Label                */
+return i+12        /* Increment I          */
+</PRE>
+
+<P>
+You can pass arguments to this sort of routine, although there isn't much
+to be gained by doing so. All variables are available to the routine anyway.
+
+<P>
+Let's move on to routines that separate the caller's variables from the
+routine's variables. Except for the smallest programs, you'll want to use
+this format. It eliminates the risk of accidentally writing over a variable
+used by the caller or by some other unprotected routine. To get protection,
+use the PROCEDURE instruction, as follows:
+<PRE>/* Routine example using PROCEDURE instruction                             */
+headcount=0
+tailcount=0
+/* Toss a coin 100 times, report results */
+do i=1 to 100
+   call cointoss                                     /* Flip the coin      */
+   if result='HEADS' then headcount=headcount+1      /* Increment counters */
+   else tailcount=tailcount+1
+                                                     /* Report results     */
+   say "Toss is" result ||".  Heads=" headcount  "Tails=" tailcount
+end /* do */
+exit                                                 /* End main program   */
+
+cointoss: procedure             /* Use PROCEDURE to protect caller         */
+   i=random(1,2)                /* Pick a random number: 1 or 2            */
+   if i=1 then return "HEADS"   /* Return English string                   */
+return "TAILS"
+</PRE>
+
+<P>
+In the above example, the variable I is used in both the main program and
+in the routine. When the PROCEDURE instruction is placed after the routine
+label, the routine's variables become local variables. They are isolated
+from all other variables in the program. Without the PROCEDURE instruction
+in the above example, the program would loop indefinitely. On each iteration
+the value of I would be reset to some value less than 100, which means the
+loop would never end. (If a programming error causes your procedure to loop
+indefinitely, use Ctrl+Break or close the OS/2 session to end the procedure.)
+
+<P>
+To access variables outside of the routine, add an EXPOSE operand to the
+PROCEDURE instruction. List the desired variables after the EXPOSE keyword:
+
+<PRE>/* Routine example using PROCEDURE instruction with EXPOSE operand         */
+headcount=0
+tailcount=0
+/* Toss a coin 100 times, report results                                   */
+do i=1 to 100
+   call cointoss                                     /* Flip the coin      */
+   say "Toss is" result ||".  Heads=" headcount  "Tails=" tailcount
+end /* do */
+exit                                                 /* End main program   */
+
+cointoss: procedure expose headcount tailcount /* Expose the counter variables */
+   if random(1,2)=1 then do                    /* Pick a random number: 1 or 2 */
+      headcount=headcount+1                    /* Bump counter...              */
+      return "HEADS"                           /* ...and return English string */
+   end
+   else
+      tailcount=tailcount+1
+return "TAILS"
+</PRE>
+
+<P>
+To pass arguments to a routine, separate the arguments with commas on the
+call:
+<PRE>call myroutine arg1, "literal <!-- entering slot 34 -->arg", arg3   /* Call as subroutine */
+myrc=myroutine(arg1, "literal arg", arg3)  /* Call as function   */
+</PRE>
+
+<P>
+In the routine, use the PARSE ARG instruction to retrieve the argument.
+
+
+<P><HR>
+
+<A HREF="029_L2_ProgramControl.html">[Back: Program Control]</A> <BR>
+<A HREF="031_L1_IntotheObjectWorld.html">[Next: Into the Object World]</A> 
+</BODY>
+</HTML>

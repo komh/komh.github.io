@@ -1,0 +1,123 @@
+<HTML>
+<HEAD>
+<TITLE>The 'SOMMBeforeAfter' metaclass</TITLE>
+</HEAD>
+<BODY>
+<H1>The 'SOMMBeforeAfter' metaclass</H1><!-- entering slot 384 -->
+<P>
+<B>SOMMBeforeAfter</B> is a metaclass that allows the user to create a class
+for which a particular method is invoked<I> before</I> each invocation of
+every method, nd for which a second method is invoked<I> after</I> each
+invocation.<B> SOMMBeforeAfter</B> defines two methods:<B> sommBeforeMethod
+</B>and<B> sommAfterMethod.</B>  These two methods are intended to be overridden
+in the child of<B> SOMMBeforeAfter</B> to define the particular "before"
+and "after" methods needed for the client application.
+<P>
+For example, suppose a "Barking" metaclass (a subclass of<B> SOMMBeforeAfter
+</B>overrides the<B> sommBeforeMethod</B> and<B> sommAfterMethod</B> with
+a method that emits one bark when invoked. Thus, one can create the "BarkingDog"
+class, whose instances (such as "Lassie") bark twice when "disturbed" by
+a method invocation.
+<BR>
+A hierarchy of metaclasses
+<BR>
+<!-- Unable to decode bitmap format --><IMG SRC="335_L3_TheSOMMBeforeAfterme_8.gif" WIDTH=495 HEIGHT=350 ALIGN=center>
+<P>
+The<B> SOMMBeforeAfter</B> metaclass is designed to be subclassed; a subclass
+(or child) of<B> SOMMBeforeAfter</B> is also a metaclass. The subclass overrides
+<B>sommBeforeMethod</B> or<B> sommAfterMethod</B> or both. These (redefned)
+methods are invoked before and after any method supported by instances of
+the subclass (these methods are called primary methods). That is, they are
+invoked before and after methods invoked on the ordinary objects that are
+instances of the class objects that are instances of the subclass of<B> SOMMBeforeAfter.
+</B>
+<P>
+The<B> sommBeforeMethod</B> returns a<B> boolean</B> value. This allows
+the "before" method to control whether the "after" method and the primary
+method get invoked. If<B> sommBeforeMethod</B> returns TRUE, normal processing
+occurs. If FALSE is returned, neither the primary method nor the corresponding
+<B>sommAfterMethod</B> is invoked. In addition, no more deeply nested before/after
+methods are invoked (see "Composition of before/after metaclasses" below).
+This facility can be used, for example, to allow a before/after metaclass
+to provide secure access to an object. The implication of this convention
+is that, if<B> sommBeforeMethod</B> is going to return FALSE, it must do
+any post-processing that might otherwise be done in the "after" method.
+
+<P>
+Caution:<B> somInit</B> and<B> somFree</B> are among the methods that get
+before/after behavior. This implies the following two obligations are imposed
+on the programmer of a<B> SOMMBeforeAfter</B> class. First, the implementation
+must guard against<B> sommBeforeMethod</B> being called before<B> somInit
+</B>has executed, and the object is not yet fully initialized. Second, the
+implementation must guard against<B> sommAfterMethod</B> being called after
+<B>somFree,</B> at which time the object no longer exists (see the example
+"C implementation for 'Barking' metaclass" below).
+<P>
+The following example shows the IDL needed to create a Barking metaclass.
+Just run the appropriate emitter to get an implementation binding, and then
+provide the appropriate "before" behavior and "after" behavior.
+<P>
+<B>SOM IDL for 'Barking' metaclass</B>
+<PRE>#ifndef Barking_idl
+#define Barking_idl
+
+#include &lt;sombacls.idl&gt;
+interface  Barking : SOMMBeforeAfter
+{
+#ifdef __SOMIDL__
+implementation
+{
+  //# Class Modifiers
+  filestem = barking;
+  callstyle = idl;
+
+  //# Method Modifiers
+  sommBeforeMethod : override;
+  sommAfterMethod : override;
+};
+#endif /* __SOMIDL__ */
+};
+#endif  /* Barking_idl */
+</PRE>
+
+<P>
+The next example shows an implementation of the Barking metaclass in which
+no barking occurs when<B> somFree</B> is invoked.
+<P>
+<B>C implementation for 'Barking' metaclass</B>
+<PRE>#define Barking_Class_Source
+#include &lt;barking.ih&gt;
+
+static char *somMN_somFree = "somFree";
+static somId somId_somFree = &amp;somMN_somFree;
+
+SOM_Scope boolean  SOMLINK sommBeforeMethod(Barking somSelf,
+                                            Environment *ev,
+                                            SOMObject object,
+                                            somId methodId,
+                                            va_list ap)
+{
+    if ( !somCompareIds( methodId, somId_somFree )
+       printf( "WOOF" );
+}
+
+SOM_Scope void  SOMLINK sommAfterMethod(Barking somSelf,
+                                        Environment *ev,
+                                        SOMObject object,
+                                        somId methodId,
+                                        somId descriptor,
+                                        somToken returnedvalue,
+                                        va_list ap)
+{
+    if ( !somCompareIds( methodId, somId_somFree )
+       printf( "WOOF" );
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="334_L2_FrameworkMetaclasses.html">[Back: Framework Metaclasses for "Before/After" Behavior]</A> <BR>
+<A HREF="336_L3_Compositionofbeforea.html">[Next: Composition of before/after metaclasses]</A> 
+</BODY>
+</HTML>

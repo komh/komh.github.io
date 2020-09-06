@@ -1,0 +1,87 @@
+<HTML>
+<HEAD>
+<TITLE>Creating a Top-Level Frame Window</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating a Top-Level Frame Window</H1><!-- entering slot 448 -->
+<P>
+The main window in most applications is a top-level frame window. An application
+creates a top-level frame window by specifying the handle of the desktop
+window, or HWND_DESKTOP, as the hwndParent parameter in a call to the WinCreateStdWindow
+function.
+<P>
+The following figure shows the main() function for a simple PM application.
+This function initializes the application, creates a message queue, and
+registers the window class for the client window before creating a top-level
+frame window.
+<PRE>    #define IDR_RESOURCES 1
+
+    MRESULT EXPENTRY ClientWndProc(HWND, ULONG, MPARAM, MPARAM);
+
+    int main(VOID)
+    {
+        HWND hwndFrame;
+        HWND hwndClient;
+        HMQ  hmq;
+        QMSG qmsg;
+        HAB  hab;
+
+        /* Set the frame-window creation flags.                       */
+        ULONG flFrameFlags =
+            FCF_TITLEBAR      |   /* Title bar                        */
+            FCF_SIZEBORDER    |   /* Size border                      */
+            FCF_MINMAX        |   /* Minimize and maximize buttons.   */
+            FCF_SYSMENU       |   /* System menu                      */
+            FCF_SHELLPOSITION |   /* System-default size and position */
+            FCF_TASKLIST ;        /* Add name to Task List.           */
+
+        /* Initialize the application for PM                          */
+        hab = WinInitialize(0);
+
+        /* Create the application message queue.                      */
+        hmq = WinCreateMsgQueue(hab, 0);
+
+        /* Register the class for the client window.                  */
+        WinRegisterClass(
+            hab,                    /* Anchor block handle            */
+            "MyPrivateClass",       /* Name of class being registered */
+            (PFNWP)ClientWndProc,   /* Window procedure for class     */
+            CS_SIZEREDRAW |         /* Class style                    */
+            CS_HITTEST,             /* Class style                    */
+            0);                     /* Extra bytes to reserve         */
+
+        /* Create a top-level frame window with a client window       */
+        /* that belongs to the window class "MyPrivateClass".         */
+        hwndFrame = WinCreateStdWindow(
+            HWND_DESKTOP,      /* Parent is desktop window.           */
+            WS_VISIBLE,        /* Make frame window visible.          */
+            &amp;flFrameFlags,     /* Frame controls                      */
+            "MyPrivateClass",  /* Window class for client             */
+            NULL,              /* No window title                     */
+            WS_VISIBLE,        /* Make client window visible .        */
+            (HMODULE) 0,       /* Resources in application module     */
+            IDR_RESOURCES,     /* Resource identifier                 */
+            NULL);             /* Pointer to client window handle     */
+
+        /* Start the main message loop. Get messages from the         */
+        /* queue and dispatch them to the appropriate windows.        */
+        while (WinGetMsg(hab, &amp;qmsg, 0, 0, 0))
+               WinDispatchMsg(hab, &amp;qmsg);
+
+        /* Main loop has terminated. Destroy all windows and the      */
+        /* message queue; then terminate the application.             */
+        WinDestroyWindow(hwndFrame);
+        WinDestroyMsgQueue(hmq);
+        WinTerminate(hab);
+
+        return 0;
+    }
+</PRE>
+
+
+<P><HR>
+
+<A HREF="442_L2_UsingWindows.html">[Back: Using Windows]</A> <BR>
+<A HREF="444_L3_CreatinganObjectWind.html">[Next: Creating an Object Window]</A> 
+</BODY>
+</HTML>

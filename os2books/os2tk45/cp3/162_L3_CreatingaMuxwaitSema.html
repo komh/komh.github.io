@@ -1,0 +1,165 @@
+<HTML>
+<HEAD>
+<TITLE>Creating a Muxwait Semaphore</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating a Muxwait Semaphore</H1><!-- entering slot 171 -->
+<P>
+<A><!-- external link: 1D 70 C3 52 -->DosCreateMuxWaitSem</A> is used to
+create muxwait semaphores. This function also opens (obtains access to)
+the semaphore for the calling process and its threads. Threads in other
+processes must call<A><!-- external link: 1D A2 C3 55 --> DosOpenMuxWaitSem
+</A>to open the semaphore before they can use it in any other muxwait semaphore
+function.
+<P>
+All the semaphores in the muxwait list must be created and opened before
+the muxwait list can be created.
+<P>
+The following code fragment creates five event semaphores and a corresponding
+array of semaphore records. The array is used to specify the semaphores
+included in the muxwait semaphore in the subsequent call to<A><!-- external link: 1D 70 C3 FC --> DosCreateMuxWaitSem</A>.
+
+<PRE>
+#define INCL_DOSSEMAPHORES   /* DOS semaphore values */
+#define INCL_DOSERRORS       /* DOS error values */
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+
+int main(VOID) {
+ HMUX      hmuxHandAny = NULLHANDLE;      /* Muxwait handle    */
+ HEV       hev[5]      = {0};             /* Event semaphores  */
+ SEMRECORD apsr[5]     = {{0}};           /* Semaphore records */
+ APIRET    ulrc        = NO_ERROR;        /* Return code       */
+ ULONG     ulLoop      = 0;               /* Loop count        */
+ ULONG     ulSem       = 0;
+
+for (ulLoop = 0; ulLoop &lt; 5; ulLoop++) {
+    ulrc = DosCreateEventSem((PSZ) NULL,
+                             &amp;hev[ulLoop],
+                             0,
+                             FALSE);
+
+    if (ulrc != NO_ERROR) {
+      printf("DosCreateEventSem error:  return code = %u\n",
+             ulrc);
+      return 1;
+    }
+    apsr[ulLoop].hsemCur = (HSEM) hev[ulLoop],
+    apsr[ulLoop].ulUser = 0;
+} /* end for */
+
+ulrc = DosCreateMuxWaitSem((PSZ) NULL,
+                           &amp;hmuxHandAny,
+                           5L,              /* Number of semaphores in list */
+                           apsr,            /* Semaphore list               */
+                           DCMW_WAIT_ANY);  /* Wait for any semaphore       */
+
+    if (ulrc != NO_ERROR) {
+      printf("DosCreateMuxWaitSem error:  return code = %u\n",
+             ulrc);
+      return 1;
+    }
+
+
+ulrc = DosWaitMuxWaitSem(hmuxHandAny,
+                         SEM_IMMEDIATE_RETURN,
+                         &amp;ulSem);           /* No semaphores have been posted, so
+                                               we should see a timeout below...    */
+
+    if (ulrc != ERROR_TIMEOUT) {
+      printf("DosWaitMuxWaitSem error:  return code = %u\n",
+             ulrc);
+      return 1;
+    }
+
+ulrc = DosDeleteMuxWaitSem(hmuxHandAny,
+                           apsr[0].hsemCur);
+
+    if (ulrc != NO_ERROR) {
+      printf("DosDeleteMuxWaitSem error:  return code = %u\n",
+             ulrc);
+      return 1;
+    }
+
+ulrc = DosCloseMuxWaitSem(hmuxHandAny);
+     if (ulrc != NO_ERROR) {
+       printf("DosCloseMuxWaitSem error: return code = %u\n",
+              ulrc);
+       return 1;
+     }
+
+return NO_ERROR;
+}
+
+</PRE>
+
+<P>
+Muxwait semaphores can be defined as either private or shared:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Private semaphores are always unnamed and are therefore
+always identified by their handles. They can be used only by threads within
+a single process.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Shared semaphores can be either named or unnamed.
+If named, they can be opened using either the name or the handle. The handle
+returned by<A><!-- external link: 1D A2 C3 55 --> DosOpenMuxWaitSem</A> is
+then used to identify the semaphore for all other functions. Semaphore names
+must include the prefix \SEM32\ and must conform to file system naming conventions.
+Shared semaphores can be used by threads in multiple processes.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+There is a system-wide limit of 65536 (64K) shared semaphores (including
+mutex, event, and muxwait semaphores); in addition, each process can have
+up to 65536 (64K) private semaphores.
+<P>
+The following conditions apply to the kinds of semaphores that can be included
+in a muxwait-semaphore list:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->The list must contain either mutex semaphores or event
+semaphores. It cannot contain both at the same time and it cannot contain
+other muxwait semaphores.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If the muxwait semaphore is shared, then all the semaphores
+in the list must also be shared.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If the muxwait semaphore is private, then the semaphores
+in its list can be either private or shared.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+If any of these conditions is violated, ERROR_WRONG_TYPE is returned.
+<P>
+The muxwait list can contain a maximum of 64 event semaphores or mutex semaphores.
+If an attempt is made to exceed this maximum, ERROR_TOO_MANY_SEMAPHORES
+is returned.
+<P>
+If the owners of any of the<I> mutex</I> semaphores in the muxwait semaphore
+list have ended without releasing them, ERROR_SEM_OWNER_DIED is returned.
+The thread should call<A><!-- external link: 1D CA C3 00 --><!-- entering slot 172 --> DosQueryMutexSem
+</A>for each mutex semaphore in the muxwait-semaphore list so that it can
+determine which semaphores are in the<I> Owner Died</I> state.
+<P>
+Each mutex semaphore that returns ERROR_SEM_OWNER_DIED from the query should
+be closed by calling<A><!-- external link: 1D 67 C3 FC --> DosCloseMutexSem</A>.
+Also, because semaphore handles can be reused, the mutex semaphores that
+are closed must be deleted from the muxwait-semaphore list by calling<A><!-- external link: 1D 78 C3 FC --> DosDeleteMuxWaitSem</A>.
+
+<P>
+OS/2 maintains a usage count for each semaphore.<A><!-- external link: 1D 70 C3 1F --> DosCreateMuxWaitSem
+</A>initializes the usage count to 1. Thereafter, each call to<A><!-- external link: 1D A2 C3 21 --> DosOpenMuxWaitSem
+</A>increments the count, and each call to<A><!-- external link: 1D 68 C3 1E --> DosCloseMuxWaitSem
+</A>decrements it.
+<P>
+One parameter of this function is a pointer to an array of<A><!-- external link: 1D CE C4 47 --> SEMRECORD
+</A>data structures. Each data structure contains one semaphore record for
+each of the semaphores to be included in the muxwait semaphore. A semaphore
+record contains the handle and a programmer-defined identifier for that
+semaphore.
+
+<P><HR>
+
+<A HREF="161_L2_UsingMuxwaitSemaphor.html">[Back: Using Muxwait Semaphores]</A> <BR>
+<A HREF="163_L3_OpeningaMuxwaitSemap.html">[Next: Opening a Muxwait Semaphore]</A> 
+</BODY>
+</HTML>

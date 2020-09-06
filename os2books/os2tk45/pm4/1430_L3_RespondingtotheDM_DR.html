@@ -1,0 +1,108 @@
+<HTML>
+<HEAD>
+<TITLE>Responding to the DM_DRAGOVER Message</TITLE>
+</HEAD>
+<BODY>
+<H1>Responding to the DM_DRAGOVER Message</H1><!-- entering slot 1456 -->
+<P>
+The DM_DRAGOVER message is sent to a target whenever the user drags the
+pointer into the window. To assess whether a drop can be accepted, the target
+must use DrgAccessDraginfo to get access to the DRAGINFO data structure.
+It then determines whether a drop can be accepted for each object. The object
+must meet the following minimum requirements to exchange data:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->The source and target must share knowledge of at least
+one common type for the object. The target can make this determination by
+using DrgVerifyTypeSet or DrgVerifyType.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The source and target must share at least one common
+rendering mechanism and format for that type object. The target can make
+this determination by using DrgVerifyRMF.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+DOR_DROP, DOR_NODROP, DOR_NODROPOP, and DOR_NEVERDROP are the four possible
+responses available to the target when it receives a DM_DRAGOVER message.
+The target sends these values to the window handle specified in the DRAGINFO
+data structure.
+<P>
+The following sample code shows how the target determines its response to
+the DM_DRAGOVER message:
+<PRE>/***********************************************************************//*  Someone's dragging an object over us.                              */
+/***********************************************************************/
+        case DM_DRAGOVER:
+         dragInfo = (PDRAGINFO)mp1;
+
+         /* Get access to the DRAGINFO data structure */
+         DrgAccessDraginfo(dragInfo);
+
+         /* Can we accept this drop? */
+         switch (dragInfo-&gt;usOperation)
+         {
+
+          /* Return DOR_NODROPOP if current operation */
+          /* is link or unknown                       */
+           case DO_UNKNOWN:
+              DrgFreeDraginfo(dragInfo);
+              return (MRFROM2SHORT(DOR_NODROPOP,0));
+              break;
+
+           /* Our default operation is Move */
+           case DO_DEFAULT:
+              dragItem = DrgQueryDragitemPtr(dragInfo,0);
+              ulBytes  = DrgQueryStrName(dragItem-&gt;hstrContainerName,
+                                                   sizeof(szDir),
+                                                   szDir);
+              if (!ulBytes)
+                return (MRFROM2SHORT(DOR_NODROPOP,0));
+              else
+                usOp = DO_MOVE;
+              break;
+
+           /* Do the requested specific operation */
+           case DO_MOVE:
+           case DO_COPY:
+              usOp = dragInfo-&gt;usOperation;
+              break;
+         }
+
+         usIndicator = DOR_DROP;
+         cItems = DrgQueryDragitemCount(dragInfo);
+
+          /* Now, we need to look at each item in turn */
+          for (i = 0; i &lt; cItems; i++)
+          {
+            dragItem = DrgQueryDragitemPtr(dragInfo, i);
+
+            /* Make sure we can move for a Move request */
+            /* or copy for a Copy                       */
+            if (((dragItem-&gt;fsSupportedOps &amp; DO_COPYABLE)   &amp;&amp;
+                 (usOp == (USHORT)DO_COPY))                 ||
+                ((dragItem-&gt;fsSupportedOps &amp; DO_MOVEABLE)   &amp;&amp;
+                 (usOp == (USHORT)DO_MOVE)))
+            {
+               /* Check the rendering format */
+               if (DrgVerifyRMF(dragItem, "DRM_OS2FILE", "DRF_UNKNOWN"))
+                  usIndicator = DOR_DROP;
+               else
+                  usIndicator = DOR_NEVERDROP;
+            }
+            else
+               usIndicator = DOR_NODROPOP;
+          }
+
+          /* Release the draginfo data structure */
+          DrgFreeDraginfo(dragInfo);
+
+          return (MRFROM2SHORT(usIndicator, usOp));
+          break;
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1429_L3_StartingtheDragOpera.html">[Back: Starting the Drag Operation]</A> <BR>
+<A HREF="1431_L4_ProvidingTargetEmpha.html">[Next: Providing Target Emphasis]</A> 
+</BODY>
+</HTML>

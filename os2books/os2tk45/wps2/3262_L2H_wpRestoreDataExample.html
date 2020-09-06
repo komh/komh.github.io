@@ -1,0 +1,70 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>wpRestoreData - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>wpRestoreData - Example Code</H1><!-- entering slot 3262 -->
+<P>
+
+<P>
+In this example, wpRestoreState is overridden to restore data from the OS2.INI
+file.
+<PRE>
+SOM_Scope void   SOMLINK UserSetTitle(nbk *somSelf,
+                                      PSZ pszNewTitle)
+{
+    nbkData *somThis = nbkGetData(somSelf);
+    nbkMethodDebug("nbk","UserSetTitle");
+
+   strcpy ( _title, pszNewTitle );
+}
+ *    Override of  wpRestoreState method to restore our data
+ *    from the OS2.INI file.
+ */
+
+SOM_Scope BOOL   SOMLINK wpRestoreState(nbk   *somSelf,
+                                        ULONG ulReserved)
+
+{
+    BOOL fSuccess;
+    ULONG ulCount;
+    CHAR buf[40];
+
+    nbkData *somThis = nbkGetData(somSelf);
+    nbkMethodDebug("nbk","wpRestoreState");
+
+    ulCount = 40;                              /* Length of data buffer */
+    fSuccess = _wpRestoreData ( somSelf        /* Our pointer */
+                      , (PSZ) "nbk"            /* Name of class */
+                      , WPNBK_KEY              /* Key of data requested */
+                      , (PBYTE) &amp;buf           /* Where to put data */
+                      , &amp;ulCount   );          /* Length of data returned */
+
+    if ( !fSuccess )
+    {
+        /* first time the object is being restored */
+
+        /* initialize string to NULL */
+        strcpy ( buf, "" );
+
+        /* Save initial string to OS2.INI file */
+        _wpSaveData ( somSelf                /* Pointer to ourself */
+                    , (PSZ) "nbk"            /* Class name */
+                    , WPNBK_KEY              /* Key of data */
+                    , (PBYTE) buf            /* Pointer to data */
+                    , 40 );                  /* Length of data to write */
+    } /* endif */
+
+    _UserSetTitle ( somSelf, buf );
+
+    return (parent_wpRestoreState(somSelf,ulReserved));
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="3261_L2H_wpRestoreDataRelated.html">[Back: wpRestoreData - Related Methods]</A> <BR>
+<A HREF="3263_L2H_wpRestoreDataTopics.html">[Next: wpRestoreData - Topics]</A> 
+</BODY>
+</HTML>

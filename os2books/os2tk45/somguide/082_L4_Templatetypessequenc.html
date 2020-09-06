@@ -1,0 +1,144 @@
+<HTML>
+<HEAD>
+<TITLE>Template types (sequences and strings)</TITLE>
+</HEAD>
+<BODY>
+<H1>Template types (sequences and strings)</H1><!-- entering slot 100 -->
+<P>
+IDL defines two template types not found in C and C++:<B> sequences</B> and
+<B>strings</B>. A<B> sequence</B> is a one-dimensional array with two characteristics:
+ a maximum size (specified at compile time) and a length (determined at
+run time).<B> Sequences</B> permit passing unbounded arrays between objects.
+<B>Sequences</B> are specified as follows:
+<P>
+<B>sequence &lt;</B><I> simple-type</I> [<B>,</B><I> positive-integer-const</I>]
+<B>&gt;</B>
+<P>
+where "simple-type" specifies any valid IDL type, and the optional "positive-integer-const"
+is a constant expression that specifies the maximum size of the<B> sequence
+</B>(as a positive integer).
+<P>
+Note: The "simple-type" cannot have a '*' directly in the sequence statement.
+Instead, a typedef for the pointer type must be used. For example, instead
+of:
+<PRE>   typedef sequence&lt;long *&gt; seq_longptr; // Error: '*' not allowed.
+</PRE>
+
+<P>
+use:
+<PRE>   typedef long * longptr;
+   typedef sequence&lt;longptr&gt; seq_longptr;  // Ok.
+</PRE>
+
+<P>
+In SOM's C and C++ bindings,<B> sequences</B>  are mapped onto<B> structs
+</B>with the following members:
+<P>
+<B>unsigned long _maximum;</B>
+<BR>
+<B>unsigned long _length;</B>
+<BR>
+<I>simple-type</I><B> *_buffer;</B>
+<P>
+where "simple-type" is the specified type of the<B> sequence</B>.  For example,
+the IDL declaration
+<PRE>   typedef sequence&lt;long, 10&gt; vec10;
+</PRE>
+
+<P>
+results in the following C<B> struct</B>:
+<PRE>   #ifndef _IDL_SEQUENCE_long_defined
+   #define _IDL_SEQUENCE_long_defined
+   typedef struct {
+       unsigned long _maximum;
+       unsigned long _length;
+       long *_buffer;
+   } _IDL_SEQUENCE_long;
+   #endif /* _IDL_SEQUENCE_long_defined */
+   typedef _IDL_SEQUENCE_long vec10;
+</PRE>
+
+<P>
+and an instance of this type is declared as follows:
+<PRE>   vec10 v = {10L, 0L, (long *)NULL};
+</PRE>
+
+<P>
+The "_maximum" member designates the actual size of storage allocated for
+the<B> sequence</B>, and the "_length" member designates the number of values
+contained in the "_buffer" member. For bounded<B> sequences</B>, it is an
+error to set the "_length" or "_maximum" member to a value larger than the
+specified bound of the<B> sequence</B>.
+<P>
+Before a<B> sequence</B> is passed as the value of an "in" or "inout" method
+parameter, the "_buffer" member must point to an array of elements of the
+appropriate type, and the "_length" member must contain the number of elements
+to be passed. (If the parameter is "inout" and the<B> sequence</B> is unbounded,
+the "_maximum" member must also be set to the actual size of the array.
+Upon return, "_length" will contain the number of values copied into "_buffer",
+which must be less than "_maximum".) When a<B> sequence</B> is passed as
+an "out" method parameter or received as the return value, the method procedure
+allocates storage for "_buffer" as needed, the "_length" member contains
+the number of elements returned, and the "_maximum" member contains the
+number of elements allocated. (The client is responsible for subsequently
+freeing the memory pointed to by  "_buffer".)
+<P>
+C and C++ programs using SOM's language bindings can refer to<B> sequence
+</B>types as:
+<P>
+<B>_IDL_SEQUENCE_</B><I>type</I>
+<P>
+where "type" is the effective type of the<B> sequence</B> members. For example,
+the IDL type sequence&lt;long,10&gt; is referred to in a C/C++ program by
+the type name _IDL_SEQUENCE_long. If longint is defined via a typedef to
+be type long, then the IDL type sequence&lt;longint,10&gt; is also referred
+to by the type name _IDL_SEQUENCE_long.
+<P>
+If the typedef is for a pointer type, then the effective type is the name
+of the pointer type. For example, the following statements define a C/C++
+type _IDL_SEQUENCE_longptr and<I> not</I> _IDL_SEQUENCE_long:
+<PRE>   typedef long * longptr;
+   typedef sequence&lt;longptr&gt; seq_longptr;
+</PRE>
+
+<P>
+A string is similar to a<B> sequence</B> of type<B> char.</B> It can contain
+all possible 8-bit quantities except NULL.<B> Strings</B> are specified
+as follows:
+<P>
+<B>string  [</B> &lt;<I> positive-integer-const</I> &gt;<B> ]</B>
+<P>
+where the optional "positive-integer-const" is a constant expression that
+specifies the maximum size of the<B> string</B> (as a positive integer,
+which does not include the extra byte to hold a NULL as required in C/C++).
+In SOM's C and C++ bindings,<B> strings</B> are mapped onto zero-byte terminated
+character arrays. The length of the string is encoded by the position of
+the zero-byte. For example, the following IDL declaration:
+<PRE>   typedef string&lt;10&gt; foo;
+</PRE>
+
+<P>
+is converted to the following C/C++<B> typedef</B>:
+<PRE>   typedef char *foo;
+</PRE>
+
+<P>
+A variable of this type is then declared as follows:
+<PRE>   foo s = (char *) NULL;
+</PRE>
+
+<P>
+C and C++ programs using SOM's language bindings can refer to<B> string
+</B>types by the type name<I> string</I>.
+<P>
+When an unbounded<B> string</B> is passed as the value of an "inout" method
+parameter, the returned value is constrained to be no longer than the input
+value. Hence, using unbounded<B> string</B>s as "inout" parameters is not
+advised.
+
+<P><HR>
+
+<A HREF="081_L5_Uniontype.html">[Back: Union type]</A> <BR>
+<A HREF="083_L4_Arrays.html">[Next: Arrays]</A> 
+</BODY>
+</HTML>

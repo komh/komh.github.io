@@ -1,0 +1,297 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Source code of TEMPLATE.CMD - part 4</TITLE>
+</HEAD>
+<BODY>
+<H1>Source code of TEMPLATE.CMD - part 4</H1><!-- entering slot 587 -->
+<PRE> 
+
+/***       Start of Part 4 of the source code of TEMPLATE.CMD       ***/
+                                                                   /*!*/
+
+/* ------------------------------------------------------------------ */
+/* function: main procedure of the program                            */
+/*                                                                    */
+/* call:     called by the runtime system with:                       */
+/*           =&gt; call main parameter_of_the_program                    */
+/*                                                                    */
+/* returns:  program return code                                      */
+/*           If no return code is returned, the value of the variable */
+/*           prog.__ExitCode is returned to the calling program.      */
+/*                                                                    */
+/* Note:     YOU MUST FILL THIS ROUTINE WITH CODE.                    */
+/*           If you want to add further global variables you SHOULD   */
+/*           add them to the expose list of the procedure MAIN!       */
+/*                                                                    */
+Main: PROCEDURE expose (exposeList)
+
+                        /* get the parameter of the program           */
+                        /*** SUBSTITUTE template WITH THE TEMPLATE  ***/
+                        /*** FOR THE PROGRAM PARAMETERS             ***/
+  parse arg template
+
+                        /* ------------------------------------------ */
+                        /* you may turn some error handling off here  */
+                        /* with the statement                         */
+                        /*     SIGNAL OFF condition                   */
+                        /* where condition is one off ERROR, SYNTAX,  */
+                        /* FAILURE, NOTREADY or NOVALUE.              */
+                        /* Example:                                   */
+                        /* To handle returncodes not equal zero of OS */
+                        /* commands in your program yourself you MUST */
+                        /* use the statement                          */
+                        /*     =&gt; SIGNAL OFF ERROR                    */
+                        /* Use                                        */
+                        /*     =&gt; prog.__UserAbort = 0                */
+                        /* to suppress CTRL-BREAK.                    */
+
+                        /* ------------------------------------------ */
+                        /* Use the function LoadDll to load all       */
+                        /* necessary dlls                             */
+                        /* Examples:                                  */
+
+/*
+                        /* load the dll REXXUTIL                      */
+  global.__rexxUtilLoaded = LoadDll(,
+     'SysLoadFuncs', ,  /* dll init function                          */
+     'REXXUTIL',     ,  /* dll name                                   */
+     'SysLoadFuncs', ,  /* dll init entry point                       */
+     '',             ,  /* dll exit function                    v3.06 */
+     'SysDropFuncs', ,  /* check function                             */
+     1,              ,  /* 1: ignore rc of rxfuncadd (for WARP)       */
+     '',             ,  /* errorcode of the init function             */
+     1 )                /* 1: abort if loading failed                 */
+                        /* 0: do not abort if loading failed          */
+*/
+
+
+/*
+                        /* load the dll RXWIN30 (Quercus System)      */
+  global.__rxwin30Loaded = LoadDll(  ,
+                           'w_register', 'rxwin30', 'rxwindow', ,
+                           'w_deRegister', 'w_open', 0, '', 0 )
+*/
+
+/*
+                        /* load the dll VREXX (IBM EWS)               */
+  global.__vrexxLoaded = LoadDll( 'VINIT', 'VREXX', 'VINIT', ,
+                                'VEXIT', '', 1 ,'ERROR' , 0 )
+*/
+
+/*
+                        /* load the dll YDBAUTIL                      */
+  global.__ydbaUtilLoaded = LoadDll( 'rxydbautilinit', 'ydbautil',,
+                                     'rxydbautilinit' , 'rxydbaUtilTerm' ,,
+                                     'rxYdbaUtilQuery' ,1 ,'' ,1 )
+
+*/
+
+/*
+                        /* load the dll RXU                           */
+                        /* (RXU is the new name of YDBAUTIL since     */
+                        /*  version 1.9)                              */
+  global.__ydbaUtilLoaded = LoadDll( 'rxuinit', 'rxu',,
+                                     'rxinit' , 'rxuTerm' ,,
+                                     'rxuQuery' ,1 ,'' ,1 )
+
+*/
+
+/* ------------------------------ */
+
+
+/*** INSERT THE MAIN PROGRAM CODE HERE ***/
+
+/* ------------------------------ */
+
+                        /* exit the program                           */
+                        /* Note: The program exit code is the return  */
+                        /*       code of the routine MAIN             */
+                        /*       If MAIN returns nothing, the program */
+                        /*       exit code is the current value of    */
+                        /*       the variable "prog.__ExitCode" after */
+                        /*       executing MAIN.                      */
+RETURN
+
+/* ------------------------------------------------------------------ */
+
+/*** INSERT FURTHER SUBROUTINES HERE ***/
+
+/*** Note: Do not forget the string 'EXPOSELIST' in the exposeList  ***/
+/***       of ALL procedures!                                       ***/
+
+/* ------------------------------------------------------------------ */
+/* function: Show the invocation syntax                               */
+/*                                                                    */
+/* call:     called by the runtime system with                        */
+/*           =&gt; call ShowUsage                                        */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  ''                                                       */
+/*                                                                    */
+/* Note:     YOU SHOULD FILL THIS ROUTINE WITH CODE.                  */
+/*           You may change the return code for your program in this  */
+/*           routine. The default for the return code is 253.         */
+/*           (The variable for the return code is prog.__ExitCode)    */
+/*                                                                    */
+/*                                                                    */
+ShowUsage: PROCEDURE expose (exposeList)
+  /*** INSERT THE CODE TO SHOW THE INVOCATION SYNTAX HERE ***/
+
+  call ShowString I!.__GetMsg( 14 ) || ' ' ,,                /* v3.06 */
+                  prog.__name ,                              /* v3.06 */
+                  global.__userUsage prog.__DefParms         /* v3.06 */
+
+RETURN ' '                                                   /* v3.03 */
+
+
+/* ------------------------------------------------------------------ */
+/* Function: add quote chars and color codes to a string              */
+/*                                                                    */
+/* call:     AddColor1( quoteChar ,myString )                         */
+/*                                                                    */
+/* where:    quoteChar - leading and trailing character for the       */
+/*                       converted string (may be ommited)            */
+/*           myString - string to convert                             */
+/*                                                                    */
+/* returns:  converted string                                         */
+/*                                                                    */
+/* note:     Add the color codes used in this routine to the          */
+/*           variable 'prog.__<!-- entering slot 588 -->LogExcludeWords' if you don't want      */
+/*           them in the logfile. Example:                            */
+/*                                                                    */
+/*               prog.__LogExcludeWords = screen.__fgYellow ,         */
+/*                                        screen.__highlight ,        */
+/*                                        screen.__AttrOff            */
+/*                                                                    */
+/*           This should be one of the first statements in the        */
+/*           routine main.                                            */
+/*                                                                    */
+
+/* REMOVE THIS COMMENT BEGIN AND THE COMMENT END BELOW TO USE ADDCOLOR1
+
+AddColor1: PROCEDURE expose (exposeList)
+  parse arg quoteChar, myString
+
+return quoteChar || screen.__fgYellow || screen.__highlight || ,
+       myString || ,
+      screen.__AttrOff || quoteChar
+
+*/
+
+/* ------------------------------------------------------------------ */
+/* NOTE: You must uncomment this routines before using them!!!        */
+
+/*** DEBUGGING SUBROUTINES ***/
+
+/**DEBUG** Delete this line before using the debugging routines!!!
+
+/* ------------------------------------------------------------------ */
+/* function: show all variables defined for the routine calling       */
+/*           this routine.                                            */
+/*                                                                    */
+/* call:     ShowDefinedVariables {N} {,varMask} {,outpufFile}        */
+/*                                                                    */
+/* where:    N - no pause if the screen is full                       */
+/*           varMask - mask for the variables                         */
+/*           outputFile - write the variable list to this file        */
+/*                                                                    */
+/* returns:  nothing                                                  */
+/*                                                                    */
+/* note:     This routine needs the Dave Boll's DLL RXU.DLL!          */
+/*           Be aware that the special REXX variables SIGL, RC and    */
+/*           RESULT are changed if you call this routine!             */
+/*                                                                    */
+/*                                                                    */
+ShowDefinedVariables:
+  parse upper arg SDV.__pauseMode, SDV.__varMask, SDV.__outPut
+
+                                /* install a local error handler      */
+  signal on syntax name SDV.__RXUNotFound
+
+                                /* load the necessary DLL function    */
+  call rxFuncDrop 'RxVLIst'
+  call rxFuncAdd 'RxVlist', 'RXU', 'RxVList'
+
+  call rxFuncDrop 'RxPullQueue'
+  call rxFuncAdd 'RxPullQueue', 'RXU', 'RxPullQueue'
+
+                                /* create a queue for the variables   */
+  SDV.__newQueue = rxqueue( 'create' )
+
+                                /* the 'D' parameter of the RxVList   */
+                                /* functions won't pause if the       */
+                                /* screen is full                     */
+  SDV.__thisRC = RxVList( SDV.__varMask, 'V' , SDV.__newQueue )
+
+                                /* ignore local variables of this     */
+                                /* routine                            */
+  SDV.__thisRC = SDV.__thisRC
+
+  call LineOut SDV.__outPut , '  ' || copies( 'Ä',76 )
+
+  if SDV.__thisRC &lt;&gt; 0 then
+  do
+
+    call LineOut SDV.__outPut , '  Defined variable(s) and their values:'
+    SDV.__i = 0
+
+    do SDV.__n = 1 to SDV.__ThisRC
+      if SDV.__i &gt;= 23 &amp; ,
+         SDV.__pauseMode &lt;&gt; 'N' then
+      do
+        ADDRESS 'CMD' 'PAUSE'
+        SDV.__i = 0
+      end /* if */
+      SDV.__varName = RxPullQueue( SDV.__newQueue, 'Nowait', 'SDV.__dummy' )
+      SDV.__varValue = RxPullQueue( SDV.__newQueue, 'Nowait', 'SDV.__dummy' )
+
+                                /* ignore local variables of this     */
+                                /* routine                            */
+      if left( SDV.__varName, 6 ) &lt;&gt; 'SDV.__' then
+      do
+        call LineOut SDV.__outPut , '     ' || SDV.__varName || ' = "' || SDV.__varValue || '"'
+        SDV.__i = SDV.__i+1
+      end /* if right( ... */
+
+    end /* do */
+
+                        /* delete the queue for the variables         */
+    call rxqueue 'Delete', SDV.__newQueue
+  end
+  else
+    call LineOut SDV.__outPut , '  No variables defined.'
+
+  call LineOut SDV.__outPut , '  ' || copies( 'Ä',76 )
+
+                        /* close the file                             */
+  call LineOut SDV.__Output
+
+                        /* delete local variables                     */
+  drop SDV.
+RETURN ' '                                                   /* v3.03 */
+
+                        /* error exit for ShowDefinedVariables        */
+SDV.__RXUNotFound:
+  call LineOut SDV.__outPut , 'ShowDefinedVariables: RXU.DLL not found'
+RETURN 255
+
+NoValue:
+  say 'sigl = 'sigl
+  say 'condition(D) ' condition('D')
+  trace ?a; nop
+
+   Delete this line before using the debugging routines!!!    **DEBUG**/
+
+/***        End of Part 4 of the source code of TEMPLATE.CMD        ***/
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="546_L3_SourcecodeofTEMPLATE.html">[Back: Source code of TEMPLATE.CMD - part 3]</A> <BR>
+<A HREF="548_L2_Sampleprogramsbasedo.html">[Next: Sample programs based on TEMPLATE.CMD]</A> 
+</BODY>
+</HTML>

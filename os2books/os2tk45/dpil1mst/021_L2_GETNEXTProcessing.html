@@ -1,0 +1,70 @@
+<HTML>
+<HEAD>
+<TITLE>GETNEXT Processing</TITLE>
+</HEAD>
+<BODY>
+<H1>GETNEXT Processing</H1><!-- entering slot 21 -->
+<P>
+The DPI GETNEXT packet contains the object(s) on which the GETNEXT operation
+must be performed.  For this operation, the subagent is to return the name,
+type, length, and value of the next variable it supports whose (ASN.1) name
+lexicographically follows the one passed in the group ID (sub-tree) and
+instance ID.
+<P>
+In this case, the instance ID may not be present (NULL) in the incoming
+DPI packet implying that the NEXT object must be the first instance of the
+first object in the sub-tree that was registered.
+<P>
+It is important to realize that a given subagent may support several discontiguous
+sections of the MIB tree.  In that situation, it would be incorrect to jump
+from one section to another.  This problem is correctly handled by examining
+the group ID in the DPI packet.  This group ID represents the "reason" why
+the subagent is being called.  It holds the prefix of the tree that the
+subagent had indicated it supported (registered).
+<P>
+If the next variable supported by the subagent does not begin with that
+prefix, the subagent must return the same object instance as in the request,
+for example the group ID and instance ID with a value of SNMP_TYPE_endOfMibView
+(implied NULL value).  This endOfMibView is not considered an error, so
+the error_code and error_index should be zero. If required, the SNMP agent
+will call upon the subagent again, but pass it a different group ID (prefix).
+ This is illustrated in the discussion below.
+<P>
+Assume there are two subagents.  The first subagent registers two distinct
+sections of the tree:  A and C.  In reality, the subagent supports variables
+A.1 and A.2, but it correctly registers the minimal prefix required to uniquely
+identify the variable class it supports.
+<P>
+The second subagent registers section B, which appears between the two sections
+registered by the first agent.
+<P>
+If a management station begins browsing the MIB, starting from A, the following
+sequence of queries of the form get-next(group ID,instance ID) would be
+performed:
+<PRE>  Subagent 1 gets called:
+         get-next(A,none) = A.1
+         get-next(A,1)    = A.2
+         get-next(A,2)    = endOfMibView
+
+  Subagent 2 is then called:
+         get-next(B,none) = B.1
+         get-next(B,1)    = endOfMibView
+
+  Subagent 1 gets called again:
+         get-next(C,none) = C.1
+</PRE>
+
+<P>
+<B>Related Information</B><!-- lm: 0x2 6 -->
+<UL>
+<P>
+<A HREF="082_L2_ProcessingaGETNEXTRe.html">Processing a GETNEXT Request
+</A><!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="020_L2_SETProcessing.html">[Back: SET Processing]</A> <BR>
+<A HREF="022_L2_GETBULKProcessing.html">[Next: GETBULK Processing]</A> 
+</BODY>
+</HTML>

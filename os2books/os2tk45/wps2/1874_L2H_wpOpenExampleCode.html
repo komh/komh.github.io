@@ -1,0 +1,87 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>wpOpen - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>wpOpen - Example Code</H1><!-- entering slot 1874 -->
+<P>
+
+<P>
+This example performs special processing upon first opening a folder.
+<PRE>SOM_Scope HWND   SOMLINK myfold_wpOpen(MYFOLDER *somSelf,
+                HWND hwndCnr,
+                ULONG ulView,
+                ULONG param)
+
+{
+    HWND        hwndFromParentOpen = NULLHANDLE;
+    MYFOLDERData *somThis = MYFOLDERGetData(somSelf);
+    MYFOLDERMethodDebug("MYFOLDER","myfold_wpOpen");
+
+    if (_queryFirstViewHandle(somSelf) == NULLHANDLE)
+    {
+              /* ONLY do this on FIRST open of the folder. */
+
+       if (_wpPopulate(somSelf, NULLHANDLE, NULL, FALSE))
+
+        {
+           WPObject *Obj;
+           WPObject *LastFoundObj = NULL;
+
+           /* Check contents of folder and see which are instances of
+            * WPFolder, we'll delete any WPFolders as a cleanup step */
+
+           for ( Obj = _wpQueryContent(somSelf,NULL,(ULONG)QC_First);
+                 Obj;
+                 Obj = _wpQueryContent(somSelf, Obj, (ULONG) QC_Next ))
+
+           {
+              /* delete the last object found on the previous iteration
+               * of the loop (we couldn't delete it then, because we
+               * needed it at the top of the loop for this iteration)
+               */
+              if (LastFoundObj) {
+                 _wpDelete(LastFoundObj,0);
+                 LastFoundObj = NULL;
+              } /* endif */
+
+              /* we want to make sure that all previously
+               * existing folders are deleted */
+
+              if (_somIsA(Obj, _WPFolder)) {
+                 LastFoundObj = Obj;
+              }  /* endif */
+
+           }  /* endfor */
+
+           /* if there is still one object left to delete, do it now */
+
+
+           if (LastFoundObj) {
+              _wpDelete(LastFoundObj,0);
+              LastFoundObj = NULL;
+           } /* endif */
+       } /* end if populate */
+    } /* end if first open */
+
+              /* Show the opened folder */
+
+    hwndFromParentOpen = parent_wpOpen(somSelf, hwndCnr, ulView, param);
+
+               /* If this is the first open, set our global flag */
+
+    if (_queryFirstViewHandle(somSelf) == NULLHANDLE)  {
+       _setFirstViewHandle(somSelf, hwndFromParentOpen);
+    } /* endif */
+
+    return( hwndFromParentOpen );
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1873_L2H_wpOpenRelatedMethods.html">[Back: wpOpen - Related Methods]</A> <BR>
+<A HREF="1875_L2H_wpOpenTopics.html">[Next: wpOpen - Topics]</A> 
+</BODY>
+</HTML>

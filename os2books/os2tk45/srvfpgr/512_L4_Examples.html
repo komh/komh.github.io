@@ -1,0 +1,109 @@
+<HTML>
+<HEAD>
+<TITLE>Examples</TITLE>
+</HEAD>
+<BODY>
+<H1>Examples</H1><!-- entering slot 661 -->
+<P>
+DosReadAsyncNmPipe does an asynchronous read from a specified file; DosWriteAsyncNmPipe
+does an asynchronous write from a specified file. Each API transfers the
+specified number of bytes from a file to a buffer, asynchronously with the
+requesting process execution.  These APIs are exclusive to DOS.
+<PRE>USHORT APIENTRY DosReadAsyncNmPipe (
+         HFILE hf,                       /* file handle                */
+         PULONG Pfunc,                   /* address of Postroutine     */
+                                         /* signals end of read        */
+         PUSHORT pusErrCode,             /* return code (returned)     */
+         PVOID pBuf,                     /* input buffer               */
+
+         USHORT cbBuf,                   /* number of bytes to be read */
+         PUSHORT pcbBytesRead);          /* number of bytes read       */
+
+
+USHORT APIENTRY DosWriteAsyncNmPipe (
+         HFILE hf,                       /* file handle             */
+         PULONG Pfunc,                   /* address of Post routine */
+                                         /* indicates end of write  */
+         PUSHORT pusErrCode,             /* return code (returned)  */
+         PVOID pBuf,                     /* output buffer           */
+         USHORT cbBuf,                   /* number of bytes to write*/
+         PUSHORT pcbBytesWritten);       /* number of bytes written */
+  unsigned far pascal AsyncCB(char far *);
+  int  complete = 0;
+
+     main()
+  {
+     HFILE    open_pipe_handle;       /* used by DosOpen to open pipe */
+     PVOID    buf;
+     USHORT   buf_length;
+     USHORT   bytes_written, bytes_read;
+     USHORT   pipe_async_return_code;
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/***   DosWriteAsyncNmPipe - Asynchronous write to file
+  *
+  *     Writes to a file or a pipe asynchronously with respect
+  *     to the requesting process execution.
+  *     (for DOS applications)
+  */
+ complete = 0;
+ ret = DosWriteAsyncNmPipe((HFILE)open_pipe_handle, /* Write Async Name */
+                                                    /* Pipe call       */
+                    AsyncCB,
+                    (PUSHORT)&amp;pipe_async_return_code,
+                    (PVOID)buf,
+                   (USHORT)buf_length,
+                    (PUSHORT)bytes_written);
+     while (complete == 0);
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/***   DosReadAsyncNmPipe - Asynchronous read to file
+  *
+  *     Reads from a file or a pipe asynchronously with respect
+  *     to the requesting process's execution.
+  *     (for DOS applications)
+  */
+ complete = 0;
+ ret = DosReadAsyncNmPipe((HFILE)open_pipe_handle,
+                                             /*  Read Async Named Pipe call */
+        
+                   AsyncCB,
+                   (PUSHORT)&amp;pipe_async_return_code,
+                   (PVOID)buf,
+                   (USHORT)buf_length,
+                   (PUSHORT)&amp;bytes_read);
+    while (complete == 0);
+    exit(0);
+  }
+
+  unsigned far pascal AsyncCB(buffer)      /* exit routine  */
+  char far * buffer;
+ {
+  complete = 1;
+  return;
+  }
+</PRE>
+
+<P>
+The following is an example of a compiler statement for DosAsyncNamedPipe
+APIs:
+<PRE>  cl /c /Lc /W2 /Zep /Alfu /Gs /Gt10 %1 /I ..\INC /I c:\MYBLD\INC
+</PRE>
+
+<P>
+where<I> %1</I> is the .C file being compiled.  
+<P>
+The following is an example of a link statement for DosAsyncNamedPipe APIs:
+
+<PRE>link %1,,,mlibcer c:\MYLIB\DOSNET.LIB c:\MYLIB\ c:\MYLIB\API.LIB
+</PRE>
+
+<P>
+where<I> %1</I> is the .OBJ being linked.
+
+<P><HR>
+
+<A HREF="511_L3_NamedPipe.html">[Back: Named Pipe]</A> <BR>
+<A HREF="513_L3_PrintDestination.html">[Next: Print Destination]</A> 
+</BODY>
+</HTML>

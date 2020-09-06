@@ -1,0 +1,87 @@
+<HTML>
+<HEAD>
+<TITLE>Initializing the Audio Device</TITLE>
+</HEAD>
+<BODY>
+<H1>Initializing the Audio Device</H1><!-- entering slot 42 -->
+<P>
+To initialize the audio device, the waveform audio MCD needs information
+about the data element to be played.  The driver makes a call to mmioGetHeader,
+which returns information contained in the header of the waveform element
+(for example, whether the data was recorded in stereo or mono, what its
+sampling rate and bits-per-sample are, and so on.).  AUDIOMCD parses this
+information and puts it into the instance structure.  Next, the instance
+structure is passed to AUDIOIF, which uses the information to initialize
+the device by means of the IOCtl interface.
+<PRE>  /*******************************************************
+  * A streaming MCD should utilize MMIO to perform all
+  * file manipulations.  If we use MMIO, then the MCD
+  * will be free from file dependencies (that is, if a RIFF
+  * IOProc or a VOC IOProc is loaded will be irrelevant.
+  ********************************************************/
+
+  ulrc = mmioGetHeader ( ulpInstance-&gt;hmmio,
+                         (PVOID) &amp;ulpInstance-&gt;mmAudioHeader ,
+                         sizeof( ulpInstance-&gt;mmAudioHeader ),
+                         (PLONG) &amp;BytesRead,
+                         (ULONG) NULL,
+                         (ULONG) NULL);
+
+  if ( ulrc == MMIO_SUCCESS )
+      {
+
+      /******************************************
+      * Copy the data from the call into the instance
+      * so that we can set the amp/mixer up with the
+      * values that the file specifies.
+      ******************************************/
+
+      AMPMIX.sMode            = WAVEHDR.usFormatTag;
+      AMPMIX.sChannels        = WAVEHDR.usChannels;
+      AMPMIX.lSRate           = WAVEHDR.ulSamplesPerSec;
+      AMPMIX.lBitsPerSRate    = WAVEHDR.usBitsPerSample;
+      ulpInstance-&gt;ulDataSize = XWAVHDR.ulAudioLengthInBytes;
+      AMPMIX.ulBlockAlignment = ( ULONG )WAVEHDR.usBlockAlign;
+      ulpInstance-&gt;ulAverageBytesPerSec = WAVEHDR.usChannels *
+         WAVEHDR.ulSamplesPerSec * ( WAVEHDR.usBitsPerSample / 8 );
+
+      } /* SuccesFul GetHeader */
+
+    else
+      {
+      ulrc = mmioGetLastError( ulpInstance-&gt;hmmio );
+
+      }
+      return (ulrc);
+
+}  /* GetAudioHeader */
+</PRE>
+
+<P>
+The handle<I> hmmio</I> that is passed to mmioGetHeader was returned by
+the call to mmioOpen to open the data element.  The buffer pointed to by
+<I>mmAudioHeader</I> is filled in by the MMIO Manager on return from mmioGetHeader.
+ It is an MMAUDIODATA structure. When the MMAUDIODATA structure is returned
+by mmioGetHeader, it contains all the information the waveform audio MCD
+needs to initialize the audio device.  The information includes:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->The type of waveform data in the file (<I>usFormatTag</I>)
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Whether the file was recorded in mono or stereo (<I>usChannels</I>)
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The sample rate and size set when the file was recorded
+(<I>usSamplesPerSec</I> and<I> usBitsPerSample</I>)<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The length of the audio data (<I>ulAudioLengthInBytes</I>).
+<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="036_L3_MMIOOperations.html">[Back: MMIO Operations]</A> <BR>
+<A HREF="038_L4_SupportingMultipleFi.html">[Next: Supporting Multiple File Formats]</A> 
+</BODY>
+</HTML>

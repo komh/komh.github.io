@@ -1,0 +1,93 @@
+<HTML>
+<HEAD>
+<TITLE>What do all those keywords mean when making a DLL?</TITLE>
+</HEAD>
+<BODY>
+<H1>What do all those keywords mean when making a DLL?</H1><!-- entering slot 124 -->
+<P>
+Okay, with the help of some of my peers, I've solved the mystery surrounding
+the seemingly redundant SINGLE/MULTIPLE and SHARED/NONSHARED attributes.
+
+<P>
+First, some prep up work...
+<P>
+Every DLL needs and gets a data segment ("automatic data segment"). It is
+the place where the DLL stores all its STATIC data--basically the data declared
+in the DLL module but declared outside any function AND (I venture) variables
+declared STATIC within a DLL function as well. The STACK is NOT!! part of
+a DLL's automatic data segment (thoug it seems to be for an EXE). The stack
+that is used when 'running' a DLL function is that of the calling thread.
+
+<P>
+Now here's the clincher...
+<P>
+DLLs CAN ALSO HAVE ADDITIONAL DATA SEGMENTS!! (as can EXEs, I imagine)
+<P>
+Bingo! Now we understand why there are two different sets of attributes--specifically,
+NONE/SINGLE/MULTIPLE and SHARED/NONSHARED. Though they basically do the
+same thing, they APPLY to different things.<!-- lm: 0x2 0 -->
+<P>
+NONE/SINGLE/MULTIPLE<!-- lm: 0x11 10 -->
+<UL> applies to the one and only
+default data segment. This is the data segment that is "automatically" created
+for your DLL (or EXE). I imagine that for 90% of the DLLs written, this
+is the only type of data segment that exists. Whether or not this data segment
+is shared or whether a private copy is created for each linking application
+is A DIRECT FUNCTION OF THIS ATTRIBUTE--'SINGLE'=it's shared, 'MULTIPLE'=everyone
+get's his own copy.<!-- lm: 0x2 0 -->
+</UL> SHARED/NONSHARED<!-- lm: 0x11 10 -->
+<UL> This
+SETS THE DEFAULT!! FOR ALL DATA SEGMENTS other than the "automatic" data
+segment. DEFAULT is the key word, because you can specify, through the SEGMENTS
+statement, the characteristics of these additional segments on an individual
+basis (which in all certainty, override this value.)<!-- lm: 0x2 0 -->
+</UL>
+<P>
+So...to answer my own question &gt;could {someone} explain what the following
+statements would &gt;produce:
+<BR>
+&gt;
+<BR>
+&gt;        DATA MULTIPLE SHARED
+<BR>
+
+<P>
+Every application which links to the DLL will have it's own private copy
+of the automatic data segment. If the DLL has no additional data segments,
+the SHARED keyword is meaningless and can be omitted. If there are additional
+data segments, only one copy of each will exist and they will be shared
+by all applications (unless a SEGMENTS statement follows which overrides
+this default for a specific segment) &gt;        or
+<BR>
+&gt;        DATA SINGLE NONSHARED
+<BR>
+
+<P>
+Every application which links to the DLL will share a single automatic data
+segment (hence, each app that affects the DLL STATIC data will affect it
+for all apps). If there are no additional data segments, the NONSHARED keyword
+is meaningless and can be omitted. If there are, a private copy will be
+created for each app (unless overriden by a SEGMENTS statement).
+<P>
+Note that in the absence of BOTH a SINGLE/MUTLIPLE and SHARED/NONSHARED
+keyword, the default is for ALL data segments (automatic and additional
+ones) to be shared (i.e., only one copy). In the absence of one OR the other,
+but not both, the property of ALL data segments are mandated by the single
+keyword. In other words, DATA SINGLE
+<BR>
+ and
+<BR>
+DATA SHARED
+<BR>
+
+<P>
+do the same exact thing.
+<P>
+Credit:  John Cortell 
+
+<P><HR>
+
+<A HREF="104_L2_HowcanIdetermineadis.html">[Back: How can I determine a diskette format and if a disk is in a drive?]</A> <BR>
+<A HREF="106_L2_WherecanIfindserialp.html">[Next: Where can I find serial port sample code?]</A> 
+</BODY>
+</HTML>

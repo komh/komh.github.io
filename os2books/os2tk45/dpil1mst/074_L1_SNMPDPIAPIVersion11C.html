@@ -1,0 +1,132 @@
+<HTML>
+<HEAD>
+<TITLE>SNMP DPI API Version 1.1 Considerations</TITLE>
+</HEAD>
+<BODY>
+<H1>SNMP DPI API Version 1.1 Considerations</H1><!-- entering slot 77 -->
+<P>
+The information presented in this section<B> must be taken as guidelines
+and not exact procedures</B>.  Your specific implementation will vary from
+the guidelines presented.
+<P>
+You can keep your existing DPI 1.1 subagent and communicate with a DPI capable
+agent that supports DPI 1.1 in addition to DPI 2.0.  For example, the SystemView
+Agent provides support for multiple versions of DPI, namely Version 1.1
+and Version 2.0.
+<P>
+<B>Note: </B> Although DPI Version 1.1 is supported, it is recommended that
+you migrate to Version 2.0.
+<P>
+Normally you would compile your DPI 1.1 subagent with the DPI 1.1 &lt;dpi\snmp_dpi.h&gt;
+include file and link-edit it with the DPI 1.1 level DPI32DLL.LIB.  At run
+time, you then need access to the DPI32DLL.DLL.  You can continue to do
+this until you are ready to migrate to DPI Version 2.0.
+<P>
+In the snmp_dpi.h include file for DPI 2.0, you may find references to DPI
+1.1 compatibility mode under control of compiler flags, such as:
+<PRE>   /DSNMP_DPI_VERSION=1 /DSNMP_DPI_RELEASE=0
+   /DSNMP_DPI_VERSION=1 /DSNMP_DPI_RELEASE=1
+</PRE>
+
+<P>
+However, this compatibility mode is<B> not</B> provided with the SystemView
+Agent.  If you want to convert to DPI 2.0, which prepares you also for SNMP
+Version 2, you must make changes to your code.
+<P>
+<B>Name Changes</B>
+<P>
+A number of field names in the snmp_dpi_xxxx_packet structures have changed
+so that the names are now more consistent throughout the DPI code.
+<P>
+The new names indicate if the value is a pointer (_p) or a union (_u).  The
+names that have changed and that affect the subagent code are listed in
+the table below. ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+<BR>
+³ OLD NAME    ³ NEW NAME    ³ DATA STRUCTURE(XXXX)   ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ group_id    ³ group_p     ³ getnext         ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ object_id    ³ object_p    ³ get, getnext, set    ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ value      ³ value_p     ³ set           ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ type      ³ value_type   ³ set           ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ next      ³ next_p     ³ set           ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ enterprise   ³ enterprise_p  ³ trap           ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ packet_body   ³ data_u     ³ dpi_hdr         ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ dpi_get     ³ get_p      ³ hdr (packet_body)    ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ dpi_getnext   ³ next_p     ³ hdr (packet_body)    ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ dpi_set     ³ set_p      ³ hdr (packet_body)    ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ dpi_trap    ³ trap_p     ³ hdr (packet_body)    ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³         ³         ³             ³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+
+<P>
+There is no clean approach to make this change transparent.  You probably
+will have to change the names in your code.  You may want to try a simple
+set of defines like:
+<PRE>#define packet_body      data_u
+#define dpi_get          get_p
+#define dpi_set          set_p
+#define dpi_next         next_p
+#define dpi_response     resp_p
+#define dpi_trap         trap_p
+#define group_id         group_p
+#define object_id        object_p
+#define value            value_p
+#define type             value_type
+#define next             next_p
+#define enterprise       enterprise_p
+</PRE>
+
+<P>
+However, the names may conflict with other definitions that you have, in
+which case you must change your code.
+<P>
+<B>Related Information</B><!-- lm: 0x2 6 -->
+<UL>
+<P>
+<A HREF="075_L1_MigratingYourSNMPDPI.html">Migrating Your SNMP DPI Subagent
+to Version 2.0</A><!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="073_L2_Thesnmp_dpihIncludeF.html">[Back: The snmp_dpi.h Include File]</A> <BR>
+<A HREF="075_L1_MigratingYourSNMPDPI.html">[Next: Migrating Your SNMP DPI Subagent to Version 2.0]</A> 
+</BODY>
+</HTML>

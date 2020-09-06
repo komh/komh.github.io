@@ -1,0 +1,123 @@
+<HTML>
+<HEAD>
+<TITLE>Inheritance</TITLE>
+</HEAD>
+<BODY>
+<H1>Inheritance</H1><!-- entering slot 155 -->
+<P>
+One of the defining aspects of an object model is its characterization of
+inheritance. This section describes SOM's model for inheritance.
+<P>
+A class in SOM defines an implementation for objects that support a specific
+interface:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->The<I> interface</I> defines the methods supported
+by objects of the class, and is specified using SOM IDL.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The<I> implementation</I>  defines what instance variables
+implement an object's state and what procedures implement its methods.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+New classes are derived (by subclassing) from previously existing classes
+through inheritance, specialization, and addition.  Subclasses inherit interface
+from their parent classes: any method available on instances of a class
+is also available on instances of any class derived from it (either directly
+or indirectly).  Subclasses also inherit implementation (the procedures
+that implement the methods) from their parent classes<I> unless</I> the
+methods are<I> overridden</I> (redefined or specialized). In addition, a
+subclass may introduce new instance methods and instance variables that
+will be inherited by other classes derived from it.
+<P>
+SOM also supports<I> multiple inheritance</I>. That is, a class may be derived
+from (and may inherit interface and implementation from) multiple parent
+classes. Note: Multiple inheritance is available only to SOM classes whose
+interfaces are specified in IDL, and not to SOM classes whose interfaces
+are specified in SOM's earlier interface definition language, OIDL. See
+Appendix B for information on how to automatically convert existing OIDL
+files to IDL.
+<P>
+It is possible under multiple inheritance to encounter potential conflicts
+or ambiguities with respect to inheritance. All multiple inheritance models
+must face these issues, and resolve the ambiguities in some way. For example,
+when multiple inheritance is allowed, it is possible that a class will inherit
+the same method or instance variable from different parents (because each
+of these parents has some common ancestor that introduces the method or
+instance variable). In this situation, a SOM subclass inherits only one
+implementation of the method or instance variable. (The implementation of
+an instance variable within an object is just the location where it is stored.
+The implementation of a method is a procedure pointer, stored within a method
+table.) The following illustration addresses the question of which method
+implementation would be inherited.
+<P>
+Consider this situation: Class "W" defines a method "foo", implemented by
+procedure "proc1". Class "W" has two subclasses, "X" and "Y". Subclass "Y"
+overrides the implementation of "foo" with procedure "proc2". Subclass "X"
+does not override "foo"<I>.</I> In addition, classes "X" and "Y" share a
+common subclass, "Z". That is, the IDL interface statement for class "Z"
+lists its parents as "X" and "Y" in that order. (These relationships form
+a diamond shape, with class "W" at the top.)
+<P>
+The question is thus: which implementation of method "foo" does class "Z"
+inherit-procedure "proc1" defined by class "W", or procedure "proc2" defined
+by class "Y"? The procedure for performing inheritance that is defined by
+SOMClass resolves this ambiguity by using the<I> left path precedence</I> rule:
+when the same method is inherited from multiple ancestors, the procedure
+used to support the method is the one used by the<U> leftmost ancestor</U> from
+which the method is inherited. (The ordering of parent classes is determined
+by the order in which the class implementor lists the parents in the IDL
+specification for the class.)
+<P>
+Class "Z" inherits the implementation of method "foo" defined by class "W"
+(procedure "proc1"), rather than the implementation defined by class "Y"
+(procedure "proc2"), because "X" is the leftmost ancestor of "Z" from which
+the method "foo" is inherited. This rule may be interpreted as giving priority
+to classes whose instance interfaces are mentioned first in IDL interface
+definitions.
+<P>
+If a class implementor decides that the default inherited implementation
+is not appropriate (for example, procedure "proc2" is desired), then SOM
+IDL allows the class designer to select the parent whose implementation
+is desired. For more information concerning this approach, see the<B> Select
+</B>modifier, which is documented in the topic "Modifier statements" in
+Chapter 4, "SOM IDL and the SOM Compiler."
+<P>
+<B>Note: </B> Alternatively, an explicit metaclass for "Z" could be introduced
+to change the way methods are inherited.<!-- entering slot 156 --> However,
+this would be a fairly serious step to take-it would also affect the semantics
+of inheritance for all of Z's descendant classes.<!-- lm: 0x2 1 -->
+<P>
+
+<P>
+Another conflict that may arise with the use of multiple inheritance is
+when two ancestors of a class define different methods (in general, with
+different signatures) of the same name. For example, suppose Class "X" defines
+a method "bar" with type<I> T1</I>, and class "Y" defines a method "bar"
+with type<I> T2</I>. Class "Z" is derived from both "X" and "Y", and "Z"
+does not override method "bar".
+<P>
+This example illustrates a method name that is "overloaded"-that is, used
+to name two entirely different methods (note that overloading is completely
+unrelated to overriding). This is not necessarily a difficult problem to
+handle. Indeed, the run-time SOM API allows the construction of a class
+that supports the two different "bar" methods. (They are implemented using
+two different method-table entries, each of which is associated with its
+introducing class.)
+<P>
+However, the interface to instances of such classes can<U> not</U> be defined
+using IDL. IDL specifically forbids the definition of interfaces in which
+method names are overloaded.  Furthermore, within SOM itself, the use of
+such classes can lead to anomalous behavior unless care is taken to avoid
+the use of name-lookup method resolution (discussed in the following section),
+since, in this case, a method name alone does not identify a unique method.
+For this reason, (statically declared) multiple-inheritance classes in SOM
+are currently restricted to those whose instance interfaces can be defined
+using IDL. Thus, the above example cannot be constructed with the aid of
+the SOM Compiler.
+
+<P><HR>
+
+<A HREF="125_L3_SOMderivedmetaclasse.html">[Back: SOM-derived metaclasses]</A> <BR>
+<A HREF="127_L2_MethodResolution.html">[Next: Method Resolution]</A> 
+</BODY>
+</HTML>

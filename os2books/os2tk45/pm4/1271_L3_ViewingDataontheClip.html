@@ -1,0 +1,66 @@
+<HTML>
+<HEAD>
+<TITLE>Viewing Data on the Clipboard</TITLE>
+</HEAD>
+<BODY>
+<H1>Viewing Data on the Clipboard</H1><!-- entering slot 1292 -->
+<P>
+The following code fragment shows how a sample clipboard viewer responds
+to the WM_DRAWCLIPBOARD message, drawing text and bit map data in its window.
+ Notice that the code uses the data retrieved from the clipboard before
+closing the clipboard.  An alternative strategy is to copy the data and
+then close the clipboard.  In any case, the original data from the clipboard
+cannot be used after the clipboard is closed.
+<P>
+
+<PRE>    PSZ     pszText;
+    HPS     hps;
+    RECTL   rcl;
+    HBITMAP hBitmap;
+    POINTL  ptlDest;
+
+    case WM_DRAWCLIPBOARD:
+        if (!WinOpenClipbrd(hab))
+            return 0;
+
+        hps = WinGetPS(hwnd);  /* Get a presentation space for drawing */
+        WinQueryWindowRect(hwnd, &amp;rcl);/* Get dimensions of the window */
+
+        if (pszText =(PSZ)WinQueryClipbrdData(hab, CF_TEXT)) {
+            WinDrawText(hps,
+                -1,                          /* Null-terminated string  */
+                pszText,                     /* The string              */
+                &amp;rcl,                        /* Where to put the string */
+                CLR_BLACK,                   /* Foreground color        */
+                CLR_WHITE,                   /* Background color        */
+                DT_CENTER | DT_VCENTER | DT_ERASERECT);
+        }
+        else if (hBitmap = (HBITMAP)WinQueryClipbrdData(hab, CF_BITMAP)) {
+            ptlDest.x = ptlDest.y = 0;
+            WinFillRect(hps, &amp;rcl, CLR_WHITE);
+            WinDrawBitmap(hps,
+                hBitmap,
+                NULL,                        /* Draws entire bit map    */
+                &amp;ptlDest,                    /* Destination             */
+                CLR_BLACK,                   /* Foreground color        */
+                CLR_WHITE,                   /* Background color        */
+                DBM_NORMAL);                 /* Bit map flags           */
+        }
+
+        /* Remove rectangle from the update region */
+        WinValidateRect(hwnd, &amp;rcl, FALSE);
+        WinReleasePS(hps);            /* Release the presentation space.*/
+        WinCloseClipbrd(hab);         /* Close the clipboard.           */
+        return 0;
+
+</PRE>
+
+<P>
+Responding to WM_DRAWCLIPBOARD Message
+
+<P><HR>
+
+<A HREF="1270_L3_RetrievingDatafromth.html">[Back: Retrieving Data from the Clipboard]</A> <BR>
+<A HREF="1272_L1_CombinationBox.html">[Next: Combination Box]</A> 
+</BODY>
+</HTML>

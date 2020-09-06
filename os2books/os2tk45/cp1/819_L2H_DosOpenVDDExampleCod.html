@@ -1,0 +1,61 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosOpenVDD - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosOpenVDD - Example Code</H1><!-- entering slot 831 -->
+<P>
+The following is NOT a complete C program.  It is simply intended to provide
+an idea of how a protected-mode OS/2 process can communicate with a virtual
+device driver (VDD).
+<P>
+This example shows a protected-mode process calling a hypothetical VDD with
+a request to read a string of bytes from the VDD. Assume that the session
+identifier of the specified DOS session has been placed into SessionID already
+and that the sample virtual device driver has registered the name "VDD007"
+with the operating system.
+<PRE> #define INCL_DOSMVDM     /* Multiple DOS sessions values */
+ #define INCL_DOSERRORS   /* DOS Error values */
+ #include &lt;os2.h&gt;
+ #include &lt;stdio.h&gt;
+
+ UCHAR   VDDName[10] = "VDD007";    /* Name of VDD */
+ HVDD    VDDHandle   = NULLHANDLE;  /* Handle of VDD */
+ SGID    SessionID   = 0;        /* Session identifier (should be initialized */
+ ULONG   Command     = 3;        /* VDD function code (hypothetical) */
+ APIRET  rc          = NO_ERROR;    /* Return code */
+ UCHAR   InputBuffer[30]  = "Your command here";  /* Command information    */
+ UCHAR   OutputBuffer[30] = "";                   /* Output data (returned) */
+
+    rc = DosOpenVDD(VDDName, &amp;VDDHandle);
+    if (rc != NO_ERROR) {
+       printf("VDD %s was not found.\n", rc);
+       return 1;
+    }
+
+    rc = DosRequestVDD(VDDHandle,              /* Handle of VDD */
+                       SessionID,              /* Session ID */
+                       Command,                /* Command to send to VDD */
+                       sizeof(InputBuffer),    /* Length of input */
+                       InputBuffer,            /* Input buffer */
+                       sizeof(OutputBuffer),   /* Length of output area */
+                       OutputBuffer);          /* Output from command */
+    if (rc != NO_ERROR) {
+        printf("DosRequestVDD error: return code = %u\n", rc);
+        return 1;
+    }
+
+    rc = DosCloseVDD(VDDHandle);               /* Close the VDD */
+    if (rc != NO_ERROR) {
+        printf("DosCloseVDD error: return code = %u\n", rc);
+        return 1;
+    }
+</PRE>
+
+
+<P><HR>
+
+<A HREF="818_L2H_DosOpenVDDRelatedFun.html">[Back: DosOpenVDD - Related Functions]</A> <BR>
+<A HREF="820_L2H_DosOpenVDDTopics.html">[Next: DosOpenVDD - Topics]</A> 
+</BODY>
+</HTML>

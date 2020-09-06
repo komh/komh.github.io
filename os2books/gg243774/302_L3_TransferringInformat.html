@@ -1,0 +1,68 @@
+<HTML>
+<HEAD>
+<TITLE>Transferring Information</TITLE>
+</HEAD>
+<BODY>
+<H1>Transferring Information</H1><!-- entering slot 333 -->
+<P>
+As explained in <A HREF="301_L3_DroppinganObject.html">Dropping an Object</A>,
+a target window may send a DM_RENDER message to the source when it receives
+a DM_DROP message from Presentation Manager.  Similarly, a Workplace Shell
+object may send the same message when its<I> _wpDrop</I> method is invoked
+by the Workplace Shell.  This message is normally sent to the source when
+the target requires the assistance of the source in completing the transfer
+of data as part of the drop operation.
+<P>
+The source window processes this message in its window procedure, according
+to the rendering mechanism requested by the target.  If the source is a
+Workplace Shell object, the Workplace Shell will directly invoke the object's
+<I>_wpRender</I> method to perform the same function.  In most cases, however,
+an object does not need to override the<I> _wpRender</I> method unless it
+wishes to implement a private rendering mechanism.
+<P>
+The DM_RENDER processing from the<I> Customer</I> program is shown in <A HREF="073_L2_HandlingtheDM_RENDER.html">Figure
+"Handling the DM_RENDER Message"</A>.
+<P>
+The first parameter to the DM_RENDER message contains a pointer to the DRAGTRANSFER
+structure, which in turn contains a pointer to the DRAGITEM structure in
+its<I> pditem</I> field.  For a Workplace Shell object, a pointer to the
+DRAGTRANSFER structure is passed as a parameter to the<I> _wpRender</I> method.
+
+<P>
+In the DRM_SHAREMEM rendering mechanism, the<I> ulItemID</I> field in the
+DRAGITEM structure is used to hold a pointer to the customer container record
+(of type CONTRECORD), in whch the<I> cust</I> field is a CUSTOMER structure
+containing details of the customer object which was dragged.
+<P>
+Next, the name of the shared memory object previously allocated by the target
+window is retrieved from the<I> hstrRenderToName</I> field of the DRAGTRANSFER
+structure.  This name is used to obtain access to the shared memory object.
+ The customer details are copied into this memory object, after which the
+memory object is freed.
+<P>
+The operation code in the DRAGTRANSFER structure is then checked to establish
+whether the target requires a copy or a move operation.  If a move was requested,
+the source program deletes the customer record from the contaiiner by calling
+an application subroutine named<I> RemoveCustomer()</I>.
+<P>
+The window procedure then returns the value TRUE, indicating that the data
+was successfully rendered.  This value is returned to the target window
+procedure that issued the<B> DrgSendTransferMsg()</B> call. At this point,
+the target window procedure has access to all information required to complete
+the drop operation, and may do so without further communication.
+<P>
+At the completion of the rendering procedure, the source may pass a DM_RENDERCOMPLETE
+message to the target, allowing the target to release any resources still
+outstanding.  A Presentation Manager window may process this message in
+its window procedure, while a Workplace Shell object is notified of the
+event by the Workplace Shell, which invokes the object's<I> _wpRenderComplete
+</I>method. This is usually only required in cases where complex private
+rendering mechanisms involve multiple transfers.  It is not used in the
+above examples.
+
+<P><HR>
+
+<A HREF="301_L3_DroppinganObject.html">[Back: Dropping an Object]</A> <BR>
+<A HREF="303_L2_UsingRenderingMechan.html">[Next: Using Rendering Mechanisms]</A> 
+</BODY>
+</HTML>

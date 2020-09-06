@@ -1,0 +1,78 @@
+<HTML>
+<HEAD>
+<TITLE>Creating a Rubber-Banding Effect with a Straight Line</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating a Rubber-Banding Effect with a Straight Line</H1><!-- entering slot 175 -->
+<P>
+When lines are drawn with a rubber-banding effect, two things happen: the
+original line (if one exists) is erased, and a new line is drawn in its
+place. This process typically takes place each time the mouse is dragged
+and continues until the mouse button is released. The quickest way to erase
+the original line (having ensured that it was drawn using mix attribute
+FM_XOR) is to redraw it using mix attribute FM_XOR. The following figure
+shows how to create this effect.
+<PRE>#define INCL_WININPUT
+#define INCL_GPITRANSFORMS
+#define INCL_GPIPRIMITIVES
+#include &lt;os2.h&gt;
+    HPS hps;                            /* Presentation-space handle  */
+    LONG curr_color;
+
+MRESULT EXPENTRY wpGeneric(HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2){
+    static POINTL ptlStart;             /* Starting point of line     */
+    static POINTL ptlNew;               /* Ending point of line       */
+    static POINTL ptlPrev;              /* Previous end point of line */
+    static BOOL fDraw;                  /* Line-drawing flag          */
+
+    switch (msg) {
+        case WM_BUTTON1DOWN:            /* User begins drawing        */
+           GpiSetColor(hps, CLR_GREEN);
+           ptlStart.x = (LONG) (LOUSHORT(mp1));
+           ptlStart.y = (LONG) (HIUSHORT(mp1));
+           GpiConvert(hps, CVTC_DEVICE, CVTC_WORLD, 1L,
+                    &amp;ptlStart);
+           ptlPrev.x = ptlStart.x;
+           ptlPrev.y = ptlStart.y;
+           GpiMove(hps, &amp;ptlStart);
+           fDraw = TRUE;
+           return ((MRESULT) TRUE);
+
+        case WM_MOUSEMOVE:              /* User draws line             */
+            if (fDraw) {
+                ptlNew.x = (LONG) (LOUSHORT(mp1));
+                ptlNew.y = (LONG) (HIUSHORT(mp1));
+                GpiConvert(hps, CVTC_DEVICE, CVTC_WORLD, 1L,  &amp;ptlNew);
+                curr_color = GpiQueryColor(hps);
+                GpiSetMix(hps, FM_XOR);
+                if ((ptlStart.x != ptlPrev.x)
+                || (ptlStart.y != ptlPrev.y)) {
+                    GpiMove(hps, &amp;ptlStart);
+                    GpiLine(hps, &amp;ptlPrev);
+                } /* if */
+                if ((ptlStart.x != ptlNew.x)
+                || (ptlStart.y != ptlNew.y)) {
+                    GpiMove(hps, &amp;ptlStart);
+                    GpiLine(hps, &amp;ptlNew);
+                    ptlPrev.x = ptlNew.x;
+                    ptlPrev.y = ptlNew.y;
+                } /* if */
+                GpiSetMix(hps, FM_OVERPAINT);
+            } /* if */
+            return ((MRESULT) TRUE);
+
+         case WM_BUTTON1UP:              /* User stops drawing          */
+            fDraw = FALSE;
+            return ((MRESULT) TRUE);
+    } /* switch */
+} /* wpGeneric */
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="166_L3_DrawingaStraightLine.html">[Back: Drawing a Straight Line]</A> <BR>
+<A HREF="168_L3_DrawingaCircle.html">[Next: Drawing a Circle]</A> 
+</BODY>
+</HTML>

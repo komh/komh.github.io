@@ -1,0 +1,69 @@
+<HTML>
+<HEAD>
+<TITLE>Making a QoS Reservation</TITLE>
+</HEAD>
+<BODY>
+<H1>Making a QoS Reservation</H1><!-- entering slot 178 -->
+<P>
+The rapi_reserve() call is used by the receiver to make a reservation or
+change a reservation.  The call specifies a reservation style, filterspecs
+(data senders), and flowspecs (QoS specifications).
+<P>
+This example shows how a receiver makes or changes a reservation:
+<PRE>#define MAX_RSVP_SENDERS 10
+    int retcode;
+    rapi_styleid_t rapiStyle = RAPI_RSTYLE_FIXED; /* fixed reservation */
+    int filterSpecCount;
+    rapi_filter_t filterSpec[MAX_RSVP_SENDERS];
+    int flowSpecCount;
+    rapi_flowspec_t flowSpec[MAX_RSVP_SENDERS];
+
+    filterSpecCount = 1;   /* one specified sender this time */
+    /* set the object size and form in the object header */
+    filterSpec[0].len = sizeof(rapi_hdr_t) + sizeof(rapi_filter_base_t);
+    filterSpec[0].form = RAPI_FILTERFORM_BASE;
+    /* fill in the body of the filterspec object */
+    filterSpec[0].filter.base.sender = sndAddr; /* copied from path event */
+
+    flowSpecCount = 1;     /* one flowspec this time */
+    /* set the object size and form in the object header */
+    flowSpec[0].len = sizeof(rapi_hdr_t) + sizeof(CL_flowspec_t);
+    flowSpec[0].form = RAPI_FORMAT_IS_CL;
+    /* fill in the body of the flowspec object */
+    flowSpec[0].cl_tspec_r = 100000;
+    flowSpec[0].cl_tspec_b = 2600;
+    flowSpec[0].cl_tspec_p = 100000;
+    flowSpec[0].cl_tspec_m = 1300;
+    flowSpec[0].cl_tspec_M = 1300;
+
+    retcode = rapi_reserve(
+            sessID,  /* session id */
+            RAPI_REQ_CONFIRM,    /* flags */
+            NULL,    /* rcv host addr (optional, sessID has destination) */
+            rapiStyle,    /* style ID */
+            NULL,    /* style extension, not supported */
+            NULL,    /* receiver policy, not supported */
+            filterSpecCount,
+            filterSpec,   /* array of filterspecs */
+            flowSpecCount,
+            flowSpec      /* array of flowspecs */
+            );
+    if (retcode)
+        printf("rapi_reserve() error %d\n", retcode);
+</PRE>
+
+<P>
+The rapi_reserve() call above has the optional RAPI_REQ_CONFIRM flag, that
+asks for a confirmation message to be sent if the reservation is made. Such
+an event indicates that the reservation had a very high probability of succeeding.
+
+<P>
+After making the reservation, the receiver should start listening for the
+data stream on a data socket.
+
+<P><HR>
+
+<A HREF="167_L3_CallbackFunctionExam.html">[Back: Callback Function Example]</A> <BR>
+<A HREF="169_L3_ReceivingaReservatio.html">[Next: Receiving a Reservation Message]</A> 
+</BODY>
+</HTML>

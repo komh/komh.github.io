@@ -1,0 +1,52 @@
+<HTML>
+<HEAD>
+<TITLE>Determining if HPS Memory is Available for Reuse</TITLE>
+</HEAD>
+<BODY>
+<H1>Determining if HPS Memory is Available for Reuse</H1><!-- entering slot 61 -->
+<P>
+After a successful send-type call using HPS memory, the user must wait until
+the stack is finished with it before reusing it.  There are two ways to
+determine if HPS memory is available for reuse: event semaphores and polling.
+
+<P>
+To use the event semaphores method, the application must allocate 15 shared
+event sempahores and pass them on the sysctl() call used to allocate the
+HPS memory (see the second example under Allocating HPS Memory).  When the
+stack is finished using the HPS memory, it will post any event semaphores
+corresponding to the 4K blocks that are now free.
+<P>
+To use the polling method, the application calls sysctl() with an array
+of pointers.  The stack will check each pointer, and if the block is in
+use, will zero the pointer in the array.  The polling method may be used
+even if event semaphores were also allocated for the memory. Following is
+an example of the polling method:
+<PRE>         long arrayofptrs[15];
+         int mib[4];
+         unsigned int needed;
+
+         mib[0] = CTL_OS2;
+         mib[1] = AF_INET;
+         mib[2] = 0;
+         mib[3] = OS2_QUERY_MEMMAPIO;
+         needed = sizeof(arrayofptrs);
+
+         if (sysctl(mib, sizeof(mib) / sizeof(mib[0]), arrayofptrs,
+             &amp;needed, NULL, 0) &lt; 0) {
+             psock_errno("sysctl(QUERY_MEMMAPIO)");
+             exit(1);
+         }
+         for (i = 0; i &lt; 15; i++) {
+            if (arrayofptrs[i] == 0) {
+               /* pointer is in use */
+            }
+         }
+</PRE>
+
+
+<P><HR>
+
+<A HREF="055_L3_UsingHPSMemorywithSe.html">[Back: Using HPS Memory with Send Calls]</A> <BR>
+<A HREF="057_L3_FreeingHPSMemory.html">[Next: Freeing HPS Memory]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,309 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Source code of LoadMAC.CMD - part 1</TITLE>
+</HEAD>
+<BODY>
+<H1>Source code of LoadMAC.CMD - part 1</H1><!-- entering slot 599 -->
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* LoadMac.CMD - REXX program to work with the macro space            */
+/*                                                                    */
+/* (c) Copyright Bernd Schemmer 1994 - 1997                           */
+/*                                                                    */
+/* Author:                                                            */
+/*   Bernd Schemmer                                                   */
+/*   Stalburgstr. 14                                                  */
+/*   D-60318 Frankfurt am Main                                        */
+/*   Germany                                                          */
+/*   Bernd.Schemmer@gmx.de                                            */
+/*                                                                    */
+/* History:                                                           */
+/*   27.09.1994 /bs v1.00                                             */
+/*     - initial release                                              */
+/*                                                                    */
+/*   07.09.1997 /bs v2.00                                             */
+/*     - first public release for RXT&amp;T                               */
+/*                                                                    */
+/* Distribution:                                                      */
+/*   This code may be distributed freely and used in other programs.  */
+/*   Please give credit where credit is due.                          */
+/*   If you need further help, feel free to contact me at the address */
+/*   noted above.                                                     */
+/*                                                                    */
+/* Description:                                                       */
+/*   LOADMAC is a program to work with the REXX macro space.          */
+/*   Using this program you may load programs into or drop programs   */
+/*   from the macro space.                                            */
+/*                                                                    */
+/* Usage:                                                             */
+/*   LoadMac {CLEAR}                                                  */
+/*           {ADD:macroCMD{,B|A}} {DROP:macroName}                    */
+/*           {SAVE:macroImage} {LOAD:macroImage}                      */
+/*           {QUERY:macroName}                                        */
+/*           {REORDER:macroName{,B|A}}                                */
+/*           {/L:logfile} {/H} {/Silent} {/NoSound} {/NoAnsi}         */
+/*           {/Trace}                                                 */
+/*                                                                    */
+/* where:                                                             */
+/*   CLEAR                                                            */
+/*     clear the macro space                                          */
+/*                                                                    */
+/*   ADD:macroCMD{,B|A}                                               */
+/*     add the macro from the file 'macroCMD' to the macro space      */
+/*     'macroCMD' must be the name of a file with a REXX program.     */
+/*     You can set the name for the macro using the string            */
+/*                                                                    */
+/*         /* MACRONAME: myName */                                    */
+/*     or                                                             */
+/*         /* MACRONAME: "m y n a m e " */                            */
+/*                                                                    */
+/*     as first line of the file. If this line is missing, the macro  */
+/*     is created with the name of the file (without the extension).  */
+/*     If you omit the extension of the file, LOADMAC adds .CMD to    */
+/*     the name.                                                      */
+/*     To overwrite an existing macro add a leading exclamation mark  */
+/*     (!) to the macro filename.                                     */
+/*     Use B (before) or A (after) for the position of the macro in   */
+/*     the search order of the interpreter.                           */
+/*     The default is 'B' (before).                                   */
+/*                                                                    */
+/*   DROP:macroName                                                   */
+/*     drop the macro 'macroName' from the macro space                */
+/*     LOADMAC first tries to read a CMD file called 'macroName' with */
+/*     the macro to get the real name of the macro (according to the  */
+/*     ADD parameter). If this fails, it uses the macro name          */
+/*     'macroName'. To force the use of the macro name 'macroName'    */
+/*     add a leading exclamation mark '!' to 'macroName'.             */
+/*                                                                    */
+/*   QUERY:macroName                                                  */
+/*     Check if the macro 'macroName' exists in the macro space       */
+/*     (returns 1 - macro exist with option 'B', 2 - macro exists     */
+/*      with options 'A' or 0 - macro does not exist if it            */
+/*      is the last parameter)                                        */
+/*     LOADMAC first tries to read a CMD file called 'macroName' with */
+/*     the macro to get the real name of the macro (according to the  */
+/*     ADD parameter). If this fails, it uses the macro name          */
+/*     'macroName'. To force the use of the macro name 'macroName'    */
+/*     add a leading exclamation mark '!' to 'macroName'.             */
+/*                                                                    */
+/*   REORDER:macroName{,A|B}                                          */
+/*     Reorder the macro 'macroName' in the macro space. The new      */
+/*     order can either be A (after) or B (before). The default is    */
+/*     B (before).                                                    */
+/*     LOADMAC first tries to read a CMD file called 'macroName' with */
+/*     the macro to get the real name of the macro (according to the  */
+/*     ADD parameter). If this fails, it uses the macro name          */
+/*     'macroName'. To force the use of the macro name 'macroName'    */
+/*     add a leading exclamation mark '!' to 'macroName'.             */
+/*                                                                    */
+/*   SAVE:macroImage                                                  */
+/*     Save the complete macro space into the file 'macroImage'       */
+/*     If you omit the extension of the file, LOADMAC adds .MAC to    */
+/*     the name.                                                      */
+/*     To overwrite an existing file add a leading exclamation mark   */
+/*     (!) to the file name.                                          */
+/*                                                                    */
+/*   LOAD:macroImage                                                  */
+/*     Load the file 'macroImage' (created with SAVE:macroImage)      */
+/*     into the macro space.                                          */
+/*     If you omit the extension of the file, LOADMAC adds .MAC to    */
+/*     the name.                                                      */
+/*     Note that you can only use this call, if the macro space is    */
+/*     empty!                                                         */
+/*                                                                    */
+/*                                                                    */
+/*   /L:logFile - logfile is the name of the logfile :-)              */
+/*                This parameter is case-sensitive!                   */
+/*                def.: do not use a logfile                          */
+/*                                                                    */
+/*   /H         - show usage, you may also use                        */
+/*                /h, /?, /HELP, -h, -H, -HELP or -?                  */
+/*                (MAIN is not called!)                               */
+/*                                                                    */
+/*   /Silent    - suppress all messages (except error messages)       */
+/*                You should also use the parameter /L:logfile if you */
+/*                use this parameter!                                 */
+/*                You may also set the environment variable SILENT to */
+/*                "1" to suppress all messages.                       */
+/*                                                                    */
+/*   /NoSound   - suppress all sounds. You may also set the           */
+/*                environment variable SOUND to "0" to suppress the   */
+/*                sounds.                                             */
+/*                                                                    */
+/*   /NoAnsi    - do not use ANSI codes. You may also set the         */
+/*                environment variable ANSI to "0" to suppress the    */
+/*                use of ANSI codes.                                  */
+/*                                                                    */
+/*   /Trace     - turn TRACE on before calling MAIN. You may also     */
+/*                set the environment variable RXTTRACE to ON to      */
+/*                turn the TRACE mode for MAIN on.                    */
+/*                                                                    */
+/* note:                                                              */
+/*   You must use at least one blank to separate the <!-- entering slot 600 -->parameters.      */
+/*   All parameters are processed in sequential order.                */
+/*   You can use all parameters as often as you like.                 */
+/*                                                                    */
+/*   Use leading and trailing ' for filenames containing blanks:      */
+/*                                                                    */
+/*     LOADMAC SAVE:'My File.SAV'                                     */
+/*                                                                    */
+/*   or                                                               */
+/*                                                                    */
+/*     LOADMAC 'SAVE:My File.SAV'                                     */
+/*                                                                    */
+/*   LOADMAC searches all existing files in the current directory and */
+/*   in the directories listed in the PATH variable.                  */
+/*   To suppress this search use an absolute or relative path for     */
+/*   the filename.                                                    */
+/*                                                                    */
+/*   To add a macro you may omit the keyword 'ADD:':                  */
+/*                                                                    */
+/*     LOADMAC myMacro                                                */
+/*                                                                    */
+/*   is equal to                                                      */
+/*                                                                    */
+/*     LOADMAC ADD:myMacro                                            */
+/*                                                                    */
+/*   (Exception: To load a macro called CLEAR you must use the        */
+/*               keyword ADD)                                         */
+/*   Be aware that the macro spaces saved with the parameter SAVE     */
+/*   contains tokenized REXX code. Thus you can't use a saved macro   */
+/*   space created with Object REXX under Classic REXX and vice       */
+/*   versa.                                                           */
+/*                                                                    */
+/* returncodes:                                                       */
+/*      0 - execution okay                                            */
+/*                                                                    */
+/*    240 ... 252                                                     */
+/*          reserved for the runtime system                           */
+/*    253 - syntax help called (parameter /h)                         */
+/*    254 - user break (CTRL-C)                                       */
+/*    255 - internal runtime system error                             */
+/*   else - program specific errors                                   */
+/*   (see also the description for the parameter QUERY:macroname      */
+/*    above)                                                          */
+/*                                                                    */
+/* Notes:                                                             */
+/*                                                                    */
+/* This program requires the REXXUTIL DLL supplied with Object REXX - */
+/* but you don't need to install Object REXX as the default REXX      */
+/* interpreter to use that DLL. You can use the Object Rexx REXXUTIL  */
+/* DLL also with Classic REXX. To do this copy the new REXXUTIL.DLL   */
+/* and the DLL REXXCRT.DLL into the directory C:\OS2\DLL (assuming C: */
+/* is your OS/2 boot drive).                                          */
+/*                                                                    */
+/* If you don't want to use the new REXXUTIL DLL as default DLL you   */
+/* can copy it to another directory (def.: C:\OREXX).                 */
+/* You must change the variable global.__RexxUtilDLL below if you use */
+/* another directory. Note that you cannot change the name of the     */
+/* DLL!                                                               */
+/*                                                                    */
+/* Further note: You can also use the functions for macro space       */
+/* handling from Dave Boll's DLL RXU - but you have to change the     */
+/* source code of LOADMAC to reflect use of RXU.                      */
+/*                                                                    */
+/* LOADMAC also needs the function SysSearchPath from the REXXUTIL    */
+/* DLL.                                                               */
+/*                                                                    */
+/* Environment variables used while running the program               */
+/*                                                                    */
+/* þ ANSI                                                             */
+/*   - Set the environment variable 'ANSI' to "0" or "OFF" if you     */
+/*     don't want colors.                                             */
+/*                                                                    */
+/* þ PATCHDRIVE                                                       */
+/*   - Set the environment variable 'PATCHDRIVE' to the drive with    */
+/*     a patched version of your program (if any exist, see the       */
+/*     routine 'I!.__CheckPatch' for the algorithm used ).            */
+/*                                                                    */
+/* þ SILENT                                                           */
+/*   - Set the environment variable 'SILENT' to "1" or "ON" to        */
+/*     suppress all messages.                                         */
+/*                                                                    */
+/* þ SOUND                                                            */
+/*   - Set the environment variable 'SOUND' to "0" or "OFF" if you    */
+/*     don't want sounds.                                             */
+/*                                                                    */
+/* þ RXTTRACE                                                         */
+/*   - Set the environment variable 'RXTTRACE' to "MAIN" to turn the  */
+/*     trace mode for the function MAIN on.                           */
+/*                                                                    */
+/* þ VERBOSE                                                          */
+/*   - Set the environment variable 'VERBOSE' to any value not equal  */
+/*     to '' if you want debug information. If the value of the       */
+/*     variable is 'DEBUG', the error handler turns interactive trace */
+/*     on if an error occured.                                        */
+/*     Note that the error handler also turns interactive trace on if */
+/*     the environment variable RXTTRACE is set to 'MAIN' or if the   */
+/*     parameter '/TRACE' is specified.                               */
+/*                                                                    */
+/*                                                                    */
+/* Based on TEMPLATE.CMD v3.06, TEMPLATE is (c) 1996 <!-- entering slot 601 -->Bernd Schemmer,  */
+/* Stalburgstr 14, 60318 Frankfurt, Germany, Bernd.Schemmer@gmx.de    */
+/* ------------------------------------------------------------------ */
+
+  call trace 'off'      /* turn interactive trace off                 */
+                        /* use this statement as the first statement  */
+                        /* in your program, to ignore the value of    */
+                        /* the environment variable RXTRACE.          */
+
+                  global. = ''  /* init the stem global. with ''      */
+
+/*** change the following values to your need                       ***/
+
+                        /* additional parameter                 v3.06 */
+                        /* (string for the usage routine)       v3.06 */
+  global.__userUsage  = ,                                    /* v3.06 */
+    '{CLEAR} {ADD:macroCMD{,B|A}} {DROP:macroName}' ,
+    '{QUERY:macroName} {REORDER:macroName{,B|A}}',
+    '{SAVE:macroImage} {LOAD:macroImage}'
+
+                                /* name &amp; path of the REXXUTIL DLL    */
+                                /* from Object REXX if it is not the  */
+                                /* default REXXUTIL DLL               */
+         global.__RexxUtilDLL = 'C:\OREXX\REXXUTIL.DLL'
+
+         global.__Version = 2.00         /* Version of YOUR program   */
+
+       global.__SignOnMsg = 1   /* set to 0 if you do not want the    */
+                                /* program start and end messages     */
+
+         global.__NeedCID = 1   /* set to 1 if you need CID support   */
+
+      global.__NeedColors = 1   /* set to 1 if you want colored msgs  */
+
+  global.__NeedPatchCheck = 1   /* set to 1 if you want the program   */
+                                /* to search for a patched version of */
+                                /* this program                       */
+
+              /* set default values for EXPOSELIST if necessary       */
+/*             exposeList = ''                                        */
+
+              /* name of the routine for the message handling         */
+              /* note: Use '' for hardcoded messages                  */
+/*          global.__GetMsg = 'GETMSG'                                */
+
+             /* base number for the message numbers (def.: 1000)      */
+/*          global.__BaseMsgNo = 1000                                 */
+
+             /* note: set the variable prog.__STDOUT to "STDERR:"     */
+             /*       or "NUL" if your program is a filter program!   */
+
+  prog.__STDOUT = 'STDOUT'        /* necessary for Object REXX        */
+  prog.__STDERR = 'STDOUT'        /* necessary for Object REXX        */
+                                                                   /*!*/
+/***                End of variables to change                      ***/
+/*      HINT: The further program code is in the function MAIN        */
+
+/***        End of Part 1 of the source code of TEMPLATE.CMD        ***/
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="555_L3_LoadMaccmd.html">[Back: LoadMac.cmd]</A> <BR>
+<A HREF="557_L4_SourcecodeofLoadMACC.html">[Next: Source code of LoadMAC.CMD - part 4]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,361 @@
+<HTML>
+<HEAD>
+<TITLE>DosExecPgm</TITLE>
+</HEAD>
+<BODY>
+<H1>DosExecPgm</H1><!-- entering slot 36 -->Bindings:  <A HREF="208_L2H_DosExecPgm.html">C</A>,
+<A HREF="383_L2H_DosExecPgm.html">MASM</A>
+<BR>
+
+<P>
+This call allows a program to request that another program execute as a
+child process.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+DosExecPgm<!-- lm: 0x2 16 -->
+<UL> (ObjNameBuf, ObjNameBufL, ExecFlags,
+ArgPointer, EnvPointer, ReturnCodes, PgmPointer)<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+<B>ObjNameBuf</B> (PCHAR) - output<!-- lm: 0x11 4 -->
+<UL> Address of the
+name of the object that contributed to the failure of DosExecPgm is returned.
+<!-- lm: 0x2 1 -->
+</UL><B>ObjNameBufL</B> (SHORT) - input<!-- lm: 0x11 4 -->
+<UL> Length,
+in bytes, of the buffer described by ObjNameBuf.<!-- lm: 0x2 1 -->
+</UL><B> ExecFlags
+</B>(USHORT) - input<!-- lm: 0x11 4 -->
+<UL> Indicates how the program executes
+in relation to the requestor and whether execution is under conditions for
+debugging.<!-- lm: 0x2 4 -->
+<P>
+Value<!-- lm: 0x2 14 -->
+<UL> Definition<!-- lm: 0x2 4 -->
+</UL> 0<!-- lm: 0x2 14 -->
+<UL> Execution
+is synchronous to the parent process.  The termination code and result code
+are stored in the two-word structure.<!-- lm: 0x2 4 -->
+</UL> 1<!-- lm: 0x2 14 -->
+<UL> Execution
+is asynchronous to the parent process. When the child process terminates,
+its result code is discarded. The process ID is stored in the first word
+of the two-word structure ReturnCodes.<!-- lm: 0x2 4 -->
+</UL> 2<!-- lm: 0x2 14 -->
+<UL> Execution
+is asynchronous to the parent process. When the child process terminates,
+its result code is saved for examination by a <A HREF="021_L2_DosCwait.html">DosCwait
+</A>request. The process ID is stored in the first word of the two-word
+structure ReturnCodes.<!-- lm: 0x2 4 -->
+</UL> 3<!-- lm: 0x2 14 -->
+<UL> Execution
+is the same as if ExecFlags=2 is specified, plus debugging conditions are
+present for the child process.<!-- lm: 0x2 4 -->
+</UL> 4<!-- lm: 0x2 14 -->
+<UL> Execution
+is asynchronous to and detached from the parent process session.  When the
+detached process is started, it is not affected by the ending of the parent
+process.<!-- lm: 0x2 4 -->
+</UL> 5<!-- lm: 0x2 14 -->
+<UL> The program is
+loaded into storage and made ready to execute, but is not placed into execution
+until the session manager dispatches the threads belonging to the process.
+<!-- lm: 0x2 4 -->
+</UL>6<!-- lm: 0x2 14 -->
+<UL> Execution is the same
+as if ExecFlag=2 is specified, with the addition of debugging conditions
+being present for the child process and any of its descendants.
+<P>
+Some memory is consumed for uncollected result codes. Issue <A HREF="021_L2_DosCwait.html">DosCwait
+</A>to release this memory. If result codes are not collected, then ExecFlags=0
+or 1 should be used.<!-- lm: 0x2 1 -->
+</UL><B> ArgPointer</B> (PSZ) - input
+<!-- lm: 0x11 4 -->
+<UL>Address of the ASCIIZ Argument strings passed to
+the program. These strings represent command parameters, which are copied
+to the environment segment of the new process. The convention used by CMD.EXE
+is that the first of these strings is the program name (as entered from
+the command prompt or found in a batch file), and the second string consists
+of parameters to the program name. The second ASCIIZ string is followed
+by an additional byte of zeros. A value of 0 for the address of ArgPointer
+means that no arguments are to be passed.<!-- lm: 0x2 1 -->
+</UL><B> EnvPointer</B>(PSZ)
+- input<!-- lm: 0x11 4 -->
+<UL> Address of the ASCIIZ environment strings
+passed to the program. These strings represent environment variables and
+their current values. An environment string has the following form:
+<PRE>variable=value</PRE>
+
+<P>
+The last ASCIIZ environment string must be followed by an additional byte
+of zeros.
+<P>
+A value of 0 for the address of EnvPointer results in the new process inheriting
+the environment of its parent process.
+<P>
+When the new process is given control, it receives:<!-- lm: 0x2 4 -->
+<P>
+o<!-- lm: 0x2 6 -->
+<UL>A pointer to its environment segment<!-- lm: 0x2 4 -->
+</UL>o<!-- lm: 0x2 6 -->
+<UL>The fully qualified path name of the executable
+file<!-- lm: 0x2 4 -->
+</UL>o<!-- lm: 0x2 6 -->
+<UL>A copy of the argument strings.
+<P>
+A coded example of this follows:
+<PRE>eo:   ASCIIZ string 1  ; environment string 1      ASCIIZ string 2  ; environment string 2
+.
+.
+.
+      ASCIIZ string n  ; environment string n
+      Byte of 0
+.
+.
+.
+po:   ASCIIZ           ; string of filename
+                       ; of program to run.
+.
+.
+.
+ao:   ASCIIZ           ; argument string 1
+      ASCIIZ           ; argument string 2
+      Byte of 0
+</PRE>
+
+<P>
+The beginning of the environment segment is "eo" and "ao" is the offset
+of the first argument string in that segment. Register BX contains "ao"
+on entry to the target program. The address to the environment segment can
+also be obtained by issuing <A HREF="058_L2_DosGetInfoSeg.html">DosGetInfoSeg</A>.
+<!-- lm: 0x2 1 -->
+</UL><B>ReturnCodes</B> (PRESULTCODES) - output<!-- lm: 0x11 4 -->
+<UL> Address
+of the structure containing the process ID or termination code and the result
+code indicating the reason for the child's termination. This structure is
+also used by a <A HREF="021_L2_DosCwait.html">DosCwait</A> request, which
+waits for an asynchronous child process to end.<!-- lm: 0x2 4 -->
+<P>
+<B>termcodepid</B> (USHORT)<!-- lm: 0x11 7 -->
+<UL> For an asynchronous
+request, the process identifier of the child process. For a synchronous
+request, the termination code furnished by the system describes<!-- entering slot 37 -->
+why the child terminated.<!-- lm: 0x2 7 -->
+<P>
+Value<!-- lm: 0x2 17 -->
+<UL> Definition<!-- lm: 0x2 7 -->
+</UL>0<!-- lm: 0x2 17 -->
+<UL> EXIT (normal)<!-- lm: 0x2 7 -->
+</UL>1<!-- lm: 0x2 17 -->
+<UL> Hard error abort<!-- lm: 0x2 7 -->
+</UL>2<!-- lm: 0x2 17 -->
+<UL> Trap operation<!-- lm: 0x2 7 -->
+</UL>3<!-- lm: 0x2 17 -->
+<UL> Unintercepted <A HREF="075_L2_DosKillProcess.html">DosKillProcess
+</A><!-- lm: 0x2 4 -->
+</UL><B>resultcode</B> (USHORT)<!-- lm: 0x11 7 -->
+<UL> Result
+code specified by the terminating synchronous process on its last <A HREF="034_L2_DosExit.html">DosExit
+</A>call.<!-- lm: 0x2 1 -->
+</UL><B> PgmPointer</B> (PSZ) - input<!-- lm: 0x11 4 -->
+<UL> Address
+of the name of the file that contains the program to be executed.  When
+the environment is passed to the target program, this name is copied into
+"po" in the environment description shown above.
+<P>
+If the string appears to be a fully qualified path (it contains a ":" in
+the second position - or it contains a "\" - or both), then the file name
+must include the extension .COM or .EXE, and the program is loaded from
+the indicated drive:directory. If the string is not a fully qualified path,
+the current directory is searched.  If the file name is not found in the
+current directory, each drive:directory specification in the PATH defined
+in the current process' environment is searched for this file.<!-- lm: 0x2 1 -->
+</UL><B> rc
+</B>(USHORT) - return<!-- lm: 0x11 4 -->
+<UL> Return code descriptions are:
+<!-- lm: 0x2 4 -->
+<P>
+<LI><!-- lm: 0x2 14 -->NO_ERROR<!-- lm: 0x2 4 --> 1<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_FUNCTION
+<!-- lm: 0x2 4 -->
+</UL>2<!-- lm: 0x2 14 -->
+<UL> ERROR_FILE_NOT_FOUND<!-- lm: 0x2 4 -->
+</UL>3<!-- lm: 0x2 14 -->
+<UL> ERROR_PATH_NOT_FOUND<!-- lm: 0x2 4 -->
+</UL>4<!-- lm: 0x2 14 -->
+<UL> ERROR_TOO_MANY_OPEN_FILES<!-- lm: 0x2 4 -->
+</UL>5<!-- lm: 0x2 14 -->
+<UL> ERROR_ACCESS_DENIED<!-- lm: 0x2 4 -->
+</UL>8<!-- lm: 0x2 14 -->
+<UL> ERROR_NOT_ENOUGH_MEMORY<!-- lm: 0x2 4 -->
+</UL>10<!-- lm: 0x2 14 -->
+<UL> ERROR_BAD_ENVIRONMENT<!-- lm: 0x2 4 -->
+</UL>11<!-- lm: 0x2 14 -->
+<UL> ERROR_BAD_FORMAT<!-- lm: 0x2 4 -->
+</UL>13<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_DATA<!-- lm: 0x2 4 -->
+</UL>26<!-- lm: 0x2 14 -->
+<UL> ERROR_NOT_DOS_DISK<!-- lm: 0x2 4 -->
+</UL>32<!-- lm: 0x2 14 -->
+<UL> ERROR_SHARING_VIOLATION<!-- lm: 0x2 4 -->
+</UL>33<!-- lm: 0x2 14 -->
+<UL> ERROR_LOCK_VIOLATION<!-- lm: 0x2 4 -->
+</UL>36<!-- lm: 0x2 14 -->
+<UL> ERROR_SHARING_BUFFER_EXCEEDED<!-- lm: 0x2 4 -->
+</UL>89<!-- lm: 0x2 14 -->
+<UL> ERROR_NO_PROC_SLOTS<!-- lm: 0x2 4 -->
+</UL>95<!-- lm: 0x2 14 -->
+<UL> ERROR_INTERRUPT<!-- lm: 0x2 4 -->
+</UL>108<!-- lm: 0x2 14 -->
+<UL> ERROR_DRIVE_LOCKED<!-- lm: 0x2 4 -->
+</UL>127<!-- lm: 0x2 14 -->
+<UL> ERROR_PROC_NOT_FOUND<!-- lm: 0x2 4 -->
+</UL>180<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_SEGMENT_NUMBER<!-- lm: 0x2 4 -->
+</UL>182<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_ORDINAL<!-- lm: 0x2 4 -->
+</UL>188<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_STARTING_CODESEG<!-- lm: 0x2 4 -->
+</UL>189<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_STACKSEG<!-- lm: 0x2 4 -->
+</UL>190<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_MODULETYPE<!-- lm: 0x2 4 -->
+</UL>191<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_EXE_SIGNATURE<!-- lm: 0x2 4 -->
+</UL>192<!-- lm: 0x2 14 -->
+<UL> ERROR_EXE_MARKED_INVALID<!-- lm: 0x2 4 -->
+</UL>194<!-- lm: 0x2 14 -->
+<UL> ERROR_ITERATED_DATA_EXCEEDS_64k<!-- lm: 0x2 4 -->
+</UL>195<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_MINALLOCSIZE<!-- lm: 0x2 4 -->
+</UL>196<!-- lm: 0x2 14 -->
+<UL> ERROR_DYNLINK_FROM_INVALID_RING<!-- lm: 0x2 4 -->
+</UL>198<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_SEGDPL<!-- lm: 0x2 4 -->
+</UL>199<!-- lm: 0x2 14 -->
+<UL> ERROR_AUTODATASEG_EXCEEDS_64k<!-- lm: 0x2 4 -->
+</UL>201<!-- lm: 0x2 14 -->
+<UL> ERROR_RELOC_CHAIN_XEEDS_SEGLIM<!-- lm: 0x2 1 -->
+</UL><B>Remarks</B>
+<P>
+The target program is located and loaded into storage if necessary.  A process
+is created and executed for the target program.  The new process is created
+with an address space separate from its parent; that is, a new Local Descriptor
+Table (LDT) is built for the process.
+<P>
+The execution of a child process can be synchronous or asynchronous to the
+execution of its parent process. If synchronous execution is indicated,
+the requesting thread waits pending completion of the child process.  Other
+threads in the requesting process may continue to run.
+<P>
+If asynchronous execution is indicated, DosExecPgm returns with the process
+ID of the started child process. Specifying ExecFlags=2 allows the parent
+process to issue a <A HREF="021_L2_DosCwait.html">DosCwait</A> request after
+the DosExecPgm request, so it can examine the result code returned when
+the child process terminates. If ExecFlags=1 is specified, the result code
+of the asynchronous child process is not returned to the parent process.
+
+<P>
+A child process inherits file handles obtained by its parent with <A HREF="091_L2_DosOpen.html">DosOpen
+</A>calls that indicated inheritance<!-- entering slot 38 --> .  The child
+process also inherits handles to pipes created by the parent process with
+<A HREF="079_L2_DosMakePipe.html">DosMakePipe</A>.
+<P>
+Because a child process has the ability to inherit handles and a parent
+process controls the meanings of handles for standard I/O, the parent can
+duplicate inherited handles as handles for standard I/O. This permits the
+parent process and the child process to coordinate I/O to a pipe or a file.
+
+<P>
+For example, a parent process can create two pipes with <A HREF="079_L2_DosMakePipe.html">DosMakePipe
+</A>requests.  It can issue <A HREF="027_L2_DosDupHandle.html">DosDupHandle
+</A>to redefine the read handle of one pipe as standard input (0000H), and
+the write handle of the other pipe as standard output (0001H).  The child
+process uses the standard I/O handles, and the parent process uses the remaining
+read and write pipe handles.  Thus, the child process reads what the parent
+writes to one pipe, and the parent process reads what the child writes to
+the other pipe.
+<P>
+When an inherited file handle is duplicated, the position of the file pointer
+is always the same for both handles, regardless of which handle repositions
+the file pointer.
+<P>
+An asynchronous process started with ExecFlags=3 or ExecFlags=6 is provided
+a trace flag facility.  This facility and the Ptrace buffer provided by
+<A HREF="104_L2_DosPtrace.html">DosPtrace</A> enable a debugger to perform
+breakpoint debugging.  <A HREF="161_L2_DosStartSession.html">DosStartSession
+</A>provides additional debugging capabilities that allow a debugger to
+trace all processes associated with an application running in a child session,
+regardless of whether the process is started with a DosExecPgm or a <A HREF="161_L2_DosStartSession.html">DosStartSession
+</A>request.
+<P>
+A detached process is treated as an orphan of the parent process and executes
+in the background.  Thus, it cannot make any VIO, KBD, or MOU calls, except
+within a video pop-up requested by VioPopUp. To test whether a program is
+running detached, use the following method.  Issue a video call, (for example,
+VioGetAnsi).  If the call is not issued within a video pop-up and the process
+is detached, the video call returns error code ERROR_VIO_DETACHED.
+<P>
+<B>Note: </B> If the target program's entry point is in a segment that has
+IOPL indicated, this causes a general protection fault and the process is
+terminated. If any dynamic link module being used by the new process has
+an initialization routine specified in a segment that has IOPL indicated,
+general protection fault occurs and the process is terminated.<!-- lm: 0x2 1 -->
+<P>
+
+<BR>
+<B>Family API Considerations</B>
+<P>
+Some options operate differently in DOS mode than in OS/2 mode.  Therefore,
+the following restrictions apply to DosExecPgm when coding in DOS mode:
+<!-- lm: 0x2 1 -->
+<P>
+o<!-- lm: 0x2 3 -->
+<UL>ExecFlags must be set to zero.  This value is not
+related to the PID of the program being executed. If ExecFlags &lt;&gt;
+0, DosExecPgm returns the error code ERROR_INVALID_DATA.<!-- lm: 0x2 1 -->
+</UL> o<!-- lm: 0x2 3 -->
+<UL>The
+ObjNameBuf field is used to provide additional information in the OS/2 mode
+environment as to why the DosExecPgm failed.  The information is not relevant
+or available in DOS 2.X or DOS 3.X. Therefore, the buffer is filled in with
+blanks.<!-- lm: 0x2 1 -->
+</UL> o<!-- lm: 0x2 3 -->
+<UL>The ReturnCodes
+two-word structure is very similar to the OS/2 mode environment. The first
+word is a termination code with the following meanings:<!-- lm: 0x2 4 -->
+<UL>
+<P>
+Value<!-- lm: 0x2 14 -->
+<UL> Definition<!-- lm: 0x2 4 -->
+</UL>0<!-- lm: 0x2 14 -->
+<UL> Exit (normal exit and termination by call
+INT 21H AH=31H)<!-- lm: 0x2 4 -->
+</UL>1<!-- lm: 0x2 14 -->
+<UL> Hard error abort<!-- lm: 0x2 4 -->
+</UL>2<!-- lm: 0x2 14 -->
+<UL> Not returned<!-- lm: 0x2 4 -->
+</UL>3<!-- lm: 0x2 14 -->
+<UL> Termination by Ctrl<!-- entering slot 39 --> -Break.
+
+<P>
+The second word contains the ResultCode specified by the terminating process
+on its <A HREF="034_L2_DosExit.html">DosExit</A> call (or INT 21H AH=4CH
+call).<!-- lm: 0x2 1 -->
+</UL><B>Application Type Considerations</B>
+<P>
+You may use DosExecPgm to start a process that is of the same type as the
+starting process. Process types include Presentation Manager, text-windowed,
+and full-screen. You may not use DosExecPgm to start a process that is of
+a different type than the starting process.
+<P>
+You must use DosStartSession to start a new process from a process that
+is of a different type. For example, use DosStartSession to start a Presentation
+Manager process from a non-Presentation Manager process.
+
+<P><HR>
+
+<A HREF="032_L2_DosError.html">[Back: DosError]</A> <BR>
+<A HREF="034_L2_DosExit.html">[Next: DosExit]</A> 
+</BODY>
+</HTML>

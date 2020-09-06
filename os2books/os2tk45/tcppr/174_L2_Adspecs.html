@@ -1,0 +1,110 @@
+<HTML>
+<HEAD>
+<TITLE>Adspecs</TITLE>
+</HEAD>
+<BODY>
+<H1>Adspecs</H1><!-- entering slot 185 -->
+<P>
+Adspecs are a part of path events.  Adspecs carry information about the
+RSVP support that is possible in the network for a specified flow.
+<P>
+An adspec is created by the RSVP daemon when a sender calls rapi_sender().
+The path message traverses the network to the receiver, and accumulates
+changes to the adspec when passing through each RSVP enabled network node.
+The receiver callback function is called with a path event.  The path event
+has the original sender tspec, and the adspec that indicates the support
+that is possible through the network for that tspec.  The receiver then
+calls rapi_reserve() to make a reservation based upon the information in
+the tspec and adspec.  Then the reservation message traverses the network
+to the sender.  The QoS reservation is set up in each RSVP node until the
+reservation message reaches the sender.  The sender callback function is
+called with a reserve event.  The sender then may adjust packet size or
+other factors in order to use the reservation effectively, based upon the
+reservation information.
+<P>
+When the application callback function is passed a non-NULL pointer for
+the adspec, then the pointer points to an IS_adspec_t data type:
+<PRE>    typedef struct {
+            Gen_adspec_t    Gen_Adspec;
+            rbool_t         CL_present;
+            CL_adspec_t     CL_Adspec;
+            rbool_t         Guar_present;
+            Guar_adspec_t   Guar_Adspec;
+    } IS_adspec_t;
+</PRE>
+
+<P>
+The IS_adspec_t data type has several fields.  The Gen_Adspec field is always
+present.  If CL_present is true, then CL_Adspec contains a CL_adspec_t data
+type, which is a composite of the controlled flow support for the path.
+If Guar_present is true, then Guar_Adspec contains a Guar_adspec_t data
+type, which is a composite of the guaranteed flow support for the path.
+
+<P>
+The Gen_Adspec_t data type is shown below.
+<PRE>    typedef struct {
+            rbool_t    servBreak;    /* break in service */
+            u_int16_t  ISHops;       /* num Int-serv aware hops */
+            float32_t  pathBW;       /* min path band width (bytes/sec) */
+            u_int32_t  pathLatency;  /* min path latency (microseconds) */
+            u_int16_t  composedMTU;  /* composed path MTU */
+    } Gen_adspec_t;
+</PRE>
+
+<P>
+If servBreak is true, then there is at least one hop on the path that does
+not have QoS support and QoS must be considered unreliable. ISHops specifies
+the number of hops that do have QoS support of some sort (controlled load
+or guaranteed).  There are estimates for minimum path bandwidth and minimum
+delay through the path.  The composedMTU is the maximum transmission unit
+that can be sent on the path without fragmentation of the packet.  The composedMTU
+includes the IP packet header and whatever protocol headers (UDP, TCP, and
+so on) will be in the packet.  Note that a particular type of service might
+have a different value for the composedMTU, due to implementation differences
+for various types of QoS.
+<P>
+The CL_adspec_t data type provides information specifically for controlled
+load flows on the path.  Note that it is possible for there to be a break
+in service for controlled load even if QoS is supported at every node.  Some
+nodes may only implement QoS for guaranteed flows.
+<PRE>    typedef struct {
+            rbool_t    servBreak;    /* break in service */
+            u_int16_t  ISHops;       /* num Int-serv aware hops */
+            float32_t  pathBW;       /* min path band width (bytes/sec) */
+            u_int32_t  pathLatency;  /* min path latency (microseconds) */
+            u_int16_t  composedMTU;  /* composed path MTU */
+    } CL_adspec_t;
+</PRE>
+
+<P>
+The fields have the same significance as for Gen_adspec_t but refer  only
+to path hops for which controlled load is supported.
+<P>
+The Guar_adspec_t data type provides information specifically for guaranteed
+flows on the path.  Note that it is possible for there to be a break in
+service for guaranteed flows even if QoS is supported at every node. Some
+nodes may only implement controlled load QoS.
+<PRE>    typedef struct {
+            rbool_t    servBreak;    /* break in service */
+            u_int16_t  ISHops;       /* num Int-serv aware hops */
+            float32_t  pathBW;       /* min path band width (bytes/sec) */
+            u_int32_t  pathLatency;  /* min path latency (microseconds) */
+            u_int16_t  composedMTU;  /* composed path MTU (bytes) */
+            u_int32_t  Ctot;         /* total rate dep. err (bytes) */
+            u_int32_t  Dtot;         /* total rate indep. err (microseconds) */
+            u_int32_t  Csum;         /* reshaped rate dep. err (bytes) */
+            u_int32_t  Dsum;         /* reshaped rate indep. err (microseconds) */
+    } Guar_adspec_t;
+</PRE>
+
+<P>
+The first five fields have the same significance as for Gen_adspec_t but
+refer only to path hops for which guaranteed flow is supported. The remaining
+fields are unique to guaranteed flows.
+
+<P><HR>
+
+<A HREF="173_L2_TspecsandFlowspecs.html">[Back: Tspecs and Flowspecs]</A> <BR>
+<A HREF="175_L2_ControlledLoadReserv.html">[Next: Controlled Load Reservations]</A> 
+</BODY>
+</HTML>

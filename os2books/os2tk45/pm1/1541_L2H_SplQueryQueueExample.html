@@ -1,0 +1,136 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>SplQueryQueue - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>SplQueryQueue - Example Code</H1><!-- entering slot 1552 -->
+<P>
+This sample code queries the local workstation for a queue name that is
+entered at the command prompt. The query is done at level 4 which returns
+returns in the buffer information in a PRQINFO3 structure and follows this
+with PRJINFO2 structures - one for each job in the queue.
+<PRE>#define INCL_SPL
+#define INCL_SPLDOSPRINT
+#define INCL_SPLERRORS
+
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+
+INT main (argc, argv)
+INT argc;
+CHAR *argv[];
+
+{
+  ULONG  splerr;
+  ULONG  cbBuf;
+  ULONG  cbNeeded;
+  ULONG  ulLevel;
+  ULONG  i;
+  USHORT uJobCount;
+  PSZ    pszComputerName;
+  PSZ    pszQueueName;
+  PVOID  pBuf;
+  PPRJINFO2 prj2;
+  PPRQINFO3 prq3 ;
+
+  if (argc != 2)
+  {
+    printf("Syntax:  setqryq  QueueName \n");
+    DosExit(EXIT_PROCESS, 0);
+  }
+
+  pszComputerName = (PSZ)NULL;
+  pszQueueName = argv[1];
+  ulLevel = 4L;
+  splerr = SplQueryQueue(pszComputerName,
+                         pszQueueName,
+                         ulLevel,
+                         (PVOID)NULL,
+                         0L,
+                         &amp;cbNeeded);
+
+  if (splerr != NERR_BufTooSmall ||
+      splerr != ERROR_MORE_DATA)
+  {
+    printf("SplQueryQueue Error=%ld, cbNeeded=%ld\n",splerr, cbNeeded);
+    DosExit(EXIT_PROCESS, 0);
+  }
+
+  if (!DosAllocMem(&amp;pBuf, cbNeeded,
+                   PAG_READ  |
+                   PAG_WRITE |
+                   PAG_COMMIT))
+  {
+    cbBuf = cbNeeded;
+    splerr = SplQueryQueue(pszComputerName,
+                           pszQueueName,
+                           ulLevel,
+                           pBuf,
+                           cbBuf,
+                           &amp;cbNeeded);
+    prq3=(PPRQINFO3)pBuf;
+    printf("Queue info: name- %s\n", prq3-&gt;pszName);
+    if (prq3-&gt;fsType &amp; PRQ3_TYPE_APPDEFAULT)
+       printf(" This is the application default print queue\n");
+       printf("  priority - %d  starttime - %d  endtime - %d fsType - %X\n",
+                 prq3-&gt;uPriority,
+                 prq3-&gt;uStartTime,
+                 prq3-&gt;uUntilTime,
+                 prq3-&gt;fsType);
+       printf("  pszSepFile    - %s\n", prq3-&gt;pszSepFile);
+       printf("  pszPrProc     - %s\n", prq3-&gt;pszPrProc);
+       printf("  pszParms      - %s\n", prq3-&gt;pszParms);
+       printf("  pszComment    - %s\n", prq3-&gt;pszComment);
+       printf("  pszPrinters   - %s\n", prq3-&gt;pszPrinters);
+       printf("  pszDriverName - %s\n", prq3-&gt;pszDriverName);
+
+    if (prq3-&gt;pDriverData)
+    {
+      printf("  pDriverData-&gt;cb           - %ld\n",
+                (ULONG)prq3-&gt;pDriverData-&gt;cb);
+      printf("  pDriverData-&gt;lVersion     - %ld\n",
+                (ULONG)prq3-&gt;pDriverData-&gt;lVersion);
+      printf("  pDriverData-&gt;szDeviceName - %s\n",
+                prq3-&gt;pDriverData-&gt;szDeviceName);
+    }
+    /* Store the job count for use later in the for loop */
+    uJobCount = prq3-&gt;cJobs;
+    printf("Job count in this queue is %d\n\n",uJobCount);
+
+    /* Increment the pointer to the PRQINFO3 structure       */
+    /* so that it points to the first structure after itself */
+    prq3++;
+
+    /* Cast the prq3 pointer to point to a PRJINFO2 structure, */
+    /* and set a pointer to point to that place                */
+    prj2=(PPRJINFO2)prq3;
+    for (i=0 ; i&lt;uJobCount ;i++)
+    {
+      printf("Job ID    = %d\n",  prj2-&gt;uJobId);
+      printf("Priority  = %d\n",  prj2-&gt;uPriority);
+      printf("User Name = %s\n",  prj2-&gt;pszUserName);
+      printf("Position  = %d\n",  prj2-&gt;uPosition);
+      printf("Status    = %d\n",  prj2-&gt;fsStatus);
+      printf("Submitted = %ld\n", prj2-&gt;ulSubmitted);
+      printf("Size      = %ld\n", prj2-&gt;ulSize);
+      printf("Comment   = %s\n",  prj2-&gt;pszComment);
+      printf("Document  = %s\n\n",prj2-&gt;pszDocument);
+
+      /* Increment the pointer to point to the next structure */
+      prj2++;
+    } /* endfor */
+    DosFreeMem(pBuf);
+  }
+  DosExit(EXIT_PROCESS, 0);
+  return (splerr);
+}
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1540_L2H_SplQueryQueueRelated.html">[Back: SplQueryQueue - Related Functions]</A> <BR>
+<A HREF="1542_L2H_SplQueryQueueTopics.html">[Next: SplQueryQueue - Topics]</A> 
+</BODY>
+</HTML>

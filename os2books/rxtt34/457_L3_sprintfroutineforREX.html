@@ -1,0 +1,215 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>sprintf routine for REXX</TITLE>
+</HEAD>
+<BODY>
+<H1>sprintf routine for REXX</H1><!-- entering slot 475 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+This is an implementation of the C function<B> sprintf</B> in REXX from
+<B>Bernie Schneider</B> (see <A HREF="961_L2H_EMailaddressesS.html">EMail
+Addresses</A>)
+<BR>
+Captured from a message in a public Internet news group (see <A HREF="880_L3_InternetNewsgroupsLi.html">Internet
+- Newsgroups</A>)
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* Program: SPRINTF                                                   */
+/* Purpose: Returns a string formatted according to the format string */
+/*          specified in the first argument and the values specified  */
+/*          in the remaining arguments. It is modeled after the       */
+/*          SPRINTF function in the C/C++, AWK, PERL, etc.            */
+/*          programming languages.                                    */
+/*                                                                    */
+/* Usage:   say sprintf(fmt_string, value1, value2, ..., valuen)      */
+/*                                                                    */
+/*  where fmt_string specifies the formatting to be done on the       */
+/*  remaining arguments. The string is composed of literals and       */
+/*  format specifiers. There should be one format specifier for       */
+/*  each value to be formatted.                                       */
+/*  Literals are considered to be anything that isn't a format        */
+/*  specifier. Format specifiers are coded as follows:                */
+/*                                                                    */
+/*    %[-][w][.d]z                                                    */
+/*                                                                    */
+/*  where                                                             */
+/*    "%" indicates the start of a format specifier. To use a %       */
+/*        in a literal, specify two concecutive %s (%%, no argument   */
+/*        value will be consumed).                                    */
+/*    "-" is optional, and indicates that the argument value is to be */
+/*        left justified in its field. If it isn't present, the value */
+/*        will be right justified.                                    */
+/*    "w" is optional, and it specifies the width of the field in     */
+/*        characters. If it isn't specified, then as many characters  */
+/*        as necessary will be used. For decimal numbers, this will   */
+/*        depend on the current value of the numeric digits setting.  */
+/*        The value will be truncated or padded with blanks as        */
+/*        necessary to fit the width specified. Numbers to the right  */
+/*        of the decimal point are padded with "0"s, and will be      */
+/*        rounded if truncation is necessary. If a numeric value      */
+/*        is -1 &lt; valuen &lt; +1, it will be padded with leading "0"s.   */
+/*   ".d" is optional, and it specifies the maximum string width, or  */
+/*        the number of digits to the right of the decimal point.     */
+/*    "z" is a single character that indicates the type of conversion */
+/*        to be performed on the corresponding argument value. It may */
+/*        be one of the following:                                    */
+/*          "d", formats a signed decimal integer                     */
+/*          "f", formats a signed decimal real number                 */
+/*          "s", formats a character string                           */
+/*          "x", formats an unsigned hexadecimal number               */
+/*                                                                    */
+/*        Examples:                                                   */
+/*          say sprintf("Number = %d", 25)                            */
+/*            -&gt; "Number = 25"                                        */
+/*          say sprintf("Number = %5d", 25)                           */
+/*            -&gt; "Number =    25"                                     */
+/*          say sprintf("String = %s", "March")                       */
+/*            -&gt; "String = March"                                     */
+/*          say sprintf("String = %5.3s", "March")                    */
+/*            -&gt; "String =   Mar"                                     */
+/*          say sprintf("Num = %8.2f", -123.456)                      */
+/*            -&gt;  "Num =  -123.46"                                    */
+/*          say sprintf("Num = '%-4x'  String = '%-10s'", ,           */
+/*                255, ,                                              */
+/*                "AbCde")                                            */
+/*            -&gt; "Num = 'FF  '  String = 'AbCde     '"                */
+/*          say sprintf("%5.1f%%", .1757 * 100)                       */
+/*            -&gt; " 17.6%"                                             */
+/*          say sprintf("Num = %7.3f", 0.25)                          */
+/*            -&gt; "Num = 000.250"                                      */
+/*                                                                    */
+/* Written: 27Nov95                                                   */
+/* Language:REXX                                                      */
+/* Author:  Bernie Schneider                                          */
+/* Notes:                                                             */
+/* Revised:                                                           */
+/*====================================================================*/
+/*                                                                    */
+sprintf: procedure
+  argno = 1                     /* Initialize argument counter        */
+  string = ""
+  start = 1                     /* Initialize pointer                 */
+  len = length(arg(1))
+
+  do until(p &gt;= len)
+    s = ""
+    argno = argno + 1
+    p = pos("%", arg(1), start)
+    if p = 0 then
+    do
+      p = len + 1
+    end
+    if substr(arg(1), p, 1) == "%" then
+    do
+      s = "%"
+    end
+    string = string || substr(arg(1), start, p - start)
+    start = p + 1
+    p = verify(arg(1), "%cdfsx", "M", start)
+    if p = 0 then
+      leave
+    spec = substr(arg(1), start, p - start + 1)
+    start = p + 1
+    r = right(spec, 1)
+    spec = delstr(spec, length(spec), 1)
+    if left(spec,1) == "-" then
+    do                          /* Get any additional specs           */
+      left = 1
+      spec = substr(spec, 2)
+    end
+    else
+    do
+      left = 0
+      spec = substr(spec, 1)
+    end
+    if spec <!-- entering slot 476 -->\== "" then                 /* Get width and precision    */
+      parse var spec width "." prec
+    else
+    do
+      width = 0
+      prec = 0
+    end
+    if \datatype(width, "W") then
+      width = 0
+    if \datatype(prec, "W") then
+      prec = 0
+    pad = " "
+
+    select
+
+      when r == "s" then
+      do
+        if width = 0 then
+          width = length(arg(argno))
+        if prec \= 0 then
+          s = left(arg(argno), prec)     /* Truncate or pad           */
+        else
+          s = arg(argno)
+      end
+
+      when r == "d" then
+      do
+        if width = 0 then
+          width = length(arg(argno))
+        s = format(arg(argno), length(arg(argno)), 0)
+      end
+
+      when r == "f" then
+      do
+        if arg(argno) &gt; -1 &amp; arg(argno) &lt; 1 then
+          pad = "0"
+        parse value arg(argno) with int "." frac
+        if width = 0 &amp; prec = 0 then
+        do
+          d = 1
+          if arg(argno) &lt; 0 then d = 2
+          width = digits() + d
+          prec = digits() - (length(int)) + d - 1
+        end
+        if width = 0 then
+          width = len - prec
+        s = format(arg(argno), width, prec)
+      end
+
+      when r == "x" then
+      do
+        if width = 0 then
+          width = length(arg(argno))
+        s = d2x(arg(argno))
+        if prec \= 0 then
+          s = left(s, prec)     /* Truncate or pad                    */
+      end
+
+      when r == "%" then
+      do
+        argno = argno - 1
+      end
+
+      otherwise
+        nop
+
+    end /* select */
+
+    if r \== "%" then
+    do
+      if left then
+        s = left(strip(s), width, pad)      /* Justify                */
+      else
+        s = right(strip(s), width, pad)
+    end
+    string = string || s
+  end /* do until(p &gt;= len) */
+return string
+
+</PRE>
+
+<P>
+
+
+<P><HR>
+
+<A HREF="456_L3_ChoiceroutineforREXX.html">[Back: Choice routine for REXX]</A> <BR>
+<A HREF="458_L2_DiskDirectoryandFile.html">[Next: Disk-, Directory- and File-Handling]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,102 @@
+<HTML>
+<HEAD>
+<TITLE>Viewing Transformation</TITLE>
+</HEAD>
+<BODY>
+<H1>Viewing Transformation</H1><!-- entering slot 75 -->
+<P>
+Each time an application draws the model space, it specifies a different
+viewing transformation to transfer a view of the picture-to-page coordinate
+space.<A><!-- external link: 1D 5C C4 55 --> GpiSetViewingTransformMatrix
+</A>is used to apply a viewing transformation. There is one viewing transformation
+for each part or whole model space to be incorporated in page-coordinate
+space.
+<P>
+<A><!-- external link: 1D 5C C4 55 -->GpiSetViewingTransformMatrix</A> cannot
+be called while there is an open segment, and it has no effect on primitives
+outside segments. When it has been specified, the viewing transformation
+applies to all subsequently created segments until it is next changed. The
+viewing transformation that is current when a segment is created is a fixed
+part of the segment. Once specified, the viewing transformation cannot be
+queried, nor can it be altered, unless you re-create the segment. This is
+inconvenient when several versions of the same picture are being drawn.
+The problem can be solved by:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Defining the picture in one or more unchained segments.
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Creating a segment chain and calling the unchained
+segments from each root segment.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Setting the viewing transformation before each root
+segment.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Each time the segment chain is drawn, multiple views of the same picture
+are produced. This sequence is illustrated in the following example, where
+the segment chain comprises three root segments, each of which calls a single
+unchained segment.
+<PRE>GpiSetInitialSegmentAttrs      /* Switches off the chained attribute   */
+GpiOpenSegment                 /* Creates an unchained segment         */
+                               /* containing the picture definition    */
+
+GpiCloseSegment
+GpiSetInitialSegmentAttrs      /* Switches on the chained attribute    */
+
+GpiSetViewingTransformMatrix   /* Sets the viewing transformation      */
+                               /* for segment 1                        */
+
+GpiOpenSegment (segment 1)
+GpiCallSegmentMatrix           /* Calls the unchained segment          */
+
+GpiCloseSegment
+GpiSetViewingTransformMatrix   /* Sets the viewing transformation      */
+                               /* for segment 2                        */
+
+GpiOpenSegment (segment 2)
+GpiSetViewingLimits            /* Specifies the area of interest       */
+                               /* in the model space.                  */
+
+GpiCallSegmentMatrix           /* Calls the unchained segment          */
+
+GpiCloseSegment
+GpiSetViewingTransformMatrix   /* Sets the viewing transformation      */
+                               /* for segment 3                        */
+
+GpiOpenSegment (segment 3)
+GpiCallSegmentMatrix           /* Calls the unchained segment          */
+GpiCloseSegment
+
+</PRE>
+
+<P>
+When a segment chain has been created using this method, an application
+cannot change the viewing transformation unless it re-creates the segment
+chain. The viewing transformation of a segment is permanently recorded and
+cannot be edited. The application would not, however, have to re-create
+the picture definition in the unchained segment.
+<P>
+If the picture definition comprises a number of unchained segments, an application
+must create an intermediate segment to contain the<A><!-- external link: 1D 64 C3 4E --> GpiCallSegmentMatrix
+</A>calls for those segments. Each root segment would then call the intermediate
+segment.
+<P>
+The viewing transformation applies to the entire root segment and cannot
+be overridden from within the segment. It is particularly useful for positioning
+and scaling one or more segments of a subpicture within the presentation
+page when a segment transformation cannot be used. A segment transformation
+can be overridden by any model or instance transformations within the segment.
+A typical example of its use is when importing a subpicture using<A><!-- external link: 1D B5 C3 52 --> GpiPutData
+</A>or<A><!-- external link: 1D A9 C3 FC --> GpiPlayMetaFile</A>.
+<P>
+<B>Note: </B> The viewing transformation must be set to its default value
+before an application defines an unchained segment to be called from another
+segment.
+
+<P><HR>
+
+<A HREF="073_L3_UsingWorldtoModelSpa.html">[Back: Using World to Model Space Transformations]</A> <BR>
+<A HREF="075_L1_EditingRetainedGraph.html">[Next: Editing Retained Graphics and Graphics Segments]</A> 
+</BODY>
+</HTML>

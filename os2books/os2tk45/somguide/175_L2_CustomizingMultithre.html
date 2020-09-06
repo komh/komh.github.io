@@ -1,0 +1,122 @@
+<HTML>
+<HEAD>
+<TITLE>Customizing Multi-threading Services</TITLE>
+</HEAD>
+<BODY>
+<H1>Customizing Multi-threading Services</H1><!-- entering slot 211 -->
+<P>
+Although the SOM kernel and the other SOMobjects frameworks allow applications
+to be multi-threaded, the kernel and frameworks generally do not require
+or exploit threads themselves. But there are some exceptions: for example,
+application servers in DSOM can be configured so that each incoming request
+is executed on a separate thread.
+<P>
+An application may choose to employ "native" multi-threading services provided
+by the underlying operating system (for example, OS/2). On other operating
+systems that do not support native multi-threading (such as, AIX 3.2), thread
+support may be provided as part of particular programming environments (like
+DCE) or libraries.  SOM provides a mechanism that allows an application
+to define and customize the multi-threading services used by SOMobjects
+frameworks.
+<P>
+Four thread service functions are defined for use by SOMobjects frameworks.
+These functions may be called indirectly via the global pointer variables
+defined below. A somToken parameter (called "thrd" below) is used as a generic
+"handle" to refer to a thread # usually it is a pointer to a thread id or
+descriptor. The actual representation of the thread handle is hidden by
+the functions.
+<PRE>typedef void somTD_SOMThreadProc(void * data);
+
+unsigned long (<B>*SOMStartThread</B>)(somToken *thrd,
+                                somTD_SOMThreadProc proc,
+                                void *data,
+                                unsigned long datasz,
+                                unsigned long stacksz);
+</PRE>
+<!-- lm: 0x2 6 -->
+<UL>
+<P>
+The referenced function starts a thread, and returns a thread handle in
+the somToken variable identified by "thrd".  The thread executes the procedure
+whose address is specified by the  proc parameter; the thread procedure
+takes a single void* argument and returns void. The data parameter passed
+to<B> SOMStartThread</B> is passed on to the thread procedure; the size
+of the data parameter, in bytes, is given by datasz.  A stack of stacksz
+bytes will be allocated for the thread.
+<P>
+Note: On OS/2, the thread procedure must be compiled with _Optlink linkage.)
+<!-- lm: 0x2 6 -->
+<P>
+If the call succeeds, a 0 is returned.  Otherwise, a non-zero error code
+is returned.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>unsigned long (<B>*SOMEndThread</B>)(void);</PRE>
+<!-- lm: 0x2 6 -->
+<UL>
+<P>
+The referenced function terminates the calling thread.<!-- lm: 0x2 6 -->
+<P>
+If the call succeeds, a 0 is returned. Otherwise,  a non-zero error code
+is returned.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>unsigned long (<B>*SOMKillThread</B>)(somToken thrd);</PRE>
+<!-- lm: 0x2 6 -->
+<UL>
+<P>
+The referenced function terminates the thread identified by the input parameter
+thrd.<!-- lm: 0x2 6 -->
+<P>
+If the call succeeds, a 0 is returned.  Otherwise, a non-zero error code
+is returned.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>unsigned long (<B>*SOMGetThreadHandle</B>)(somToken * thrd);</PRE>
+<!-- lm: 0x2 6 -->
+<UL>
+<P>
+The referenced function returns a handle that can be used to identify the
+calling thread. The handle is returned in the somToken variable pointed
+to by thrd.<!-- lm: 0x2 6 -->
+<P>
+If the call succeeds, a 0 is returned. Otherwise, a non-zero error code
+is returned.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The actual mutex service function prototypes and global variable declarations
+are found in file "somthrd.h".
+<P>
+If the underlying operating system supports native multi-threading (currently,
+only OS/2), SOM provides appropriate default multi-threading service function
+implementations. On those operating systems that do not support native multi-threading,
+the default multi-threading service functions have null implementations.
+
+<P>
+An application may want to use threading services different from those provided
+by the underlying operating system (if any); for example, DCE applications
+will want to use DCE threads. In that case, the default multi-threading
+service functions can be replaced by application#defined functions.
+<P>
+An application program would use code similar to the following to install
+the replacement routines:
+<PRE>#include &lt;somthrd.h&gt;/* Define a replacement routine: */
+unsigned long myStartThread (somToken *thrd,
+                             somTD_SOMThreadProc proc,
+                             void *data,
+                             unsigned long datasz,
+                             unsigned long stacksz)
+{
+    (Customized code goes here)
+}
+...    <B>
+SOMStartThread =</B>myStartThread;
+</PRE>
+
+<P>
+It is important to install custom multi-threading service functions before
+any SOM calls are made.
+
+<P><HR>
+
+<A HREF="174_L2_CustomizingMutualExc.html">[Back: Customizing Mutual Exclusion Services (Thread Safety)]</A> <BR>
+<A HREF="176_L1_DistributedSOMDSOM.html">[Next: Distributed SOM (DSOM)]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,250 @@
+<HTML>
+<HEAD>
+<TITLE>Named Pipe Structures for OS/2 Warp V4.0 and OS/2 Warp V3.0</TITLE>
+</HEAD>
+<BODY>
+<H1>Named Pipe Structures for OS/2 Warp V4.0 and OS/2 Warp V3.0</H1><!-- entering slot 3507 --> 
+<P>
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B>Pointers</B><!-- lm: 0x11 11 -->
+<UL> SFT field<B> sf_fsd</B> points
+to the associated NP structure.
+<P>
+<B>NmpRmpHand</B> locates the RMP handle that contains the selector for
+the NPN RMP segment.
+<P>
+NPN field<B> npn_link</B> points to the double linked list of NP structures
+that are instances of the named pipe.
+<P>
+Instances of named pipes are double-lined by<B> np_flink</B> and<B> np_blink</B>.
+
+<P>
+NP fields<B> np_selector1</B> and<B> np_selector2</B> point to associated
+NPB structures. <!-- lm: 0x2 1 -->
+</UL><B> Locations</B><!-- lm: 0x11 11 -->
+<UL> The
+NPN RMP is allocated from the kernel swappable heap.
+<P>
+The NP is allocated from the system arena.
+<P>
+The NPB is allocated from the kernel resident heap. <!-- lm: 0x2 1 -->
+</UL><B> VM
+Owner</B><!-- lm: 0x11 11 -->
+<UL> NP owner id is<B> npipenp (0xff31)</B>.
+
+<P>
+NPN owner id is<B> npipenpn (0xff30)</B>.
+<P>
+NPB owner id is<B> npipenbuf (0xff9f)</B>.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B><A HREF="3252_L0_.html">Format</A></B>
+<P>
+There are four important data structures associated with named pipes:  the
+SFT corresponding to an open named pipe, a pair of kernel internal data
+structures describing the pipe and one or two allocated memory segments
+which contain the data buffers for the pipe. 
+<P>
+The parts of the SFT specific to named pipes are:
+<PRE>
+        sf_flags        SF_NMPIPE and SF_PIPE set
+        sf_np           pointer to pipe info.
+        sf_pipmod       mode of pipe, per-sft internal state bits
+
+   Where:
+
+        sf_np is defined to be sf_fsd+0, the pointer to np structure
+        sf_pipmod is defined to be sf_fsd+4, the mode of pipe, plus internal state
+
+</PRE>
+ 
+<P>
+<U><I>NP</I></U> Named Pipe data structure
+<P>
+The internal data structure for an instance of a pipe.  One of these structures
+is allocated for each open instance of a particular named pipe.
+<P>
+Allocated NP structures are placed on two lists.  The first is headed by
+ActiveNPList, with list pointer np_next linking together all currently active
+NP structures.
+<P>
+The second list is headed by the NPN structure defined below and is doubly-linked
+by the np_flink and np_blink pointers.  This list is used to iterate over
+all instances of a particular pipe name.
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÂÄÄÄÄÄÄÂÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³<I>Field Name</I>       ³<I>Offset</I>³<I>Length</I>³<I>Type</I>³<I>Description</I>                             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³np_state         ³+0    ³1     ³B   ³state of pipe                           ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³np_refcnt        ³+1    ³1     ³B   ³SFT reference count for pipe (1 or 2)   ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³np_next          ³+2    ³2     ³W   ³pointer to next in active list          ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³np_flink         ³+4    ³2     ³W   ³pointer to next instance of pipe        ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³np_blink         ³+6    ³2     ³W   ³pointer to previous instance of pipe    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³np_namkey        ³+8    ³2     ³W   ³RMP key value for npn structure         ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³np_scnt          ³+a    ³1     ³B   ³count of servers (max. 1)               ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³np_ccnt          ³+b    ³1     ³B   ³count of clients (max. 1)               ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³np_selector1     ³+c    ³2     ³W   ³selector for outgoing data buffer       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³np_selector2     ³+e    ³2     ³W   ³selector for incoming data buffer       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³np_pipmod        ³+10   ³2     ³W   ³pipe mode specified at creation time    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³np_flags         ³+12   ³2     ³W   ³pipe flags                              ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³np_ssft          ³+14   ³4     ³D   ³back pointer to server SFT              ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³np_csft          ³+18   ³4     ³D   ³back pointer to client SFT              ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³np_timeo         ³+1c   ³4     ³D   ³default timeout for DosWaitNmPipe       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³np_ssem          ³+20   ³4     ³D   ³server end system semaphore             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³np_ssemkey       ³+24   ³2     ³W   ³server's semaphore key                  ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³np_csem          ³+26   ³4     ³D   ³client end system semaphore             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³np_csemkey       ³+2a   ³2     ³W   ³client's semaphore key                  ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÁÄÄÄÄÄÄÁÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+ 
+<P>
+<U><I>NPN</I></U> Named Pipe Name data structure
+<P>
+The following structure contains the common name for the multiple instances
+of a pipe.  Its key value is used as the ProcBlock key for waiters on the
+pipe.  The key value is also used as an RMP key to look up the name record
+from the NP structure.
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÂÄÄÄÄÄÄÂÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³<I>Field Name</I>       ³<I>Offset</I>³<I>Length</I>³<I>Type</I>³<I>Description</I>                             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³npn_link         ³+0    ³4     ³D   ³pointer to first instance               ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³npn_key          ³+4    ³2     ³W   ³unique serial number of name            ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³npn_len          ³+6    ³2     ³W   ³<!-- entering slot 3508 -->total length of structure               ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³npn_name         ³+8    ³254   ³A   ³name of pipe, null terminated           ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÁÄÄÄÄÄÄÁÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+ 
+<P>
+<U><I>NPB</I></U> Named Pipe Buffer data structure
+<P>
+The following variables are used to control the access to a pipe buffer
+and are part of the allocated buffer for the pipe.  In the case of a duplex
+pipe, two independent data buffers are allocated.  Only one buffer will
+be allocated for a simplex pipe.
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÂÄÄÄÄÄÄÂÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³<I>Field Name</I>       ³<I>Offset</I>³<I>Length</I>³<I>Type</I>³<I>Description</I>                             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³npb_selector     ³+0    ³2     ³W   ³selector of buffer                      ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³npb_first        ³+2    ³2     ³W   ³base of buffer                          ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³npb_in           ³+4    ³2     ³W   ³next free byte in buffer                ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³npb_out          ³+6    ³2     ³W   ³next byte of data in buffer             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³npb_last         ³+8    ³2     ³W   ³end+1 of buffer                         ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³npb_rdlck        ³+a    ³2     ³W   ³read lock sem.                          ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³npb_wtlck        ³+c    ³2     ³W   ³write lock sem.                         ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³npb_rdsem        ³+e    ³2     ³W   ³read sync sem.                          ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³npb_wtsem        ³+10   ³2     ³W   ³write sync sem.                         ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³npb_rdcnt        ³+12   ³1     ³B   ³count of readers of buffer              ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³npb_wtcnt        ³+13   ³1     ³B   ³count of writers to buffer              ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³npb_data         ³+14   ³2     ³W   ³size of data left in pipe               ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÁÄÄÄÄÄÄÁÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+ 
+<P>
+<B>np_state</B> allowable values for named pipe state
+<P>
+Internally, byte stream mode pipes store just a collection of bytes in the
+data buffer.  Message stream mode pipes have individual messages preceeded
+by a word which indicates the size of the message. 
+<P>
+Named pipes may be in one of several states depending on the actions that
+have been taken on it by the server end and client end. The following state/action
+table summarizes the valid state transitions:
+<PRE>
+     Current state           Action          Next state
+
+      &lt;none&gt;             server MakeNmPipe   DISCONNECTED
+      DISCONNECTED       server connect      LISTENING
+      LISTENING          client open         CONNECTED
+      CONNECTED          server disconn      DISCONNECTED
+      CONNECTED          client close        CLOSING
+      CLOSING            server disconn      DISCONNECTED
+      CONNECTED          server close        CLOSING
+      &lt;any other&gt;        server close        &lt;pipe deallocated&gt;
+
+</PRE>
+
+<P>
+A special internal state, LISTEN2 is used when a client open is in progress
+(since some operations may block).  This is treated the same as the LISTENING
+state except that a new open or wait will not recognize it as an available
+pipe. 
+<P>
+If a server disconnects his end of the pipe, the client end will enter a
+special state in which any future operations (except close) on the file
+descriptor associated with the pipe will return an error.
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Name                ³Bit Mask³Description                             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³NP_DISCONNECTED     ³1       ³after pipe creation or Disconnect       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³NP_LISTENING        ³2       ³after DosNmPipeConnect                  ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³NP_CONNECTED        ³3       ³after Client open                       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³NP_CLOSING          ³4       ³after Client close                      ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³NP_LISTEN2          ³0x12    ³internal; client open in progress       ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+ 
+<P>
+<B>np_pipmod, sf_pipmod</B> bit mask values:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Name                ³Bit Mask³Description                             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³NP_NBLK             ³0x8000  ³non-blocking read/write                 ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³NP_NBLKR            ³0x8000  ³non-blocking read                       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³NP_NBLKW            ³0x8000  ³non-blocking write                      ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³NP_SERVER           ³0x4000  ³set if server end                       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³NP_WMESG            ³0x0400  ³write messages                          ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³NP_RMESG            ³0x0100  ³read as messages                        ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³NP_TIMOUT           ³0x3800  ³<!-- entering slot 3509 -->Timeout np_sem_blk &amp; np_sem_wait        ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+
+<P><HR>
+
+<A HREF="3219_L3_FileSystemBufferforO.html">[Back: File System Buffer for OS/2 Warp V4.0 and OS/2 Warp V3.0]</A> <BR>
+<A HREF="3221_L3_AnonymousPipeStructu.html">[Next: Anonymous Pipe Structures for OS/2 Warp V4.0 and OS/2 Warp V3.0]</A> 
+</BODY>
+</HTML>

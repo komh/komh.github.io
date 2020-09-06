@@ -1,0 +1,156 @@
+<HTML>
+<HEAD>
+<TITLE>TrnsDt</TITLE>
+</HEAD>
+<BODY>
+<H1>TrnsDt</H1><!-- entering slot 55 -->
+<P>
+We show a typical combination of the optional parameters of<B> TrnsDt</B> in
+Combination of the TrnsDt parameters for Japanese for your convenience.
+
+<BR>
+Example of TrnsDt usage from 32-bit code (source: MISCWIN.C)
+<BR>
+
+<PRE><B>#pragma pack(2)</B>                         /* parameter for TrnsDt will be  */
+                                        /* packed along 2-byte boundary  */
+struct TrnsDtParm                       /* Parameters for TrnsDt            */
+{
+  USHORT   Length;                      /* Length of parameters             */
+  USHORT   exit;                        /* Exit code                        */
+  USHORT   SourceLen;                   /* Length of a source string        */
+  <B>char * _Seg16 pSource</B>;                /* (far) Address of a source string */
+  USHORT   TargetLen;                   /* Length of a target string        */
+  <B>char * _Seg16 pTarget</B>;                /* (far) Address of a target string */
+  USHORT   id;                          /* Translation id                   */
+  USHORT   SourceCP;                    /* Source code page                 */
+  USHORT   TargetCP;                    /* Target code page                 */
+  USHORT   Options;                     /* Translation options              */
+};
+#pragma pack()
+<B>extern USHORT _Far16 _Pascal TrnsDt(struct TrnsDtParm *);</B>
+<B>#pragma seg16(Tparm)</B>
+<B>struct TrnsDtParm Tparm;</B>
+MRESULT EXPENTRY cpConvDlgProc(HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2)
+{
+   ...
+     Tparm.Length    = sizeof(Tparm);
+     Tparm.exit      = 0;
+     Tparm.SourceLen = strlen(szBufIn);
+     Tparm.pSource   = szBufIn;
+     Tparm.TargetLen = sizeof(szBufOut);
+     Tparm.pTarget   = szBufOut;
+     Tparm.id = 0;
+     Tparm.SourceCP = *pPcCodePage;
+     Tparm.TargetCP = atoi(szCurrentHost);
+
+     if ((*pHost).CPflag == combined)
+        /*---- Options for a combined code page ------------*/
+        /*         Bit 8 (on) : SO/SI in a target string    */
+        /*         Bit 2 (on) : Use the IBM-defined table   */
+        /*         Bit 0 (off): No SO/SI in a source string */
+        /*--------------------------------------------------*/
+        Tparm.Options = 0x0104;
+     else
+        /*---- Options for a SBCS or a DBCS code page ------*/
+        /*         Bit 8 (off): No SO/SI in a target string */
+        /*         Bit 2 (on) : Use the IBM-defined table   */
+        /*         Bit 0 (off): No SO/SI in a source string */
+        /*--------------------------------------------------*/
+        Tparm.Options = 0x0004;
+     TrnsDt(&amp;Tparm);
+   ...
+</PRE>
+<B>Options of TrnsDt at Example of TrnsDt usage from 32-bit code (source:
+MISCWIN.C)</B><!-- lm: 0x2 1 -->
+<UL>
+<P>
+Bit 15-9<!-- lm: 0x12 11 -->
+<UL> Reserved<!-- lm: 0x2 1 -->
+</UL>Bit 8<!-- lm: 0x12 11 -->
+<UL> A target string may have SO/SI.  ON
+at this sample.<!-- lm: 0x2 1 -->
+</UL>Bit 7-3<!-- lm: 0x12 11 -->
+<UL> Reserved<!-- lm: 0x2 1 -->
+</UL>Bit 2<!-- lm: 0x12 11 -->
+<UL> Translation with a non-editable table.
+ON at this sample to use the default IBM-defined table.<!-- lm: 0x2 1 -->
+</UL>Bit 1<!-- lm: 0x12 11 -->
+<UL> A source string consists only of DBCS
+characters, i.e. a pure DBCS string. OFF at this sample.<!-- lm: 0x2 1 -->
+</UL>Bit 0<!-- lm: 0x12 11 -->
+<UL> A source string may have contained SO/SI.
+ OFF at this sample.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³From/To   ³String  ³From CP ³To CP   ³parameter ³Bit 8          ³Bit 2          ³Bit 1          ³Bit 0          ³
+³          ³type    ³        ³        ³          ³               ³               ³               ³               ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ASCII to  ³Mix to  ³942 or  ³1027 or ³0x0004    ³Off (No SO/SI  ³On (Use        ³Off (The first ³Off (No SO/SI  ³
+³EBCDIC    ³SBCS    ³932     ³290     ³          ³at target)     ³IBM-supplied   ³character is   ³at source )    ³
+³          ³        ³        ³        ³          ³               ³table)         ³SBCS.)         ³               ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ASCII to  ³Mix to  ³942 or  ³930 or  ³0x0104    ³On (SO/SI at   ³On (Use        ³Off (The first ³Off (No SO/SI  ³
+³EBCDIC    ³Mix     ³932     ³939     ³          ³target)        ³IBM-supplied   ³character is   ³at source )    ³
+³          ³        ³        ³        ³          ³               ³table)         ³SBCS.)         ³               ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ASCII to  ³Mix to  ³942 or  ³300     ³0x0004    ³Off (No SO/SI  ³On (Use        ³Off (The first ³Off (No SO/SI  ³
+³EBCDIC    ³DBCS    ³932     ³        ³          ³at target)     ³IBM-supplied   ³character is   ³at source )    ³
+³          ³        ³        ³        ³          ³               ³table)         ³SBCS.)         ³               ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³EBCDIC to ³SBCS to ³1027 or ³932 or  ³0x0004    ³Off (No SO/SI  ³On (Use        ³Off (The first ³Off (No SO/SI  ³
+³ASCII     ³Mix     ³290     ³942     ³          ³at target)     ³IBM-supplied   ³character is   ³at source )    ³
+³          ³        ³        ³        ³          ³               ³table)         ³SBCS.)         ³               ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³EBCDIC to ³Mix to  ³930 or  ³932 or  ³0x0005    ³Off (No SO/SI  ³On (Use        ³Off (The first ³On (SO/SI at   ³
+³ASCII     ³Mix     ³939     ³942     ³          ³at target)     ³IBM-supplied   ³character is   ³source )       ³
+³          ³        ³        ³        ³          ³               ³table)         ³SBCS.)         ³               ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³EBCDIC to ³DBCS to ³300     ³932 or  ³0x0006    ³Off (No SO/SI  ³On (Use        ³On (The first  ³Off (No SO/SI  ³
+³ASCII     ³Mix     ³        ³942     ³          ³at target)     ³IBM-supplied   ³character is   ³at source )    ³
+³          ³        ³        ³        ³          ³               ³table)         ³DBCS.)         ³               ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ASCII     ³Mix to  ³942 or  ³1027 or ³0x0005    ³Off (No SO/SI  ³On (Use        ³Off (The first ³On (SO/SI at   ³
+³(with     ³SBCS    ³932     ³290     ³          ³at target)     ³IBM-supplied   ³character is   ³source )       ³
+³pseudo    ³        ³        ³        ³          ³               ³table)         ³SBCS.)         ³               ³
+³SO/SI) to ³        ³        ³        ³          ³               ³               ³               ³               ³
+³EBCDIC    ³        ³        ³        ³          ³               ³               ³               ³               ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ASCII     ³Mix to  ³942 or  ³930 or  ³0x0105    ³On (SO/SI at   ³On (Use        ³Off (The first ³On (SO/SI at   ³
+³(with     ³Mix     ³932     ³939     ³          ³target)        ³IBM-supplied   ³character is   ³source )       ³
+³pseudo    ³        ³        ³        ³          ³               ³table)         ³SBCS.)         ³               ³
+³SO/SI) to ³        ³        ³        ³          ³               ³               ³               ³               ³
+³EBCDIC    ³        ³        ³        ³          ³               ³               ³               ³               ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ASCII     ³Mix to  ³942 or  ³300     ³0x0005    ³Off (No SO/SI  ³On (Use        ³Off (The first ³On (SO/SI at   ³
+³(with     ³DBCS    ³932     ³        ³          ³at target)     ³IBM-supplied   ³character is   ³source )       ³
+³pseudo    ³        ³        ³        ³          ³               ³table)         ³SBCS.)         ³               ³
+³SO/SI) to ³        ³        ³        ³          ³               ³               ³               ³               ³
+³EBCDIC    ³        ³        ³        ³          ³               ³               ³               ³               ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³EBCDIC to ³SBCS to ³1027 or ³932 or  ³0x0004    ³Off (No SO/SI  ³On (Use        ³Off (The first ³Off (No SO/SI  ³
+³ASCII     ³Mix     ³290     ³942     ³          ³at target)     ³IBM-supplied   ³character is   ³at source )    ³
+³(with     ³        ³        ³        ³          ³               ³table)         ³SBCS.)         ³               ³
+³pseudo    ³        ³        ³        ³          ³               ³               ³               ³               ³
+³SO/SI)    ³        ³        ³        ³          ³               ³               ³               ³               ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³EBCDIC to ³Mix to  ³930 or  ³932 or  ³0x0105    ³On (SO/SI at   ³On (Use        ³Off (The first ³On (SO/SI at   ³
+³ASCII     ³Mix     ³939     ³942     ³          ³target)        ³IBM-supplied   ³character is   ³source )       ³
+³(with     ³        ³        ³        ³          ³               ³table)         ³SBCS.)         ³               ³
+³pseudo    ³        ³        ³        ³          ³               ³               ³               ³               ³
+³SO/SI)    ³        ³        ³        ³          ³               ³               ³               ³               ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³EBCDIC to ³DBCS to ³300     ³932 or  ³0x0006    ³Off (No SO/SI  ³On (Use        ³On (The first  ³Off (No SO/SI  ³
+³ASCII     ³Mix     ³        ³942     ³          ³at target)     ³IBM-supplied   ³character is   ³at source )    ³
+³(with     ³        ³        ³        ³          ³               ³table)         ³DBCS.)         ³               ³
+³pseudo    ³        ³        ³        ³          ³               ³               ³               ³               ³
+³SO/SI)    ³        ³        ³        ³          ³               ³               ³               ³               ³
+ÀÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+
+<P><HR>
+
+<A HREF="046_L3_ConvertingASCIIDBCSt.html">[Back: Converting ASCII DBCS to EBCDIC DBCS]</A> <BR>
+<A HREF="048_L4_WinCpTranslateString.html">[Next: WinCpTranslateString]</A> 
+</BODY>
+</HTML>

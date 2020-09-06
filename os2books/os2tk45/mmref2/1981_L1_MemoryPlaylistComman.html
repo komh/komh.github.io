@@ -1,0 +1,300 @@
+<HTML>
+<HEAD>
+<TITLE>Memory Playlist Commands</TITLE>
+</HEAD>
+<BODY>
+<H1>Memory Playlist Commands</H1><!-- entering slot 1983 -->
+<P>
+A memory playlist is a data structure in your application. It contains an
+array of simple, machine-like instructions, or commands, each of which has
+a fixed format consisting of a 32-bit operation code and three 32-bit operands.
+
+<P>
+Using playlist instructions, you can play audio objects in succession from
+one or more memory buffers.  Instructions include branching to and returning
+from subroutines within the playlist. In addition, the playlist can be modified
+dynamically by the application while it is being played.
+<P>
+The MCI_OPEN_PLAYLIST flag is specified for the<A><!-- external link: 1D 40 27 FC --> MCI_OPEN
+</A>command message to indicate that the<I> pszElementName</I> field in
+the<A><!-- external link: 1D 0D 29 FC --> MCI_OPEN_PARMS</A> data structure
+is a pointer to a memory playlist. The following table lists and describes
+the playlist instructions.
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Command             ³Description                             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³BRANCH_OPERATION    ³Transfers control to another instruction³
+³                    ³in the playlist.                        ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³CALL_OPERATION      ³Transfers control to the instruction    ³
+³                    ³specified in Operand 2, saving the      ³
+³                    ³number of the instruction following the ³
+³                    ³CALL_OPERATION for use on a             ³
+³                    ³RETURN_OPERATION.                       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³CUEPOINT_OPERATION  ³Causes a cue-point data record to be    ³
+³                    ³entered into the data stream.           ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³DATA_OPERATION      ³Specifies a data buffer to be played    ³
+³                    ³from or recorded into.                  ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³EXIT_OPERATION      ³Indicates the end of the playlist.      ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³LOOP_OPERATION      ³Controls iteration in a playlist.       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³MESSAGE_OPERATION   ³Returns a message to the application    ³
+³                    ³during playlist processing.             ³
+³                    ³MESSAGE_OPERATION statements can be used³
+³                    ³by the application to trace specific    ³
+³                    ³points during the execution of the      ³
+³                    ³playlist processor.                     ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³NOP_OPERATION       ³Used as a placeholder.                  ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³RETURN_OPERATION    ³Transfers control to the playlist       ³
+³                    ³instruction following the most recently ³
+³                    ³executed CALL_OPERATION.                ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³SEMPOST_OPERATION   ³Causes the playlist processor to post an³
+³                    ³event semaphore.  The playlist processor³
+³                    ³will call DosWaitEventSem.              ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³SEMWAIT_OPERATION   ³Causes the playlist processor to wait on³
+³                    ³a semaphore. The playlist processor will³
+³                    ³call DosWaitEventSem.                   ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+<B>Playlist Instructions</B>
+<P>
+The commands and their descriptions (including operand information) follow:
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B>BRANCH_OPERATION</B><!-- lm: 0x11 4 -->
+<UL> Transfers control to another
+instruction in the playlist.<!-- lm: 0x2 4 -->
+<P>
+Operand 1<!-- lm: 0x2 24 -->
+<UL> Ignored.<!-- lm: 0x2 4 -->
+</UL> Operand
+2<!-- lm: 0x2 24 -->
+<UL> The absolute instruction number in the playlist
+to which control is being transferred. Because the playlist is defined as
+an array of structures (instruction, operation, and operand values) its
+first instruction is referenced as array element, index 0. Therefore, the
+first instruction in the list is 0, the second instruction is 1, and so
+on.<!-- lm: 0x2 4 -->
+</UL> Operand 3<!-- lm: 0x2 24 -->
+<UL> Ignored.<!-- lm: 0x2 4 -->
+</UL> Branching
+out of a subroutine is not prohibited; however, it is not recommended because
+an unused return address is left on the stack maintained by the playlist
+processor.
+<P>
+An application can enable or disable a BRANCH_OPERATION by exchanging it
+with a NOP_OPERATION.  Operands for a NOP_OPERATION are ignored.<!-- lm: 0x2 1 -->
+</UL><B> CALL_OPERATION
+</B><!-- lm: 0x11 4 -->
+<UL>Transfers control to the absolute instruction
+number specified in Operand 2, saving the number of the instruction following
+the CALL for use on a RETURN instruction.
+<P>
+CALL instructions may be nested up to 20 levels.<!-- lm: 0x2 4 -->
+<P>
+Operand 1<!-- lm: 0x2 24 -->
+<UL> Ignored.<!-- lm: 0x2 4 -->
+</UL> Operand
+2<!-- lm: 0x2 24 -->
+<UL> Absolute instruction number in the playlist to
+which control is being transferred.<!-- lm: 0x2 4 -->
+</UL> Operand 3<!-- lm: 0x2 24 -->
+<UL> Ignored.
+<!-- lm: 0x2 4 --><!-- lm: 0x2 1 -->
+</UL><B>CUEPOINT_OPERATION</B><!-- lm: 0x11 4 -->
+<UL> Causes
+a cue-point data record to be entered into the data stream. Note that the
+cue point is relative to the DATA_OPERATION that follows it.<!-- lm: 0x2 4 -->
+<P>
+Operand 1<!-- lm: 0x2 24 -->
+<UL> User-defined parameter to be returned
+as the low word of MsgParam1 in the<A><!-- external link: 1D 20 27 FC --> MM_MCICUEPOINT
+</A>message.<!-- lm: 0x2 4 -->
+</UL> Operand 2<!-- lm: 0x2 24 -->
+<UL> Offset
+in MMTIME units for the actual time the CUEPOINT message should be generated.
+<!-- lm: 0x2 4 -->
+</UL>Operand 3<!-- lm: 0x2 24 -->
+<UL> Ignored.<!-- lm: 0x2 4 -->
+</UL> The
+<A><!-- external link: 1D 20 27 FC -->MM_MCICUEPOINT</A> message is returned
+to the application as soon as possible<!-- entering slot 1984 --> after
+the cue-point data record is encountered in the data stream. The message
+is sent to the window handle specified when the device was originally opened.
+
+<P>
+<B>Note: </B> The CUEPOINT instruction is ignored when used in a recording
+operation.<!-- lm: 0x2 4 --><!-- lm: 0x2 1 -->
+</UL><B> DATA_OPERATION</B><!-- lm: 0x11 4 -->
+<UL> Specifies
+a data buffer to be played from or recorded into.<!-- lm: 0x2 4 -->
+<P>
+Operand 1<!-- lm: 0x2 24 -->
+<UL> long pointer to a buffer in the application.
+<!-- lm: 0x2 4 -->
+</UL>Operand 2<!-- lm: 0x2 24 -->
+<UL> Length of the
+buffer pointed to by Operand 1.<!-- lm: 0x2 4 -->
+</UL> Operand 3<!-- lm: 0x2 24 -->
+<UL> Current
+position in the buffer. This operand is updated by the system during a recording
+or playback operation. For a playback operation, it is the number of bytes
+that have been sent to the output device handler. For a recording operation,
+it is the number of bytes that have been placed into a user buffer.
+<P>
+The current position in the buffer is particularly important after a recording
+operation, because this field contains the number of bytes of recorded data.
+ The remaining bytes in the buffer are not valid.<!-- lm: 0x2 4 -->
+</UL> The
+buffer indicated by the DATA instruction must only contain the raw data
+bytes from the device and cannot include any header information. For example,
+a buffer for a sequencer device can contain only MIDI multibyte messages,
+as defined by the International MIDI Association. Therefore, the precise
+meaning or format of the data is dependent on the current settings of the
+media device.  For example, a wave audio data element is assumed to have
+the format PCM or ADPCM, number of bits per sample, and so on, that is indicated
+by the settings of the audio device.
+<P>
+The address range of a DATA statement cannot overlap the address range of
+any another DATA statement. However, the same DATA statement can be repeated.
+<!-- lm: 0x2 1 -->
+</UL><B>EXIT_OPERATION</B><!-- lm: 0x11 4 -->
+<UL> Indicates
+the end of the playlist.<!-- lm: 0x2 4 -->
+<P>
+Operand 1<!-- lm: 0x2 24 -->
+<UL> Ignored.<!-- lm: 0x2 4 -->
+</UL>Operand 2<!-- lm: 0x2 24 -->
+<UL> Ignored.<!-- lm: 0x2 4 -->
+</UL>Operand 3<!-- lm: 0x2 24 -->
+<UL> Ignored.<!-- lm: 0x2 4 --><!-- lm: 0x2 1 -->
+</UL><B> LOOP_OPERATION
+</B><!-- lm: 0x11 4 -->
+<UL>Controls iteration in a playlist. It is the
+responsibility of the application to initialize the current iteration.  The
+current iteration is reset to zero following loop termination.<!-- lm: 0x2 4 -->
+<P>
+Operand 1<!-- lm: 0x2 24 -->
+<UL> Number of times the loop is to be executed.
+<!-- lm: 0x2 4 -->
+</UL>Operand 2<!-- lm: 0x2 24 -->
+<UL> Target instruction
+to branch to, when the loop condition fails.<!-- lm: 0x2 4 -->
+</UL> Operand
+3<!-- lm: 0x2 24 -->
+<UL> Current iteration.<!-- lm: 0x2 4 -->
+</UL> The
+last instruction in a loop is a branch back to the LOOP_OPERATION. The operation
+of the LOOP_OPERATION instruction is as follows:<!-- lm: 0x2 5 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 9 -->If Operand 3 is less than Operand 1, control
+is transferred to the playlist instruction following the LOOP instruction,
+and the iteration count in Operand 3 is incremented.<!-- lm: 0x2 5 -->
+<P>
+ <LI><LI><!-- lm: 0x2 9 -->Otherwise, the iteration count is reset to zero
+and control is passed to the instruction specified in Operand 2.<!-- lm: 0x2 4 -->
+</UL> Typically,
+the application sets the iteration count to zero when the playlist is passed
+to the device, but this is not required.  The loop instruction merely compares
+the loop count with the iteration count. If the iteration count is set to
+a value other than zero when the playlist is passed in, it is as if the
+loop has been executed that number of times. Also, if a playback operation
+is stopped, and then the same playlist is loaded again, the loop iteration
+count is not initialized by the playlist processor.
+<P>
+It is the application's responsibility to see that iteration count values
+are what is required when switching from play to record, record to play,
+and when changing settings for the data (for example,<I> bitspersample</I>,
+<I>samplespersec</I>, and so on) with the set command. These commands cause
+the playlist stream to be destroyed and re-created, and the playlist to
+be reassociated as a new playlist with the playlist processor.<!-- lm: 0x2 1 -->
+</UL><B> MESSAGE_OPERATION
+</B><!-- lm: 0x11 4 -->
+<UL>Returns a message to the application during
+playlist processing.<!-- lm: 0x2 4 -->
+<P>
+Operand 1<!-- lm: 0x2 24 -->
+<UL> Ignored.<!-- lm: 0x2 4 -->
+</UL> Operand
+2<!-- lm: 0x2 24 -->
+<UL> ULONG that is returned to the application in the
+<A><!-- external link: 1D 24 27 FC -->MM_MCIPLAYLISTMESSAGE</A> message
+MsgParam2.<!-- lm: 0x2 4 -->
+</UL> Operand 3<!-- lm: 0x2 24 -->
+<UL> Ignored.
+<!-- lm: 0x2 4 -->
+</UL>Each time the playlist processor encounters a MESSAGE
+instruction,<A><!-- external link: 1D 24 27 FC --> MM_MCIPLAYLISTMESSAGE
+</A>is returned to the application. MESSAGE instructions can be used by
+the application to trace specific points during the execution of the playlist
+processor.
+<P>
+<B>Note: </B> This function is not intended to be used for timing of data
+production or consumption identified by previously interpreted instructions.
+<!-- lm: 0x2 4 --><!-- lm: 0x2 1 -->
+</UL><B>NOP_OPERATION</B><!-- lm: 0x11 4 -->
+<UL> Used
+as a placeholder.<!-- lm: 0x2 4 -->
+<P>
+Operand 1<!-- lm: 0x2 24 -->
+<UL> Ignored.<!-- lm: 0x2 4 -->
+</UL>Operand 2<!-- lm: 0x2 24 -->
+<UL> Ignored.<!-- lm: 0x2 4 -->
+</UL>Operand 3<!-- lm: 0x2 24 -->
+<UL> Ignored.<!-- lm: 0x2 4 --><!-- lm: 0x2 1 -->
+</UL><B> RETURN_OPERATION
+</B><!-- lm: 0x11 4 -->
+<UL>Transfers control to the playlist instruction
+following the most recently executed CALL instruction.<!-- lm: 0x2 4 -->
+<P>
+Operand 1<!-- lm: 0x2 24 -->
+<UL> Ignored.<!-- lm: 0x2 4 -->
+</UL>Operand 2<!-- lm: 0x2 24 -->
+<UL> Ignored.<!-- lm: 0x2 4 -->
+</UL>Operand 3<!-- lm: 0x2 24 -->
+<UL> Ignored.<!-- lm: 0x2 4 --><!-- lm: 0x2 1 -->
+</UL><B> SEMPOST_OPERATION
+</B><!-- lm: 0x11 4 -->
+<UL>Causes the playlist processor to post an<!-- entering slot 1985 --> event
+semaphore.  The playlist processor will call DosWaitEventSem.<!-- lm: 0x2 4 -->
+<P>
+Operand 1<!-- lm: 0x2 24 -->
+<UL> Contains the semaphore to post.<!-- lm: 0x2 4 -->
+</UL>Operand 2<!-- lm: 0x2 24 -->
+<UL> Ignored.<!-- lm: 0x2 4 -->
+</UL>Operand 3<!-- lm: 0x2 24 -->
+<UL> Ignored.<!-- lm: 0x2 4 --><!-- lm: 0x2 1 -->
+</UL><B> SEMWAIT_OPERATION
+</B><!-- lm: 0x11 4 -->
+<UL>Causes the playlist processor to wait on a semaphore.
+ The playlist processor will call DosWaitEventSem.<!-- lm: 0x2 4 -->
+<P>
+Operand 1<!-- lm: 0x2 24 -->
+<UL> Contains the semaphore to perform the
+wait on.<!-- lm: 0x2 4 -->
+</UL>Operand 2<!-- lm: 0x2 24 -->
+<UL> Amount of time the semaphore should
+wait.<!-- lm: 0x2 4 -->
+</UL>Operand 3<!-- lm: 0x2 24 -->
+<UL> Boolean value indicating whether
+or not the semaphore should be cleared before waiting.<!-- lm: 0x2 4 --><!-- lm: 0x2 1 -->
+</UL>     
+
+<P><HR>
+
+<A HREF="1980_L3H_UNDOWaveaudioCommand.html">[Back: UNDO (Waveaudio Command) - Topics]</A> <BR>
+<A HREF="1982_L1_GraphicButtonControl.html">[Next: Graphic Button Control]</A> 
+</BODY>
+</HTML>

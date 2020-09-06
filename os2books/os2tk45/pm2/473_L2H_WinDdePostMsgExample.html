@@ -1,0 +1,73 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>WinDdePostMsg - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>WinDdePostMsg - Example Code</H1><!-- entering slot 473 -->
+<P>
+This example uses WinDdePostMsg to request a security item from the server
+once it has received an acknowledgement (via WM_DDEINITIATEACK) to the WinDdeInitiate
+call.  Note the use of the shared memory segment to pass and receive necessary
+information.
+<PRE>#define INCL_WINDDE             /* Window DDE Functions         */
+#define INCL_DOSMEMMGR          /* Memory Manager values        */
+#include &lt;os2.h&gt;
+
+BOOL  fSuccess;         /* success indicator                    */
+HWND  hwndClient;       /* client window                        */
+HWND  hwndServer;       /* server window                        */
+CHAR  pszAppName[15]="";/* server application                   */
+CHAR  pszTopicName[15]="";/* topic                              */
+HWND  hwndTo;           /* target window                        */
+HWND  hwndFrom;         /* source window                        */
+USHORT  usMsgId;        /* message id                           */
+BOOL  fRetry;           /* retry indicator                      */
+CONVCONTEXT Context;
+PDDESTRUCT  pddeData;   /* DDE structure                        */
+MRESULT  mresReply;     /* message return data                  */
+
+case WM_CREATE:
+     fSuccess = WinDdeInitiate(hwndClient, pszAppName,
+                               pszTopicName, &amp;Context);
+     DosAllocSharedMem((PVOID)pddeData,"DDESHAREMEM",
+                       sizeof(DDESTRUCT) + 50,
+                       PAG_READ | PAG_WRITE | PAG_COMMIT |
+                       OBJ_GIVEABLE | OBJ_GETTABLE);
+
+case WM_DDE_INITIATEACK:
+     /* issue a request message to DDE partner */
+     usMsgId = WM_DDE_REQUEST;
+
+     /* initialize DDE conversation structure */
+     pddeData-&gt;cbData = sizeof(DDESTRUCT);      /* Total length  */
+     pddeData-&gt;fsStatus = DDE_FACK;    /* Status - positive ack  */
+     pddeData-&gt;usFormat = DDEFMT_TEXT;           /* Data format  */
+     pddeData-&gt;offszItemName = sizeof(DDESTRUCT);/* Offset to item  */
+
+     /* set name of item to 'Security', copying the information to
+        the shared memory at the end of pddeData */
+     strcpy((BYTE *)pddeData + pddeData-&gt;offszItem,
+            SZDDESYS_ITEM_SECURITY);
+
+     /* Offset to beginning of data (notice additional offset due
+        to item information) */
+
+     pddeData-&gt;offabData = sizeof(DDESTRUCT) +
+                          strlen(SZDDESYS_ITEM_SECURITY);
+
+     /* set name of item to 'Security', copying the information to
+        the shared memory at the end of pddeData */
+     strcpy((BYTE *)pddeData + pddeData-&gt;offszItem,
+            SZDDESYS_ITEM_SECURITY);
+
+     fSuccess = WinDdePostMsg(hwndTo, hwndFrom, usMsgId, pddeData,
+                              fRetry);
+</PRE>
+
+
+<P><HR>
+
+<A HREF="472_L2H_WinDdePostMsgRelated.html">[Back: WinDdePostMsg - Related Messages]</A> <BR>
+<A HREF="474_L2H_WinDdePostMsgTopics.html">[Next: WinDdePostMsg - Topics]</A> 
+</BODY>
+</HTML>

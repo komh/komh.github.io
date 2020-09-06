@@ -1,0 +1,106 @@
+<HTML>
+<HEAD>
+<TITLE>Starting a Session</TITLE>
+</HEAD>
+<BODY>
+<H1>Starting a Session</H1><!-- entering slot 121 -->
+<P>
+<A><!-- external link: 1D FB C3 53 -->DosStartSession</A> is used to start
+new sessions and to specify the name of the application to be started in
+the new session.
+<P>
+There are five types of sessions that you can start: full screen, text window,
+Presentation Manager (PM), full screen DOS Session, and windowed DOS Session.
+OS/2 applications running in any of the OS/2 session types-full screen,
+text window, and PM-can start a session for any other application type,
+including DOS Sessions. Applications running in DOS Sessions cannot start
+sessions.
+<P>
+<A><!-- external link: 1D FB C3 53 -->DosStartSession</A> can be used to
+start either a foreground or a background session, but a new session can
+be started in the foreground only when the session of the caller, or one
+of the descendant sessions of the caller, is currently executing in the
+foreground.
+<P>
+A session can be started as an unrelated session or as a child session.
+
+<P>
+In the following code fragment, an unrelated, foreground session is created,
+and the application, SIMON.EXE, is started in the new session:
+<PRE>    #define INCL_DOSPROCESS       /* Process and thread values */
+    #define INCL_DOSSESMGR
+    #include &lt;os2.h&gt;
+
+    #define HF_STDOUT 1      /* Standard output handle */
+
+    STARTDATA  sd;
+    PID        pidProcess;
+    CHAR       szBuf[CCHMAXPATH];
+    ULONG      ulSessionID, cbWritten;
+    APIRET     rc;
+    CHAR       szPgmName[] = "SIMON.EXE";
+
+    sd.Length = sizeof(sd);                    /* Length of the structure */
+    sd.Related = SSF_RELATED_INDEPENDENT;      /* Unrelated session       */
+    sd.FgBg = SSF_FGBG_FORE;                   /* In the foreground       */
+    sd.TraceOpt = SSF_TRACEOPT_NONE;           /* No tracing              */
+    sd.PgmTitle = (PSZ) NULL;                  /* Title is PgmName        */
+    sd.PgmName = szPgmName;                    /* Address of szPgmName    */
+    sd.PgmInputs = (PBYTE) NULL;               /* No command line args    */
+    sd.TermQ = (PBYTE) NULL;                   /* No terminal queue       */
+    sd.Environment = (PBYTE) NULL;             /* Inherits environment    */
+    sd.InheritOpt = SSF_INHERTOPT_PARENT;      /* Uses parent environment */
+    sd.SessionType = SSF_TYPE_PM;              /* PM session              */
+    sd.IconFile = (PSZ) NULL;                  /* Uses default icon       */
+    sd.PgmHandle = 0;                          /* Used by Win calls       */
+    sd.PgmControl = SSF_CONTROL_MAXIMIZE;      /* Starts app maximized    */
+    sd.InitXPos = 0;                           /* Lower left corner       */
+    sd.InitYPos = 0;                           /* Lower left corner       */
+    sd.InitXSize = 0;                          /* Ignored for maximized   */
+    sd.InitYSize = 0;                          /* Ignored for maximized   */
+    sd.ObjectBuffer = szBuf;                   /* Fail-name buffer        */
+    sd.ObjectBuffLen = sizeof(szBuf);          /* Buffer length           */
+
+    rc = DosStartSession(&amp;sd, &amp;ulSessionID, &amp;pidProcess);
+
+    if (rc) {
+        DosBeep(750,250);
+        DosWrite(HF_STDOUT, "error starting new session\r\n", 28, &amp;cbWritten);
+        DosExit(EXIT_PROCESS, rc);
+    }
+
+</PRE>
+
+<P>
+Before calling<A><!-- external link: 1D FB C3 FC --> DosStartSession</A>,
+you must create a<A><!-- external link: 1D D2 C4 C2 --> STARTDATA</A> data
+structure that defines the session to be started. Different lengths for
+the data structure are supported to provide compatibility and various levels
+of application control.
+<P>
+<A><!-- external link: 1D FB C3 53 -->DosStartSession</A> uses the<A><!-- external link: 1D D2 C4 C2 --> STARTDATA
+</A>structure to specify the details of the new session, such as the name
+of the application to start in the session, whether the new session should
+be started in the foreground or background, and whether the new session
+is unrelated or is a child session of the session calling<A><!-- external link: 1D FB C3 FC --> DosStartSession</A>.
+
+<P>
+When a session is created, the title specified in<A><!-- external link: 1D D2 C4 FC --> STARTDATA</A>,
+(or the application title if no title is specified in<A><!-- external link: 1D D2 C4 FC --> STARTDATA</A>)
+is added to the Window List.
+<P>
+The<I> Related</I> field in the<A><!-- external link: 1D D2 C4 C2 --> STARTDATA
+</A>structure specifies whether the new session is related to the session
+calling<A><!-- external link: 1D FB C3 FC --> DosStartSession</A>.
+<P>
+If the<I> InheritOpt</I> field in the<A><!-- external link: 1D D2 C4 C2 --> STARTDATA
+</A>data structure is set to 1, the new session<!-- entering slot 122 --> inherits
+the environment and open file handles of the calling process. This applies
+for both unrelated and related sessions.
+
+<P><HR>
+
+<A HREF="115_L2_UsingSessions.html">[Back: Using Sessions]</A> <BR>
+<A HREF="117_L3_ControllingtheExecut.html">[Next: Controlling the Execution of Child Sessions]</A> 
+</BODY>
+</HTML>

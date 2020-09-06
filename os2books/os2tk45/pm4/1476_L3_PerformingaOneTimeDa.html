@@ -1,0 +1,86 @@
+<HTML>
+<HEAD>
+<TITLE>Performing a One-Time Data Transfer</TITLE>
+</HEAD>
+<BODY>
+<H1>Performing a One-Time Data Transfer</H1><!-- entering slot 1505 -->
+<P>
+A client application posts a WM_DDE_REQUEST or WM_DDE_POKE message to perform
+a one-time data transfer with a server application. The item-name portion
+of the shared-memory object passed with the message contains the name of
+the desired item. When the client posts a WM_DDE_POKE message, the data
+portion of the shared-memory object contains the data being sent to the
+server.
+<P>
+If the server can satisfy the request, it renders the item in the requested
+format and includes it, with a DDESTRUCT data structure, in a shared-memory
+object and posts a WM_DDE_DATA message to the client, as shown in the following
+code fragment:
+<PRE>/* The DDE data structure is passed, and    */
+/* the client should have shared it with us */
+pDDEdata  = (PDDESTRUCT)mp2;
+szReqItem = (BYTE *)(pDDEdata+(pDDEdata-&gt;offszItemName));
+ShowMessage(szReqItem);
+
+/*  We support item status, but not anything else */
+if (!strcmpi(szReqItem, szItem))
+   {
+      ShowMessage("sending...");
+
+       /* Get some sharable memory */
+       DosAllocSharedMem((PVOID)&amp;mem,
+                         NULL,
+                         sizeof(DDESTRUCT)+21,
+                         PAG_COMMIT |
+                         PAG_READ |
+                         PAG_WRITE |
+                         OBJ_GIVEABLE);
+
+       /*  Get the server's id and give it access to the */
+       /*  shared memory                                 */
+       WinQueryWindowProcess(hClientWnd, &amp;pid, &amp;tid);
+       DosGiveSharedMem(&amp;mem, pid, PAG_READ | PAG_WRITE);
+
+       /*  Setup DDE data structures                                 */
+       /*  (11 byte name length, 10 plus NULL, 10 byte data length)  */
+       pDDEdata           = (PDDESTRUCT)mem;
+       pDDEdata-&gt;cbData   = 10;             /* Data length           */
+       pDDEdata-&gt;fsStatus = 0;              /* Status                */
+       pDDEdata-&gt;usFormat = DDEFMT_TEXT;    /* Text format           */
+
+       /*  Go past end of structure for the name */
+       pDDEdata-&gt;offszItemName = sizeof(DDESTRUCT);
+
+       /*  Go past end of structure (and name) for the data  */
+       pDDEdata-&gt;offabData = sizeof(DDESTRUCT)+11;
+       strcpy((BYTE *)(pDDEdata+(pDDEdata-&gt;offabData)), szStatus);
+       WinDdePostMsg(hClientWnd,
+                     hwnd,
+                     WM_DDE_DATA,
+                     pDDEdata,
+                     DDEPM_RETRY);
+   }
+
+   else
+   {
+       ShowMessage("rejecting...");
+       pDDEdata-&gt;cbData   = 0;                  /* Data length */
+       pDDEdata-&gt;fsStatus = DDE_NOTPROCESSED;   /* Status      */
+       pDDEdata-&gt;usFormat = DDEFMT_TEXT;        /* Text format */
+       WinDdePostMsg(hClientWnd,
+                     hwnd,
+                     WM_DDE_ACK,
+                     pDDEdata,
+                     DDEPM_RETRY);
+   }
+   ShowMessage("sent...");
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1475_L3_SendingaNegativeAckn.html">[Back: Sending a Negative Acknowledgment]</A> <BR>
+<A HREF="1477_L3_EstablishingaPermane.html">[Next: Establishing a Permanent Data Link]</A> 
+</BODY>
+</HTML>

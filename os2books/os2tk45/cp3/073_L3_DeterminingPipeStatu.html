@@ -1,0 +1,153 @@
+<HTML>
+<HEAD>
+<TITLE>Determining Pipe Status</TITLE>
+</HEAD>
+<BODY>
+<H1>Determining Pipe Status</H1><!-- entering slot 77 -->
+<P>
+<A><!-- external link: 1D CC C3 5C -->DosQueryNPHState</A> and<A><!-- external link: 1D CD C3 5D --> DosQueryNPipeInfo
+</A>can be used to obtain information about named pipes.
+<P>
+<B><A><!-- external link: 1D CC C3 5C -->DosQueryNPHState</A></B>
+<BR>
+A client process can read data from the pipe, write data to the pipe, or
+both, depending on the access mode specified when the pipe was created.
+To check the current access mode, the client process can call<A><!-- external link: 1D CC C3 FC --> DosQueryNPHState</A>.
+
+<P>
+The following code fragment shows how to use<A><!-- external link: 1D CC C3 5C --> DosQueryNPHState
+</A>to obtain information about a named pipe:
+<PRE>    #define INCL_DOSNMPIPES   /* Named-pipe values */
+    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+
+    HPIPE    hpHandle;            /* Pipe handle       */
+    ULONG    ulPipeHandleState;   /* Pipe-handle state */
+    APIRET   ulrc;                /* Return code       */
+
+    ulrc = DosQueryNPHState(hpHandle, &amp;ulPipeHandleState);
+
+    if (ulrc != 0) {
+        printf("DosQueryNPHState error: return code = %ld",
+               ulrc);
+        return;
+    }
+
+</PRE>
+
+<P>
+On successful return,<I> PipeHandleState</I> will contain information that
+describes the nature of the named pipe.
+<P>
+<A><!-- external link: 1D CC C3 5C -->DosQueryNPHState</A> returns the following
+information about the pipe handle and the attributes of the pipe:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->The end of the pipe that the handle is for (server
+or client end)<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The pipe type (byte pipe or message pipe)<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The instance count<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The blocking mode (blocking or nonblocking)<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The read mode (byte-read mode or message-read mode)
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The values for pipe type and instance count cannot be changed, so they are
+always the same as those that were specified when the pipe was created with
+<A><!-- external link: 1D 71 C3 FC -->DosCreateNPipe</A>. The information
+returned for blocking mode and read mode, however, can come from different
+sources:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->If the handle is for the server end of the pipe, then
+the blocking mode and the read mode were set with<A><!-- external link: 1D 71 C3 FC --> DosCreateNPipe</A>,
+but could have been reset with<A><!-- external link: 1D F0 C3 FC --> DosSetNPHState</A>.
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If the handle is for the client end of the pipe, then
+the blocking mode and the read mode were set to "blocking" and "byte-read"
+by the system when the client called<A><!-- external link: 1D 9F C3 FC --> DosOpen</A>.
+However, again, they could have been reset with<A><!-- external link: 1D F0 C3 FC --> DosSetNPHState</A>.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The pipe attributes are described in more detail in <A HREF="068_L3_CreatingNamedPipes.html">Creating
+Named Pipes</A>.
+<P>
+An application can use<A><!-- external link: 1D F0 C3 5E --> DosSetNPHState
+</A>to change the wait mode and the read mode. The pipe cannot be changed
+to no-wait mode when another thread is blocked on a read or write operation
+to the same end of the pipe.
+<P>
+<B>DosQueryNPipeInfo</B> More detailed information about a named pipe can
+be obtained by using<A><!-- external link: 1D CD C3 FC --> DosQueryNPipeInfo</A>.
+This function returns information in a<A><!-- external link: 1D BF C4 9D --> PIPEINFO
+</A>data structure that includes the name of the pipe, the current and maximum
+instance counts (the current number of pipes and the maximum number of times
+the pipe can be created), the size of the input and output buffers for the
+pipe, and the pipe identifier of the client process.
+<P>
+The following code fragment shows how to use<A><!-- external link: 1D CD C3 FC --> DosQueryNPipeInfo</A>:
+
+<PRE>    #define INCL_DOSNMPIPES   /* Named-pipe values */
+    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+
+    HPIPE    hpHandle;          /* Pipe handle                     */
+    ULONG    ulInfoLevel;       /* Pipe data required              */
+    PIPEINFO pipInfoBuf;        /* Pipe information data structure */
+    ULONG    ulInfoBufSize;     /* Pipe data-buffer size           */
+    APIRET   ulrc;              /* Return code                     */
+
+    ulInfoLevel = 1;                    /* Ask for standard level of pipe info */
+
+    ulInfoBufSize = sizeof(PIPEINFO);   /* Length of pipe info data structure  */
+
+    ulrc = DosQueryNPipeInfo(hpHandle,
+                             ulInfoLevel,
+                             &amp;pipInfoBuf,
+                             ulInfoBufSize);
+
+    if (ulrc != 0) {
+        printf("DosQueryNPipeInfo error: return code = %ld",
+               ulrc);
+        return;
+    }
+
+</PRE>
+
+<P>
+On successful return, the pipe information data structure contains a set
+of information describing the nature and the current state of the named
+pipe.
+<P>
+<A><!-- external link: 1D CD C3 5D -->DosQueryNPipeInfo</A> returns level
+1 or level 2 file information for the pipe. Level 1 information includes
+the following:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->The actual sizes of the in-buffer and out-buffer<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The maximum number of pipe instances permitted<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The current number of pipe instances<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The length of the pipe name<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The ASCIIZ name of the pipe, including \\<I>ComputerName
+</I>if the pipe is in a remote computer system.
+<P>
+Level 2 information consists of a unique 2-byte identifier for each of the
+pipe's client processes.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="072_L3_SynchronizingNamedPi.html">[Back: Synchronizing Named Pipe Dialogs]</A> <BR>
+<A HREF="074_L3_ExaminingtheContents.html">[Next: Examining the Contents of Named Pipes]</A> 
+</BODY>
+</HTML>

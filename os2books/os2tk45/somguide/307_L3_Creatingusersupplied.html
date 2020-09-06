@@ -1,0 +1,184 @@
+<HTML>
+<HEAD>
+<TITLE>Creating user-supplied proxies</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating user-supplied proxies</H1><!-- entering slot 350 -->
+<P>
+DSOM uses a proxy object in the client's address space to represent the
+remote object. As mentioned earlier in this chapter, the proxy object encapsulates
+the operations necessary to forward and invoke methods on the remote object
+and return the results. By default, proxy generation is done automatically
+by the DSOM run time. However, if desired, the programmer can cause a user-supplied
+proxy class to be loaded instead of letting the run time dynamically generate
+a default proxy class. User-supplied proxies can be useful in specialized
+circumstances when local processing or data caching is desired.
+<P>
+To build a user-supplied proxy class, it is necessary to understand a bit
+about how dynamic proxy classes are constructed by the DSOM run time. The
+DSOM run time constructs a proxy class by creating an instance of a class
+that inherits the interface and implementation of<B> SOMDClientProxy,</B> and
+the interface (but not the implementation) of the target class. The methods
+in the interface of the target object are all overridden to call the<B> somDispatch
+</B>method (For more details, see "Object references and proxy objects"
+in section 6.8.)
+<P>
+Every SOM object contains the<B> somDispatch</B> method, inherited from
+<B>SOMObject.</B> This method is used to dynamically dispatch a method on
+an object, and can be overridden with application-specific dispatching mechanisms.
+In<B> SOMDClientProxy,</B> the<B> somDispatch</B> method is overridden to
+forward method calls to the corresponding remote target object.
+<P>
+So, in effect, when a method is called on a default proxy object created
+by the DSOM run time, it redispatches the method to the remote object using
+DSOM's version of<B> somDispatch.</B>
+<P>
+Below is a simple example of a user-supplied proxy class. In this particular
+example, the proxy object maintains a local, unshared copy of an attribute
+("attribute_long") defined in the remote object ("Foo"), while forwarding
+method invocations ("method1") on to the remote object. The result is that,
+when multiple clients are talking to the same remote "Foo" object, each
+client has a local copy of the attribute but all clients share the "Foo"
+object's implementation of "method1".
+<P>
+<B>Note: </B> It is important to understand that simply setting the attribute
+in one client's proxy does not affect the value of the attribute in other
+proxies. Maintaining consistency of the cached data values, if desired,
+is the responsibility of the user-supplied proxy class.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+Following is the IDL file for the "Foo" class:
+<PRE>
+// foo.idl
+
+
+#include &lt;somdtype.idl&gt;
+#include &lt;somobj.idl&gt;
+
+
+interface Foo : SOMObject
+{
+        string  method1(out string a, inout long b,
+                        in ReferenceData c);
+        attribute long attribute_long;
+
+
+  implementation
+  {
+     releaseorder: method1, _set_attribute_long,
+                   _get_attribute_long;
+     dllname="foo.dll";
+     somDefaultInit: override;
+  };
+};
+</PRE>
+
+<P>
+The user-supplied proxy class is created by using multiple inheritance between
+<B>SOMDClientProxy</B> and the target object (in this case "Foo"). Thus,
+the IDL file for the user-supplied proxy class "Foo__Proxy" (note the two
+underscores) is as follows:
+<PRE>
+// fooproxy.idl
+
+
+#include &lt;somdcprx.idl&gt;
+#include &lt;foo.idl&gt;
+
+
+interface Foo__Proxy : SOMDClientProxy, Foo
+{
+  implementation
+  {
+     dllname="fooproxy.dll";
+     method1: override;
+  };
+};
+</PRE>
+
+<P>
+When a dynamic proxy class is created by the DSOM run time, the methods
+inherited from the target class are automatically overridden to use somDispatch.
+When you build a user-supplied proxy, you need to do this explicitly. This
+is why "method1" is overridden in the implementation section of the "fooproxy.idl"
+file.
+<P>
+The implementation of "method1", which was added to the template produced
+by the SOM Compiler, simply calls the<B> somDispatch</B> method on "somSelf"
+Because "Foo__Proxy" has inherited the implementation of<B> SOMDClientProxy,
+</B>calling<B> somDispatch</B> within "method1" sends the method to the
+remote "Foo" object.
+<PRE>/* fooproxy.c */
+
+#include &lt;somdtype.h&gt;
+#include &lt;fooproxy.ih&gt;
+
+SOM_<!-- entering slot 351 -->Scope string  SOMLINK method1(Foo__Proxy somSelf,
+                                  Environment *ev,
+                                  string* a, long* b,
+                                  ReferenceData* c)
+{
+    string ret_str;
+    somId  methodId;
+
+
+/*  Foo__ProxyData *somThis = Foo__ProxyGetData(somSelf); */
+    Foo__ProxyMethodDebug("Foo__Proxy","method1");
+
+
+    /* redispatch method, remotely */
+    methodId = somIdFromString("method1");
+    _somDispatch(somSelf, (void**)&amp;ret_str,
+                 methodId, somSelf, ev, a, b, c);
+    SOMFree(methodId);
+
+
+    return ret_str;
+}
+</PRE>
+
+<P>
+In summary, to build a user-supplied proxy class:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Create the .idl file with the proxy class inheriting
+from both<B> SOMDClientProxy</B> and from the target class. Important: The
+user-supplied proxy class must be named "&lt;targetClassName&gt;_ _Proxy"
+(with two underscores in the name) and<B> SOMDClientProxy</B> must be the
+<I>first class</I> in the list of parent classes; for example,
+<PRE>
+        interface Foo_ _Proxy : SOMDClientProxy, Foo
+
+</PRE>
+
+<P>
+Putting<B> SOMDClientProxy</B> first ensures that its version of<B> somDispatch
+</B>will be used to dispatch remote method calls.
+<P>
+In the implementation section of the .idl file, override all methods that
+are to be invoked on the target class. Do not override methods that are
+to be invoked on the local proxy.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Compile the .idl file. Be sure the Interface Repository
+gets updated with the .idl file. In the implementation file, for each overridden
+method, call<B> somDispatch</B> with the method name and parameters passed
+into the overridden method. If the proxy class provides an implementation
+for the<B> somInit</B> or<B> somDefaultInit</B> method, then it is important
+to ensure that calling that method more than once on the same proxy object
+has no negative effect.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Build the DLL and place it the LIBPATH for AIX and
+OS/2, or listed in PATH for Windows. Before creating the default proxy,
+the DSOM run time checks the LIBPATH for a DLL containing the class named
+"&lt;targetClassName&gt;_<B> _Proxy"</B> If such a DLL is found, DSOM loads
+it instead of dynamically generating a proxy class.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="306_L4_Examplecode.html">[Back: Example code]</A> <BR>
+<A HREF="308_L3_Customizingthedefaul.html">[Next: Customizing the default base proxy class]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,285 @@
+<HTML>
+<HEAD>
+<TITLE>send_file()</TITLE>
+</HEAD>
+<BODY>
+<H1>send_file()</H1><!-- entering slot 223 -->
+<P>
+The send_file() function sends the file data over a connected socket.
+<P>
+<B>Syntax</B>
+<PRE>#include &lt;types.h&gt;
+#include &lt;sys\socket.h&gt;
+ssize_t send_file(<I>socket_ptr</I>, <I>sf_struct</I>, <I>flags</I>)
+int * <I>socket_ptr</I>;
+struct sf_parms * <I>sf_struct</I>;
+int <I>flags</I>;
+</PRE>
+
+<P>
+<B>Parameters</B><!-- lm: 0x2 0 -->
+<P>
+<I>socket_ptr</I><!-- lm: 0x11 2 -->
+<UL> Pointer to the socket descriptor
+of a connected socket.<!-- lm: 0x2 0 -->
+</UL><I> sf_struct</I><!-- lm: 0x11 2 -->
+<UL> Pointer
+to a structure that contains variables needed by send_file().<!-- lm: 0x2 0 -->
+</UL><I> flags
+</I><!-- lm: 0x11 2 -->
+<UL>Allows the sender to control the transmission
+of the message. Set this parameter by specifying one or more of the following
+flags. If you specify more than one flag, use the logical OR operator (|)
+to separate them. Setting this parameter is supported only for sockets in
+the Internet domain.<!-- lm: 0x2 2 -->
+<P>
+SF_CLOSE<!-- lm: 0x12 26 -->
+<UL> Close the connection after data has been
+successfully sent or queued for retransmission.<!-- lm: 0x2 2 -->
+</UL> SF_REUSE
+<!-- lm: 0x12 26 -->
+<UL>Prepare the socket for reuse after the data has
+been successfully sent or queued for transmission and the existing connection
+closed.<!-- lm: 0x2 2 --><!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>Description</B>
+<P>
+The<I> send_file()</I> function sends data from the file associated with
+the open file handle, directly from the file-system cache, over the connection
+associated with the socket.
+<P>
+The<I> send_file()</I> function attempts to write header_length bytes from
+the buffer pointed to by header_data, followed by file_bytes from the file
+associated with file_descriptor, followed by trailer_length bytes from the
+buffer pointed to by trailer_data, over the connection associated with the
+socket pointed to by socket_ptr.
+<P>
+As data is sent, the kernel updates the variables in the sf_parms structure
+so that if the send_file() is interrupted by a signal, the application simply
+needs to reissue the send_file(). If the application sets file_offset &gt;
+the actual file size, or file_bytes &gt; (the actual file size - file_offset),
+the return value is -1 with errno set to [EINVAL].
+<P>
+The flags argument is effective only after all the data has been sent successfully;
+otherwise it is ignored. The application should zero the flags argument
+before setting the appropriate value. If flags =<B> SF_REUSE</B> and socket
+reuse is not supported, then upon successful completion of sending the data,
+the kernel closes this socket and sets the socket pointed to by socket_ptr
+to -1. If flags =<B> SF_CLOSE</B> and send_file() completes successfully,
+the socket pointed to by socket_ptr is set to -1 by the kernel.
+<P>
+<B>Implementation Note</B>
+<P>
+<!-- lm: 0x2 2 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 5 -->The<B> send_file()</B> API can be used only on OS/2
+WARP 4.5, which supports Kernel Execution Environment (KEE32), and Installable
+File System Mechanism (IFSM32). For more information on KEE, refer to OS/2
+WARP 4.5 related Document.<!-- lm: 0x2 2 -->
+<P>
+<LI><!-- lm: 0x2 5 -->The performance of<B> accept_and_recv()</B> and<B> send_file()
+</B>is greatly effected by the number of threads that are allowed to be
+active concurrently. If too few threads are active and work is not done
+quickly enough, too many threads, needless traps, and context switches can
+reduce performance by a factor of two. The kernel should make some attempt
+to intelligently determine  how many threads may be active concurrently.
+Optimally, the number of threads active concurrently should be just below
+the saturation point, that is, one or two connect request waiting on the
+backlog queue so that when an accept_and_recv() thread completes, there
+is another connect requests ready to be processed.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>Return Values</B>
+<P>
+ There are three<!-- entering slot 224 --> possible return values from<I> send_file()
+</I>:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 5 --><LI><LI><LI>An error has occurred, check errno for
+more information.<!-- lm: 0x2 2 -->
+<P>
+<LI><!-- lm: 0x2 5 --><LI><LI>The command has completed successfully.<!-- lm: 0x2 2 -->
+<P>
+<LI><!-- lm: 0x2 5 --><LI><LI>The command was interrupted by a signal while
+sending data.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+<!-- lm: 0x2 0 -->
+<P>
+<B>Error Code</B><!-- lm: 0x2 22 -->
+<UL><B>Description</B><!-- lm: 0x2 0 -->
+</UL>EACCESS<!-- lm: 0x12 22 -->
+<UL>Thecallingprocessdoesnothavetheappropriateprivileges
+.<!-- lm: 0x2 0 -->
+</UL>EBADF<!-- lm: 0x12 22 -->
+<UL>Eitherthesocketpointedtobythesocket
+_ ptrargument ,orthefile _ descisnotavaliddescriptor .<!-- lm: 0x2 0 -->
+</UL>ECONNABORTED<!-- lm: 0x12 22 -->
+<UL>Aconnectionhasstopped
+.<!-- lm: 0x2 0 -->
+</UL>ECONNRESET<!-- lm: 0x12 22 -->
+<UL>Aconnectionwasforciblyclosedbyapeer
+.<!-- lm: 0x2 0 -->
+</UL>EFAULT<!-- lm: 0x12 22 -->
+<UL>Thedatabufferpointedtobysocket
+_ ptr ,file _ size ,header _ dataortrailer _ datawasnotvalid .<!-- lm: 0x2 0 -->
+</UL>EINTR<!-- lm: 0x12 22 -->
+<UL>Thesend
+_ file ( )functionwasinterruptedbyasignalthatwascaughtbeforeanydatawassent
+.<!-- lm: 0x2 0 -->
+</UL>EINVAL<!-- lm: 0x12 22 -->
+<UL>Thevaluespecifiedbyanattributeisnotvalid
+.<!-- lm: 0x2 0 -->
+</UL>ENOTCONN<!-- lm: 0x12 22 -->
+<UL>Thesocketisnotconnected
+.<!-- lm: 0x2 0 -->
+</UL>EPIPE<!-- lm: 0x12 22 -->
+<UL>Thesocketisshutdownforwriting
+,orthesocketisconnection - modeandnolongerconnected .<!-- lm: 0x2 0 -->
+</UL>EIO<!-- lm: 0x12 22 -->
+<UL>AnI
+/ Oerroroccurred .<!-- lm: 0x2 0 -->
+</UL>ENETDOWN<!-- lm: 0x12 22 -->
+<UL>Thelocalinterfaceusedtoreachthedestinationisdown
+.<!-- lm: 0x2 0 -->
+</UL>ENETUNREACH<!-- lm: 0x12 22 -->
+<UL>Noroutetothedestinationispresent
+.<!-- lm: 0x2 0 -->
+</UL>ENOBUFS<!-- lm: 0x12 22 -->
+<UL>Nobufferspaceisavailable
+.<!-- lm: 0x2 0 -->
+</UL>ENOMEM<!-- lm: 0x12 22 -->
+<UL>Therewasinsufficientmemoryavailabletocompletetheoperation
+.<!-- lm: 0x2 0 -->
+</UL>ENOSR<!-- lm: 0x12 22 -->
+<UL>TherewereinsufficientSTREAMSresourcesavailablefortheoperationtocomplete
+.<!-- lm: 0x2 0 -->
+</UL>ENOTSOCK<!-- lm: 0x12 22 -->
+<UL>Thesocketpointedtobythesocket
+_ ptrargumentdoesnotrefertoasocket .<!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>Examples</B>
+<P>
+The following is an example of using<B> send_file()</B> call to send a file
+data over a connected socket.
+<P>
+
+<PRE>#define MSG_CLOSE 0x800#define O_RDONLY  0x4
+
+#include #include #include #include #include #include #include #include
+char  serveraddress[128],filename[256];
+int   serverport = 6000;
+int   fd,rc,s;
+
+struct sf_parms
+   {
+        void   *header_data;      /* ptr to header data */
+        size_t header_length;     /* size of header data */
+        int    file_handle;       /* file handle to send from */
+        size_t file_size;         /* size of file */
+        int    file_offset;       /* byte offset in file to send from */
+        size_t file_bytes;        /* bytes of file to be sent */
+        void   *trailer_data;     /* ptr to trailer data */
+        size_t trailer_length;    /* size of trailer data */
+        size_t bytes_sent;        /* bytes sent in this send_file call */
+   } sfp;
+
+int   putfile (void);
+
+int main (int argc, char *argv[])
+{
+
+ strcpy (serveraddress, argv[1]);   /* argv[1] is server address to which file is to be sent */
+ strcpy (filename, argv[2]);        /* argv[2] is name of the file to be sent */
+
+ printf ("Sending File to server\n");
+   if ((rc = putfile()) != 0)
+        {
+          printf ("Putfile() failed rc = %d sock_errno = %d \n", rc, sock_errno());
+            return(rc);
+        }
+}
+
+int putfile ()
+{
+    struct sockaddr_in servername;
+
+    if( (s = socket (PF_INET, SOCK_STREAM, 0)) != -1 )
+    {
+      servername.sin_len         = sizeof(servername);
+      servername.sin_family      = AF_INET;
+      servername.sin_addr.s_addr = inet_addr(serveraddress);
+      servername.sin_port        = serverport;
+
+    if((rc = connect(s,(struct sockaddr *)&amp;servername,sizeof(servername))) != -1)
+       {
+            fd =open(filename,O_RDONLY,0);
+            sfp.header_data   = 0;
+            sfp.header_length = 0;
+            sfp.file_handle   = fd;
+            sfp.file_size     = -1;
+            sfp.file_offset   = 0;
+            sfp.file_bytes    = -1;
+            sfp.trailer_data  = 0;
+            sfp.trailer_length= 0;
+            sfp.bytes_sent    = 0;
+
+          if(( rc = send_file(&amp;s,&amp;sfp,MSG_CLOSE)) != 0)
+                printf( " ******  FILE NOT SENT  ****** ");
+            close(fd);
+       }
+      else
+        printf ("send_file :connect() failed sock_errno = %d \n",sock_errno());
+    }
+    else
+      printf ("send_file :socket() failed rc = %d\n", sock_errno());
+   return(rc);
+}
+</PRE>
+
+<P>
+<B>Related Calls</B><!-- lm: 0x2 5 -->
+<UL>
+<P>
+<A HREF="198_L2_send.html">send()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="183_L2_connect.html">connect()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="186_L2_getsockopt.html">getsockopt()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="187_L2_ioctl.html">ioctl()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="192_L2_readv.html">readv()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="193_L2_recv.html">recv()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="194_L2_recvfrom.html">recvfrom()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="195_L2_recvmsg.html">recvmsg()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="197_L2_select.html">select()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="200_L2_sendmsg.html">sendmsg()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="201_L2_sendto.html">sendto()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="202_L2_setsockopt.html">setsockopt()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="203_L2_shutdown.html">shutdown()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="205_L2_sock_errno.html">sock_errno()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="206_L2_socket.html">socket()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="223_L2_writev.html">writev()</A><!-- lm: 0x2 0 -->
+</UL>
+
+<P><HR>
+
+<A HREF="198_L2_send.html">[Back: send()]</A> <BR>
+<A HREF="200_L2_sendmsg.html">[Next: sendmsg()]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,100 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Creating drive objects</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating drive objects</H1><!-- entering slot 390 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+Captured from a message in a public CompuServe Forum
+<BR>
+Author:<B> Dick Goran</B>, (see <A HREF="949_L2H_EMailaddressesG.html">EMail
+Addresses</A>)
+<PRE> 
+/* TEST210.CMD - Build drives objects on the Desktop */
+/* /----------------------------------\              */
+/* |  WARNING - drives objects are    |              */
+/* |  neither deletable nor shredable |              */
+/* | --- the following was added ---  |              */
+/* |        Bernd Schemmer            |              */
+/* |  You need BlackHole or a similar |              */
+/* |  tool to delete drive objects.   |              */
+/* \----------------------------------/              */
+/*                                                   */
+
+  call RxFuncAdd "SysLoadFuncs", "REXXUTIL", "SysLoadFuncs"
+  call SysLoadFuncs
+
+  boot_drive    = LEFT( VALUE( "RUNWORKPLACE",, "OS2ENVIRONMENT" ), 2 )
+  drive_letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+  local_drives  = SysDriveMap( "A", "LOCAL" )
+
+  floppy_resource      = "32 " || boot_drive || "\OS2\DLL\PMWP.DLL;"
+  local_disk_resource  = "13 " || boot_drive || "\OS2\DLL\PMWP.DLL;"
+  remote_disk_resource = "16 " || boot_drive || "\OS2\DLL\PMWP.DLL;"
+
+  location   = "&lt;WP_DESKTOP&gt;"
+  class      = "WPDISK"
+  title      = "Test object^for drive "
+
+  new_drives = "E"                  /* may contain any number of drives */
+
+  do d = 1 to WORDS( new_drives )
+
+    drive_letter =,
+      WORD( new_drives, d )
+    drive_number =,
+      POS( drive_letter, drive_letters )
+
+
+    setup_string =,
+      "DRIVENUM=" || drive_number  || ";"
+
+    select
+      when ( drive_number = 1 ) | ( drive_number = 2 ) then
+      do
+        setup_string =,
+               setup_string || "ICONRESOURCE=" || floppy_resource
+      end /* when */
+
+      when drive_number &lt;= WORDS( local_drives ) then
+      do
+        setup_string =,
+               setup_string || "ICONRESOURCE=" || local_disk_resource
+      end /* when */
+
+      otherwise
+      do
+        setup_string =,
+               setup_string || "ICONRESOURCE=" || remote_disk_resource
+      end /* otherwise */
+    end /* select */
+
+    setup_string =,
+      setup_string ||,
+      "OBJECTID=&lt;New drive " || drive_letter || " object&gt;;"
+
+    call SysCreateObject class,,
+                        title || drive_letter,,
+                        location,,
+                        setup_string,,
+                        "R"
+    if RESULT &lt;&gt; 1 then
+    do
+      say "   Unable to crea object for drive" drive_letter
+    end /* if RESULT &lt;&gt; 1 then */
+
+  end /* do d = 1 to ... */
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="378_L2_HintsforCreating&Cha.html">[Back: Hints for Creating & Changing objects ...]</A> <BR>
+<A HREF="380_L3_Creatingshadowsofdri.html">[Next: Creating shadows of drive objects]</A> 
+</BODY>
+</HTML>

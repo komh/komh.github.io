@@ -1,0 +1,156 @@
+<HTML>
+<HEAD>
+<TITLE>Creating a Linear Slider</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating a Linear Slider</H1><!-- entering slot 366 -->
+<P>
+Before the slider is created, a temporary SLDCDATA data structure is allocated,
+and variables are specified for the slider control window handle and slider
+style. The SLDCDATA data structure is allocated so that the scale increments
+and spacing of the slider can be specified.
+<P>
+The slider style variable enables the application to specify style bits,
+SLS_* values, that are used to customize the slider.
+<P>
+You create a slider by using the WC_SLIDER window class name in the<I> ClassName
+</I>parameter of WinCreateWindow call. The handle of the slider control
+window is returned in the slider window variable.
+<P>
+After the slider is created, but before it is made visible, the application
+can set other slider control characteristics, such as:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Size and placement of tick marks<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Text above one or more tick marks<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->One or more detents<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Initial slider arm position<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The settings in the preceding list are just a few that an application can
+specify. Slider control messages are used to specify these settings.
+<P>
+The sample code in the following figure shows an example of how a linear
+slider is created. The main components of the slider are labeled.
+<PRE>SLDCDATA sldcData;                  /* SLDCDATA data structure        */CHAR     szTickText[5];             /* Text strings variable          */
+USHORT   idx;                       /* Counter for setting text       */
+                                    /* strings                        */
+HWND     hwndSlider;                /* Slider window handle           */
+ULONG    ulSliderStyle;             /* Slider styles                  */
+
+/**********************************************************************/
+/* Initialize the parameters in the data structure.                   */
+/**********************************************************************/
+sldcData.cbSize = sizeof(SLDCDATA); /* Size of SLDCDATA structure     */
+sldcData.usScale1Increments = 6;    /* Number of increments           */
+sldcData.usScale1Spacing = 0;       /* Use 0 to have slider calculate */
+                                    /* spacing                        */
+
+/**********************************************************************/
+/* Set the SLS_* style flags to the default values, plus slider       */
+/* buttons right.                                                     */
+/**********************************************************************/
+ulSliderStyle = SLS_HORIZONTAL    | /* Slider is horizontal           */
+                SLS_CENTER        | /* Slider shaft centered in       */
+                                    /* slider window                  */
+                SLS_HOMELEFT      | /* Home position is left edge of  */
+                                    /* slider                         */
+                SLS_PRIMARYSCALE1 | /* Scale is displayed above       */
+                                    /* slider shaft                   */
+                SLS_BUTTONSRIGHT;   /* Slider buttons at right end of */
+                                    /* slider                         */
+
+/**********************************************************************/
+/* Create the slider control window.                                  */
+/* The handle of the window is returned in hwndSlider.                */
+/**********************************************************************/
+hwndSlider = WinCreateWindow(
+               hwndClient,          /* Parent window handle           */
+               WC_SLIDER,           /* Slider window class name       */
+               (PSZ)NULL,           /* No window text                 */
+               ulSliderStyle,       /* Slider styles variable         */
+               (SHORT)10,           /* X coordinate                   */
+               (SHORT)10,           /* Y coordinate                   */
+               (SHORT)150,          /* Window width                   */
+               (SHORT)80,           /* Window height                  */
+               hwndClient,          /* Owner window handle            */
+               HWND_TOP,            /* Sibling window handle          */
+               ID_SLIDER,           /* Slider control window ID       */
+               &amp;sldcData,           /* Control data structure         */
+               (PVOID)NULL);        /* No presentation parameters     */
+
+/**********************************************************************/
+/* Set tick marks at several places on the slider shaft using the     */
+/* primary scale.                                                     */
+/**********************************************************************/
+WinSendMsg(hwndSlider,              /* Slider window handle           */
+           SLM_SETTICKSIZE,         /* Message for setting tick mark  */
+                                    /* size.                          */
+           MPFROM2SHORT(
+             SMA_SETALLTICKS,       /* Attribute for setting all tick */
+                                    /* marks to the same size         */
+             6),                    /* Draw tick marks 6 pixels long  */
+           NULL);                   /* Reserved value                 */
+
+/**********************************************************************/
+/* Set text above the tick marks.                                     */
+/**********************************************************************/
+for (idx = 0; idx &lt;= 5; idx++)      /* Count from 0 to 5              */
+{
+  itoa(10*idx, szTickText, 10);     /* Set text at increments of 10   */
+
+  WinSendMsg(hwndSlider,            /* Slider window handle           */
+           SLM_SETSCALETEXT,        /* Message for setting text on a  */
+                                    /* slider scale                   */
+           MPFROMSHORT(idx),        /* Text string counter            */
+           MPFROMP(szTickText));    /* Text to put on slider scale    */
+}
+
+/**********************************************************************/
+/* Set detents between two of the tick marks on the slider shaft.     */
+/**********************************************************************/
+WinSendMsg(hwndSlider,              /* Slider window handle           */
+           SLM_ADDDETENT,           /* Message for adding detents to  */
+                                    /* a slider scale                 */
+           MPFROMSHORT(5),          /* Put a detent 5 pixels from home*/
+           NULL);                   /* Reserved value                 */
+
+WinSendMsg(hwndSlider,              /* Slider window handle           */
+           SLM_ADDDETENT,           /* Message for adding detents to  */
+                                    /* slider scale                   */
+           MPFROMSHORT(25),         /* Put a detent 25 pixels from    */
+                                    /* home                           */
+           NULL);                   /* Reserved value                 */
+
+/**********************************************************************/
+/* Set the slider arm position to the 1st increment on the scale.     */
+/**********************************************************************/
+WinSendMsg(hwndSlider,              /* Slider window handle           */
+           SLM_SETSLIDERINFO,       /* Message for setting slider     */
+                                    /* attributes                     */
+           MPFROM2SHORT(
+             SMA_SLIDERARMPOSITION, /* Modify slider arm position     */
+             SMA_INCREMENTVALUE),   /* Use an increment value         */
+           MPFROMSHORT(1));         /* Value to <!-- entering slot 367 -->use is 1st            */
+                                    /* increment                      */
+
+/**********************************************************************/
+/* Since all items have been set, make the control visible.           */
+/**********************************************************************/
+WinShowWindow(hwndSlider,           /* Slider window handle           */
+              TRUE);                /* Make the window visible        */
+
+</PRE>
+
+<P>
+
+
+<P><HR>
+
+<A HREF="365_L2_UsingSliderControls.html">[Back: Using Slider Controls]</A> <BR>
+<A HREF="367_L3_RetrievingDataforSel.html">[Next: Retrieving Data for Selected Slider Values]</A> 
+</BODY>
+</HTML>

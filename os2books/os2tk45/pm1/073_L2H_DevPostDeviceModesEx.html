@@ -1,0 +1,73 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DevPostDeviceModes - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DevPostDeviceModes - Example Code</H1><!-- entering slot 76 -->
+<P>
+This example shows how to call DevPostDeviceModes and allocate a new buffer,
+if necessary, for the larger job properties (DRIVDATA structure).
+<PRE>#define INCL_DEV
+#define INCL_DOS
+#include &lt;os2.h&gt;
+#include &lt;memory.h&gt;
+
+{
+    ULONG         devrc=FALSE;
+    HAB           hab;
+    PSZ           pszPrinter;
+    HDC           hdc=NULL;
+    PDRIVDATA     pOldDrivData;
+    PDRIVDATA     pNewDrivData=NULL;
+    PDEVOPENSTRUC dops;
+    LONG          buflen;
+
+/* check size of buffer required for job properties */
+    buflen = DevPostDeviceModes( hab,
+                                 NULL,
+                                 dops-&gt;pszDriverName,
+                                 dops-&gt;pdriv-&gt;szDeviceName,
+                                 pszPrinter,
+                                 DPDM_POSTJOBPROP
+                               );
+
+/* return error to caller */
+    if (buflen&lt;=0)
+        return(buflen);
+
+/* allocate some memory for larger job properties and */
+/* return error to caller */
+
+    if (buflen != dops-&gt;pdriv-&gt;cb)
+    {
+        if (DosAllocMem((PPVOID)&amp;pNewDrivData,buflen,fALLOC))
+            return(DPDM_ERROR);
+    }
+
+/* copy over old data so driver can use old job */
+/* properties as base for job properties dialog */
+    pOldDrivData = dops-&gt;pdriv;
+    dops-&gt;pdriv = pNewDrivData;
+    memcpy( (PSZ)pNewDrivData, (PSZ)pOldDrivData, pOldDrivData-&gt;cb );
+
+/* display job properties dialog and get updated */
+/* job properties from driver */
+
+    devrc = DevPostDeviceModes( hab,
+                                dops-&gt;pdriv,
+                                dops-&gt;pszDriverName,
+                                dops-&gt;pdriv-&gt;szDeviceName,
+                                pszPrinter,
+                                DPDM_POSTJOBPROP
+                              );
+    return(devrc);
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="072_L2H_DevPostDeviceModesRe.html">[Back: DevPostDeviceModes - Related Functions]</A> <BR>
+<A HREF="074_L2H_DevPostDeviceModesTo.html">[Next: DevPostDeviceModes - Topics]</A> 
+</BODY>
+</HTML>

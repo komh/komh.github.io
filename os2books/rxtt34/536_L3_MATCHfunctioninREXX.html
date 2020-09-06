@@ -1,0 +1,144 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>MATCH function in REXX</TITLE>
+</HEAD>
+<BODY>
+<H1>MATCH function in REXX</H1><!-- entering slot 561 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+(see also <A HREF="834_L3_NNTPclientandSMTPcli.html">NNTP client and SMTP
+client/daemon for use with WARP IAK</A>)
+<PRE> 
+/* Matching function in REXX                                          */
+/*                                                                    */
+/* captured from a public message in a FIDO message area              */
+/*                                                                    */
+/* Author: Detlev Ahlgrimm                                            */
+/*         (see <A HREF="943_L2H_EMailaddressesA.html">EMail Addresses</A>)                                      */
+/*                                                                    */
+
+  curMask = ""
+
+  do forever
+                    /* get the mask                                   */
+    say "Please enter a mask (with ? and *, EXIT &lt;RETURN&gt; to end)"
+    say "  Enter &lt;RETURN&gt; to use the mask '" || curMask || "'."
+    call CharOut , "&gt; "
+    newMask = LineIn()
+
+    if translate( newMask ) = "EXIT" then
+      leave
+
+    if NewMask = "" then
+      NewMask = curMask
+    else
+      curMask = newMask
+
+                    /* get the test string                            */
+    say "Please enter a test string"
+    call CharOut , "&gt; "
+    testString = LineIn()
+
+                    /* call the match function and show the result    */
+    say "Match( " newMask "," testString  ") is " || ,
+         match( NewMask,testString )
+
+  end /* do forever */
+
+exit
+
+/* ------------------------------------------------------------------ */
+/* function: Match function in REXX                                   */
+/*                                                                    */
+/* call:     result = match( spec, name )                             */
+/*                                                                    */
+/* where:    spec - mask (containing ? and * as joker)                */
+/*           name - test string                                       */
+/*                                                                    */
+/* returns:  1 - name matches spec                                    */
+/*           0 - name does not match spec                             */
+/*                                                                    */
+/* History:                                                           */
+/*           C-Version    D.Ahlgrimm     03.1995                      */
+/*                        (see <A HREF="943_L2H_EMailaddressesA.html">EMail Addresses</A>)                       */
+/*           REXX-Version D.Ahlgrimm  21.06.1995                      */
+/*                                                                    */
+/*           05.09.1996   D.Ahlgrimm                                  */
+/*                        REXX-Code &amp; Algorithmus optimiert           */
+/*                       (u.a. Grenzen genauer)                       */
+/*                                                                    */
+/*           16.11.1996   Translated comments into english            */
+/*                        and reformatted the code /bs                */
+/*                                                                    */
+Match: PROCEDURE
+  PARSE ARG spec, name
+
+  spec_lng = LENGTH( spec )+1
+  name_lng = LENGTH( name )+1
+  spec_pos = 1
+  name_pos = 1
+
+                    /* do for all chars in spec                       */
+  DO WHILE spec_pos&lt;spec_lng
+
+    spec_ptr = SUBSTR( spec, spec_pos, 1 )
+    name_ptr = SUBSTR( name, name_pos, 1 )
+
+    IF spec_ptr = "*" THEN
+    DO
+      IF spec_pos+1 = spec_lng THEN
+                    /* spec equal '*' -&gt; finished, rest meaningless   */
+        RETURN( 1 )
+
+      ss = SUBSTR( spec, spec_pos+1 )
+
+                    /* as: Number of '*' in spec                      */
+      as = LENGTH( SPACE( TRANSLATE( ss, COPIES( " ", C2D( "*" ) )"x",, " " ), 0 ) )
+
+      DO i = 0 to name_lng-name_pos-( LENGTH( ss )-as )
+
+                    /* 0 to length - current position - count ...     */
+                    /*  ...of the chars not equal '*' in spec         */
+
+        IF Match( ss, SUBSTR( name, name_pos+i ) ) = 1 THEN
+                    /* the rest of spec (after the *) matches         */
+                    /* the rest of name                               */
+          RETURN( 1 )
+
+      END /* DO i = 0 to name_lng-name_pos-( LENGTH( ss )-as ) */
+
+                    /* no match for the rest found                    */
+      RETURN( 0 )
+    END; /* IF spec_ptr = "*" THEN */
+    ELSE
+    DO
+      IF ( spec_ptr = "?" &amp; name_pos&lt;&gt;name_lng ) | spec_ptr = name_ptr THEN
+      DO
+        spec_pos = spec_pos+1
+        name_pos = name_pos+1
+      END /* IF ( spec_ptr = "?" &amp; ... ) */
+      ELSE
+                    /* spec equal '?' and the name is done ..         */
+                    /* ... or character is okay                       */
+        RETURN( 0 )
+    END /* ELSE */
+  END /* DO WHILE spec_pos&lt;spec_lng */
+
+  IF name_pos &lt;&gt; name_lng THEN
+                    /* spec is done, name is not                      */
+    RETURN( 0 )
+                    /* spec and name are both done                    */
+RETURN( 1 )
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="535_L3_UsingtheCLOCK$device.html">[Back: Using the CLOCK$ device]</A> <BR>
+<A HREF="537_L3_SampleforusingBEEPto.html">[Next: Sample for using BEEP to play sounds]</A> 
+</BODY>
+</HTML>

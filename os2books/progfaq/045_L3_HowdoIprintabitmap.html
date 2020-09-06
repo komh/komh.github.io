@@ -1,0 +1,75 @@
+<HTML>
+<HEAD>
+<TITLE>How do I print a bitmap?</TITLE>
+</HEAD>
+<BODY>
+<H1>How do I print a bitmap?</H1><!-- entering slot 53 -->
+<P>
+Here's my code for sending a bitmap to the printer I'm leaving out the part
+where I maintain an aspect ratio between the screen and the printer page.
+
+<PRE>    SIZEL sizl = {0,0};
+    // Get DC/PS for printer
+    hdcPrinter = GetPrinterDC( hab, PM_Q_STD );
+    hpsPrinter = GpiCreatePS( hab, hdcPrinter, &amp;sizl,
+                              PU_PELS | GPIF_DEFAULT |
+                              GPIT_NORMAL | GPIA_ASSOC);
+
+    // Get DC/PS for memory DC compatible with printer
+    hdcPrtMem = DevOpenDC( hab, OD_MEMORY, "*", 0, NULL, hdcPrinter );
+    hpsPrtMem = GpiCreatePS( hab, hdcPrtMem, &amp;sizl,
+                             PU_PELS | GPIF_DEFAULT |
+                             GPIT_MICRO | GPIA_ASSOC );
+
+    // Get DC/PS for memory DC compatible with display
+    hdcMemory = DevOpenDC( hab, OD_MEMORY, "*", 0, NULL, NULLHANDLE );
+    hpsMemory = GpiCreatePS( hab, hdcMemory, &amp;sizl,
+                             PU_PELS | GPIF_DEFAULT |
+                             GPIT_MICRO | GPIA_ASSOC );
+
+    // Get PS for a window to be printed
+    hpsToPrint = WinGetPS( hwndToPrint );
+
+    // Set up memory BitBlt
+    BITMAPINFOHEADER2 bmih;
+    LONG alBitmapStuff[ 2 ];
+    WinQueryWindowPos( hwndToPrint, &amp;swp );
+    bmih.cbFix = sizeof( BITMAPINFOHEADER2 );
+    bmih.cx = swp.cx;
+    bmih.cy = swp.cy;
+    GpiQueryDeviceBitmapFormats( hpsToPrint, 2L, alBitmapStuff );
+    bmih.cPlanes = (USHORT) alBitmapStuff[ 0 ];
+    bmih.cBitCount = (USHORT) alBitmapStuff[ 1 ];
+
+    // ....Set up aptl[0],[1],[2],[3] for the memory BitBlt
+
+    // Do BitBlt from Display memory PS to Printer memory PS
+    hbmToPrint = GpiCreateBitmap( hpsMemory, &amp;bmih, 0, NULL, NULL );
+    GpiSetBitmap( hpsMemory, hbmToPrint );
+    GpiBitBlt( hpsMemory, hpsToPrint, 3L, aptl, ROP_SRCCOPY, BBO_IGNORE );
+    GpiSetBitmap( hpsMemory, NULLHANDLE );
+
+    GpiSetBitmap( hpsPrtMem, hbmToPrint );
+
+    // ....Set up aptl[0],[1],[2],[3] for the printer BitBlt
+
+    // BitBlt to printer PS from Printer memory PS
+    DevEscape( hdcPrinter, DEVESC_STARTDOC,strlen( szDocName ), szDocName,
+               &amp;lBytes, NULL );
+    GpiBitBlt( hpsPrinter, hpsPrtMem, 4L, aptl, ROP_SRCCOPY,BBO_IGNORE );
+    DevEscape( hdcPrinter, DEVESC_ENDDOC, 0, NULL, &amp;lBytes, NULL );
+    GpiSetBitmap( hpsPrtMem, NULLHANDLE );
+    GpiDeleteBitmap( hbmToPrint );
+
+    // Release all hdc's and hps's
+</PRE>
+
+<P>
+Credit:  Rick Fishman 
+
+<P><HR>
+
+<A HREF="044_L3_Isthereaneasywaytoge.html">[Back: Is there an easy way to get printer output (another opinion)?]</A> <BR>
+<A HREF="046_L3_HowdoIdomyownPrintSc.html">[Next: How do I do my own Print Screen?]</A> 
+</BODY>
+</HTML>

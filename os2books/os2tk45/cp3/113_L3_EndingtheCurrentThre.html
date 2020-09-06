@@ -1,0 +1,78 @@
+<HTML>
+<HEAD>
+<TITLE>Ending the Current Thread</TITLE>
+</HEAD>
+<BODY>
+<H1>Ending the Current Thread</H1><!-- entering slot 118 -->
+<P>
+To end the execution of the current thread, call DosExit, specifying the
+action code as 0. It is good practice to end each thread in the application
+individually.
+<P>
+If the thread that is ending is the last thread in the process, or if the
+request is to end all threads in the process, then the process also ends.
+ All threads except one are ended, and that thread executes any routines
+in the list specified by<A><!-- external link: 1D 86 C3 FC --> DosExitList</A>.
+When this is complete, the resources of the process are released, and the
+result code that was specified in the<A><!-- external link: 1D 84 C3 3A --> DosExit
+</A>call is passed to any thread that calls<A><!-- external link: 1D 0A C4 3D --> DosWaitChild
+</A>for this process.
+<P>
+In the following code fragment, the main routine starts another program,
+SIMPLE.EXE, and then expects a return code of 3 to be returned. SIMPLE.EXE
+sets the return code with<A><!-- external link: 1D 84 C3 FC --> DosExit</A>.
+
+<PRE>    #define INCL_DOSPROCESS           /* Process and thread values */
+    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+
+    #define START_PROGRAM "SIMPLE.EXE"
+    #define RETURN_OK 3
+
+    CHAR        szLoadError[100];
+    PSZ         pszArgs;
+    PSZ         pszEnvs;
+    RESULTCODES rcReturnCodes;
+    APIRET      ulrc;
+
+    ulrc = DosExecPgm(szLoadError,                /* Object name buffer           */
+                      sizeof(szLoadError),        /* Length of object name buffer */
+                      EXEC_SYNC,                  /* Asynchronous/Trace flags     */
+                      pszArgs,                    /* Argument string              */
+                      pszEnvs,                    /* Environment string           */
+                      &amp;rcReturnCodes,             /* Termination codes            */
+                      START_PROGRAM);             /* Program file name            */
+
+    if (ReturnCodes.codeResult == RETURN_OK)      /* Check result code            */
+        printf("Things are ok...");
+    else
+        printf("Something is wrong...");
+
+/*----------------SIMPLE.EXE------------------*/
+
+    #define INCL_DOSPROCESS          /* Process and thread values */
+    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+
+    #define RETURN_CODE 3
+
+    main()
+    {
+        printf("Hello!\n");
+        DosExit(EXIT_THREAD,         /* End thread/process */
+                RETURN_CODE);        /* Result code        */
+    }
+
+</PRE>
+
+<P>
+When you specify<A><!-- external link: 1D 84 C3 3A --> DosExit</A> for thread
+1 (the initial thread of execution started by OS/2 for this process), all
+of the threads in the process are ended, and the process is ended.
+
+<P><HR>
+
+<A HREF="112_L3_WaitingforaThreadtoE.html">[Back: Waiting for a Thread to End]</A> <BR>
+<A HREF="114_L3_EndingaThread.html">[Next: Ending a Thread]</A> 
+</BODY>
+</HTML>

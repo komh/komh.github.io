@@ -1,0 +1,223 @@
+<HTML>
+<HEAD>
+<TITLE>Exercise 8: Identifying the Owner of Storage</TITLE>
+</HEAD>
+<BODY>
+<H1>Exercise 8: Identifying the Owner of Storage</H1><!-- entering slot 121 -->
+<P>
+Objectives:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->To learn how to find out where a part of storage
+originated<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->To learn how to find out what module contains
+it, if not dynamically acquired<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Every piece of storage has an owner.  Storage owned by OS/2 may not have
+all the storage accounting information which is kept for storage used by
+applications.  The most common clue that this situation has occurred is
+the presence of the <A HREF="3328_L0_.html">'UVirt'</A> flag (bit 52) in
+the descriptor. The next most common clue is that the procedure below may
+fail if complete storage accounting has not been done.
+<P>
+Within OS/2, handles are used extensively.  Generally, a handle is nothing
+more than an index into some table or other.  For diagnostic purposes, one
+can treat it as a 'magic number' that can be used as an operand on certain
+commands.
+<P>
+The initial objective is to find the module table entry which the loader
+built when the module was loaded.  This will relate storage to the 'far'
+addresses in the link map.
+<P>
+The procedure is slightly different for private and shared storage.
+<P>
+With practice, one learns quickly what selectors are likely to be private,
+and which are likely to be shared.  Refer to the address space picture which
+appears earlier, to refresh your memory about private and shared storage.
+
+<P>
+One way to tell is to display the entire LDT  ( using  'DL' ), and to look
+for the gap between 'low numbered' and 'high numbered' selectors.<!-- lm: 0x2 6 -->
+<UL>
+<P>
+If the address is private, there will likely be many processes that define
+the address, and the data is likely different for each.  You will need to
+find which process is the one you want.<!-- lm: 0x2 1 -->
+</UL> The dump
+formatter command '.I' will show you not only the handle of the module table
+entry for the executable which caused this process to exist, but also will
+show you the handle of the 'PTDA', which is the key control block for a
+process.<!-- lm: 0x2 6 -->
+<UL>
+<P>
+The command usually used to identify storage is the '.M' command.<!-- lm: 0x2 1 -->
+</UL> If
+issued with a shared address, the output has the handle of the module table
+entry.  If issued for a private address, you get a set of output lines for
+every process which contains the address.  In this case, you will need to
+use the hPTDA, or PTDA handle from the '.I' command to determine which set
+of output lines to use.<!-- lm: 0x2 6 -->
+<UL>
+<P>
+Once you have the handle of the module table entry, issue the command .LMO
+&lt;handle&gt;.<!-- lm: 0x2 1 -->
+</UL> The command will not only give you
+the full path name of the module, but will also format a table which has
+a column (toward the right) titled 'sel'. This is the selector assigned.
+ The first line of output is for the first segment in the link map, the
+second line is for the second segment, and so on.  Thus, you can convert
+the selector:offset in the dump to a segment:offset in the correct link
+map.<!-- lm: 0x2 1 -->
+<PRE>.I
+PROCESS slot:23 Pid:0008 Ord:0001
+PTDA    handle=032e address=%ad6d97f0
+MTE     handle=0363 address=%ff666d4c (DEMO)
+SMTE    address=%fe14abe8
+LDT     handle=035c address=%ac6d7000
+CODE:   <!-- entering slot 122 -->user (cs:eip)#000f:000000be cbargs=
+STACKS: user (ss:esp)#001f:000014be(active)
+        ring2(ss:esp)#0036:00001000(bottom)
+        ring0 tcbframe=%fe023f58 bottom=%fe023f9c
+
+.M CS:IP
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 01f5 %ff821b18 00000010 %00010000 1c9 01f6 01f3 00fa 0000 0131 0000 hptda=0240
+ 00fa %ff820586 00000010 %00010000 1d9 0102 00f9 0000 0000 0131 0000 hptda=0117
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 0131  01f5 0000  0838 0132 0132  0000 00  00 00 00 shared    c:pmshell.exe
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0177 %ff821044 00000010 %00010000 179 0178 0175 0000 0000 01be 0000 hptda=01b9
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 01be  0177 0000  002c 01b9 01bf  0000 00  00 00 00 UNKNOWN
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 01f5 %ff821b18 00000010 %00010000 1c9 01f6 01f3 00fa 0000 0131 0000 hptda=0240
+ 00fa %ff820586 00000010 %00010000 1d9 0102 00f9 0000 0000 0131 0000 hptda=0117
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 0131  01f5 0000  0838 0132 0132  0000 00  00 00 00 shared    c:pmshell.exe
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 02b5 %ff822b98 00000010 %00010000 1d9 02b6 02b2 0000 0000 0322 0000 hptda=031c
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 0322  02b5 0000  0838 0327 0327  0000 00  00 00 00 shared    c:cmd.exe
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 02e6 %ff822fce 00000010 %00010000 1d9 02e7 02e5 0000 0000 0362 0000 hptda=032e
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 0362  02e6 0000  0838 0363 0363  0000 00  00 00 00 shared    c:demo.exe
+
+.LMO 363
+hmte=0363 pmte=%ff666d4c mflags=00803142 c:\pmg\pete\demo16\demo.exe
+seg  sect psiz vsiz hob  sel  flags
+0001 0001 2e78 2e78 0362 000f 2d20 code shr rel
+0002 0000 0000 2910 0000 0017 0c01 data
+0003 0019 0937 1560 0000 001f 0d01 data rel
+</PRE>
+<!-- lm: 0x2 6 -->
+<UL>
+<P>
+Start the dump formatter by typing   DF_RET  ..\DUMPS.162\DUMP01.DMP
+<P>
+Procedure:<!-- lm: 0x2 2 -->
+</UL>  1.<!-- lm: 0x2 6 -->
+<UL>Enter the command
+ '.I'<!-- lm: 0x2 1 -->
+</UL> The PDTA handle is __________,  the module
+table entry handle is _________<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Enter the command  '.M CS:IP' to identify Memory
+at CS:IP.<!-- lm: 0x2 1 -->
+</UL> Which 'har' line is for our process?  har=_________
+
+<P>
+What is the hmte value from this set of lines? hmte=______________<!-- lm: 0x2 6 -->
+<UL>
+<P>
+<B>Note: </B> This is exactly what the '.I' command showed you, because
+this is what the .I command does internally.<!-- lm: 0x2 2 -->
+</UL>  3.<!-- lm: 0x2 6 -->
+<UL>Enter
+the command '.LMO ', followed by the hmte value.<!-- lm: 0x2 1 -->
+</UL> What
+is the full path name of the module that contains CS:IP?
+<P>
+_________________________________________________________<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->What is the segment number which has been assigned
+selector 000F? ______<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->What address would you look for in the link map
+to find CS:IP?<!-- lm: 0x2 1 -->
+</UL> ___________________________<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Now, repeat the same steps using the data in
+the next few displays. The address of interest is DFDF:9324<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->What is the privilege level of this segment?
+________<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->What is its size? ___________<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->What is the command to identify memory at this
+address? __________________<!-- lm: 0x2 1 -->
+</UL> Issue it.  The lines
+which start hco= are context records, which indicate all of the<!-- entering slot 123 --> contexts
+(processes) that can reference this address. It is extremely likely to be
+a shared address.<!-- lm: 0x2 2 -->
+<UL>
+<P>
+10.<!-- lm: 0x2 6 -->
+<UL>Issue the  '.LMO' command for the module table
+entry handle.<!-- lm: 0x2 2 -->
+</UL> 11.<!-- lm: 0x2 6 -->
+<UL>What module
+is this?  Full path name is ______________________<!-- lm: 0x2 2 -->
+</UL> 12.<!-- lm: 0x2 6 -->
+<UL>Which
+segment in the module contains this address? _________<!-- lm: 0x2 2 -->
+</UL> 13.<!-- lm: 0x2 6 -->
+<UL>Therefore,
+in the .map file, the address will be ______:_______<!-- lm: 0x2 1 -->
+</UL>
+<PRE>DG DFDFLDT
+dfdf  Code    Bas=1bfb0000 Lim=0000d4ef DPL=2 P  RE C  A
+
+.M DFDF:9324
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 00b7 %ff81ffc4 00000010 %1bfb0000 3d9 0075 00b8 0000 00b4 00c5 0000  hco=0026c
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 00c5  00b7 0000  0838 00bf 00bf  0000 00  00 00 00 shared    c:doscall1.dll
+ hco=026c pco=ffe62c37  hconext=00184 hptda=032e f=1c  pid=
+ hco=0184 pco=ffe627af  hconext=00014 hptda=031c f=1c  pid=
+ hco=0014 pco=ffe6207f  hconext=00089 hptda=0240 f=1c  pid=
+ hco=0089 pco=ffe622c8  hconext=00021 hptda=01b9 f=1c  pid=
+ hco=0021 pco=ffe620c0  hconext=00000 hptda=0117 f=1c  pid=
+
+.LMO BF
+hmte=00bf pmte=%ff66ef3c mflags=0498b594 c:\os2\dll\doscall1.dll
+obj   vsize    vbase    flags   ipagemap cpagemap hob  sel
+0001 00000360 1bf80000 80009025 00000001 00000001 00c8 dfc6 r-x shr alias iopl
+0002 0000aa30 1bf90000 80002025 00000002 0000000b 00c7 dfcf r-x shr big
+0003 0000d519 1bfa0000 8000d025 0000000d 0000000e 00c6 dfd6 r-x shr alias conf iopl
+0004 0000d4f0 1bfb0000 8000d025 0000001b 0000000e 00c5 dfde r-x shr alias conf iopl
+0005 00001140 13f90000 80001023 00000029 00000002 00c4 9fcf rw- shr alias
+0006 00001af0 13fa0000 80001003 0000002b 00000002 0000 9fd7 rw- alias
+0007 00000e44 13fb0000 80001023 0000002d 00000001 00c2 9fdf rw- shr alias
+0008 00000550 13fc0000 80001003 0000002e 00000001 0000 9fe7 rw- alias
+0009 00001000 13fd0000 80001023 0000002f 00000000 00c0 9fef rw- shr alias
+000a 00001000 13fe0000 80001023 0000002f 00000000 00be 9ff7 rw- shr alias
+</PRE>
+
+
+<P><HR>
+
+<A HREF="097_L3_Part4WatchingaRingTr.html">[Back: Part 4: Watching a Ring Transition]</A> <BR>
+<A HREF="099_L1_StepstoDiagnoseaTrap.html">[Next: Steps to Diagnose a Trap]</A> 
+</BODY>
+</HTML>

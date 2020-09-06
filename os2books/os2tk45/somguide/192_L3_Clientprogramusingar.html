@@ -1,0 +1,209 @@
+<HTML>
+<HEAD>
+<TITLE>Client program using a remote stack</TITLE>
+</HEAD>
+<BODY>
+<H1>Client program using a remote stack</H1><!-- entering slot 228 -->
+<P>
+The preceding program has been rewritten below showing how DSOM can be used
+to create and access a "Stack" object somewhere in the system. The exact
+location of the object does not matter to the application; it just wants
+a "Stack" object. Note that the stack operations of the two programs are
+identical. The main differences lie in stack creation and destruction, as
+highlighted below. (Also see "Memory management" later for more information
+on allocating and freeing memory.)
+<PRE><B>#include &lt;somd.h&gt;</B>
+#include &lt;stack.h&gt;
+
+int main(int argc, char *argv])
+{
+  Environment ev;
+  Stack stk;
+  long num = 100;
+
+  SOM_InitEnvironment(&amp;ev);<B>
+  SOMD_Init(&amp;ev);</B>
+</PRE>
+
+<PRE>  /* The StackNewClass invocation is optional and unnecessary
+   * in the client program when the class object is created in
+   * the SOMInitModule function that is invoked during DLL
+   * initialization.
+   */
+  StackNewClass (Stack_MajorVersion, Stack_MinorVersion);   <B>
+  stk = _somdNewObject(SOMD_ObjectMgr, &amp;ev, "Stack", "");</B>
+
+  /* Verify successful object creation */
+  if ( OperationOK(&amp;ev) )
+  {
+     while ( !_full(stk, &amp;ev) )
+     {
+        _push(stk, &amp;ev, num);
+        somPrintf("Top: %d\n", _top(stk, &amp;ev));
+        num += 100;
+     }
+
+     /* Test stack overflow exception */
+     _push(stk, &amp;ev, num);
+     OperationOK(&amp;ev);
+
+     while ( !_empty(stk, &amp;ev) )
+     {
+        somPrintf("Pop: %d\n", _pop(stk, &amp;ev));
+     }
+
+     /* Test stack underflow exception */
+     somPrintf("Top Underflow: %d\n", _top(stk, &amp;ev));
+     OperationOK(&amp;ev);
+     somPrintf("Pop Underflow: %d\n", _pop(stk, &amp;ev));
+     OperationOK(&amp;ev);
+
+     _push(stk, &amp;ev, -10000);
+     somPrintf("Top: %d\n", _top(stk, &amp;ev));
+     somPrintf("Pop: %d\n", _top(stk, &amp;ev));
+        <B>
+     _somdDestroyObject(SOMD_ObjectMgr, &amp;ev, stk);</B>
+
+     if ( OperationOK(&amp;ev) )
+     {
+        somPrintf("Stack test successfully completed.\n");
+     }
+  }
+<B>  SOMD_Uninit(&amp;ev);</B>
+  SOM_UninitEnvironment(&amp;ev);
+
+  return(0);
+}
+</PRE>
+
+<PRE>boolean OperationOK(Environment *ev)
+{
+   char *exID;
+
+   switch (ev-&gt;_major)
+   {
+     case SYSTEM_EXCEPTION:
+       exID = somExceptionId(ev);
+       somPrintf("System exception: %s\n", exID);
+       somdExceptionFree(ev);
+       return (FALSE);
+
+     case USER_EXCEPTION:
+       exID = somExceptionId(ev);
+       somPrintf("User exception: %s\n", exID);
+       somdExceptionFree(ev);
+       return (FALSE);
+
+     case NO_EXCEPTION:
+       return (TRUE);
+
+     default:
+       somPrintf("Invalid exception type in Environment.\n");
+       somdExceptionFree(ev);
+       return (FALSE);
+   }
+}
+
+</PRE>
+
+<P>
+Let's step through the differences.
+<P>
+First, every DSOM program must include the file &lt;somd.h&gt; (when using
+C ++, &lt;somd.xh&gt;). This file defines constants, global variables, and
+run-time interfaces used by DSOM. Usually, this file is sufficient to establish
+all necessary DSOM definitions.
+<P>
+Next, DSOM requires its own initialization call.
+<PRE>        SOMD_Init(&amp;ev);
+</PRE>
+
+<P>
+The call to<B> SOMD_Init</B> initializes the DSOM run-time environment<B> SOMD_Init
+</B>must be called before any DSOM run-time calls are made. A side effect
+of calling<B> SOMD_Init</B> is that a run-time object, called the<I> DSOM
+Object Manager,</I> is created, and a pointer to it is stored in the global
+variable,<B> SOMD_ObjectMgr,</B> for programming convenience. The DSOM Object
+Manager provides basic run-time support for clients to find, create, destroy,
+and identify objects. The Object Manager is discussed in detail in the section
+entitled "Basic Client Programming."
+<P>
+Next, the local stack creation statement,
+<PRE>        stk = StackNew();
+</PRE>
+was replaced by
+<PRE>
+        stk = _somdNewObject(SOMD_ObjectMgr, &amp;ev, "Stack", "");
+</PRE>
+
+<P>
+The call to<B> somdNewObject</B> asks the DSOM Object Manager (<B>SOMD_ObjectMgr</B>)
+to create a "Stack" object,<!-- entering slot 229 --> wherever it can find
+an implementation of "Stack". (There are other methods with which one can
+request specific servers.) If no object could be created, NULL is returned,
+and an exception is raised. Otherwise, the object returned is a "Stack"
+proxy.
+<P>
+<B>Note: </B> On AIX, the following call may be needed before the<B> somdNewObject
+</B>call, if the "Stack" class implementation has been linked directly with
+the program executable (vs. using a dynamic link library, or DLL). This
+call will properly initialize the class for use by DSOM (this initialization
+is done in<B> SOMInitModule</B>for DLLs):<!-- lm: 0x2 1 -->
+<UL>
+<P>
+ 
+<PRE>           StackNewClass(Stack_MajorVersion, Stack_MinorVersion);
+</PRE>
+
+<P>
+A<I> proxy</I> is an object that is a local representative for a remote
+<I>target object.</I> A proxy inherits the target object's interface, so
+it responds to the same methods. Operations invoked on the proxy are not
+executed locally, but are forwarded to the "real" target object for execution.
+The client program always has a proxy for each remote target object on which
+it operates.
+<P>
+From this point on, the client program treats the "Stack" proxy exactly
+as it would treat a local "Stack". The "Stack" proxy takes responsibility
+for forwarding requests to, and yielding results from, the remote "Stack".
+For example,
+<PRE>        _push(stk,&amp;ev,num);
+</PRE>
+
+<P>
+causes a message representing the method call to be sent to the server process
+containing the remote object. The DSOM run-time in the server process decodes
+the message and invokes the method on the target object. The result (in
+this case, just an indication of completion) is then returned to the client
+process in a message. The DSOM run time in the client process decodes the
+result message and returns any result data to the caller.
+<P>
+At the end of the original client program, the local "Stack" was destroyed
+by the statement,
+<PRE>        _somFree(stk);
+</PRE>
+
+<P>
+whereas, in the client program above, the "Stack" proxy and the remote "Stack"
+are destroyed by the statement,
+<PRE>        _somdDestroyObject(SOMD_ObjectMgr, &amp;ev, stk);
+</PRE>
+
+<P>
+If the client only wants to release its use of the remote object (freeing
+the proxy) without destroying the remote object, it can call the<B> somdReleaseObject
+</B>method instead of<B> somdDestroyObject</B>.
+<P>
+Finally, the client must shut down DSOM, so that any operating system resources
+acquired by DSOM for communications or process management can be returned:
+
+<PRE>        SOMD_Uninit(&amp;ev);
+</PRE>
+This call must be made at the end of every DSOM program.
+
+<P><HR>
+
+<A HREF="191_L3_Clientprogramusingal.html">[Back: Client program using a local stack]</A> <BR>
+<A HREF="193_L4_Usingspecificservers.html">[Next: Using specific servers]</A> 
+</BODY>
+</HTML>

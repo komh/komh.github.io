@@ -1,0 +1,64 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>somSetException - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>somSetException - Example Code</H1><!-- entering slot 253 -->
+<P>
+
+<PRE>/* IDL declaration of class X:  */
+interface X : SOMObject {
+exception OUCH {long code1; long code2; };
+void foo(in long arg) raises (OUCH);
+};
+/* implementation of foo method */
+SOM_Scope void SOMLINK foo(X somSelf, Environment *ev, long arg)
+{
+X_OUCH *exception_params; /* X_OUCH struct is defined
+                                    in X's usage bindings    */
+
+   if (arg &gt; 5) /* then this is a very bad error */
+   {
+      exception_params = (X_OUCH*)SOM_Malloc(sizeof(X_OUCH));
+      exception_params-&gt;code1 = arg;
+      exception_params-&gt;code2 = arg-5;<B>
+      somSetException</B>(ev, USER_EXCEPTION, ex_X_OUCH,
+                          exception_params);
+      /* the Environment ev now contains an X_OUCH exception, with
+      * the specified exception_params struct. The constant
+      * ex_X_OUCH is defined in foo.h. Note that exception_params
+      *  must be malloced.
+      */
+      return;
+   }
+...
+}
+
+main()
+{
+   Environment *ev;
+   X x;
+
+   somEnvironmentNew();
+   x = Xnew();
+   ev = <B>somGetGlobalEnvironment</B>();
+   X_foo(x, ev, 23);
+   if (ev-&gt;_major != NO_EXCEPTION) {
+   printf("foo exception = %s\n", <B>somExceptionId</B>(ev));
+   printf("code1 = %d\n",
+   ((X_OUCH*) somExceptionValue(ev))-&gt;code1);
+   /* finished handling exception. */
+   /* free the copied id and the original X_OUCH structure: */
+   somExceptionFree(ev);
+   }
+...
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="252_L2H_somSetExceptionRelat.html">[Back: somSetException - Related Information]</A> <BR>
+<A HREF="254_L2H_somSetExceptionTopic.html">[Next: somSetException - Topics]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,54 @@
+<HTML>
+<HEAD>
+<TITLE>Interprocess Communication Using Named Pipes (Part 2)</TITLE>
+</HEAD>
+<BODY>
+<H1>Interprocess Communication Using Named Pipes (Part 2)</H1><!-- entering slot 100 -->
+<PRE>#define  NPIPE_NAME   "\\PIPE\\SRVPIPE"         /* Pipe name             */
+
+HFILE      hPipe;                               /* Pipe handle           */
+REQUEST    *Request;                            /* Request buffer        */
+REPLY      *Reply;                              /* Reply buffer          */
+ULONG      ulAction;                            /* Open action           */
+ULONG      ulBytes;                             /* Bytes read/written    */
+APIRET     rc;                                  /* Return code           */
+
+rc = DosCreateNPipe(NPIPE_NAME,                 /* Create named pipe     */
+                    &amp;hPipe,                     /* Pipe handle           */
+                    NP_ACCESS_DUPLEX,           /* Allow duplex access   */
+                    NP_WAIT         |           /* Blocking mode         */
+                    NP_TYPE_MESSAGE |           /* Msg oriented pipe     */
+                    NP_READMODE_MESSAGE,        /* Msg oriented read     */
+                    0x01,                       /* Single instance only  */
+                    sizeof(REPLY),              /* Outbound buffer size  */
+                    sizeof(REQUEST),            /* Inbound buffer size   */
+                    0);                         /* Default timeout value */
+
+while (!ProcessEnded)                           /* Until process ends    */
+      {
+      rc = DosConnectNPipe(hPipe);              /* Connect to requester  */
+      rc = DosRead(hPipe,                       /* Read request          */
+                   Request,                     /* Request buffer        */
+                   sizeof(REQUEST),             /* Size of buffer        */
+                   &amp;ulBytes);                   /* No. of bytes read     */
+
+      ServiceRequest(Request, Reply);           /* Complete request      */
+
+      rc = DosWrite(hPipe,                      /* Write reply to pipe   */
+                    Reply,                      /* Reply buffer          */
+                    sizeof(REPLY),              /* Size of buffer        */
+                    &amp;ulBytes);                  /* No. of bytes written  */
+      rc = DosDisConnectNPipe(hPipe);           /* Disconnect from req   */
+      }
+</PRE>
+
+<P>
+This example shows a "server" process creating and reading from a duplex
+named pipe.
+
+<P><HR>
+
+<A HREF="097_L2_InterprocessCommunic.html">[Back: Interprocess Communication Using Named Pipes (Part 1)]</A> <BR>
+<A HREF="099_L2_SynchronizationUsing.html">[Next: Synchronization Using Presentation Manager Messages]</A> 
+</BODY>
+</HTML>

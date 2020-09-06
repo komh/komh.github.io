@@ -1,0 +1,162 @@
+<HTML>
+<HEAD>
+<TITLE>First Time Problems</TITLE>
+</HEAD>
+<BODY>
+<H1>First Time Problems</H1><!-- entering slot 476 -->
+<P>
+Problems that occur whenever a program statement is executed indicate an
+error in that statement or in a parameter used by that statement.  These
+errors may often be indicated by the nature of the error.  Some common errors
+are given below.
+<P>
+<B>Trap 000D</B>
+<P>
+This error indicates that the program attempted to access a location in
+memory that was not within the area allocated to its parent process.  Since
+such access might violate the integrity of other applications or of the
+operating system itself, OS/2 disallows the access.  Note that the pointer
+may directly reference a memory location, or may be the handle to a resource
+such as a window, presentation space etc.
+<P>
+The usual cause of such an error is that a pointer passed as a parameter
+in a function call is incorrect.  The pointer may not have been initialized,
+or may have been set to an incorrect value as a result of a failed allocation
+request or incorrect pointer arithmetic.
+<P>
+Resolution actions are typically as follows:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Check that the function call which allocated the resource
+referenced by the pointer completed without error, and that a valid pointer
+was returned.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Ensure that any pointer arithmetic carried out on
+the pointer between allocation and the failing program statement is error-free.
+<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->If the pointer is stored in an instance data area
+(that is, a data block normally stored in the window words), ensure that
+the pointer to the instance data area itself has been correctly read from
+the window words at the start of processing for the<I> current</I> message.
+<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+The allocation of a Presentation Manager resource may also fail for reasons
+associated with its parent window.  See Failure to Allocate Resources below.
+
+<P>
+One additional cause of this error is the application releasing an instance
+data block too early in the processing of a WM_DESTROY message.  If the
+memory object containing this data block is released, and the application
+then attempts to release other resources whose handles are contained within
+the data block, OS/2 will not allow access to the memory.  This problem
+is easily resolved by releasing the instance data block after other resources.
+
+<P>
+<B>Trap 000E</B>
+<P>
+This error indicates that an application under OS/2 Version 2.0 attempted
+to access an area in memory for which an address range had been allocated,
+but no storage committed.  This error typically occurs when writing data
+objects into application data areas, since most operating system and Presentation
+Manager resources are automatically committed upon allocation.
+<P>
+The usual cause of such an error is that the application failed to include
+the PAG_COMMIT flag in the<B> DosAllocMem()</B> function call that allocated
+the resource, or failed to issue a<B> DosSetMem()</B> call when increasing
+the size of a memory object.  The problem may be easily resolved simply
+by including the PAG_COMMIT flag or including a<B> DosSetMem()</B> call
+to ensure that sufficient storage is available before writing to a memory
+object.
+<P>
+<B>Failure to Allocate Resources</B>
+<P>
+A common error shows itself when Presentation Manager resources cannot be
+allocated correctly by an application.  This occurs most frequently with
+resources allocated upon creation of a window, during processing of the
+WM_CREATE message.
+<P>
+The cause of the error is a failure, on the part of the application, to
+complete the default processing of the WM_CREATE message,<I> before</I> carrying
+out application-specific processing.  Part of this default processing involves
+the allocation of a Presentation Manager control block for the window, allocation
+of a window handle etc.  If this processing is not performed, via a<B> WinDefWindowProc()
+</B>function call, at the commencement of processing for the WM_CREATE message,
+function calls which use parameters such as the window handle will fail.
+
+<P>
+The problem may be easily resolved by placing a<B> WinDefWindowProc()</B> function
+call as the first statement in the processing for the WM_CREATE message.
+
+<P>
+<B>Stack Space Exceeded</B>
+<P>
+This error may appear in either of two places:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->If it appears during a call to an application subroutine,
+it usually indicates that the space reserved for the application'<!-- entering slot 477 -->sstackisinsufficientforthenumberofnestedfunctioncalls
+,localvariables ,etc . ,beingusedbytheapplication .<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->If it appears during a call to an operating system
+or Presentation Manager function, it may indicate the same cause as above,
+or that the limit of the application's Ring 2 stack, used by system-level
+code invoked by the application, has been exceeded.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+The application's stack size may be exceeded in situations where the application
+makes a large number of nested subroutine calls, particularly where extensive
+recursion is used, and/or where large numbers of local variables are defined.
+ In such cases, the stack may be need to be increased beyond the recommended
+minimum of 8KB, using the STACKSIZE statement in application's module definition
+file.
+<P>
+The Ring 2 stack limit is normally exceeded only in situations where a system-level
+function attempts to retrieve more items from the stack than were originally
+placed there.  This can occur where an application passes an incorrect parameter
+to a function; for example, if a parameter is declared by the function as
+an array of eight elements, but the application passes an array containing
+only seven elements, an error may occur when the function attempts to retrieve
+eight elements from the Ring 2 stack for processing.
+<P>
+While such an error may reveal itself during compilation, certain C typecasting
+conventions may mask the problem until run time.  Where this error occurs
+during execution, careful checking of parameters is recommended.
+<P>
+<B>Window Fails to Appear</B>
+<P>
+This error occurs when an application issues a<B> WinCreateWindow()</B> or
+<B>WinCreateStdWindow()</B> function call to create a display window, but
+the window fails to appear on the desktop, even though the function returns
+a valid window handle.  This error may result from either of two causes:
+<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->The WS_VISIBLE flag may not be set in the frame creation
+flags for the window.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->The application may include the FCF_ICON or FCF_ACCELTABLE
+frame creation flags, but no icon or accelerator table resources are defined
+with resource identifiers which match the window identifier.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+In both cases, the<B> WinCreateWindow</B> or<B> WinCreateStdWindow()</B> function
+will return a valid window handle, since the window has been created.
+<P>
+In the first case, the problem may be rectified by including the WS_VISIBLE
+flag in the frame creation flags, or by using the<B> WinShowWindow()</B> function
+to explicitly make the window visible.
+<P>
+In the second case, resources should be defined in the application's resource
+script file to match the FCF_ICON and FCF_ACCELTABLE frame creation flags.
+ These resources must have identifiers that match the window identifier
+given in the<B> WinCreateWindow()</B> or<B> WinCreateStdWindow()</B> calls,
+since Presentation Manager uses this identifier to load the resources.
+
+<P><HR>
+
+<A HREF="433_L2_ProblemDiagnosis.html">[Back: Problem Diagnosis]</A> <BR>
+<A HREF="435_L3_RepetitiveActionProb.html">[Next: Repetitive Action Problems]</A> 
+</BODY>
+</HTML>

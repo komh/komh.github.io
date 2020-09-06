@@ -1,0 +1,128 @@
+<HTML>
+<HEAD>
+<TITLE>Peeking at a Queue</TITLE>
+</HEAD>
+<BODY>
+<H1>Peeking at a Queue</H1><!-- entering slot 143 -->
+<P>
+The server process and its threads can examine a queue element by calling
+<A><!-- external link: 1D A6 C3 FC -->DosPeekQueue</A>. This function is
+not available to client processes.
+<P>
+Unlike<A><!-- external link: 1D D8 C3 FC --> DosReadQueue</A>,<A><!-- external link: 1D A6 C3 4D --> DosPeekQueue
+</A>does not remove the element from the queue.
+<P>
+<A><!-- external link: 1D A6 C3 4D -->DosPeekQueue</A> can either examine
+elements in the order that was specified when the queue was created (FIFO,
+LIFO, or priority), or it can examine the next element in the queue after
+a previous<A><!-- external link: 1D A6 C3 4D --> DosPeekQueue</A> request
+has been called. By making multiple<A><!-- external link: 1D A6 C3 4D --> DosPeekQueue
+</A>requests, the server process can search through a queue, examining each
+element in turn. When it locates the element it is searching for, the server
+process can remove the element from the queue by calling<A><!-- external link: 1D D8 C3 FC --> DosReadQueue</A>.
+
+<P>
+If several threads are using the same queue, the process writing to the
+queue can use the ulData field of the<A><!-- external link: 1D C9 C4 B0 --> REQUESTDATA
+</A>data structure to indicate that an element is directed to a particular
+thread. The thread can peek at the queue whenever data is available and
+read any elements containing the appropriate value in the ulData field.
+
+<P>
+The following code fragment shows how a thread can use<A><!-- external link: 1D A6 C3 4D --> DosPeekQueue
+</A>to examine the elements in a queue. Assume that a previous call to<A><!-- external link: 1D A3 C3 4C --> DosOpenQueue
+</A>provided the queue handle that is contained in<I> QueueHandle</I>. Assume
+that the identifier of the process that owns the queue has been placed into
+<I>OwningPID</I> already.
+<PRE>    #define INCL_DOSQUEUES       /* Queue values */
+    #define INCL_DOSPROCESS      /* needed for DCWW_WAIT */
+
+    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+
+    HQUEUE        hqQueueHandle;   /* Queue handle                  */
+    REQUESTDATA   rqRequest;       /* Request-identification data   */
+    ULONG         ulDataLength;    /* Length of examined element    */
+    PVOID         pDataAddress;    /* Address of examined element   */
+    ULONG         ulElementCode;   /* Indicator of examined element */
+    BOOL32        bNoWait;         /* No wait if queue is empty     */
+    BYTE          bElemPriority;   /* Priority of examined element  */
+    HEV           hevSemHandle;    /* Semaphore handle              */
+    PID           pidOwningPID;    /* PID of queue owner            */
+    APIRET        ulrc;            /* Return code                   */
+
+    rqRequest.pid = pidOwningPID; /* Set request data block to indicate   */
+                                  /* queue owner                          */
+
+    ulElementCode = 0;           /* Indicate that the peek should start  */
+                                 /* at the front of the queue            */
+
+    bNoWait = DCWW_WAIT;          /* Indicate that the peek call should   */
+                                  /* wait if the queue is currently empty */
+
+    hevSemHandle = 0;             /* Unused since this is a call that     */
+                                  /* synchronously waits                  */
+
+    ulrc = DosPeekQueue(hqQueueHandle,
+                        &amp;rqRequest,
+                        &amp;ulDataLength,
+                        &amp;pDataAddress,
+                        &amp;ulElementCode,
+                        bNoWait,
+                        &amp;bElemPriority,
+                        hevSemHandle);
+
+    if (ulrc != 0) {
+        printf("DosPeekQueue error: return code = %ld",
+               ulrc);
+        return;
+    }
+
+</PRE>
+
+<P>
+On successful return,<I> DataLength</I> contains the size of the element
+on the queue that is pointed to by the pointer within<I> DataAddress</I>,
+<I>ElementCode</I> has been updated to indicate the next queue element,
+<I>ElemPriority</I> has been updated to contain the priority of the queue
+element pointed to by<I> DataAddress</I>, and<I> Request.ulData</I> contains
+any special data that the<A><!-- external link: 1D 10 C4 51 --> DosWriteQueue
+</A>caller placed into the queue.
+<P>
+If the queue is empty and<I> NoWait</I> is set to DCWW_WAIT (0), the calling
+thread waits until an element is placed in the queue. If the queue is empty
+and<I> NoWait</I> is set to DCWW_NOWAIT (1),<A><!-- external link: 1D A6 C3 4D --> DosPeekQueue
+</A>returns immediately with ERROR_QUE_EMPTY.
+<P>
+If<I> NoWait</I> is set to DCWW_NOWAIT, an event semaphore must be provided
+so that the calling thread can determine when an element has been placed
+in the queue. The semaphore is created by calling<A><!-- external link: 1D 6E C3 FC --> DosCreateEventSem</A>,
+and its handle is supplied as a<A><!-- external link: 1D A6 C3 4D --> DosPeekQueue
+</A>parameter. The first time an event semaphore handle is supplied in a
+<A><!-- external link: 1D A6 C3 4D -->DosPeekQueue</A> or<A><!-- external link: 1D D8 C3 50 --> DosReadQueue
+</A>request for which DCWW_NOWAIT has been specified for a particular queue,
+the handle is saved by the system. The same handle must be supplied in all
+subsequent<A><!-- external link: 1D A6 C3 4D --> DosPeekQueue</A> and<A><!-- external link: 1D D8 C3 50 --> DosReadQueue
+</A>requests that are called for that queue; if a different handle is supplied,
+ERROR_<!-- entering slot 144 -->INVALID _ PARAMETERisreturned .
+<P>
+When a client process adds an element to the queue, the system automatically
+opens the semaphore (if necessary) and posts it. The server can either call
+<A><!-- external link: 1D BF C3 20 -->DosQueryEventSem</A> periodically
+to determine whether the semaphore has been posted, or it can call DosWaitEventSem.
+DosWaitEventSem causes the calling thread to block until the semaphore is
+posted.
+<P>
+After the event semaphore has been posted, the calling thread must call
+<A><!-- external link: 1D A6 C3 1F -->DosPeekQueue</A> again to examine
+the newly added queue element.
+<P>
+If QUE_CONVERT_ADDRESS is specified in the call to<A><!-- external link: 1D 73 C3 FC --> DosCreateQueue</A>,
+OS/2 will automatically convert 16-bit addresses to 32-bit addresses.
+
+<P><HR>
+
+<A HREF="135_L3_ReadingfromaQueue.html">[Back: Reading from a Queue]</A> <BR>
+<A HREF="137_L3_PurgingaQueue.html">[Next: Purging a Queue]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,88 @@
+<HTML>
+<HEAD>
+<TITLE>Nested Exceptions</TITLE>
+</HEAD>
+<BODY>
+<H1>Nested Exceptions</H1><!-- entering slot 839 -->
+<P>
+A<I> nested exception</I> is an exception that occurs while another exception
+is being handled.
+<P>
+OS/2 supports nested exceptions because an unhandled exception that occurs
+in an exception handler should be handled at a higher level-that is, by
+an ancestor of the procedure that registered the offending handler.
+<P>
+When a nested exception occurs, the EH_NESTED_CALL flag is set in the exception
+structure to indicate that a nested function call is being made. The normal
+convention then is for the handler to return immediately without handling
+the exception if the EH_NESTED_CALL flag is set. Without this flag, it would
+be easy to create an infinitely recursive situation.
+<P>
+For example, suppose we have the following scenario:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Procedure main calls procedure PA, which establishes
+exception handler HA.<!-- lm: 0x2 2 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 6 -->Procedure PA calls procedure PB, which establishes
+exception handler HB.<!-- lm: 0x2 2 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 6 -->Procedure PB calls procedure PC, which establishes
+exception handler HC.<!-- lm: 0x2 2 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 6 -->Procedure PC calls procedure PD.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Now suppose that procedure PD causes an exception. The system refers to
+the current thread's chain of exception handlers.
+<P>
+Because procedure PD has no handler, the system calls HC, the handler for
+procedure PC, with the EH_NESTED_CALL flag clear. If handler HC returns
+CONTINUE_SEARCH, the system calls the next handler in the chain, handler
+HB, again with the EH_NESTED_CALL flag clear.
+<P>
+Now suppose that exception handler HB causes an exception while it is processing
+the original exception. The call frames for the procedures are arranged
+in the following order on the stack:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Procedure main<!-- lm: 0x2 2 -->  2.<!-- lm: 0x2 6 -->
+<UL>Procedure
+PA<!-- lm: 0x2 2 -->
+</UL> 3.<!-- lm: 0x2 6 -->
+<UL>Procedure PB<!-- lm: 0x2 2 -->
+</UL> 4.<!-- lm: 0x2 6 -->
+<UL>Procedure PC<!-- lm: 0x2 2 -->
+</UL> 5.<!-- lm: 0x2 6 -->
+<UL>Procedure PD<!-- lm: 0x2 2 -->
+</UL> 6.<!-- lm: 0x2 6 -->
+<UL>OS/2's exception dispatcher<!-- lm: 0x2 2 -->
+</UL> 7.<!-- lm: 0x2 6 -->
+<UL>Procedure HB, which is the exception handler
+procedure<!-- lm: 0x2 2 -->
+</UL> 8.<!-- lm: 0x2 6 -->
+<UL>OS/2's exception dispatcher<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The system will now start traversing the exception handler chain again.
+Exception handler HB could have registered an exception handler, which would
+be the first handler in the chain. If it had registered a handler, it would
+be called with the EH_NESTED_CALL flag clear.
+<P>
+The range of the nested exception is exception handlers HC and HB. The end
+of this range can be determined by the fact that exception handler HB is
+the currently active handler.
+<P>
+These exception handlers have already been given a chance to handle the
+original exception.  They are now about to be called again in a nested range.
+ Therefore, when handlers HC and HB are called again, they will be called
+with the EH_NESTED_CALL flag set.  If they do not handle the exception,
+then exception handler HA will be called with the EH_NESTED_CALL flag clear,
+because it is outside the nested range.
+
+<P><HR>
+
+<A HREF="819_L3_UnwindingExceptionHa.html">[Back: Unwinding Exception Handlers]</A> <BR>
+<A HREF="821_L3_ProcessExitLists.html">[Next: Process Exit Lists]</A> 
+</BODY>
+</HTML>

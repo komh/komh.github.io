@@ -1,0 +1,61 @@
+<HTML>
+<HEAD>
+<TITLE>Starting a Session</TITLE>
+</HEAD>
+<BODY>
+<H1>Starting a Session</H1><!-- entering slot 173 -->
+<P>
+The sender and receiver start sessions in the same way, by issuing a rapi_session()
+call.  This call requires a sockaddr structure, which defines a destination
+address and port, a protocol number, an optional callback function that
+you provide, and some other parameters. If the session is multicast, then
+the address is for a multicast group to which the senders send data.  The
+port can be considered an extension of the multicast address.  The address
+and port must agree for all users of that multicast group.  The rapi_session()
+call returns a session ID that is used in subsequent calls to the RSVP API.
+
+<P>
+This example assumes that the destination is a multicast group.
+<PRE>
+#include
+    int retcode;
+    rapi_sid_t sessID;          /* RSVP session ID */
+    int proto = IPPROTO_UDP;    /* protocol (UDP) */
+    struct sockaddr_in mulAddr; /* multicast address, port, protocol */
+    int alertSoc;               /* alert socket for asynchronous events */
+    int ttl;                    /* multicast time to live value */
+
+    mulAddr.sin_family = AF_INET;
+    mulAddr.sin_addr.s_addr = inet_addr("224.1.1.1");
+    mulAddr.sin_port = htons(1201);
+
+    /* Do multicast group setup at this point. Code omitted here. */
+
+    sessID = rapi_session((struct sockaddr *)&amp;mulAddr, proto, 0, callback,
+                          NULL, &amp;retcode);
+    if (! sessID)
+        {
+        printf("Session did not start! rapi_session() error code %d\n",
+               retcode);
+        exit(1);
+        }
+    else
+        {
+        alertSoc = rapi_getfd(sessID);
+        printf("Session %d started, alert socket is %d\n",
+               sessID, alertSoc);
+        }
+    if (alertSoc &lt;= 0)
+        {
+        printf("Error, rapi_getfd() could not provide an alert socket!\n");
+        exit(1);
+        }
+</PRE>
+
+
+<P><HR>
+
+<A HREF="162_L3_DeterminingAddresses.html">[Back: Determining Addresses and Ports]</A> <BR>
+<A HREF="164_L3_GettinganAlertSocket.html">[Next: Getting an Alert Socket]</A> 
+</BODY>
+</HTML>

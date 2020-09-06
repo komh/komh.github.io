@@ -1,0 +1,104 @@
+<HTML>
+<HEAD>
+<TITLE>How do I perform parallel compilation?</TITLE>
+</HEAD>
+<BODY>
+<H1>How do I perform parallel compilation?</H1><!-- entering slot 30 -->
+<P>
+You can accomplish parallel compilation in one of two ways. The first involves
+GNU Make, the second involves DMAKE.
+<P>
+GNU Make:
+<P>
+To perform parallel compilation with GNU Make simply do two things:<!-- lm: 0x2 0 -->
+<P>
+o<!-- lm: 0x2 2 -->
+<UL>Make sure your make file does not execute the make
+utility (again) from inside the make file.<!-- lm: 0x2 0 -->
+</UL>o<!-- lm: 0x2 2 -->
+<UL>On the GNU Make command line, specify '--jobs
+x', where 'x' is the maximum number of concurrent jobs you will allow GNU
+Make to execute. If you do not wish to have a maximum, then you may specify
+simply '--jobs' and GNU Make will execute as many jobs as possible at one
+time.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+DMAKE:
+<P>
+The ini file comes in the dmake archive in a few different flavours.  Take
+the file with the extension .msc and rename it to dmake.ini.  Set an environment
+variable in config.sys
+<P>
+SET MAKESTARTUP=d:\COMPILER\DMAKE.INI
+<P>
+====== Makefile
+<PRE>CC=iccCOPTS=/Sm /Gt+ /Ti+ /O- /Gs+
+CONLY=-c
+
+LIBS=os2
+
+INCS=psfax2.h
+
+MAXPROCESS=2
+
+all: psfax2.exe sendfax.exe
+
+modem.obj:  modem.c $(INCS)
+   $(CC) $(CONLY) $(COPTS) modem.c
+
+psfax2.obj: psfax2.c $(INCS)
+   $(CC) $(CONLY) $(COPTS) psfax2.c
+
+psfax2.exe: psfax2.obj modem.obj
+   link386 /ST:32768 /CO psfax2+modem;
+
+sendfax.obj: sendfax.c $(INCS)
+   $(CC) $(CONLY) $(COPTS) sendfax.c
+
+sendfax.exe: sendfax.obj modem.obj
+   link386 /ST:32768 /CO sendfax+modem;
+</PRE>
+
+<P>
+====== End of makefile
+<P>
+Couple of gotchas.  There is a bug in the MAXPROCESS handling of the copy
+I use.  Set it to 1, and you get a typical make, ie one at a time. Set it
+to 2, and the thing launches 3 processes. Ie with more than 1, you actually
+get n+1 processes running.
+<P>
+Another caveat
+<PRE>xxx.yy: aaa.bbb
+    command1
+    command2
+    command3
+</PRE>
+
+<P>
+The above structure does not work.  The reason is that all 3 commands will
+be spawned together in parallel sessions.  To serialize them you must make
+up dependancies in the makefile.  I ran into this becuase I have one makefile
+that completes every link stage by copying the result onto a network drive.
+ I had to take all the links that previously had 2 commands, and break them
+into 2 blocks with the second being a dependancy of the remote file on the
+local file, and the copy command.
+<P>
+One more word of warning, dmake is not to pleased with those convoluted
+things that workframe spits out in the name of makefiles.  You may have
+to do a significant amount of makefile editing, depending on how you makefile
+look now.
+<P>
+Provided that 3 simultaneous copies of your compiler doesn't push your machine
+into excessive swapping, the improvements in build speed are amazing.  Before
+dmake I'd never seen a build actually top the cpu meter here, the process
+was<!-- entering slot 31 --> always waiting for disk as it loaded compilers/headers
+etc.	Now the compiler sits in ram and just gets re-used, and the headers
+are coming directly from cache all the time. Build time cut in half, and
+my cpu guage is pegged at 100% when a build is running. 
+
+<P><HR>
+
+<A HREF="025_L2_Howbigshouldmystacks.html">[Back: How big should my stacksize be?]</A> <BR>
+<A HREF="027_L2_WhatisanRCof87invali.html">[Next: What is an RC of 87 (invalid param) from the API?]</A> 
+</BODY>
+</HTML>

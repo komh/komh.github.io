@@ -1,0 +1,304 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Soundex routine(s)</TITLE>
+</HEAD>
+<BODY>
+<H1>Soundex routine(s)</H1><!-- entering slot 556 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+Soundex routine(s) from<B> Ross Patterson</B> (see <A HREF="958_L2H_EMailaddressesP.html">EMail
+Addresses</A>)
+<BR>
+Captured from a message in a public Internet news group (see <A HREF="880_L3_InternetNewsgroupsLi.html">Internet
+- Newsgroups</A>)
+<BR>
+converted to OS/2 REXX by Bernd Schemmer
+<P>
+
+<PRE> 
+
+/* Message from the author:                                           */
+/*                                                                    */
+/* Someone asked for a copy of the SOUNDEX algorithm in REXX.  I      */
+/* recently dug the following up from my archives, in response to a   */
+/* request for the NYSIIS algorithm.  They're both there, so you get  */
+/* two for the price of one!                                          */
+/*                                                                    */
+/* The SOUNDEX implementation is mine, and while true to the          */
+/* definition of SOUNDEX, it is NOT the exact algorithm published so  */
+/* many years ago.  That algorithm was heavily loop-based and didn't  */
+/* perform well.  This algorithm produces the same results much more  */
+/* quickly, relying on some REXX-isms like Space().  The NYSIIS       */
+/* implementation is a literal translation of Jeff Kell's             */
+/* implementation (written in an old language called SPL) into REXX   */
+/* by yours truly.                                                    */
+/*                                                                    */
+/* Please don't criticise the coding style, I was quite a bit younger */
+/* when I wrote these ;-)                                             */
+/*                                                                    */
+/* Enjoy,                                                             */
+/*   Ross Patterson                                                   */
+/*   Sterling Software, Inc.                                          */
+/*   VM Software Division                                             */
+/*                                                                    */
+/*                                                                    */
+
+/**********************************************************************/
+/* NAMEHASH:  Phonetic Name Indexing Routine         Jeff Kell        */
+/*                                                                    */
+/* This routine produces two different phonetic name keys from        */
+/* a given stored name in the form (Last,First) with a comma          */
+/* as a delimiter to the last name.  The first algorithm used         */
+/* is the Soundex algorithm, variant 1:                               */
+/* (1) Convert characters to numerics using table:                    */
+/*     0 = A,E,H,I,O,U,W,Y                                            */
+/*     1 = B,F,P,V                                                    */
+/*     2 = C,G,J,K,Q,S,X,Z                                            */
+/*     3 = D,T                                                        */
+/*     4 = L                                                          */
+/*     5 = M,N                                                        */
+/*     6 = R                                                          */
+/* (2) Make multiple digits single.                                   */
+/* (3) Remove zeroes after first position.                            */
+/* (4) Fill on right with zeroes to make 6 characters.                */
+/* (5) Replace first digit with first character of name.              */
+/*                                                                    */
+/* Stated reliability of Soundex is 95.99% with selectivity           */
+/* factor of .213% for a name inquiry.                                */
+/*                                                                    */
+/* The second algorithm is the New York State Identification          */
+/* and Intelligence System, or NYSIIS algorithm.  This routine        */
+/* is more reliable and selective than Soundex, especially for        */
+/* grouped phonetic sounds.  It does not perform well with 'Y'        */
+/* groups as 'Y' is not translated.  NYSIIS <!-- entering slot 557 -->yields an alpha           */
+/* key which is filled or rounded to 10 characters:                   */
+/* (1)  Translate first characters of name:                           */
+/*      MAC =&gt; MCC     KN  =&gt; NN       K   =&gt; C                       */
+/*      PH  =&gt; FF      PF  =&gt; FF       SCH =&gt; SSS                     */
+/* (2)  Translate last characters of name:                            */
+/*      EE  =&gt; Y       IE  =&gt; Y                                       */
+/*      DT,RT,RD,NT,ND =&gt; D                                           */
+/* (3)  First character of key = first character of name.             */
+/* (4)  Translate remaining characters by following rules,            */
+/*      incrementing by one character each time:                      */
+/*      a.  EV =&gt; AF else A,E,I,O,U =&gt; A                              */
+/*      b.  Q =&gt; G    Z =&gt; S    M =&gt; N                                */
+/*      c.  KN =&gt; N  else K =&gt; C                                      */
+/*      d.  SCH =&gt; SSS    PH =&gt; FF                                    */
+/*      e.  H =&gt; If previous or next is nonvowel, previous            */
+/*      f.  W =&gt; If previous is vowel, previous                       */
+/*      Add current to key if current &lt;&gt; last key character           */
+/* (5)  If last character is S, remove it                             */
+/* (6)  If last characters are AY, replace with Y                     */
+/* (7)  If last character is A, remove it                             */
+/*                                                                    */
+/* Stated reliability of NYSIIS is 98.72% with a selectivity          */
+/* factor of .164% for a name inquiry.                                */
+/*                                                                    */
+/* Both algorithms are taken from Robert L. Taft, "Name Search        */
+/* Techniques", New York State Identification and Intelligence        */
+/* System.                                                            */
+/*                                                                    */
+/* SPL version by Jeff Kell, U. Tennasee at Chatanooga                */
+/* Translated to REXX by Ross Patterson, Rutgers University           */
+/*     on 05/05/88                                                    */
+/*                                                                    */
+/**********************************************************************/
+
+  do forever
+    call LineOut , "Enter the input for the algorithms (RETURN to end): "
+    thisName = lineIN()
+    if thisName = "" then
+      leave
+
+    Parse value NameHash( thisName ) with RC Soundex NYIIS .
+    say "RC = " || rc || ", soundex = " || soundex || ", NYIIS = " || nyiis
+  end /* do forever */
+exit 0
+
+/* ------------------------------------------------------------------ */
+/* function: calculate the SOUNDEX and NYSIIS values for a string     */
+/*                                                                    */
+/* call:     NameHash name                                            */
+/*                                                                    */
+/* where:    name                                                     */
+/*                                                                    */
+/* returns:  rc soundex nyiis                                         */
+/*                                                                    */
+NameHash: Procedure
+  Name = Space( Translate( Arg( 1 ) ),0 )
+  Parse var Name Name "," .
+  If Name = "" then
+    Return 1
+
+Return 0 Soundex( Name,6 ) NYSIIS( Name )
+
+/* ------------------------------------------------------------------ */
+/* function: SOUNDEX translation from source1 to target1              */
+/*                                                                    */
+/* call:     Soundex name {,length)                                   */
+/*                                                                    */
+/* where:    name                                                     */
+/*           length                                                   */
+/*                                                                    */
+/* returns:  soundex value                                            */
+/*                                                                    */
+Soundex: Procedure
+  Source = Arg( 1 )
+  Length = Arg( 2 )
+
+  If Length = "" then
+    Length = 6
+
+  Result = Left( Source,1 )
+  SoundexNum = "01230120022455012623010202"
+             /* ABCDEFGHIJKLMNOPQRSTUVWXYZ */
+
+  Source = Translate( Source,SoundexNum,"ABCDEFGHIJKLMNOPQRSTUVWXYZ","0" )
+  Do I = 1 to Length( Source )
+    Do J = I+1 to Length( Source ) ,
+       While Substr( Source,I,1 ) = Substr( Source,J,1 )
+      Source = Left( Source,J-1 )'0'Substr( Source,J+1 )
+    End
+  End
+  Result = Result || Substr( Space( Translate( Source, " ","0" ),0 ),2 )
+Return Left( Result,Length,"0" )
+
+/* ------------------------------------------------------------------ */
+/* function: NYSIIS PHONETIC CODE TRANSLATION FROM SOURCE TO TARGET   */
+/*                                                                    */
+/* call:     NYSIIS name                                              */
+/*                                                                    */
+/* where:    name                                                     */
+/*                                                                    */
+/* returns:  NYSIIS value                                             */
+/*                                                                    */
+NYSIIS: Procedure
+  Source = Arg( 1 )
+
+  Select
+    When Left( Source,3 ) = "MAC" then
+      Source = "MCC"Substr( Source,4 )
+
+    When Left( Source,3 ) = "SCH" then
+      Source = "SSS"Substr( Source,4 )
+
+    When Left( Source,2 ) = "KN" then
+      Source = "NN"Substr( Source,3 )
+
+    When Left( Source,2 ) = "PH" | ,
+         Left( Source,2 ) = "PF" then
+      Source = "FF"Substr( Source,3 )
+
+    When Left( Source,1 ) = "K" then
+      Source = "C"Substr( Source,2 )
+
+    Otherwise
+      Nop
+
+  End /* select */
+
+  Ending = Right( Source,2 )
+
+  If Ending = "EE" | Ending = "IE" then
+    Source = Left( Source,1,Length( Source )-2 )"Y"
+
+  If Ending = "DT" | Ending = "RT" | ,
+     Ending = "RD" | Ending = "NT" | ,
+     Ending = "ND" then
+    Source = Left( Source,1,Length( Source )-2 )"D"
+
+  Result = Left( Source,1 )
+  Do Cursor = 2 to Length( Source )
+    Char = ScanNYSIIS(  )
+
+/* original code:                                                      */
+/*  If Char ^= Right( Result,1 ) then                                  */
+/* replaced with:                                                      */
+    If Char &lt;&gt; Right( Result,1 ) then
+      Result = Result || Char
+  End
+
+  If Right( Result,1 ) = "S" then
+    Target1 = Left( Target1,Length( Target1 )-1 )
+
+  If Right( Result,2 ) = "AY" then
+    Target1 = Left( Target1,Length( Target1 )-2 )"Y"
+
+  If Right( Result,1 ) = "A" then
+    Target1 = Left( Target1,Length( Target1 )-1 )
+
+Return Left( Result,10 )
+
+/* ------------------------------------------------------------------ */
+/* sub routine of NYSIIS                                              */
+/*                                                                    */
+ScanNYSIIS: Procedure expose Source Cursor
+  Vowels = "AEIOU"
+  Chars = Substr( Source,Cursor,3 )
+  Char = Left( Chars,1 )
+  Select
+
+    When Left( Chars,2 ) = "EV" then
+      Result = "AF"
+
+/* original code:                                                     */
+/*    When Find( Char,Vowels ) &gt; 0 then                               */
+/* replaced with:                                                     */
+    When pos( Char,Vowels ) &gt; 0 then
+      Result = "A"
+
+    When Char = "Q" then
+      Result = "G"
+
+    When Char = "Z" then
+      Result = "S"
+
+    When Char = "M" then
+      Result = "N"
+
+    When Left( Chars,2 ) = "KN" then
+      Result = "N"
+
+    When Char = "K" then
+      Result = "C"
+
+    When Left( Chars,3 ) = "SCH" then
+      Result = "SSS"
+
+    When Left( Chars,2 ) = "PH" then
+      Result = "FF"
+
+    When Char = "H" then
+    Do
+      If Find( Substr( Source,Cursor-1,1 ),Vowels ) = 0 then
+        Result = Substr( Source,Cursor-1,1 )
+      Else If Find( Substr( Chars,2,1 ),Vowels ) = 0 then
+        Result = Substr( Chars,2,1 )
+    End
+
+    When Cursor = "W" then ,
+      If Find( Substr( Source,Cursor-1,1 ),Vowels ) &gt; 0 then
+        Result = Substr( Source,Cursor-1,1 )
+
+    otherwise
+      <!-- entering slot 558 -->nop
+
+  End /* select */
+
+  Source = Left( Source,Cursor-1 ) || Result || Substr( Source,Cursor+1 )
+
+Return Left( Result,1 )
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="532_L3_ShowaninProgressindi.html">[Back: Show an "in Progress" indicator]</A> <BR>
+<A HREF="534_L3_Simpleparameterparsi.html">[Next: Simple parameter parsing routine]</A> 
+</BODY>
+</HTML>

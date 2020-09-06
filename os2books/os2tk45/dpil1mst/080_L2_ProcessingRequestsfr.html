@@ -1,0 +1,125 @@
+<HTML>
+<HEAD>
+<TITLE>Processing Requests from the Agent</TITLE>
+</HEAD>
+<BODY>
+<H1>Processing Requests from the Agent</H1><!-- entering slot 84 -->
+<P>
+After we have registered our sample MIB sub-tree with the agent, we must
+expect that SNMP requests for that sub-tree will be passed for processing
+by us.  Since the requests will arrive in the form of DPI packets on the
+connection that the we have established, we go into a while loop to await
+DPI packets from the agent.
+<P>
+Since the subagent cannot know in advance which kind of packet arrives from
+the agent, we await a DPI packet (forever), then we parse the packet, check
+the packet type, and process the request based on the DPI packet type.  A
+call to pDPIpacket, which expects as parameter a pointer to the encoded/serialized
+DPI packet, returns a pointer to a DPI parse tree.  The pointer points to
+a snmp_dpi_hdr structure which looks as follows:
+<PRE>struct snmp_dpi_hdr {
+  unsigned char  proto_major;
+  unsigned char  proto_version;
+  unsigned char  proto_release;
+  unsigned short packet_id;
+  unsigned char  packet_type;
+  union {
+     snmp_dpi_reg_packet      *reg_p;
+     snmp_dpi_ureg_packet     *ureg_p;
+     snmp_dpi_get_packet      *get_p;
+     snmp_dpi_next_packet     *next_p;
+     snmp_dpi_next_packet     *bulk_p;
+     snmp_dpi_set_packet      *set_p;
+     snmp_dpi_resp_packet     *resp_p;
+     snmp_dpi_trap_packet     *trap_p;
+     snmp_dpi_open_packet     *open_p;
+     snmp_dpi_close_packet    *close_p;
+     unsigned char            *any_p;
+  } data_u;
+};
+typedef struct snmp_dpi_hdr    snmp_dpi_hdr;
+#define snmp_dpi_hdr_NULL_p    ((snmp_dpi_hdr *)0)
+</PRE>
+
+<P>
+With the DPI parse tree, we decide how to process the DPI packet. The following
+code example demonstrates the high level process of a DPI subagent.
+<PRE>#include &lt;snmp_dpi.h&gt;              /* DPI 2.0 API definitions */
+static int handle;                 /* handle has global scope */
+
+main(int argc, char *argvíù, char *envpíù)
+{
+  unsigned char *packet_p;
+  int            rc = 0;
+  unsigned long  length;
+  snmp_dpi_hdr  *hdr_p;
+
+  if (argc&gt;1) {                     /* if use passed one parm */
+     if (strcmp(argví1ù,"-d")==0)   /* being -d, then we      */
+         DPIdebug(2);               /* turn on DPI debugging  */
+  } /* endif */                     /* which shows us things  */
+
+  do_connect_and_open();            /* connect and DPI-OPEN   */
+
+  do_register();                    /* register our sub-tree  */
+
+  while (rc == 0) {                 /* do forever             */
+   rc = DPIawait_packet_from_agent( /* wait for a DPI packet  */
+           handle,                  /* on this connection     */
+           -1,                      /* wait forever           */
+           &amp;packet_p,               /* receives ptr to packet */
+           &amp;length);                /* receives packet length */
+
+   if (rc != DPI_RC_OK) exit(1);    /* If it failed, exit     */
+
+   hdr_p = pDPIpacket(packet_p);    /* parse DPI packet       */
+   if (hdr_p == snmp_dpi_hdr_NULL_p)/* If we fail to parse it */
+      exit(1);                      /* then exit              */
+
+   switch(hdr_p-&gt;packet_type) {     /* handle by DPI type     */
+   case SNMP_DPI_GET:
+     rc = do_get(hdr_p,
+                 hdr_p-&gt;data_u.get_p);
+     break;
+   case SNMP_DPI_GETNEXT:
+     rc = do_next(hdr_p,
+                  hdr_p-&gt;data_u.next_p);
+     break;
+
+</PRE>
+
+<BR>
+
+<PRE>   case SNMP_DPI_SET:
+   case SNMP_DPI_COMMIT:
+   case SNMP_DPI_UNDO:
+     rc = do_set(hdr_p,
+                 hdr_p-&gt;data_u.set_p);
+     break;
+   case SNMP_DPI_CLOSE:
+     rc = do_close(hdr_p,
+                   hdr_p-&gt;data_u.close_p);
+     break;
+   case SNMP_DPI_UNREGISTER:
+     rc = do_unreg(hdr_p,
+                   hdr_p-&gt;data_u.ureg_p);
+     break;
+   default:
+     printf("Unexpected DPI packet type %d\n",
+            hdr_p-&gt;packet_type);
+     rc = -1;
+   } /* endswitch */
+   if (rc) exit(1);
+  } /* endwhile */
+
+  return(0);
+} /* end of main() */
+</PRE>
+
+
+<P><HR>
+
+<A HREF="079_L2_RegisteringaSubTreew.html">[Back: Registering a Sub-Tree with the Agent]</A> <BR>
+<A HREF="081_L2_ProcessingaGETReques.html">[Next: Processing a GET Request]</A> 
+</BODY>
+</HTML>

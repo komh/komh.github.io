@@ -1,0 +1,80 @@
+<HTML>
+<HEAD>
+<TITLE>Installing Hook Functions</TITLE>
+</HEAD>
+<BODY>
+<H1>Installing Hook Functions</H1><!-- entering slot 1603 -->
+<P>
+You can install hook functions by calling WinSetHook, specifying the type
+of hook that calls the function-whether the function is to be associated
+with the system-message queue or with the queue of a particular thread-and
+a pointer to a function entry point. The following sample code shows how
+to install a hook function into the message queue of a thread:
+<PRE>BOOL EXPENTRY MyInputHook(HAB, PQMSG, USHORT);
+HAB  hab;
+HMQ  hmq;
+
+WinSetHook(hab,                   /* Anchor block handle            */
+           hmq,                   /* Thread message queue           */
+           HK_INPUT,              /* Called by the input hook       */
+           (PFN) MyInputHook,     /* Address of input-hook function */
+           (HMODULE)NULL);        /* Function is in appl. module    */
+
+</PRE>
+
+<P>
+Place hook functions associated with the system-message queue in a dynamic
+link library (DLL) separate from the application that installs the hook
+function. The installing application needs the handle of the DLL module
+before it can install the hook function. DosLoadModule, given the name of
+the DLL, returns the handle of the DLL module. Once you have the handle,
+you can call DosQueryProcAddr to obtain the address of the hook function.
+Finally, use WinSetHook to install the hook-function address in the appropriate
+hook list. WinSetHook passes the module handle, a pointer to the hook-function
+entry point, and NULL for the message-queue argument, indicating that the
+hook function should be associated with the system queue. The following
+sample code shows functions, called from the application's main routine,
+that initialize a DLL and install the hook function:
+<PRE>HAB     habDLL;
+HMODULE hMod;
+PFN     pfnInput;
+
+/***********************************************************************/
+/*  InitDLL: This function sets up the DLL and sets all variables.     */
+/***********************************************************************/
+void EXPENTRY InitDLL(HAB hab)
+{
+    habDLL = hab;
+
+/***********************************************************************/
+/*  Load the dll - actually, just get our module handle.               */
+/***********************************************************************/
+    DosLoadModule(NULL, 0, "HOOKDLL", &amp;hMod);
+
+/***********************************************************************/
+/*  Find the address of the input hook procedure.                      */
+/***********************************************************************/
+    DosQueryProcAddr(hMod, 0, "InputProc", &amp;pfnInput);
+}
+
+/***********************************************************************/
+/*  StartInputHook: This function starts the hook filtering.           */
+/***********************************************************************/
+void EXPENTRY StartInputHook(void)
+{
+
+/***********************************************************************/
+/*  Set a hook to our input filter routine.                            */
+/***********************************************************************/
+    WinSetHook(habDLL, NULLHANDLE, HK_INPUT, pfnInput, hMod);
+}
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1568_L2_UsingHooks.html">[Back: Using Hooks]</A> <BR>
+<A HREF="1570_L3_ReleasingHookFunctio.html">[Next: Releasing Hook Functions]</A> 
+</BODY>
+</HTML>

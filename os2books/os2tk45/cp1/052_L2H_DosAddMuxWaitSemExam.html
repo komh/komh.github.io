@@ -1,0 +1,75 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosAddMuxWaitSem - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosAddMuxWaitSem - Example Code</H1><!-- entering slot 55 -->
+<P>
+This example creates two semaphore record lists, with two event semaphores
+in each. It then creates a muxwait semaphore with the first semaphore record
+list, and it adds the second list later using DosAddMuxWaitSem.
+<PRE>#define INCL_DOSSEMAPHORES   /* DOS semaphore values */
+#define INCL_DOSERRORS       /* DOS error values */
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+
+int main(VOID) {
+ HMUX      hmuxHandAny = NULLHANDLE;       /* Muxwaithandle */
+ HEV       hevA[2]      = {0};             /* Event semaphores */
+ SEMRECORD apsrA[2]     = {{0}};           /* Semaphore records */
+ HEV       hevB[2]      = {0};             /* Event semaphores */
+ SEMRECORD apsrB[2]     = {{0}};           /* Semaphore records */
+ APIRET    rc          = NO_ERROR;         /* Return code */
+ ULONG     ulLoop      = 0;                /* Loop count */
+
+for (ulLoop = 0; ulLoop &lt; 2; ulLoop++) {
+    rc = DosCreateEventSem((PSZ) NULL,
+                           &amp;hevA[ulLoop],
+                           0,
+                           FALSE);
+    if (rc != NO_ERROR) {
+      printf("DosCreateEventSem error:  return code = %u\n", rc);
+      return 1;
+    }
+    apsrA[ulLoop].hsemCur = (HSEM) hevA[ulLoop],
+    apsrA[ulLoop].ulUser = 0;
+
+    rc = DosCreateEventSem((PSZ) NULL,
+                           &amp;hevB[ulLoop],
+                           0,
+                           FALSE);
+    if (rc != NO_ERROR) {
+      printf("DosCreateEventSem error:  return code = %u\n", rc);
+      return 1;
+    }
+    apsrB[ulLoop].hsemCur = (HSEM) hevB[ulLoop],
+    apsrB[ulLoop].ulUser = 0;
+} /* endfor */
+
+rc = DosCreateMuxWaitSem((PSZ) NULL,
+                         &amp;hmuxHandAny,
+                         2L,             /* Number of semaphores in list */
+                         apsrA,          /* Semaphore list */
+                         DCMW_WAIT_ANY); /* Wait for any semaphore */
+    if (rc != NO_ERROR) {
+      printf("DosCreateMuxWaitSem error:  return code = %u\n", rc);
+      return 1;
+    }
+
+rc = DosAddMuxWaitSem(hmuxHandAny,  apsrB);
+    if (rc != NO_ERROR) {
+      printf("DosAddMuxWaitSem error:  return code = %u\n", rc);
+      return 1;
+    }
+
+return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="051_L2H_DosAddMuxWaitSemRela.html">[Back: DosAddMuxWaitSem - Related Functions]</A> <BR>
+<A HREF="053_L2H_DosAddMuxWaitSemTopi.html">[Next: DosAddMuxWaitSem - Topics]</A> 
+</BODY>
+</HTML>

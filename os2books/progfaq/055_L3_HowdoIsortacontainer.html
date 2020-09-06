@@ -1,0 +1,72 @@
+<HTML>
+<HEAD>
+<TITLE>How do I sort a container control?</TITLE>
+</HEAD>
+<BODY>
+<H1>How do I sort a container control?</H1><!-- entering slot 66 -->
+<PRE>/*
+ * Note that PSESSION is my own instance data structure.
+ * I use it here to retrieve the type of field comparison I should do.
+ */
+
+ static SHORT APIENTRY Compare (PMINIRECORDCORE pmrc1,
+                                PMINIRECORDCORE pmrc2,
+                                PVOID pvStorage)
+ {
+    PSESSION pSession = (PSESSION) pvStorage ;
+    PFIELDINFO pFieldInfo = pSession-&gt;pFieldInfoSort ;
+    PPVOID pField1 = (PPVOID) ((PBYTE) pmrc1 +
+       pFieldInfo-&gt;offStruct) ;
+    PPVOID pField2 = (PPVOID) ((PBYTE) pmrc2 +
+       pFieldInfo-&gt;offStruct) ;
+    SHORT sResult = 0 ;
+
+    if (pFieldInfo-&gt;flData &amp; CFA_STRING) {
+       sResult = strcmp ((PCHAR) *pField1, (PCHAR) *pField2) ;
+    }
+    else if (pFieldInfo-&gt;flData &amp; CFA_ULONG) {
+       if ((ULONG) *pField1 &lt; (ULONG) *pField2)
+          sResult = -1 ;
+       else if ((ULONG) *pField1 &gt; (ULONG) *pField2)
+          sResult = 1 ;
+       else
+          sResult = 0 ;
+    }
+    else if (pFieldInfo-&gt;flData &amp; CFA_DATE) {
+       sResult = CompareDate ((PCDATE) (PVOID) pField1,
+                              (PCDATE) (PVOID) pField2) ;
+    }
+    else if (pFieldInfo-&gt;flData &amp; CFA_TIME) {
+       sResult = CompareTime ((PCTIME) (PVOID) pField1,
+                              (PCTIME) (PVOID) pField2) ;
+    }
+
+    // Any other data type gets treated as equal;
+    // no sorting can be done. Now handle reverse sequence.
+    if (pSession-&gt;fSortReverse &amp;&amp; sResult)
+       sResult = -sResult ;
+    return sResult ;
+ }
+</PRE>
+
+<P>
+Here is how I invoke the sort:
+<PRE> // Send container a sort message.
+ ulRC = LONGFROMMR (WinSendMsg (
+                    pSession-&gt;hwndContainer,
+                    CM_SORTRECORD,
+                    MPFROMP (Compare), MPFROMP (pSession))) ;
+ if (!ulRC) {
+    // Report error.
+ }
+</PRE>
+
+<P>
+Credit:  Wayne Kovsky 
+
+<P><HR>
+
+<A HREF="054_L3_HowdoIgetmycontainer.html">[Back: How do I get my containers to use Mini-icons?]</A> <BR>
+<A HREF="056_L3_HowdoIqueryallrecord.html">[Next: How do I query all records in a container - tree view?]</A> 
+</BODY>
+</HTML>

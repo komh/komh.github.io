@@ -1,0 +1,90 @@
+<HTML>
+<HEAD>
+<TITLE>Wait and Notify Flags</TITLE>
+</HEAD>
+<BODY>
+<H1>Wait and Notify Flags</H1><!-- entering slot 17 -->
+<P>
+MCI_WAIT specifies that the application should not send a notification message.
+ It also specifies that the driver should not return to the caller until
+the entire command has been completed.
+<P>
+MCI_NOTIFY specifies that upon completion of the command a notify message
+is to be sent to the application using the mdmDriverNotify function. If
+the notify flag is specified, the MCD should perform error checking and
+minimal processing on the command before returning to the caller.  Error
+checking should ensure that the command can begin the main processing.
+<P>
+If neither MCI_WAIT or MCI_NOTIFY is specified, the processing is the same
+as if MCI_NOTIFY were specified, except that notification is not provided
+when the command completes.
+<P>
+Error and parameter checking should minimize the possibility that an error
+occurs after control is returned to the calling thread, requiring a notify
+error message to be sent to the calling application.  The list of error
+conditions that are checked before returning to the caller will vary from
+driver to driver.
+<P>
+The main processing of the command should be done using a separate thread
+or a mechanism that allows control to be returned to the calling thread.
+If the MCD is using the SSM subsystem, the event procedure should be used
+for handling notify commands.
+<P>
+If an error is returned on an mciDriverEntry call, the error should not
+be sent using mdmDriverNotify. After an error is returned on mciDriverEntry,
+the MCD has finished processing that command.
+<P>
+On notify commands, it is the responsibility of the MCD to ensure that the
+data structure associated with the command message is copied into driver
+memory before returning to the caller. If this is not done, the driver might
+find that the memory was changed before it could process the command. For
+example, the<I> hwndCallback</I>,<I> ulFrom</I>, and<I> ulTo</I> fields
+on the MCI_PLAY message should be copied when the MCI_NOTIFY flag is specified.
+
+<P>
+Media control messages that can require a lot of time to complete are MCI_PLAY,
+MCI_RECORD, MCI_SEEK, and MCI_STEP.  These commands are action commands.
+ Messages such as MCI_PAUSE, MCI_GETDEVCAPS, MCI_STATUS, and MCI_SET are
+non-action commands and do not require much processing time.  The non-action
+commands need not be processed on a separate thread if the notify flag is
+specified.  For these commands, the call to mdmDriverNotify should be made
+at the completion of the command.
+<P>
+If the MCD is using the Stream Programming Interface (SPI) functions to
+perform data streaming, the SPI events should be used instead of separate
+threads. SPI requires an event routine to handle SPI events such as End-of-Stream,
+an error, and so on.  SPI will call this event routine on one of its threads.
+ Therefore, the mdmDriverNotify call could be made as part of the event
+routine.
+<P>
+An MM_MCINOTIFY message can have the notification codes shown in the following
+table associated with it.
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Notification Code        ³Condition That Caused the Notification       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³MCI_NOTIFY_SUCCESSFUL    ³The command completed successfully with no   ³
+³                         ³errors.                                      ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³MCI_NOTIFY_SUPERSEDED    ³A second command of the same type is received³
+³                         ³with the notify flag set.                    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³MCI_NOTIFY_ABORTED       ³A second command is received that prevents   ³
+³                         ³the first command from completing            ³
+³                         ³successfully. If the driver finds an error   ³
+³                         ³early in the parameter-checking or command   ³
+³                         ³processing that requires an error to be      ³
+³                         ³returned to the caller, no notification is   ³
+³                         ³sent back to the application.                ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+If the notification code field of MM_MCINOTIFY contains a value other than
+those shown in the previous table, the value is the error code for a specific
+OS/2 multimedia error condition.  Only one MM_MCINOTIFY message per command
+should be sent.
+
+<P><HR>
+
+<A HREF="016_L3_SubsystemMessages.html">[Back: Subsystem Messages]</A> <BR>
+<A HREF="018_L3_BasicCommandMessages.html">[Next: Basic Command Messages]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,221 @@
+<HTML>
+<HEAD>
+<TITLE>Scoping Rules</TITLE>
+</HEAD>
+<BODY>
+<H1>Scoping Rules</H1><!-- entering slot 12 -->
+<P>
+In DSS, you can have multiple resource domains within a cell and this will
+most likely be typical of your network's topography.  In order to maintain
+compatibility with your existing applications and still provide access to
+the full range of tools available in DSS, several API categories introduced
+scoping rules.  These APIs are:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->NetUser<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->NetGroup<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->NetApp<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->NetAlias<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The first parameter (<I>pszServername</I>) in LAN Server 4.0 took the name
+of a server to execute on. In DSS, the use of this parameter has been expanded
+and is now called<I> pszTarget</I>. You can still pass in a servername,
+but the API scopes the call to the server's resource domain.
+<P>
+The following examples help introduce scoping rules.
+<P>
+We will start with a cell by the name of /.../mybigcell with two resource
+domains, resdom_1 and resdom_2.  The domain resdom_1 has SERVER1 while resdom_2
+has SERVER2.
+<PRE>Example 1: Scoped to a server's resource domain.
+                NetUserEnum ("\\SERVER1", ... )
+                This returns all users belonging to resdom_1.
+
+                NetUserEnum ("\\SERVER2", ... )
+                This returns all users belonging to resdom_2.
+
+Example 2: Scoped to a cell.
+
+                NetUserEnum ("/ ... /anycell", ...)
+                This returns all DSS users in / ... /anycell.
+
+
+                NetUserEnum ("/.:", ... )
+                This returns all DSS users in the local cell.
+
+Example 3: Scoped to a resource domain.
+
+                NetUserEnum ("//resdom_1", ... )
+                This returns all the users associated with resource domain resdom_1.
+
+                NetUserEnum ("//bldg901@/ ... /devcell", ... )
+                This returns all the users in cell / ... /devcell associated
+                with resource domain //bldg901.
+
+</PRE>
+
+<P>
+<B>OTHGRPS/OTHALIAS/OTHUSERS</B>
+<P>
+These special entries provide a way for enumeration APIs to indicate that
+information outside of the scope is available. For example, NetGroupGetUsers
+returns all of the users in resdom 1 that are members of GRP1 when (<I>//resdom_1,
+...</I> ) is used and GRP1 is represented as ... . It is possible there
+could be other users in the group which are not actually part of the resource
+domain. If this is the case, the API returns OTHUSERS.  This informs you
+that there are others in the group that are members of another resource
+domain.
+<P>
+The following table illustrates a sample DSS cell containing two resource
+domains:  deptJRAS and Development.     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+<BR>
+    ³ Table 2. Sample DSS Cell (/ ... /samplecell)          ³
+<BR>
+    ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+    ³     RESOURCE DOMAIN:    ³     RESOURCE DOMAIN:    ³
+<BR>
+    ³       DEPTJRAS      ³      DEVELOPMENT      ³
+<BR>
+    ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+    ³               Users:               ³
+<BR>
+    ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+    ³ JANE  - Administrator     ³ JANE  - User          ³
+<BR>
+    ³ JOE  - User, print-operator  ³ JACK  - Administrator     ³
+<BR>
+    ³ JACK  - User          ³ SUSAN - User          ³
+<BR>
+    ³                ³                ³
+<BR>
+    ³                ³                ³
+<BR>
+    ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+    ³               Groups:               ³
+<BR>
+    ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+    ³ o  GRP1            ³ o  CODERS           ³
+<BR>
+    ³   -  JANE          ³   -  JANE          ³
+<BR>
+    ³   -  JACK          ³   -  JOE          ³
+<BR>
+    ³ o  GRP2            ³   -  dceuser        ³
+<BR>
+    ³                ³ o  TESTERS          ³
+<BR>
+    ³                ³ o  GRP2            ³
+<BR>
+    ³                ³                ³
+<BR>
+    ³                ³                ³
+<BR>
+    ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+    ³               Servers:              ³
+<BR>
+    ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+    ³ S1               ³ DEVSRV             ³
+<BR>
+    ³                ³                ³
+<BR>
+    ³ Alias:    UTILITIES     ³ Alias:    COMPILER      ³
+<BR>
+    ³ Application: LOTUS 1-2-3    ³ Application: IPMD       ³
+<BR>
+    ³                ³                ³
+<BR>
+    ³                ³                ³
+<BR>
+    ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+    ³             Non-DSS Users             ³
+<BR>
+    ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+    ³ o  Non-DSS Users       ³                ³
+<BR>
+    ³   -  cell_admin       ³                ³
+<BR>
+    ³                ³                ³
+<BR>
+    ³                ³                ³
+<BR>
+    ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+    ³             Non-DSS Groups             ³
+<BR>
+    ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+    ³ o  laser_users        ³                ³
+<BR>
+    ³   -  cell_admin       ³                ³
+<BR>
+    ³   -  JANE          ³                ³
+<BR>
+    ³                ³                ³
+<BR>
+    ³                ³                ³
+<BR>
+    ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+Here are several examples of scoping rules and the return of OTHGRPS and
+OTHUSERS.  These actions also apply to OTHALIAS.
+<P>
+
+<PRE>Examples:
+
+1) Enumerate the users in resource domain deptJRAS.
+          NetUserEnum("//deptJRAS", ...) or NetUserEnum("\\\\S1", ...)
+          API will return JANE, JOE, and JACK.
+
+2) Enumerate the users in resource domain Development.
+          NetUserEnum("//Development", ...) or NetUserEnum("\\\\DEVSRV", ...)
+          API will return JANE, JACK, and SUSAN.
+
+3) Enumerate the users in the local cell.
+          NetUserEnum("/ ... /samplecell", ...) or NetUserEnum("/.:", ...)
+          API will return JANE, JOE, JACK, SUSAN.
+
+4) Enumerate the groups in the cell in which JOE is a member.
+          NetUserGetGroups("/ ... /samplecell", "JOE", ...)
+          API will return CODERS.
+
+5) Enumerate the groups in resource domain deptJRAS in which JOE is a member.
+          NetUserGetGroups("//deptJRAS","JOE", ...) or
+          NetUserGetGroups("\\\\S1","JOE", ...)
+          This API returns, OTHGRPS.  JOE is not a member of any groups
+          in resource domain deptJRAS. OTHGRPS is returned to indicate
+          that JOE is a member of groups outside of the resource domain.
+
+6) Enumerate the groups in the local cell in which JANE is a member.
+          NetUserGetGroups("/.:","JANE", ...) or
+          NetUserGetGroups("/ ... /samplecell","JANE", ... )
+          This API returns GRP1, CODERS and OTHGRPS.  OTHGRPS is returned
+          because JANE is a member of laser-users, which is not a valid
+          name for a DSS group.
+</PRE>
+
+<P>
+DSS provides expanded capabilities with the existing Net APIs by expanding
+the valid values for<I> pszTarget</I>.  However, if an application must
+run on non-DSS<!-- entering slot 13 --> clients, you should either not use
+the new forms or determine what system is running the application and dynamically
+use the correct value.
+
+<P><HR>
+
+<A HREF="011_L3_DSSAPIStrategy.html">[Back: DSS API Strategy]</A> <BR>
+<A HREF="013_L3_DCEandtheManagedObje.html">[Next: DCE and the Managed Object Class Library]</A> 
+</BODY>
+</HTML>

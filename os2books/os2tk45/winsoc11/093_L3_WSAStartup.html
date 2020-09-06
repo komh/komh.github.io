@@ -1,0 +1,279 @@
+<HTML>
+<HEAD>
+<TITLE>WSAStartup()</TITLE>
+</HEAD>
+<BODY>
+<H1>WSAStartup()</H1><!-- entering slot 115 -->
+<P>
+<B>Description</B>
+<P>
+
+<PRE>#include &lt;winsock.h&gt;</PRE>
+ 
+<P>
+<B>int PASCAL FAR WSAStartup ( WORD</B><I> wVersionRequired</I><B>, LPWSADATA
+</B><I>lpWSAData</I><B> );</B><!-- lm: 0x2 1 -->
+<UL>
+<P>
+<I>wVersionRequired</I><!-- lm: 0x11 3 -->
+<UL> The highest version of Windows
+Sockets API support that the caller can use. The high order byte specifies
+the minor version (revision) number; the low-order byte specifies the major
+version number.<!-- lm: 0x2 1 -->
+</UL><I> lpWSAData</I><!-- lm: 0x11 3 -->
+<UL> A
+pointer to the<B> WSADATA</B> data structure that is to receive details
+of the Windows Sockets implementation.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Remarks</B>
+<P>
+This function<B> must</B> be the first Windows Sockets function called by
+an application or DLL.  It allows an application to specify the version
+of Windows Sockets API required and to retrieve details of the specific
+Windows Sockets implementation.  The application may only issue further
+Windows Sockets API functions after a successful<B> WSAStartup()</B> invocation.
+
+<P>
+In order to support future Windows Sockets implementations and applications
+which may have functionality differences from Windows Sockets 1.1, a negotiation
+takes place in<B> WSAStartup()</B>.  The caller of<B> WSAStartup()</B> and
+the Windows Sockets DLL indicate to each other the highest version that
+they can support, and each confirms that the other's highest version is
+acceptable.  Upon entry to<B> WSAStartup()</B>, the Windows Sockets DLL
+examines the version requested by the application.  If this version is higher
+than the lowest version supported by the DLL, the call succeeds and the
+DLL returns in<I> wHighVersion</I> the highest version it supports and in
+<I>wVersion</I> the minimum of its high version and<I> wVersionRequested.
+</I>The Windows Sockets DLL then assumes that the application will use<I> wVersion.
+</I> If the<I> wVersion</I> field of the<B> WSADATA</B> structure is unacceptable
+to the caller, it should call <A HREF="088_L3_WSACleanup.html">WSACleanup()
+</A>and either search for another Windows Sockets DLL or fail to initialize.
+
+<P>
+This negotiation allows both a Windows Sockets DLL and a Windows Sockets
+application to support a range of Windows Sockets versions.  An application
+can successfully utilize a Windows Sockets DLL if there is any overlap in
+the version ranges.  The following chart gives examples of how<B> WSAStartup()
+</B>works in conjunction with different application and Windows Sockets
+DLL versions:
+<P>
+
+<PRE><B>App versions DLL Versions </B><I>wVersionRequested wVersion wHighVersion </I>End Result------------ ------------ ----------------- -------- ------------ ----------
+1.1          1.1          1.1               1.1      1.1          use 1.1
+
+1 . 0   1 . 1        1 . 0            1 . 1                  1 . 0        1 . 0            use   1 . 0
+1 . 0            1 . 0   1 . 1        1 . 0                  1 . 0        1 . 1            use   1 . 0
+1 . 1            1 . 0   1 . 1        1 . 1                  1 . 1        1 . 1            use   1 . 1
+
+1 . 1            1 . 0            1 . 1                  1 . 0        1 . 0            App   fails
+
+1 . 0            1 . 1            1 . 0                  - - -        - - -            NotSupp
+
+1 . 0   1 . 1        1 . 0   1 . 1        1 . 1                  1 . 1        1 . 1            use   1 . 1
+
+1 . 1   2 . 0        1 . 1            2 . 0                  1 . 1        1 . 1            use   1 . 1
+2 . 0            1 . 1            2 . 0                  1 . 1        1 . 1            App   fails
+</PRE>
+
+<P>
+The following code fragment demonstrates how an application which supports
+only version 1.1 of Windows Sockets makes a<B> WSAStartup()</B> call:
+<P>
+
+<PRE>WORD wVersionRequested;
+WSADATA wsaData;
+int err;
+
+wVersionRequested = MAKEWORD( 1, 1 );
+
+err = WSAStartup( wVersionRequested, &amp;wsaData );
+if ( err ]= 0 ) {
+    /* Tell the user that we couldn't find a useable */
+    /* winsock.dll.                                  */
+    return;
+}
+
+/* Confirm that the Windows Sockets DLL supports 1.1.*/
+/* Note that if the DLL supports versions greater    */
+/* than 1.1 in addition to 1.1, it will still return */
+/* 1.1 in wVersion since that is the version we      */
+/* requested.                                        */
+
+if ( LOBYTE( wsaData.wVersion ) ]= 1 !!
+         HIBYTE( wsaData.wVersion ) ]= 1 ) {
+    /* Tell the user that we couldn't find a useable */
+    /* winsock.dll.                                  */
+    WSACleanup( );
+    return;
+}
+
+/* The Windows Sockets DLL is acceptable.  Proceed.  */
+</PRE>
+
+<P>
+And this code fragment demonstrates how a Windows Sockets DLL which supports
+only version 1.1 performs the WSAStartup() negotiation:
+<PRE>/* Make sure that the version requested is &gt;= 1.1.   */
+/* The low byte is the major version and the high    */
+/* byte is the minor version.                        */
+
+if ( LOBYTE( wVersionRequested ) &lt; 1 !!
+     ( LOBYTE( wVersionRequested ) == 1 &amp;&amp;
+       HIBYTE( wVersionRequested ) &lt; 1 ) {
+    return WSAVERNOTSUPPORTED;
+}
+
+/* Since we only support 1.1, set both wVersion and  */
+/* wHighVersion to 1.1.                              */
+
+lpWsaData-&gt;wVersion = MAKEWORD( 1, 1 );
+lpWsaData-&gt;wHighVersion = MAKEWORD( 1, 1 );
+</PRE>
+
+<P>
+Once an application has made a successful<B> WSAStartup()</B> call, it may
+proceed to make other Windows Sockets API calls as needed.  When it has
+finished using the services of the Windows Sockets DLL, the application
+must call <A HREF="088_L3_WSACleanup.html">WSACleanup()</A> in order to
+allow the DLL to free any resources allocated by the Windows Sockets DLL
+for the application. Details of the actual Windows Sockets implementation
+are described in the WSAData structure defined as follows:
+<P>
+
+<PRE>struct WSAData {
+        WORD            wVersion;
+        WORD            wHighVersion;
+        char            szDescriptioníWSADESCRIPTION_<!-- entering slot 116 -->LEN+1ù;
+        char            szSystemStatusíWSASYSSTATUS_LEN+1ù;
+        unsigned short  iMaxSockets;
+        unsigned short  iMaxUdpDg;
+        char FAR *      lpVendorInfo
+};
+</PRE>
+
+<P>
+The members of this structure are:<!-- lm: 0x2 1 -->
+<P>
+<I>wVersion</I><!-- lm: 0x11 3 -->
+<UL> The version of the Windows Sockets
+specification that the Windows Sockets DLL expects the caller to use.<!-- lm: 0x2 1 -->
+</UL><I> wHighVersion
+</I><!-- lm: 0x11 3 -->
+<UL>The highest version of the Windows Sockets specification
+that this DLL can support (also encoded as above).  Normally this will be
+the same as wVersion.<!-- lm: 0x2 1 -->
+</UL><I> szDescription</I><!-- lm: 0x11 3 -->
+<UL> A
+null-terminated ASCII string into which the Windows Sockets DLL copies a
+description of the Windows Sockets implementation, including vendor identification.
+ The text (up to 256 characters in length) may contain any characters, but
+vendors are cautioned against including control and formatting characters:
+the most likely use that an application will put this to is to display it
+(possibly truncated) in a status message.<!-- lm: 0x2 1 -->
+</UL><I> szSystemStatus
+</I><!-- lm: 0x11 3 -->
+<UL>A null-terminated ASCII string into which the
+Windows Sockets DLL copies relevant status or configuration information.
+ The Windows Sockets DLL should use this field only if the information might
+be useful to the user or support staff: it should not be considered as an
+extension of the szDescription field.<!-- lm: 0x2 1 -->
+</UL><I> iMaxSockets
+</I><!-- lm: 0x11 3 -->
+<UL>The maximum number of sockets which a single
+process can potentially open. A Windows Sockets implementation may provide
+a global pool of sockets for allocation to any process; alternatively it
+may allocate per-process resources for sockets.  The number may well reflect
+the way in which the Windows Sockets DLL or the networking software was
+configured.  Application writers may use this number as a crude indication
+of whether the Windows Sockets implementation is usable by the application.
+ For example, an X Windows server might check iMaxSockets when first started:
+if it is less than 8, the application would display an error message instructing
+the user to reconfigure the networking software.  (This is a situation in
+which the szSystemStatus text might be used.)  Obviously there is no guarantee
+that a particular application can actually allocate iMaxSockets sockets,
+since there may be other Windows Sockets applications in use.<!-- lm: 0x2 1 -->
+</UL><I> iMaxUdpDg
+</I><!-- lm: 0x11 3 -->
+<UL>The size in bytes of the largest UDP datagram
+that can be sent or received by a Windows Sockets application.  If the implementation
+imposes no limit, iMaxUdpDg is zero.  In many implementations of Berkeley
+sockets, there is an implicit limit of 8192 bytes on UDP datagrams (which
+are fragmented if necessary).  A Windows Sockets implementation may impose
+a limit based, for instance, on the allocation of fragment reassembly buffers.
+ The minimum value of iMaxUdpDg for a compliant Windows Sockets implementation
+is 512.  Note that regardless of the value of iMaxUdpDg, it is inadvisable
+to attempt to send a broadcast datagram which is larger than the Maximum
+Transmission Unit (MTU) for the network.  (The Windows Sockets API does
+not provide a mechanism to discover the MTU, but it must be no less than
+512 bytes.)<!-- lm: 0x2 1 -->
+</UL><I> lpVendorInfo</I><!-- lm: 0x11 3 -->
+<UL> A
+far pointer to a vendor-specific data structure.  The definition of this
+structure (if supplied) is beyond the scope of this specification.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+An application may call<B> WSAStartup()</B> more than once if it needs to
+obtain the WSAData structure information more than once.  However, the<I> wVersionRequired
+</I>parameter is assumed to be the same on all calls to<B> WSAStartup()</B>;
+that is, an application cannot<!-- entering slot 117 --> change the version
+of Windows Sockets it expects after the initial call to<B> WSAStartup().
+</B>
+<P>
+There must be one <A HREF="088_L3_WSACleanup.html">WSACleanup()</A> call
+corresponding to every<B> WSAStartup()</B> call to allow third-party DLLs
+to make use of a Windows Sockets DLL on behalf of an application.  This
+means, for example, that if an application calls<B> WSAStartup()</B> three
+times, it must call <A HREF="088_L3_WSACleanup.html">WSACleanup()</A> three
+times.  The first two calls to <A HREF="088_L3_WSACleanup.html">WSACleanup()
+</A>do nothing except decrement an internal counter; the final <A HREF="088_L3_WSACleanup.html">WSACleanup()
+</A>call does all necessary resource deallocation for the task.
+<P>
+<B>Return Value</B>
+<P>
+<B>WSAStartup()</B> returns zero if successful.  Otherwise it returns one
+of the error codes listed below.  Note that the normal mechanism whereby
+the application calls <A HREF="089_L3_WSAGetLastError.html">WSAGetLastError()
+</A>to determine the error code cannot be used, since the Windows Sockets
+DLL may not have established the client data area where the "last error"
+information is stored.
+<P>
+<B>Notes For Windows Sockets Suppliers</B>
+<P>
+Each Windows Sockets application<B> must</B> make a<B> WSAStartup()</B> call
+before issuing any other Windows Sockets API calls. This function can thus
+be utilized for initialization purposes.
+<P>
+Further issues are discussed in the notes for <A HREF="088_L3_WSACleanup.html">WSACleanup()</A>.
+
+<P>
+<B>Error Codes</B>
+<P>
+<!-- lm: 0x2 1 -->
+<P>
+WSASYSNOTREADY<!-- lm: 0x11 11 -->
+<UL> Indicates that the underlying network
+subsystem is not ready for network communication.<!-- lm: 0x2 1 -->
+</UL> WSAVERNOTSUPPORTED
+<!-- lm: 0x11 11 -->
+<UL>The version of Windows Sockets API support requested
+is not provided by this particular Windows Sockets implementation.<!-- lm: 0x2 1 -->
+</UL> WSAEINVAL
+<!-- lm: 0x11 11 -->
+<UL>The Windows Sockets version specified by the application
+is not supported by this DLL.<!-- lm: 0x2 1 -->
+</UL> 
+<P>
+<B>See Also</B>
+<P>
+<A HREF="065_L3_send.html">send()</A><B>,</B> <A HREF="066_L3_sendto.html">sendto()</A><B>,
+</B><A HREF="088_L3_WSACleanup.html">WSACleanup()</A>
+<P>
+
+
+<P><HR>
+
+<A HREF="092_L3_WSASetLastError.html">[Back: WSASetLastError()]</A> <BR>
+<A HREF="094_L3_WSAUnhookBlockingHoo.html">[Next: WSAUnhookBlockingHook()]</A> 
+</BODY>
+</HTML>

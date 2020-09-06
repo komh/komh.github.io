@@ -1,0 +1,57 @@
+<HTML>
+<HEAD>
+<TITLE>Conversion To / From Unicode</TITLE>
+</HEAD>
+<BODY>
+<H1>Conversion To / From Unicode</H1><!-- entering slot 163 -->
+<P>
+Conversion To / From Unicode
+<P>
+As previously described, DBCS codepage definition is not always the same
+between Windows and OS/2.  From this reason, the mapping to and from Unicode
+is slightly different between the two.  This results in the difference of
+the converted character to/from Unicode by<I> MultiByteToWideChar</I> and
+<I>WideCharToMultiByte</I> API for some cases.
+<P>
+From programmer's point of view, the difference in 0x00 - 0x7F range has
+a very important meaning.  On Windows, code point 0x5C and 0x7E in a DBCS
+codepage is converted to U005C and U007E respectively. In other words, on
+Windows, code point below 0x80 is c onverted to Unicode by just adding 0x00
+at its top regardless what graphic symbol is assigned to it.  (For example,
+0x5C in Japanese and Korean codepage is Yen and Won respectively, but it
+is converted to U005C whose definition is Unicode backslash.)  On the other
+hand, on OS/2, 0x5C is converted to U00A5 in Japanese codepage and U20A9
+in Korean codepage.  But, fortunately, on OS/2, the modifier<I> path=yes/no
+</I>can be specified for UCONV object and programs can control the conversion
+for 0x5C and 0x7E characters.  From this fact, it is considered that Windows
+architect has decided to take program code compatibility, while OS/2 architect
+has decided to take both graphic symbol compatibility and program code compatibility,
+at least for code point below 0x80.
+<P>
+For Unicode conversion to/from code point below 0x80, Open32 keeps compatibility
+with Windows because it is highly possible that internationalized Windows
+software may assume such conversion, especially for path string parsing
+and C source code parsing.  To accomplish this conversion, Open32 always
+specifies<I> path=yes</I> modifier for UCONV object.  This modifier makes
+effect on code point 0x5C and 0x7E and Unicode code point U005C and U007E
+as follows.
+<P>
+
+<PRE> ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+ ³    path =yes        ³    path =  no       ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄ´
+ ³ CP = 932  ³ Unicode ³ CP = 932  ³ Unicode ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄ´
+ ³ 0x5C      ³ U005C   ³ 0x5C      ³ U00A5   ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄ´
+ ³ 0x7E      ³ U007E   ³ 0x5C      ³ U203E   ³
+ ÀÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+
+<P><HR>
+
+<A HREF="154_L4_DDEML.html">[Back: DDEML]</A> <BR>
+<A HREF="156_L4_OutputofUnicodeChara.html">[Next: Output of Unicode Character]</A> 
+</BODY>
+</HTML>

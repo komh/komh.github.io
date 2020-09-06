@@ -1,0 +1,107 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Generate random numbers avoiding duplicates</TITLE>
+</HEAD>
+<BODY>
+<H1>Generate random numbers avoiding duplicates</H1><!-- entering slot 554 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* sample code for the random number generator routine */
+do forever
+  call LineOut, 'Random number generator'
+  call LineOut,  ''
+  call LineOut,  'Enter "" to leave'
+
+  call Charout,  'Enter min:   '
+  parse pull min
+  if min = '' then
+    leave
+
+  call Charout,  'Enter max:   '
+  parse pull max
+  if max = '' then
+    leave
+
+  call Charout,  'Enter count: '
+  parse pull count
+  if count = '' then
+    leave
+
+  call LineOut , 'The result is: ' RandomNumbers( min, max, count )
+
+end /* do forever */
+
+exit 0
+
+/* ------------------------------------------------------------------ */
+/* function: Generate n random numbers avoiding duplicates            */
+/*                                                                    */
+/* usage:    resultStr = RandomNumbers( min, max, count )             */
+/*                                                                    */
+/* where:    min - lower limit for the numbers                        */
+/*           max - upper limit for the numbers                        */
+/*           count - no of random numbers                             */
+/*                                                                    */
+/* returns:  The random numbers in a string separated by blanks       */
+/*           or 'ERROR:' in case of a parameter error                 */
+/*                                                                    */
+/* note:     The limitations for the random function of the used      */
+/*           REXX interpreter apply to RandomNumbers also             */
+/*                                                                    */
+/* source:   Found in a public news group                             */
+/*                                                                    */
+RandomNumbers: PROCEDURE
+  parse arg min, max, count
+
+                    /* install a local error handler                  */
+  errorResult = 'ERROR:'
+  signal on syntax Name RandomNumberError
+
+  select
+
+     when ( datatype( min, 'N' ) &lt;&gt; 1 | datatype( max, 'N' ) &lt;&gt; 1 ) | ,
+          ( min &gt;= max ) | ( datatype( count, 'N' ) &lt;&gt; 1 ) | ,
+          count &lt; 0 then
+     do
+                    /* invalid parameter                              */
+       resStr = errorResult
+     end /* when */
+
+     when ( max - min &lt; count ) then
+     do
+                    /* invalid parameter (leads to an endless loop)   */
+       resStr = errorResult
+     end /* when */
+
+     otherwise
+     do
+       resStr =  ' '
+
+       do until words( resStr ) = count
+         i = random( min, max )
+         resStr = overlay( i,resStr,i*3)
+       end /* do until ... */
+
+     end /* otherwise */
+
+  end /* select */
+
+return space( resStr )
+
+                    /* exit handler for syntax errors                 */
+RandomNumberError:
+return errorResult
+</PRE>
+
+<P>
+
+
+<P><HR>
+
+<A HREF="529_L3_Convertadecimalnumbe.html">[Back: Convert a decimal number into a system based n]</A> <BR>
+<A HREF="531_L2_Miscusefulroutines.html">[Next: Misc. useful routines]</A> 
+</BODY>
+</HTML>

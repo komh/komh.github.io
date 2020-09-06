@@ -1,0 +1,69 @@
+<HTML>
+<HEAD>
+<TITLE>Mutual Exclusion (Mutex) Semaphores</TITLE>
+</HEAD>
+<BODY>
+<H1>Mutual Exclusion (Mutex) Semaphores</H1><!-- entering slot 150 -->
+<P>
+A mutual exclusion (mutex) semaphore protects resources (such as files,
+data in memory, and peripheral devices) from simultaneous access by several
+processes. Mutex semaphores enable threads to serialize their access to
+resources. It does so by preventing the processes from concurrently executing
+the sections of code through which access is made. These sections of code
+are called critical sections. For example, a mutex semaphore could be used
+to prevent two or more threads from simultaneously writing to the same file
+on a disk.
+<P>
+Before a thread can execute a mutex-protected critical section, it must
+request and receive ownership of the mutex semaphore. Only the thread that
+has gained ownership of the mutex semaphore is permitted to perform operations
+on the protected resource. Only one thread at a time can own the mutex semaphore,
+and the owner thread retains ownership  until it finishes executing its
+critical section. When finished, the owner thread releases the mutex semaphore,
+enabling another thread to become the owner.
+<P>
+When a thread requests ownership of a mutex semaphore that is already owned,
+OS/2 blocks the thread. When more than one thread requests ownership of
+the same semaphore, OS/2 queues the requests and grants subsequent ownership
+based on the thread's priority and the order in which the requests were
+received.
+<P>
+If more than one thread is blocked on a<A><!-- external link: 1D DA C3 3B --> DosRequestMutexSem
+</A>request, then ownership is given to the thread that has the highest
+priority level. If more than one of the waiting threads have the same priority
+level, then FIFO ordering is used to determine which thread is unblocked
+and given ownership of the semaphore.
+<P>
+For example, both thread 1 and thread 2 must write information to the same
+disk file. Thread 1 claims ownership of an agreed-upon mutex semaphore and
+starts writing its information to the file. If thread 2 also requests ownership
+of the semaphore, it will be blocked. When thread 1 has finished writing
+to the file, it releases the semaphore. OS/2 then unblocks thread 2 and
+designates it as the new owner of the semaphore so that it can write to
+the file.
+<P>
+During process termination, after delivery of process-termination exceptions
+and unwind exceptions, if any threads in the process aside from Thread 1
+(the main thread) own a mutex semaphore, ownership of the semaphore (and
+therefore, the shared resource) passes to Thread 1. This gives Thread 1
+a last chance to clean up the semaphore and the shared resource before the
+process ends. If Thread 1 ends without releasing the semaphore, all threads
+that are currently waiting on ownership of the semaphore will be unblocked
+with the SEM_OWNER_DIED return code. Any thread that attempts to open it
+or request ownership of the semaphore will receive a SEM_OWNER_DIED return
+code.
+<P>
+The recommended way to clean up semaphores, and other resources, is for
+each thread, especially Thread 1, to have an exception handler to handle
+clean up during process termination (the XCPT_PROCESS_TERMINATE or XCPT_ASYNC_PROCESS_TERMINATE
+exceptions). When it is not possible to register an exception handler for
+a thread, (a DLL, for example, must de-register its exception handlers when
+it returns control to the thread that called it), you should add a clean
+up routine to the exit list of the process.
+
+<P><HR>
+
+<A HREF="141_L3_EventSemaphores.html">[Back: Event Semaphores]</A> <BR>
+<A HREF="143_L3_MultipleWaitMuxwaitS.html">[Next: Multiple Wait (Muxwait) Semaphores]</A> 
+</BODY>
+</HTML>

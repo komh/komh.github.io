@@ -1,0 +1,77 @@
+<HTML>
+<HEAD>
+<TITLE>Linking at Runtime</TITLE>
+</HEAD>
+<BODY>
+<H1>Linking at Runtime</H1><!-- entering slot 815 -->
+<P>
+So far, the examples in this chapter have used load-time dynamic linking.
+With load-time linking, OS/2 loads the DLL containing the imported functions
+when it loads the EXE file.  If it cannot find the necessary DLL, it terminates
+the application and reports the error.
+<P>
+Run-time dynamic linking permits an application to load a DLL into memory
+when it is required, and to remove the DLL when it is no longer needed.
+The application uses the DosLoadModule function to load the DLL into memory
+(if it is not loaded already).  If the system cannot find the DLL, the application
+receives an error value and can take appropriate action. For example, the
+application might use another DLL or search another directory.
+<P>
+Once the application has loaded the DLL, it can use the DosQueryProcAddr
+function to obtain a pointer to the required function (or functions). The
+application then can use the function.  When the DLL is no longer required,
+the application can use the DosFreeModule function to remove the DLL from
+memory.  If there are other applications using the DLL, it remains in memory
+until the last application frees the DLL.
+<P>
+An application can specify a full path for the run-time DLL. If you specify
+the full path name, you can have two DLLs with the same name loaded at the
+same time, as in C:\OS2\DLLFILE.DLL and C:\OS2\DLL\DLLFILE.DLL. If the path
+is not specified, OS/2 assumes the DLL has the extension .DLL and looks
+for the file in the directories specified by the LIBPATH environment variable.
+
+<P>
+The following figure uses the run-time dynamic-linking functions to access
+the myPuts function in the MYPUTS.DLL dynamic link library.
+<PRE>    #define INCL_DOSMODULEMGR
+    #include &lt;os2.h&gt;
+
+    VOID (* EXPENTRY myPuts) (PSZ);
+
+    VOID main(VOID)
+    {
+        HMODULE hmod;
+        ULONG ulErr;
+        UCHAR szFailName[CCHMAXPATH];
+
+        ulErr = DosLoadModule(szFailName,          /* failed module name */
+            sizeof(szFailName),                    /* size of buffer     */
+            "myputs",                              /* name of DLL        */
+            &amp;hmod);                                /* module handle here */
+
+        if (ulErr)
+            DosExit(EXIT_PROCESS, 1);
+
+        ulErr = DosQueryProcAddr(hmod,    /* DLL module handle           */
+            0,                            /* function ordinal value      */
+            "myPuts",                     /* function name               */
+            (PFN *) &amp;myPuts);             /* address of function pointer */
+
+        if (!ulErr) {
+
+            /* We can use the function now. */
+
+            myPuts("does it work?");
+
+            DosFreeModule(hmod);                 /* frees the DLL module */
+        }
+    }
+</PRE>
+
+
+<P><HR>
+
+<A HREF="798_L3_CreatinganInitializa.html">[Back: Creating an Initialization/Termination Function]</A> <BR>
+<A HREF="800_L2_ProtectedMemoryUse.html">[Next: Protected Memory Use]</A> 
+</BODY>
+</HTML>

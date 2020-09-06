@@ -1,0 +1,106 @@
+<HTML>
+<HEAD>
+<TITLE>About Exception Management</TITLE>
+</HEAD>
+<BODY>
+<H1>About Exception Management</H1><!-- entering slot 828 -->
+<P>
+A multitasking operating system must manage applications carefully. A serious
+error (such as an attempt to access protected memory) occurring in one application
+cannot be permitted to damage any other application in the system. To manage
+errors that might damage other applications, OS/2 defines a class of error
+conditions called exceptions and defines default actions for those errors.
+
+<P>
+When an exception occurs, the default action taken by OS/2 is usually to
+terminate the application causing the exception (unless the application
+has registered its own exception handling routines). In some cases, when
+the exception can safely be ignored, execution is allowed to continue.
+<P>
+Rather than having OS/2 default action occur, an application can register
+its own<I> exception handlers</I> routines. An exception handler routine
+could be written to correct certain error conditions-when these error conditions
+occur, the thread's exception handler gets the exception, corrects the condition,
+and the thread continues executing rather than being terminated immediately
+by OS/2. OS/2's default action is taken if there are no user-defined exception
+handling routines or if all user-defined routines return without handling
+the exception.
+<P>
+An application can use<A><!-- external link: 1D E6 C3 4E --> DosSetExceptionHandler
+</A>to register an exception handling routine.<A><!-- external link: 1D E6 C3 4E --> DosSetExceptionHandler
+</A>takes a pointer to an <A HREF="181_L2_EXCEPTIONREGISTRATIO.html">EXCEPTIONREGISTRATIONRECORD
+</A>data structure as its only argument. The first field in this data structure
+is a pointer to the previous exception handler in the chain. This field
+is maintained by OS/2 and must never be modified by an application. The
+second field is a pointer to the exception handling routine that will be
+registered by OS/2.
+<P>
+A single exception handler can be used to handle all the exceptions that
+you choose to handle. It is not necessary to have a separate exception handler
+for each exception.
+<P>
+Once an exception handling routine is registered, the system will notify
+it when an exception occurs. OS/2 sends synchronous exceptions only to the
+thread causing the exception. An application must register an exception
+handler for each thread that is handling exceptions. When OS/2 terminates
+an application, however, a process-termination exception is sent to all
+threads used by the application to be terminated. When the user presses
+Ctrl+Break, an asynchronous signal exception is sent only to Thread 1, the
+main thread, of the executing process.
+<P>
+The exception handling routine is passed the following four parameters that
+provide exception-specific information:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<A HREF="184_L2_EXCEPTIONREPORTRECOR.html">EXCEPTIONREPORTRECORD</A><!-- lm: 0x11 4 -->
+<UL> Describes
+the exception and its parameters. The first field of this data structure
+contains the number of the exception that occurred.<!-- lm: 0x2 1 -->
+</UL> <A HREF="181_L2_EXCEPTIONREGISTRATIO.html">EXCEPTIONREGISTRATIONRECORD
+</A><!-- lm: 0x11 4 -->
+<UL>The <A HREF="181_L2_EXCEPTIONREGISTRATIO.html">EXCEPTIONREGISTRATIONRECORD
+</A>data structure used to initially register the exception handler. This
+is a microprocessor-specific value.<!-- lm: 0x2 1 -->
+</UL> ContextRecord
+<!-- lm: 0x11 4 -->
+<UL>Describes the machine state at the time the exception
+occurred.<!-- lm: 0x2 1 -->
+</UL> DispatcherContext<!-- lm: 0x11 4 -->
+<UL> Contains
+state information on nested exception and collided unwinds. This information
+must not be modified by the application.<!-- lm: 0x2 1 -->
+</UL>Details of the parameters and data structures can be found in <A HREF="823_L2_ExceptionHandlerInte.html">Exception
+Handler Interface</A>.
+<P>
+OS/2 places the exception handlers for each thread in an<I> exception handler
+chain</I>. Registering an exception handler adds it to the head of the chain.
+
+<P>
+When an application registers an exception handler, the exception handler
+is added to the head of the chain. If the application calls a routine in
+a dynamic link library (DLL), the DLL might register an exception handler
+in case there is an exception while its code is executing; the DLL deregisters
+the exception handler before returning control to the application. The DLL's
+exception handler would be ahead of the application's exception handler
+in the chain.
+<P>
+Exception handlers in the chain are notified of an exception in Last-In-First-Out
+(LIFO) order. Thus, if an exception occurs while your thread is executing,
+the exception handler for your thread is notified of the exception first.
+If your exception handler chooses to handle the exception, the earlier exception
+handlers in the chain never see the exception. If your exception handler
+chooses not to handle the exception, it is passed along to the next earlier
+exception handler in the chain. If no exception handler in the chain chooses
+to handle the exception, OS/2 takes the default action for the exception.
+
+<P>
+If an exception happens while DLL code is executing, and if the DLL's exception
+handler chooses to handle the exception, your application's exception handlers
+will never be aware it.
+
+<P><HR>
+
+<A HREF="810_L1_ExceptionManagement.html">[Back: Exception Management]</A> <BR>
+<A HREF="812_L3_SystemExceptions.html">[Next: System Exceptions]</A> 
+</BODY>
+</HTML>

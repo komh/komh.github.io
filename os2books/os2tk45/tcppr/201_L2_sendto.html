@@ -1,0 +1,184 @@
+<HTML>
+<HEAD>
+<TITLE>sendto()</TITLE>
+</HEAD>
+<BODY>
+<H1>sendto()</H1><!-- entering slot 227 -->
+<P>
+The socket call sends data on a socket.
+<P>
+<B>Syntax</B>
+<PRE>#include &lt;types.h&gt;
+#include &lt;sys\socket.h&gt;
+int sendto(<I>s</I>, <I>msg</I>, <I>len</I>, <I>flags</I>, <I>to</I>, <I>tolen</I>)
+int <I>s</I>;
+char *<I>msg</I>;
+int <I>len</I>;
+int <I>flags</I>;
+struct sockaddr *<I>to</I>;
+int <I>tolen</I>;
+</PRE>
+
+<P>
+<B>Parameters</B><!-- lm: 0x2 0 -->
+<P>
+<I>s</I><!-- lm: 0x11 2 -->
+<UL> Socket descriptor.<!-- lm: 0x2 0 -->
+</UL><I> msg
+</I><!-- lm: 0x11 2 -->
+<UL>Pointer to the buffer containing the message
+to transmit.<!-- lm: 0x2 0 -->
+</UL><I> len</I><!-- lm: 0x11 2 -->
+<UL> Length
+of the message in the buffer pointed to by the<I> msg</I> parameter.<!-- lm: 0x2 0 -->
+</UL><I> flags
+</I><!-- lm: 0x11 2 -->
+<UL>Allows the sender to control the message transmission.
+Set this parameter to 0, or to one or more of the following flags. If you
+specify more than one flag, use the logical OR operator (|) to separate
+them. Setting this parameter is supported only for sockets in the internet
+domain.<!-- lm: 0x2 2 -->
+<P>
+MSG_DONTROUTE<!-- lm: 0x12 27 -->
+<UL> The SO_DONTROUTE socket option is
+turned on for the duration of the operation. This is usually used only by
+diagnostic or routing programs.<!-- lm: 0x2 2 -->
+</UL> MSG_DONTWAIT<!-- lm: 0x12 27 -->
+<UL> Do
+not wait for resources during this call.<!-- lm: 0x2 2 -->
+</UL> MSG_EOF
+<!-- lm: 0x12 27 -->
+<UL>Indicates that the sending of data on the connection
+is complete. This flag is effective on T/TCP connections only.<!-- lm: 0x2 2 -->
+</UL> MSG_OOB
+<!-- lm: 0x12 27 -->
+<UL>Sends out-of-band data on the socket.<!-- lm: 0x2 2 --><!-- lm: 0x2 0 -->
+</UL><I> to
+</I><!-- lm: 0x11 2 -->
+<UL>Pointer to a sockaddr structure (buffer) containing
+the destination address.<!-- lm: 0x2 0 -->
+</UL><I> tolen</I><!-- lm: 0x11 2 -->
+<UL> Size
+in bytes of the buffer pointed to by the<I> to</I> parameter.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>Description</B>
+<P>
+This call sends data on the socket with descriptor<I> s</I>. The sendto()
+call applies to connected or unconnected sockets. For unconnected datagram
+and raw sockets, the sendto() call sends data to the specified destination
+address. For stream and sequenced packet sockets the destination address
+is ignored.
+<P>
+To broadcast on a socket, first issue a setsockopt() call using the SO_BROADCAST
+option to gain broadcast permissions.
+<P>
+Provide the address of the target using the<I> to</I> parameter. Specify
+the length of the message with the<I> tolen</I> parameter. If the message
+is too long to pass through the underlying protocol, the error SOCEMSGSIZE
+is returned and the message is not transmitted.
+<P>
+If the sending socket has no space to hold the message to be transmitted,
+the sendto() call blocks the message, unless the socket is in a nonblocking
+I/O mode.
+<P>
+Use the select() call to determine when it is possible to send more data.
+
+<P>
+Datagram sockets are<I> connected</I> by calling connect().  This identifies
+the peer to send/receive the datagram.  Once a datagram socket is connected
+to a peer, you may still use the sendto() call but a destination address
+cannot be included.
+<P>
+To change the peer address when using connected datagram sockets, issue
+a connect() call with a null address.  Specifying a null address on a connected
+datagram socket removes the peer address specification.  You can then either
+issue a sendto() call specifying a different destination address or issue
+a connect() call to connect to a different peer. For more information on
+connecting datagram sockets and specifying null addresses, see <A HREF="183_L2_connect.html">Datagram
+or Raw Sockets</A>.
+<P>
+If the<I> to</I> parameter is specified and this sendto() call was preceded
+by a connect() call, the<I> dst</I> parameter must be NULL. If not NULL,
+the error SOCEISCONN is returned and the message is not sent. If the<I> to
+</I>parameter is specified and this sendto() call was not preceded by a
+connect() call, this sendto() call results in socket<I> s</I> being connected
+to<I> dst</I>, the message being sent, and socket<I> s</I> being disconnected
+from<I> dst</I>.
+<P>
+<B>Return Values</B>
+<P>
+When successful, the number of bytes of data sent is returned.  Successful
+completion does not guarantee delivery of the data to the receiver. The
+return value -1 indicates an error was detected on the sending side. You
+can get the specific error code by calling sock_errno() or psock_errno().
+<!-- lm: 0x2 0 -->
+<P>
+<B>Error Code</B><!-- lm: 0x2 24 -->
+<UL><B>Description</B><!-- lm: 0x2 0 -->
+</UL>SOCENOTSOCK<!-- lm: 0x12 24 -->
+<UL>The<I>s</I>parameterisnotavalidsocketdescriptor
+.<!-- lm: 0x2 0 -->
+</UL><!-- entering slot 228 -->SOCEFAULT<!-- lm: 0x12 24 -->
+<UL>Usingthe<I>msg</I>and<I>len</I>parameterswouldresultinanattempttoaccessmemoryoutsidethecaller
+' saddressspace .<!-- lm: 0x2 0 -->
+</UL>SOCEINVAL<!-- lm: 0x12 24 -->
+<UL>The<I>tolen</I>parameterisnotthesizeofavalidaddressforthespecifiedaddressfamily
+.<!-- lm: 0x2 0 -->
+</UL>SOCEISCONN<!-- lm: 0x12 24 -->
+<UL>Thiscallwasprecededbyaconnect
+( )call ,the<I>to</I>parameterofthiscallisspecified ,butthe<I>dst</I>parameterisnotNULL
+.<!-- lm: 0x2 0 -->
+</UL>SOCEMSGSIZE<!-- lm: 0x12 24 -->
+<UL>Themessagewastoobigtobesentasasingledatagram
+.<!-- lm: 0x2 0 -->
+</UL>SOCENOBUFS<!-- lm: 0x12 24 -->
+<UL>Nobufferspaceisavailabletosendthemessage
+.<!-- lm: 0x2 0 -->
+</UL>SOCEWOULDBLOCK<!-- lm: 0x12 24 -->
+<UL>The<I>s</I>parameterisinnonblockingmodeandthedatacannotbesentwithoutblocking
+,ortheSO _ SNDTIMEOoptionhasbeensetforsocket<I>s</I>andthetimeoutexpiredbeforeanydatawassent
+.<!-- lm: 0x2 0 -->
+</UL>SOCENOTCONN<!-- lm: 0x12 24 -->
+<UL>Thesocketisnotconnected
+.<!-- lm: 0x2 0 -->
+</UL>SOCEDESTADDRREQ<!-- lm: 0x12 24 -->
+<UL>Destinationaddressrequired
+.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>Related Calls</B><!-- lm: 0x2 5 -->
+<UL>
+<P>
+<A HREF="186_L2_getsockopt.html">getsockopt()</A><!-- lm: 0x2 5 --> <A HREF="192_L2_readv.html">readv()
+</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="193_L2_recv.html">recv()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="194_L2_recvfrom.html">recvfrom()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="195_L2_recvmsg.html">recvmsg()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="197_L2_select.html">select()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="198_L2_send.html">send()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="200_L2_sendmsg.html">sendmsg()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="202_L2_setsockopt.html">setsockopt()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="203_L2_shutdown.html">shutdown()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="205_L2_sock_errno.html">sock_errno()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="206_L2_socket.html">socket()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="223_L2_writev.html">writev()</A><!-- lm: 0x2 0 -->
+</UL>
+
+<P><HR>
+
+<A HREF="200_L2_sendmsg.html">[Back: sendmsg()]</A> <BR>
+<A HREF="202_L2_setsockopt.html">[Next: setsockopt()]</A> 
+</BODY>
+</HTML>

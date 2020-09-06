@@ -1,0 +1,148 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>GpiBitBlt - Remarks</TITLE>
+</HEAD>
+<BODY>
+<H1>GpiBitBlt - Remarks</H1><!-- entering slot 77 -->
+<P>
+A rectangle of bit-map image data is copied from a bit map selected into
+a device context associated with the source presentation space, to a bit
+map selected into a device context associated with the target presentation
+space. Alternatively, either presentation space may be associated with a
+device context that specifies a suitable raster device, for example, the
+screen.
+<P>
+<B>Note: </B> In either case, both source and target device contexts must
+apply to the same physical device. It is an error if this device does not
+support raster operations.
+<P>
+Unless the device is a<I> banded</I> printer, both source and target may
+refer to the same presentation space. If so, the copy is nondestructive
+when source and target rectangles overlap.
+<P>
+A rectangle can be specified in device coordinates, for both source and
+target. These rectangles are noninclusive; that is, they include the left
+and lower boundaries in device space, but not the right and upper boundaries.
+ Thus, if the lower-left maps to the same device pel as the upper-right,
+that rectangle is considered to be empty.
+<P>
+If the upper-right source point is specified, and the source and target
+rectangles are of different sizes, stretching, or compressing, or both,
+of the data occurs.<I> flOptions</I> specifies how eliminated rows or columns
+of bits are to be treated if compression occurs.  Note that the pattern
+data is never stretched or compressed.
+<P>
+The following current attributes of the target presentation space are used
+(other than for converting between monochrome and color, as described below):
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Area color<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Area background color<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Pattern set<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Pattern symbol.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The color values are used in conversion between monochrome and color data.
+ This is the only format conversion performed by this function.  The conversions
+are:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Output of a monochrome pattern to a color device.
+
+<P>
+In this instance, the pattern is converted first to a color pattern using
+the current area colors:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->source 1s -&gt; area foreground color<!-- lm: 0x2 8 --> -<!-- lm: 0x2 11 -->
+<UL>source
+0s -&gt; area background color.<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>Copying
+from a monochrome bit map to a color bit map (or device).
+<P>
+The source bits are converted as follows:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->source 1s -&gt; image foreground color<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->source 0s -&gt; image background color.<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>Copying
+from a color bit map to a monochrome bit map (or device).<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->The image will be grey scaled under the current operation
+of the device drivers, and the colors will be shades of grey corresponding
+to a mapping scheme that the device driver uses. This behavior may vary
+from one printer to another, depending on the printer's capabilities.
+<P>
+The only variance from this grey-scaling is that pure white (for example,
+backgrounds) prints as black and pure black (for example, text) prints as
+white.<!-- lm: 0x2 6 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Note: </B> In all of the above instances (except where the source image
+background color is used) it is the attributes of the<I> target</I> presentation
+space that are used.
+<P>
+If the mix (<I>lRop</I>) does not call for a pattern, the pattern set and
+pattern symbol are not used. If it does not require a source (this is not
+valid when<I> flOptions</I> is in the range 1 through 3),<I> hpsSource</I> is
+not required and must be null. <B> Sx1,Sy1</B> is also ignored in this instance.
+
+<P>
+Neither the source nor the pattern is required when a bit map, or part of
+a bit map, is to be cleared to a particular color.
+<P>
+If the mix does require both source and pattern, a three-way operation is
+performed.
+<P>
+If a pattern is required, dithering may be performed for solid patterns
+in a color that is not available on the device; see <A HREF="2775_L2_GpiSetPattern.html">GpiSetPattern</A>.
+
+<P>
+Support for the BM_SRCTRANSPARENT and BM_DESTTRANSPARENT background mix
+options is provided by the CAPS_BACKGROUND_MIX_SUPPORT flags in DevQueryCaps.
+
+<P>
+Requesting the BM_SRCTRANSPARENT background mix option results in pels from
+the source bit map matching the presentaton space background color, to not
+be copied to the output bit map, effectively leaving those pels in the output
+unchanged. This provides for a transparent overlay function.
+<P>
+Requesting the BM_DESTTRANSPARENT background mix option results in a transfer
+such that pels from the source bit map will only be copied to<!-- entering slot 78 --> destination
+pels that match the presentation space background color. This provides for
+a transparent underlay function.
+<P>
+If any of the source data is not available (when, for example, the source
+presentation space is connected to a screen window, and the source rectangle
+is not totally visible), the contents of the unavailable parts are undefined.
+This can be checked with <A HREF="2100_L2_GpiRectVisible.html">GpiRectVisible
+</A>before calling this function.
+<P>
+This function is independent of drawing mode (see <A HREF="2548_L2_GpiSetDrawingMode.html">GpiSetDrawingMode</A>);
+the effect always occurs immediately, and it is not retained even if the
+drawing mode is<B> draw-and-retain</B> or<B> retain</B>. Its effect, however,
+is recorded in a metafile, but note that this is successful only if the
+metafile is replayed on a similar device, with<B> draw</B> drawing mode.
+
+<P>
+The current position in both source and target presentation spaces is unchanged
+by this function.
+<P>
+<B>Note: </B> This function must not be used when creating SAA-conforming
+metafiles; see "MetaFile Resolutions" in the<I> Presentation Manager Programming
+Reference</I> for more information.
+
+<P><HR>
+
+<A HREF="072_L2H_GpiBitBltParameters.html">[Back: GpiBitBlt - Parameters]</A> <BR>
+<A HREF="074_L2H_GpiBitBltErrors.html">[Next: GpiBitBlt - Errors]</A> 
+</BODY>
+</HTML>

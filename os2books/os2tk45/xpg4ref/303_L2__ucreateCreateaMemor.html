@@ -1,0 +1,256 @@
+<HTML>
+<HEAD>
+<TITLE>_ucreate - Create a Memory Heap</TITLE>
+</HEAD>
+<BODY>
+<H1>_ucreate - Create a Memory Heap</H1><!-- entering slot 329 -->_ucreate - Create a Memory Heap<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>#include &lt;umalloc.h&gt;
+Heap_t _ucreate(void *<I>block</I>, size_t <I>initsz</I>, int <I>clean</I>, int <I>memtype</I>,
+                 void *(*<I>getmore_fn</I>)(Heap_t, size_t *, int *)
+                 void  (*<I>release_fn</I>)(Heap_t, void *, size_t);
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Description
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+<LI>ucreate creates your own memory heap that you can allocate and free
+memory from, just like<I> The Developer's Toolkit</I> run-time heap.
+<P>
+Before you call _ucreate, you must first get the initial<I> block</I> of
+memory for the heap. You can get this block by calling an OS/2 function
+(such as DosAllocMem or or DosAllocSharedMem) or by statically allocating
+it. (See the<I> CP Programming Guide and Reference</I> for more information
+on the OS/2 functions.)
+<P>
+<B>Note: </B> You must also return this initial block of memory to the system
+after you destroy the heap.<!-- lm: 0x2 10 -->
+<P>
+
+<P>
+When you call _ucreate, you pass it the following parameters:<!-- lm: 0x2 10 -->
+<P>
+<I>block</I><!-- lm: 0x12 24 -->
+<UL> The pointer to the initial block you
+obtained.<!-- lm: 0x2 10 -->
+</UL><I> initsz</I><!-- lm: 0x12 24 -->
+<UL> The
+size of the initial block, which must be at least _HEAP_MIN_SIZE bytes (defined
+in &lt;malloc.h&gt;). If you are creating a fixed-size heap, the size must
+be large enough to satisfy all memory requests your program will make of
+it.<!-- lm: 0x2 10 -->
+</UL><I> clean</I><!-- lm: 0x12 24 -->
+<UL> The macro
+_BLOCK_CLEAN, if the memory in the block has been initialized to 0, or !_BLOCK_CLEAN,
+if the memory has not been touched.  This improves the efficiency of _ucalloc;
+if the memory is already initialized to 0, _ucalloc does not need to initialize
+it.
+<P>
+<B>Note: </B> DosAllocMem initializes memory to 0 for you.  You can also
+use memset to initialize the memory; however, memset also commits all the
+memory at once, an action that could slow overall performance.<!-- lm: 0x2 24 --><!-- lm: 0x2 10 -->
+</UL><I> memtype
+</I><!-- lm: 0x12 24 -->
+<UL>A macro indicating the type of memory in your
+heap: _HEAP_REGULAR (regular) or _HEAP_SHARED (shared). Shared memory can
+be shared between different processes. For more information on different
+types of memory, see the<I> VisualAge C++ Programming Guide</I> and the
+<I>Control Program Guide and Reference</I>.
+<P>
+<B>Note: </B> Make sure that when you get the initial block, you request
+the same type of memory that you specify for<I> memtype</I>.<!-- lm: 0x2 24 --><!-- lm: 0x2 10 -->
+</UL><I> getmore_fn
+</I><!-- lm: 0x12 24 -->
+<UL>A function you provide to get more memory from
+the system (typically using OS/2 functions or static allocation). To create
+a fixed-size heap, specify NULL for this parameter.<!-- lm: 0x2 10 -->
+</UL><I> release_fn
+</I><!-- lm: 0x12 24 -->
+<UL>A function you provide to return memory to
+the system (typically using DosFreeMem). To create a fixed-size heap, specify
+NULL for this parameter.<!-- lm: 0x2 10 -->
+</UL>
+<P>
+If you create a fixed-size heap, the initial block of memory must be large
+enough to satisfy all allocation requests made to it. Once the block is
+fully allocated, further allocation requests to the heap will fail.  If
+you create an expandable heap, the<I> getmore_fn</I> and<I> release_fn</I> allow
+your heap to expand and shrink dynamically.
+<P>
+When you call _umalloc (or a similar function) for your heap, if not enough
+memory is available in the block, it calls the<I> getmore_fn</I> you provide.
+Your<I> getmore_fn</I> then gets more memory from the system and adds it
+to the heap, using any method you choose.
+<P>
+Your<I> getmore_fn</I> must have the following prototype:
+<PRE>   void *(*getmore_fn)(Heap_t <I>uh</I>, size_t *<I>size</I>, int *<I>clean</I>);</PRE>
+where:  compact break=fit.<!-- lm: 0x2 10 -->
+<P>
+<I>uh</I><!-- lm: 0x2 18 -->
+<UL> Is the heap to get memory for.<!-- lm: 0x2 10 -->
+</UL><I> size
+</I><!-- lm: 0x2 18 -->
+<UL>Is the size of the allocation request passed
+by _umalloc. You probably want to return enough memory at a time to satisfy
+several allocations; otherwise, every subsequent allocation has to call
+<I>getmore_fn</I>. You should return multiples of 64K (the smallest size
+that DosAllocMem returns). Make sure you update the<I> size</I> parameter
+if you return more than the original request.<!-- lm: 0x2 10 -->
+</UL><I> clean
+</I><!-- lm: 0x2 18 -->
+<UL>Within<I> getmore_fn</I>, you must set this
+variable<!-- entering slot 330 --> either to _BLOCK_CLEAN, to indicate that
+you initialized the memory to 0, or to !_BLOCK_CLEAN, to indicate that the
+memory is untouched.<!-- lm: 0x2 10 -->
+</UL>
+<P>
+<B>Note: </B> Make sure your<I> getmore_fn</I> allocates the right type
+of memory for the heap.<!-- lm: 0x2 10 -->
+<P>
+
+<P>
+When you call _uheapmin to coalesce the heap or _udestroy to destroy it,
+these functions call the<I> release_fn</I> you provide to return the memory
+to the system. function.
+<P>
+Your<I> release_fn</I> must have the following prototype:
+<PRE>   void (*release_fn)(Heap_t <I>uh</I>, void *<I>block</I>, size_t <I>size</I>);</PRE>
+
+<P>
+The heap<I> uh</I> the block is from, the<I> block</I> to be returned, and
+its<I> size</I> are passed to<I> release_fn</I> by _uheapmin or _udestroy.
+
+<P>
+For more information about creating and using heaps, see the "Managing Memory"
+in the<I> VisualAge C++ Programming Guide</I>.<!-- lm: 0x2 1 -->
+</UL> Returns
+
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+If successful, _ucreate returns a pointer to the heap created. If errors
+occur, _ucreate returns NULL.<!-- lm: 0x2 1 -->
+</UL> Example Code
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+The following example uses _ucreate to create an expandable heap. The functions
+for expanding and shrinking the heap are get_fn and release_fn. The program
+then opens the heap and performs operations on it, and then closes and destroys
+the heap.
+<PRE>#define  INCL_DOSMEMMGR             /* Memory Manager values */
+#include &lt;os2.h&gt;
+#include &lt;bsememf.h&gt;                /* Get flags for memory management  */
+#include &lt;stdlib.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;umalloc.h&gt;
+
+static void *get_fn(Heap_t usrheap, size_t *length, int *clean)
+{
+   void *p;
+
+   /* Round up to the next chunk size */
+   *length = ((*length) / 65536) * 65536 + 65536;
+   *clean = _BLOCK_CLEAN;
+   DosAllocMem(&amp;p, *length, PAG_COMMIT | PAG_READ | PAG_WRITE);
+   return (p);
+}
+
+static void release_fn(Heap_t usrheap, void *p, size_t size)
+{
+   DosFreeMem(p);
+   return;
+}
+
+int main(void)
+{
+   void    *initial_block;
+   APIRET  rc;
+   Heap_t  myheap;
+   char    *ptr;
+
+   /* Call DosAllocMem to get the initial block of memory */
+   if (0 != (rc = DosAllocMem(&amp;initial_block, 65536,
+                              PAG_WRITE | PAG_READ | PAG_COMMIT))) {
+      printf("DosAllocMem error: return code = %ld\n", rc);
+      exit(EXIT_FAILURE);
+   }
+</PRE>
+
+<PRE>   /* Create an expandable heap starting with the block declared earlier */
+   if (NULL == (myheap = _ucreate(initial_block, 65536, _BLOCK_CLEAN,
+                                  _HEAP_REGULAR, get_fn, release_fn))) {
+      puts("_ucreate failed.");
+      exit(EXIT_FAILURE);
+   }
+   if (0 != _uopen(myheap)) {
+      puts("_uopen failed.");
+      exit(EXIT_FAILURE);
+   }
+
+   /* Force user heap to grow */
+   ptr = _umalloc(myheap, 100000);
+
+   _uclose(myheap);
+
+   if (0 != _udestroy(myheap, _FORCE)) {
+      puts("_udestroy failed.");
+      exit(EXIT_FAILURE);
+   }
+   if (0 != (rc = DosFreeMem(initial_block))) {
+      printf("DosFreeMem error: return code = %ld\n", rc);
+      exit(EXIT_FAILURE);
+   }
+   return 0;
+}
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Related Information
+<P>
+<!-- lm: 0x2 10 -->
+<UL><!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 --><A HREF="300_L2__uaddmemAddMemorytoa.html"><LI>uaddmem
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="301_L2__ucallocReserveandIn.html"><LI>ucalloc
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="302_L2__ucloseCloseHeapfrom.html"><LI>uclose
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="305_L2__udestroyDestroyaHea.html"><LI>udestroy
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="307_L2__uheapminReleaseUnus.html"><LI>uheapmin
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="311_L2__umallocReserveMemor.html"><LI>umalloc
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="317_L2__uopenOpenHeapforUse.html"><LI>uopen
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="046_L2_Differentiatingbetwe.html">Differentiating
+between Memory Management Functions</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><LI>Managing Memory" in the<I> VisualAge C++ Programming
+Guide</I><!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="302_L2__ucloseCloseHeapfrom.html">[Back: _uclose - Close Heap from Use]</A> <BR>
+<A HREF="304_L2__udefaultChangetheDe.html">[Next: _udefault - Change the Default Heap]</A> 
+</BODY>
+</HTML>

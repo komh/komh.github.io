@@ -1,0 +1,100 @@
+<HTML>
+<HEAD>
+<TITLE>Segment Register Association</TITLE>
+</HEAD>
+<BODY>
+<H1>Segment Register Association</H1><!-- entering slot 808 -->
+<P>
+A<B><I> Segment-Register-Association</B></I> establishes an assembly-time
+association between a <A HREF="128_L3_ProcessorRegisters.html"><I>Segment-Register
+</I></A>and an expression that resolves to a <A HREF="168_L4_GroupName.html"><I>GroupName
+</I></A>or <A HREF="176_L4_SegmentName.html"><I>SegmentName</I></A>.  It
+allows the programmer to describe for the assembler what values are held
+in the segment registers at program run-time.
+<P>
+When the user program executes, all instructions that access memory do so
+through a particular segment register.  To generate the correct encoding
+for an instruction that accesses a memory location, the assembler must know
+which segment register will be used in the effective memory address.  In
+general, accessing a memory location from within a user program is done
+by referencing a named variable defined within a particular named segment.
+
+<P>
+Before accessing a named program variable (in a named memory segment), it
+is the programmer's responsibility to insure that the desired segment register
+actually references the correct physical segment at program run-time.  Unless
+the<B> ASSUME</B> directive is used to describe this association, the assembler
+has no way of knowing<I> which</I> segment register (if any) is addressing
+a named segment when a reference to a named variable contained therein is
+encountered.  In this situation, the programmer is forced to use the <A HREF="473_L4_SegmentOverrideOpera.html">Segment
+Override (: Operator)</A> in every instruction to "reach" the desired variable
+and cause the assembler to generate the proper instruction encoding.  The
+association established by the<B> ASSUME</B> directive allows the assembler
+to take over the task of verifying memory references and generating the
+appropriate instructions.
+<P>
+If you temporarily use a segment register to contain a value other than
+the segment or group identified in the<B> ASSUME</B> association, then you
+should reflect the change with a new<B> ASSUME</B> statement, or cancel
+the association with an<B> ASSUME xS:NOTHING</B> construct.
+<P>
+When the contents of a segment register are used for addressability, the
+register value should never contradict the association established for that
+register.
+<P>
+When the <A HREF="784_L3_MODELDefineProgramMe.html">.MODEL</A> directive
+is utilized and the program is designed to follow the conventions that it
+establishes, the<B> ASSUME</B> directive is no longer needed in most cases.
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B>Example</B><!-- lm: 0x2 11 -->
+<UL>
+<P>
+
+<PRE>Data  SEGMENT
+Stuff WORD 0
+Data  ENDS
+
+Code  SEGMENT
+      ASSUME NOTHING       ; Cancel all register assumptions
+      mov ax,Data          ; Load general-purpose register with segment frame,
+      mov DS,ax            ;   then establish addressablity through DS
+      mov ES,ax            ;   and ES.  The assembler doesn't "know" this yet
+      mov Stuff, 1         ; Error, can't reach Stuff
+      ASSUME ES:Data       ; Associate ES register with Data segment
+      add Stuff, bx        ; Now we can reach Stuff, but the assembler needs
+                           ;   to generate an ES override instruction byte
+      ASSUME DS:SEG Stuff  ; Expression to extract the segment value of Stuff
+                           ;   This has the same effect as ASSUME DS:Data
+                           ;   Now both DS and ES are associated with Data
+      add Stuff, cx        ; This time, the instruction doesn't need an
+                           ;   override byte because DS is the default
+                           ;   register for normal accesses to memory
+      ASSUME DS:NOTHING    ; Cancel the association between DS and Data
+      add Stuff, dx        ; Once again, the ES override is generated
+      add DS:Stuff, dx     ; Must use "force" if we want the default encoding
+Code  ends
+      end
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL><B>Warning</B>:<!-- lm: 0x2 11 -->
+<UL>
+<P>
+If an<B> ASSUME CS</B>:<A HREF="261_L2_ExpressionSyntax.html"><I>Expression
+</I></A>is placed before the code segment it is referencing, the assembler
+will ignore the<B> ASSUME</B>.  The<B> ASSUME CS</B>:<A HREF="261_L2_ExpressionSyntax.html"><I>Expression
+</I></A>statement must follow the<B> SEGMENT</B> definition statement of
+the code segment it is referencing.
+<P>
+The<B> ASSUME</B> statement for the<B> CS</B> register should be placed
+immediately following the code <A HREF="786_L3_SEGMENTOpenaProgramI.html">SEGMENT
+</A>statement, before any labels are defined in that code segment.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="797_L3_ASSUMEInformAssemble.html">[Back: ASSUME (Inform Assembler of Register Contents)]</A> <BR>
+<A HREF="799_L4_GeneralPurposeRegist.html">[Next: General-Purpose Register Association]</A> 
+</BODY>
+</HTML>

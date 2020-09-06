@@ -1,0 +1,135 @@
+<HTML>
+<HEAD>
+<TITLE>The MUX Wait</TITLE>
+</HEAD>
+<BODY>
+<H1>The MUX Wait</H1><!-- entering slot 196 -->
+<P>
+The last category of BlockIds to consider is the MUXWAIT. This has a BlockId
+of the form:
+<PRE>
+
+      fffdssss       where ssss is the slot id of the waiting thread.
+
+
+</PRE>
+
+<P>
+A MUXWAIT is a multiplex semaphore wait. The semaphore comprising the MUX
+list may be:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+RAMSEMs<!-- lm: 0x2 6 -->
+<P>
+SYSSEMs<!-- lm: 0x2 6 -->
+<P>
+32-bit Event &amp; Mutex SEMs<!-- lm: 0x2 1 -->
+</UL>
+<P>
+We will consider each of these in turn.
+<P>
+The first step is to format the<B> muxtable</B>. This comprises 9-byte entries.
++0x2 is the slot number of the waiter. +0x5 indicates the type of semaphore.
++5 is the semaphore handle, which is interpreted according to type as follows:
+<!-- lm: 0x2 1 -->
+<P>
+0x00<!-- lm: 0x2 11 -->
+<UL> Entry unused<!-- lm: 0x2 1 -->
+</UL> 0x01<!-- lm: 0x2 11 -->
+<UL> handle
+is offset of SYSSEM from selector 400<!-- lm: 0x2 1 -->
+</UL> 0x02<!-- lm: 0x2 11 -->
+<UL> Entry
+is a hob:offset of RAMSEM<!-- lm: 0x2 1 -->
+</UL> 0x03<!-- lm: 0x2 11 -->
+<UL> Entry
+is a physical address of a RAMSEM<!-- lm: 0x2 1 -->
+</UL> 0x04<!-- lm: 0x2 11 -->
+<UL> Entry
+points to a 32-bit Event SEM.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following shows an example formatted MUXTABLE. There are up to 255 entries,
+but in practise the entries in use are grouped at the beginning of the table.
+
+<PRE># db muxtable+(9*0) l90400:000048be c7 48 14 00 02 1a 07 be-00                      GH.....&gt;.
+# db muxtable+(9*1) l9
+0400:000048c7 d0 48 15 00 02 5c 07 be-00                      PH...\.&gt;.
+# db muxtable+(9*2) l9
+0400:000048d0 ff ff 15 00 02 78 07 be-00                      .....x.&gt;.
+# db muxtable+(9*3) l9
+0400:000048d9 e2 48 1f 00 02 58 07 fa-03                      bH...X.z.
+# db muxtable+(9*4) l9
+0400:000048e2 fd 48 1f 00 02 5c 07 fa-03                      }H...\.z.
+# db muxtable+(9*5) l9
+0400:000048eb c3 49 1f 00 02 50 07 fa-03                      CI...P.z.
+# db muxtable+(9*6) l9
+0400:000048f4 57 49 58 00 02 61 01 64-07                      WIX..a.d.
+# db muxtable+(9*7) l9
+0400:000048fd 06 49 1f 00 02 60 07 fa-03                      .I...`.z.
+# db muxtable+(9*8) l9
+0400:00004906 0f 49 1f 00 02 64 07 fa-03                      .I...d.z.
+# db muxtable+(9*9) l9
+0400:0000490f 18 49 1f 00 02 68 07 fa-03                      .I...h.z.
+# db muxtable+(9*a) l9
+0400:00004918 a8 49 1f 00 02 6c 07 fa-03                      (I...l.z.
+# db muxtable+(9*b) l9
+0400:00004921 2a 49 58 00 01 f0 53 00-00                      *IX..pS..
+# db muxtable+(9*c) l9
+0400:0000492a cc 49 30 00 03 02 a7 f1-00                      LI0...'q.
+# db muxtable+(9*d) l9
+0400:00004933 3c 49 1b 00 01 9c 53 00-00                      &lt;I....S..
+# db muxtable+(9*e) l9
+0400:0000493c be 48 1b 00 03 da a6 f1-00                      &gt;H...Z&amp;q.
+# db muxtable+(9*f) l9
+0400:00004945 4e 49 63 00 01 fc 53 00-00                      NIc..|S..
+# db muxtable+(9*10) l9
+0400:0000494e eb 48 63 00 01 32 54 00-00                      kHc..2T..
+# db muxtable+(9*11) l9
+0400:00004957 60 49 58 00 01 e4 53 00-00                      `IX..dS..
+# db muxtable+(9*12) l9
+0400:00004960 ba 49 58 00 01 ea 53 00-00                      :IX..jS..
+# db muxtable+(9*13) l9
+0400:00004969 72 49 57 00 01 ba 53 00-00                      rIW..:S..
+# db muxtable+(9*14) l9
+0400:00004972 7b 49 57 00 01 c0 53 00-00                      {IW..<!-- entering slot 197 -->@S..
+# db muxtable+(9*15) l9
+0400:0000497b 84 49 57 00 01 c6 53 00-00                      .IW..FS..
+# db muxtable+(9*16) l9
+0400:00004984 8d 49 57 00 01 cc 53 00-00                      .IW..LS..
+# db muxtable+(9*17) l9
+0400:0000498d 96 49 57 00 01 d2 53 00-00                      .IW..RS..
+# db muxtable+(9*18) l9
+0400:00004996 9f 49 57 00 01 d8 53 00-00                      .IW..XS..
+# db muxtable+(9*19) l9
+0400:0000499f f4 48 57 00 01 de 53 00-00                      tHW..^S..
+# db muxtable+(9*1a) l9
+0400:000049a8 b1 49 21 00 02 a8 07 fa-03                      1I!..(.z.
+# db muxtable+(9*1b) l9
+0400:000049b1 33 49 21 00 03 ee a6 f1-00                      3I!..n&amp;q.
+# db muxtable+(9*1c) l9
+0400:000049ba 45 49 58 00 01 f0 53 00-00                      EIX..pS..
+# db muxtable+(9*1d) l9
+0400:000049c3 d9 48 1f 00 02 54 07 fa-03                      YH...T.z.
+# db muxtable+(9*1e) l9
+0400:000049cc d5 49 00 00 00 00 00 00-00                      UI.......
+# db muxtable+(9*1f) l9
+0400:000049d5 de 49 00 00 00 00 00 00-00                      ^I.......
+# db muxtable+(9*20) l9
+0400:000049de e7 49 00 00 00 00 00 00-00                      gI.......
+# db muxtable+(9*21) l9
+0400:000049e7 f0 49 00 00 00 00 00 00-00                      pI.......
+# dp %%f1a6da l2
+</PRE>
+
+<P>
+In this example there are only semaphore types 0, 1, 2 and 3. We will illustrate
+unravelling each of these in turn. For type 4 see the later section on 32-Bit
+Semaphores.
+
+<P><HR>
+
+<A HREF="152_L5_BlockingonaRAMSEM.html">[Back: Blocking on a RAMSEM]</A> <BR>
+<A HREF="154_L6_TheSYSSEM.html">[Next: The SYSSEM]</A> 
+</BODY>
+</HTML>

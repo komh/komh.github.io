@@ -1,0 +1,152 @@
+<HTML>
+<HEAD>
+<TITLE>Virtual Memory Object Records</TITLE>
+</HEAD>
+<BODY>
+<H1>Virtual Memory Object Records</H1><!-- entering slot 160 -->
+<P>
+VMOBs are 16-byte records allocated contiguously in a table in system memory.
+Each table entry is numbered from 1 and is referred to as a memory object
+handle, or more simple as a<B> hob</B>. 
+<P>
+VMOBs are use to store information about the allocation request. Of particular
+interest are:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->The Requestor<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The Owner<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The Permissions<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The VMOB also has links to other related control blocks. Of these the important
+ones are:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+The associated VMAR,<!-- lm: 0x2 6 -->
+<P>
+the associated VMCOs,<!-- lm: 0x2 6 -->
+<P>
+and associated VMOBs.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+VMOB is formatted by using the KDB or DF<B> .MO</B> command.<B> .MO</B> takes
+either the handle or address or the VMOB as a parameter, or if no parameters
+are specified then the entire VMOB table is formatted.
+<PRE>##.mo hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 0001  0001 fec8  0000 fff1 0000  0000 00  00 00 00 vmob
+ 0002  0002 fec8  0000 ffe3 0000  0000 00  00 00 00 vmar
+ 0003  0003 fec8  0000 ffec 0000  0000 00  01 00 00 vmkrhrw
+ 0004  %fff13238  8000 ffe1 0000  0000 00  00 00 00 vmah
+ 0005  %fff13190  8000 ffe1 0000  0000 00  00 00 00 vmah
+ 0006  %fff0a891  8000 ffa6 0000  0000 00  00 00 00 mte       doscalls.dll
+ 0007  0006 0000  0000 ff6d 0000  0000 00  00 00 00 doshlp
+ 0008  0007 0000  0000 ffaa 0006  0000 00  00 00 00 os2krnl
+ 0009  0008 0000  0000 ffaa 0006  0000 00  00 00 00 os2krnl
+ 000a  0009 0000  0000 ffaa 0006  0000 00  00 00 00 os2krnl
+ 000b  000a 0000  0000 ffaa 0006  0000 00  00 00 00 os2krnl
+ 000c  000b 0000  0000 ffaa 0006  0000 00  00 00 00 os2krnl
+ 000d  000c 0000  0325 ffba 0000  0000 00  00 00 00 lock
+ 000e  000d 0000  0000 ffaa 0006  0000 00  00 00 00 os2krnl
+ 000f  000e 0000  0000 ffaa 0006  0000 00  00 00 00 os2krnl
+ 0010  008f 0000  402c 00ae 0115  0000 00  00 00 00 priv 0002 c:pmshell.exe
+ 0011  0010 0000  0000 ff37 0000  0000 00  00 00 00 romdata
+ 0012  0011 0000  0000 ffaa 0006  0000 00  00 00 00 os2krnl
+</PRE>
+
+<P>
+One VMOB is formatted per line with the hob in the left-hand column.
+<P>
+The owner is shown under the<B> own</B> column and is given as a hob that
+is associated with and uniquely identifies where the allocation is made
+from. For example:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+Memory dynamically allocated within a Private arena uses the handle of the
+PTDA (<B>hptda</B>) as the owner.
+<P>
+The PTDA has a number of characteristics that make it an ideal choice for
+an owner:<!-- lm: 0x2 11 -->
+<UL>
+<P>
+Each process has a unique PTDA<!-- lm: 0x2 11 -->
+<P>
+The PTDA is the central control block from which all information about a
+process is obtained.<!-- lm: 0x2 11 -->
+<P>
+Each PTDA is allocated from a unique memory object so has a unique hob,
+which defined to be the hptda.<!-- lm: 0x2 6 -->
+</UL> For storage allocated
+for a load module segment the module MTE handle (<B>hmte</B>) is used.
+<P>
+The MTE has a number of characteristics that make is an ideal choice for
+an owner:<!-- lm: 0x2 11 -->
+<UL>
+<P>
+Each loaded module is represented in the system by an unique MTE.<!-- lm: 0x2 11 -->
+<P>
+Each MTE is allocated from a unique memory object so has a unique associated
+hob, which is defined to be the hmte.<!-- lm: 0x2 6 --> <!-- lm: 0x2 6 -->
+</UL> Memory
+allocated in the shared arena which is not specific to a particular process
+uses the following conventions for owner:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->For DLL instance and global data the owner is the
+hmte of the owning DLL.<!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 11 -->For Giveable shared storage, the owner is (0xfff5).
+<!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 11 -->For Gettable shared storage, the owner is (0xfff6).
+<!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 11 -->For Giveable and Gettable shared storage, the owner
+is (0xfff7).<!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 11 -->For Named Shared Storage, the owner is (0xff82).
+<!-- lm: 0x2 6 -->
+</UL>See DosAllocSeg, DosGiveSeg, DosGetSeg and DosAllocSharedMem
+APIs in the Control Program Programming References for OS/2 1.x, 2.x and
+3.x.<!-- lm: 0x2 6 -->
+<P>
+Memory allocated or suballocated from the system arena uses an artificial
+system owner id (ffxx) that doesn'<!-- entering slot 161 -->tactuallycorrespondtoaVMOBbutisaconventionalhandleusedtoindicatethetypeofsystemobjectwhichhasbeenallocated
+.Anexamplethisishob1whichisthetableofVMOBs .<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The requestor's id is shown in the<B> hmte</B> column. This field is either:
+<!-- lm: 0x2 6 -->
+<UL>
+<P>
+The hmte of the module making the request.<!-- lm: 0x2 6 -->
+<P>
+An associated system object<!-- lm: 0x2 6 -->
+<P>
+zero where there is no associated requestor.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+To the right of each line appears a textual interpretation of the<B> own
+</B>and<B> hmte</B> fields.
+<P>
+The handle of the associated <A HREF="129_L4_VirtualMemoryArenaRe.html">VMAR
+</A>is shown in the<B> har</B> column.
+<P>
+Associated VMOB's that share the same virtual address (that is, instance
+data) are linked from the<B> hobnxt</B> field.
+<P>
+Not every VMOB is linked to an associated VMAR, as seen in hobs 4 and 5
+in the example. These are known as pseudo-objects. They are used for some
+small system control blocks that are allocated, as required, from system
+storage but are too small to warrant the overhead of the minimum allocation
+of 1 page, which an arena records implies. PTDAs and MTEs are the most frequently
+encountered pseudo-objects. The<B> va</B> field replaces the<B> har</B> and
+<B>hobnxt</B> and points directly at the object itself.
+
+<P><HR>
+
+<A HREF="129_L4_VirtualMemoryArenaRe.html">[Back: Virtual Memory Arena Records]</A> <BR>
+<A HREF="131_L4_TheVirtualMemoryCont.html">[Next: The Virtual Memory Context Record]</A> 
+</BODY>
+</HTML>

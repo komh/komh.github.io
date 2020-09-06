@@ -1,0 +1,733 @@
+<HTML XPOS=0% YPOS=BOTTOM WIDTH=100% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 00 00 08 00 11 64 00 64 00 --><TITLE>CMDLINE.CMD</TITLE>
+</HEAD>
+<BODY>
+<H1>CMDLINE.CMD</H1><!-- entering slot 953 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* BEGINNING OF CmdLine CODE BY ALBERT CROSBY                         */
+/*                                                                    */
+/*                                                                    */
+/*     CmdLine.CMD Version 1.0                                        */
+/*     (c) 1994 by Albert Crosby &lt;acrosby@comp.uark.edu&gt;              */
+/*                                                                    */
+/*     This code may be distributed freely and used in other programs.*/
+/*     Please give credit where credit is due.                        */
+/*                                                                    */
+/*     CmdLine.CMD is REXX code that creates a full featured version  */
+/*     of the OS/2 command line parser that may be called from your   */
+/*     programs.                                                      */
+/*                                                                    */
+/*     see also the <A HREF="905_L3_DocumentationforCMDL.html">Documentation</A>                                     */
+/*                                                                    */
+/*     bug corrections by Bernd Schemmer                              */
+/*                                                                    */
+/*     03.10.1994 /bs                                                 */
+/*       - changed variable "key" to "key1"                           */
+/*       - added variable "userDefinedKey"                            */
+/*     24.06.1995 /bs                                                 */
+/*       - added code to save the and load the history list           */
+/*       - added code to show an online help                          */
+/*     08.01.1996 /bs                                                 */
+/*       - added code to handle dropping of REXXUTIL functions        */
+/*                                                                    */
+/*                                                                    */
+/* This is a CmdLine function for REXX.  It supports                  */
+/*     *  OS/2 style command history. (1)                             */
+/*     *  Keeps insert state. (1)                                     */
+/*     *  Command line _can_ include control chars.                   */
+/*     *  Allows for "hidden" input, for passwords.                   */
+/*     *  A call can be restricted from accessing the history.        */
+/*     *  A call can be restricted from updating the history.         */
+/*     *  A predefined value can be given to extended keys. (1) (2)   */
+/*                                                                    */
+/* NOTE                                                               */
+/* (1) These functions work ONLY if CmdLine is included in the source */
+/*     file for your program.                                         */
+/* (2) Format: !history.nn="string" where nn is the DECIMAL           */
+/*     value for the second character returned when the extended      */
+/*     key is pressed.                                                */
+/*                                                                    */
+
+/* The following two lines are used in case CmdLine is called as an   */
+/* external function                                                  */
+
+parse source . . name
+if translate(filespec("name",name))="CMDLINE.CMD" then signal extproc
+
+CmdLine: procedure expose !history. !rexxUtilLoaded  (exposeList)
+extproc:  /* CmdLine called as an external proc or command line */
+
+/* Parameters can be any combination of                               */
+/* Hidden             Characters are displayed as "*", no history,    */
+/*                    not kept.                                       */
+/* Forget             Do not add the result of this call to the       */
+/*                    history list.                                   */
+/* No History         Do not allow access to the history list.        */
+/* Clear              Clear the history list with this call (no input */
+/*                    action made.)                                   */
+/*                    Also clears any predefined keys!                */
+/* Insert             Set insert mode ON.                             */
+/* Overwrite          Set overwrite mode OFF.                         */
+/* SameLine           Keep cursor on sameline after input.            */
+/*                    (Default off)                                   */
+/* Required           null values are not accepted. (Default off)     */
+/* Valid              Next parameter specifies the valid charachters  */
+/*                    (no translation) unless specified elsewhere. (1)*/
+/* Upper              Translate input to upper case. (1)              */
+/* Lower              Translate input to lower case. (1)              */
+/* Width              Next parameter specifies the maximum width. (1) */
+/* Autoskip           Do not wait for enter after <!-- entering slot 954 -->last char on a      */
+/*                    field with a width.                             */
+/* X                  Next parameter specifies the initial X (column) */
+/*                    position.                                       */
+/* Y                  Next parameter specifies the initial Y (row)    */
+/*                    position.                                       */
+/* Prompt             Displays the next parameter as a prompt in front*/
+/*                    of the entry field.                             */
+/*                                                                    */
+/* Only the first letter matters.  Enter each desired parameter       */
+/* seperated by commas.                                               */
+/*                                                                    */
+/* NOTES                                                              */
+/*    (1)  Upper, Lower, Width, and VALID preclude access to the      */
+/*         history list.                                              */
+/*                                                                    */
+/*                                                                    */
+hidden=0
+history=1
+keep=1
+sameline=0
+required=0
+reset=0
+valid=xrange()
+upper=0
+lower=0
+width=0
+autoskip=0
+
+/* ------------------------ RXT&amp;T v2.00 start ----------------------- */
+                   /* install a local error handler                   */
+signal on syntax Name cmdLineError
+
+/* ------------------------ RXT&amp;T v2.00 end ------------------------- */
+
+/* ------------------------ RXT&amp;T v1.70 start ----------------------- */
+
+if symbol( "!history.file" ) &lt;&gt; "VAR" | ,
+   value( "!history.file" ) = "" then
+  !history.file = "EREXXTRY.HST"
+
+/* ------------------------ RXT&amp;T v1.70 end ------------------------- */
+
+parse value SysCurPos() with x y
+do i=1 to arg()
+   cmd=translate(left(arg(i),1))
+   parm=""
+   if pos("=",arg(i))\=0 then
+      parse value arg(i) with ."="parm
+   select
+      when cmd="X" then
+         do
+         parse value SysCurPos() with x y
+         if parm="" then
+            do;i=i+1;parm=arg(i);end
+         if datatype(parm,"W") then
+            Call SysCurPos parm,y
+         end
+      when cmd="Y" then
+         do
+         parse value SysCurPos() with x y
+         if parm="" then
+            do;i=i+1;parm=arg(i);end
+         if datatype(parm,"W") then
+            Call SysCurPos x,parm
+         end
+      when cmd="T" then
+         do
+         if parm="" then
+            do;i=i+1;parm=arg(i);end
+         call charout, parm
+         end
+      when cmd="H" then
+         do
+         hidden=1
+         keep=0
+         history=0
+         end
+      when cmd="C" then
+         reset=1
+      when cmd="O" then
+         !history.insert=0
+      when cmd="I" then
+         !history.insert=1
+      when cmd="F" then
+         keep=0
+      when cmd="S" then
+         sameline=1
+      when cmd="R" then
+         required=1
+      when cmd="V" then
+         do
+         if parm="" then
+            do;i=i+1;parm=arg(i);end
+         valid=parm
+         history=0
+         keep=0
+         end
+      when cmd="U" then
+         do; upper=1; lower=0; history=0; keep=0; end
+      when cmd="L" then
+         do; upper=0; lower=1; history=0; keep=0; end
+      when cmd="A" then
+         autoskip=1
+      when cmd="W" then
+         do
+         if parm="" then
+            do;i=i+1;parm=arg(i);end
+         width=parm
+         if \datatype(width,"Whole") then width=0
+         if width&lt;0 then width=0
+         history=0
+         keep=0
+         end
+    otherwise nop
+    end
+end
+
+if width=0 then autoskip=0
+
+if reset then
+   do
+   drop !history.
+   return ""
+   end
+
+if symbol("!history.0")="LIT" then
+   !history.0=0
+if symbol("!history.insert")="LIT" then
+   !history.insert=1
+
+historical=-1
+key1=SysGetKey("NoEcho")
+word=""
+pos=0
+do forever /* while key1\=d2c(13)*/
+   userDefinedkey=0
+
+   if key1=d2c(13) then /* Enter key */
+      if required &amp; word="" then nop;
+      else leave
+   else if (key1=d2c(8)) then /* Backspace */
+      do
+      if length(word)&gt;0 then
+      do
+      word=delstr(word,pos,1)
+      call rubout 1
+      pos=pos-1
+      if pos&lt;length(word) then
+         do
+         if \hidden then call charout, substr(word,pos+1)||" "
+         else call charout, copies("*",length(substr(word,pos+1)))||" "
+         call charout, copies(d2c(8),length(word)-pos+1)
+         end
+      end
+      end
+   else if key1=d2c(27) then /* Escape */
+      do
+      if pos&lt;length(word) then
+         if \hidden then call charout, substr(word,pos+1)
+         else call charout, copies("*",length(substr(word,pos+1)))
+      call rubout length(word)
+      word=""
+      pos=0
+      end
+   else if key1=d2c(10) | key1=d2c(9) then /* Ctrl-Enter and TAB */
+      nop; /* Ignored */
+   else if key1=d2c(224) | key1=d2c(0) then /* Extended key handler */
+      do
+      key2=SysGetKey("NoEcho")
+      select
+
+/* ----------------------- RXT&amp;T v1.70 start ------------------------ */
+
+         when key2=d2c( 94 ) then                          /* CTRL-F1 */
+         do
+           call ShowKeys
+           word = ''
+           pos = 0
+           userDefinedKey = 1
+         end /* when */
+
+         when key2=d2c( 60 ) then                               /* F2 */
+         do
+                            /* save the history list                  */
+           call SLHist 'SAVE'
+           word = ''
+           pos = 0
+           userDefinedKey = 1
+         end /* when */
+
+         when key2=d2c( 85) then                          /* SHIFT-F2 */
+         do
+                            /* load the history list                  */
+           call SLHist 'LOAD'
+           word = ''
+           pos = 0
+           userDefinedKey = 1
+         end /* when */
+
+         when key2=d2c( 105 ) then                          /* ALT-F2 */
+         do
+                        /* append the history list                    */
+           call SLHist 'APPEND'
+           word = ''
+           pos = 0
+           userDefinedKey = 1
+         end /* when */
+
+         when key2=d2c( 95 ) then                          /* CTRL-F2 */
+         do
+                  /* change the current history file                  */
+           call SLHist 'FILE'
+           word = ''
+           pos = 0
+           userDefinedKey = 1
+         end /* when */
+
+         when key2=d2c( 107 ) then                          /* ALT-F4 */
+         do
+                  /* save the history list and exit                   */
+                  /* (without a warning if the list is empty          */
+           call SLHist 'SAVE', 'QUIET'
+           word = 'EXIT'
+           userdefinedkey = 1
+         end /* when */
+
+/* ------------------------ RXT&amp;T v1.70 end ------------------------- */
+
+         when key2=d2c(59) then /* F1 */
+            if (history) &amp; (!history.0&lt;&gt;0) then
+               do
+               if symbol("search")="LIT" then
+                  search=word
+               if symbol("LastFind")="LIT" then
+                  search=word
+               else if LastFind\=word
+                  then search=word
+               if historical=-1 then
+                  start=!history.0
+               else start=historical-1
+               if start=0 then start=!history.0
+               found=0
+               do i=start to 1 by -1
+                  if abbrev(!history.i,search) then
+                     do
+                     found=1
+                     historical=i
+                     LastFind=!history.i
+                     leave
+                     end
+               end
+               if found then
+                  do
+                  if pos&lt;length(word) then
+                     if \hidden then call charout, substr(word,pos+1)
+                     else call charout, copies("*",length(substr(word,pos+1)))
+                  call rubout length(word)
+                  word=!history.historical
+                  pos=length(word)
+                  if \hidden then call charout, word
+                  else call charout, copies("*",length(word))
+                  end
+               end
+         when key2=d2c(72) then /* Up arrow */
+            if (history) &amp; (!history.0&lt;&gt;0) then
+               do
+               if historical=-1 then
+                  historical=!history.0
+               else historical=historical-1
+               if historical=0 then
+                  historical=!history.0
+               if pos&lt;length(word) then
+                  if \hidden then call charout, substr(word,pos+1)
+                  else call charout, copies("*",length(substr(word,pos+1)))
+               call rubout length(word)
+               word=!history.historical
+               pos=length(word)
+               if \hidden then call charout, word
+               else call charout, copies("*",length(word))
+               end
+         when key2=d2c(80) then /* Down arrow */
+            if (history) &amp; (!history.0&lt;&gt;0) then
+               do
+               if historical=-1 then
+                  historical=1
+               else historical=historical+1
+               if historical&gt;!history.0 then
+                  historical=1
+               if pos&lt;length(word) then
+                  if \hidden then call charout, substr(word,pos+1)
+                  else call charout, copies("*",length(substr(word,pos+1)))
+               call rubout length(word)
+               word=!history.historical
+               pos=length(word)
+               if \hidden then call charout, word
+               else call charout, copies("*",length(word))
+               end
+         when key2=d2c(75) then /* Left arrow */
+            if pos&gt;0 then
+               do
+               call Charout, d2c(8)
+               pos=pos-1
+               end
+         when key2=d2c(77) then /* Right arrow */
+            if pos&lt;length(word) then
+               do
+               if \hidden then call Charout, substr(word,pos+1,1)
+               else call charout, "*"
+               pos=pos+1
+               end
+         when key2=d2c(115) then /* Ctrl-Left arrow */
+            if pos&gt;0 then
+               do
+               call charout, d2c(8)
+               pos=pos-1
+               do forever
+                  if pos=0 then leave
+                  if substr(word,pos+1,1)\==" " &amp; substr(word,pos,1)==" " then
+                        leave
+                  else
+                     do
+                     call charout, d2c(8)
+                     pos=pos-1
+                     end
+               end
+               end
+         when key2=d2c(116) then /* Ctrl-Right arrow */
+            if pos&lt;length(word) then
+               do
+               if \hidden then call Charout, substr(word,pos+1,1)
+               else call charout, "*"
+               pos=pos+1
+               do forever
+                  if pos=length(word) then
+                     leave
+                  if substr(word,pos,1)==" " &amp; substr(word,pos+1,1)\==" " then
+                     leave
+                  else
+                     do
+                     if \hidden then call Charout, substr(word,pos+1,1)
+                     else call charout, "*"
+                     pos=pos+1
+                     end
+               end
+               end
+         when key2=d2c(83) then /* Delete key */
+            if pos&lt;length(word) then
+               do
+               word=delstr(word,pos+1,1)
+               if \hidden then call Charout, substr(word,pos+1)||" "
+               else call Charout, copies("*",length(substr(word,pos+1)))||" "
+               call charout, copies(d2c(8),length(word)-pos+1)
+               end
+         when key2=d2c(82) then /* Insert key */
+            !history.insert=\!history.insert
+         when key2=d2c(79) then /* End key */
+            if pos&lt;length(word) then
+               do
+               if \hidden then call Charout, substr(word,pos+1)
+               else call Charout, copies("*",length(substr(word,pos+1)))
+               pos=length(word)
+               end
+         when key2=d2c(71) then /* Home key */
+            if pos\=0 then
+               do
+               call Charout, copies(d2c(8),pos)
+               pos=0
+               end
+         when key2=d2c(117) then /* Control-End key */
+            if pos&lt;length(word) then
+               do
+               call Charout, copies(" ",length(word)-pos)
+               call Charout, copies(d2c(8),length(word)-pos)
+               word=left(word,pos)
+               end
+         when key2=d2c(119) then /* Control-Home key */
+            if pos&gt;0 then
+               do
+               if pos&lt;length(word) then
+                  if \hidden then call charout, substr(word,pos+1)
+                  else call charout, copies("*",length(substr(word,pos+1)))
+               call rubout length(word)
+               word=substr(word,pos+1)
+               if \hidden then call Charout, word
+               else call Charout, copies("*",length(word))
+               call Charout, copies(d2c(8),length(word))
+               pos=0
+               end
+      otherwise
+
+         if history &amp; symbol("!history.key."||c2d(key2))\="LIT" then /* Is there a defined string? */
+            do
+               if pos&lt;length(word) then
+                  if \hidden then call charout, substr(word,pos+1)
+                  else call charout, copies("*",length(substr(word,pos+1)))
+               call rubout length(word)
+               i=c2d(key2)
+               word=!history.key.i
+               pos=length(word)
+               if \hidden then call charout, word
+               else call charout, copies("*",length(word))
+
+               userDefinedkey=1
+            end
+      end
+      end
+   else if width=0 | length(word)&lt;width then /* The key is a <!-- entering slot 955 -->normal key &amp; within width */
+      do
+      if upper then key1=translate(key1);
+      if lower then key1=translate(key1,"abcdefghijklmnopqrstuvwxyz","ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+      if pos(key1,valid)\=0 then
+         do;
+         if \hidden then call Charout, key1;
+         else call charout, "*"
+         if !history.insert then
+            word=insert(key1,word,pos);
+         else word=overlay(key1,word,pos+1)
+         pos=pos+1;
+         if pos&lt;length(word) then
+            do
+            if \hidden then
+               call Charout, substr(word,pos+1)
+            else call Charout, copies("*", length(substr(word,pos+1)))
+            call Charout, copies(d2c(8),length(word)-pos)
+            end
+         end
+      else beep(400,4)
+      end
+   if (autoskip &amp; length(word)=width) | userDefinedKey  then leave
+   key1=SysGetKey("NoEcho")
+end
+if \sameline then say
+if (keep) &amp; (word\=="") then
+   do
+   historical=!history.0
+   if word\=!history.historical then
+      do
+      !history.0=!history.0+1
+      historical=!history.0
+      !history.historical=word
+      end
+   end
+return word
+
+rubout: procedure
+arg n
+do i=1 to n
+   call Charout, d2c(8)||" "||d2c(8)
+end
+return
+/* END OF CmdLine CODE BY ALBERT CROSBY */
+
+/* ----------------------- RXT&amp;T v1.70 start ------------------------ */
+
+/* ------------------------------------------------------------------ */
+/* Function: Save or Load the history list or change the name of the  */
+/*           history file                                             */
+/*                                                                    */
+/* Usage:    SLHist [SAVE|APPEND|LOAD|FILE], {QUIET}                  */
+/*                                                                    */
+/*                                                                    */
+/* where:    SAVE   - save the history list to the history file       */
+/*                    (overwrite an existing file)                    */
+/*           APPEND - append the history list to the history file     */
+/*           LOAD   - load the histry list from the history file      */
+/*           FILE   - change the current history file                 */
+/*                                                                    */
+/*           QUIET  - suppress all mesages                            */
+/*                    This parameter is ignored, if the first         */
+/*                    parameter is FILE                               */
+/*                                                                    */
+SLHist: PROCEDURE expose !history.
+  parse upper arg action, quietMode
+
+  SIGNAL OFF NOTREADY
+
+  crLF = "0D0A"x
+
+  select
+
+    when action = "FILE" then
+    do
+      call lineOut, crLF || "The current history file is " || !history.file || "." ,
+                    crLF || "Enter the new name for the history file ("""" to abort):"
+      userInput = strip( lineIN() )
+      if userInput &lt;&gt; "" then
+      do
+        !History.file = userInput
+        call lineOut , "The history file is now " || !history.file || "."
+      end /* if userInput = "" then */
+      else
+        call lineOut, "History file not changed."
+    end /* when */
+
+    when !History.file = "" then
+    do
+      if quietMode &lt;&gt; "QUIET" then
+        call lineOut ,crLF || "No history file defined!"
+    end
+
+    when action = "SAVE" | action = "APPEND" then
+    do
+      if !history.0 = 0 then
+      do
+        if quietMode &lt;&gt; "QUIET" then
+          call LineOut , crLF ||  "Historylist is empty. No data saved."
+      end /* if !history.0 = 0 then */
+      else
+      do
+        if action = "SAVE" then
+        do
+                        /* delete an existing history file            */
+          if stream( !history.file, "c", "QUERY EXISTS" ) &lt;&gt; "" then
+            "@del " !history.file  "2&gt;NUL 1&gt;NUL"
+          actionMsg = "Saving"
+        end /* if action = "SAVE" then */
+        else
+          actionmsg = "Appending"
+
+        if quietMode &lt;&gt; "QUIET" then
+          call CharOut , crLF || actionmsg || " the history list to the file" ,
+                         crLF  !history.file || " ..."
+
+        do i = 1 to !history.0
+          if quietMode &lt;&gt; "QUIET" then
+            call CharOut , "."
+          call lineOut !history.file, !history.i
+        end /* do i = 1 to history.0 */
+
+                        /* close the file                             */
+        call stream !history.file, "c", "CLOSE"
+
+        if quietMode &lt;&gt; "QUIET" then
+          call lineOut, " done (" || i-1 || " commands written)."
+      end /* else */
+    end /* when */
+
+    when action = "LOAD" then
+    do
+      if stream( !history.file, "c", "QUERY EXISTS" ) = "" then
+      do
+        if quietMode &lt;&gt; "QUIET" then
+          call LineOut , crLF || "Historyfile " || ,
+                         !history.file || " not found!"
+      end /* if stream( ... */
+      else
+      do
+        if quietMode &lt;&gt; "QUIET" then
+          call CharOut , crLF || "Loading the history list from the file" ,
+                         crLF  !history.file || " ..."
+        !history.0 = 0
+
+        do i=1 while lines( !history.file ) &lt;&gt; 0
+          if quietMode &lt;&gt; "QUIET" then
+            call CharOut , "."
+          !history.i = lineIn( !history.file )
+        end /* do i=1 while lines( !history.file ) &lt;&gt; 0 */
+        !history.0 = i-1
+
+                        /* close the file                             */
+        call stream !history.file, "c", "CLOSE"
+
+        if quietMode &lt;&gt; "QUIET" then
+          call lineOut, "done (" || i-1 || " commands read)."
+
+      end /* else */
+    end /* when */
+
+    otherwise
+    do
+      if quietMode &lt;&gt; "QUIET" then
+        call lineOut,crLF || "Invalid call to SLHist!"
+    end /* otherwise */
+
+  end /* select */
+
+RETURN 0
+
+/* ------------------------------------------------------------------ */
+/* Function: Show a usage help for the new keys                       */
+/*                                                                    */
+/* Usage:    ShowKeys                                                 */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  -                                                        */
+/*                                                                    */
+ShowKeys:
+
+  crLF = "0D0A"x
+
+  call LineOut ,,
+   crLF || ,
+   "Keys for editing the command line: "                                    || crLF || ,
+   "  [Up]       Cycle to the previous entry in the history list"           || crLF || ,
+   "  [Down]     Cycle to the next entry in the history list"               || crLF || ,
+   "  [Left]     Move the cursor to the left"                               || crLF || ,
+   "  [Right]    Move the cursor to the right"                              || crLF || ,
+   "  [ESC]      Clear the input line"                                      || crLF || ,
+   "  [Home]     Moves the cursor to the beginning of the input line"       || crLF || ,
+   "  [End]      Moves the cursor to the end of the input line"             || crLF || ,
+   "  [^Home]    Erases from the cursor to the beginning of the input line" || crLF || ,
+   "  [^End]     Erases from the cursor to the end of the input line"       || crLF || ,
+   "  [Ins]      Toggles Insert/Typeover mode"                              || crLF || ,
+   "  [Del]      Deletes character under the cursor"                        || crLF || ,
+   "  [Bkspc]    Deletes the charcter in front of the cursor"               || crLF || ,
+   "  [^Left]    Moves to the beginning of the previous word"               || crLF || ,
+   "  [^Right]   Moves to the beginning of the next word"                   || crLF || ,
+   " "                                                                      || crLF || ,
+   "  [F2]       Save the history list (overwrite an existing file)"        || crLF || ,
+   "  [ALT-F2]   Save the history list (append to an existing file)"        || crLF || ,
+   "  [SHIFT-F2] Load the history list"                                     || crLF || ,
+   "  [CTRL-F2]  Change the history list file"                              || crLF || ,
+   "  [ALT-F4]   Save history list and exit <!-- entering slot 956 -->program"
+
+RETURN
+
+/* ------------------------ RXT&amp;T v1.70 end ------------------------- */
+
+/* ------------------------ RXT&amp;T v2.00 start ----------------------- */
+cmdLineError:
+                   /* error handler for syntax error                  */
+
+                   /* some program dropped the REXXUTIL function  --- */
+                   /* use old input routine again                     */
+  call LineOut , ""
+  call LineOut , "07"x || "Warning: Some program dropped the REXXUTIL functions!"
+  call LineOut , "07"x || "         Now using the old input routine again."
+  call LineOut , ""
+  call LineOut , "Execute 'SIGNAL Restart' to load the functions again."
+  call LineOut , ""
+
+  !rexxUtilLoaded = 0
+
+RETURN ""
+
+/* ------------------------ RXT&amp;T v2.00 end ------------------------- */
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="903_L2_ExtendtheprogramREXX.html">[Back: Extend the program REXXTRY.CMD]</A> <BR>
+<A HREF="905_L3_DocumentationforCMDL.html">[Next: Documentation for CMDLINE.CMD]</A> 
+</BODY>
+</HTML>

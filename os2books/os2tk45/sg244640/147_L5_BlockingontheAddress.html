@@ -1,0 +1,205 @@
+<HTML>
+<HEAD>
+<TITLE>Blocking on the Address of a Resource</TITLE>
+</HEAD>
+<BODY>
+<H1>Blocking on the Address of a Resource</H1><!-- entering slot 180 -->
+<P>
+The initial analysis of BlockIds that are linear addresses uses the<B> .M
+</B>command to determine ownership.
+<P>
+If we have appropriate symbols loaded,<B> LN</B> against the BlockId can
+also be very informative.
+<P>
+As mentioned in the previous section, for addresses to be effective BlockIds
+they must be unique and so are generally allocated from the system arena.
+ Most allocations from the system arena are 'labelled' with a system object
+Id.  If the .MO command is used against a system object Id it will display
+a meaningful mnemonic for the Owner Id.  In many cases the Mnemonic is for
+a system control block or buffer. BlockIds that address the beginning of
+a control block tend to be used for serialising updates to the control block.
+ There may be processes that a control block is associated with.  These
+are often serialised by using the address of a field within the control,
+that is specifically associated with the process.
+<P>
+A complete list of system object Ids may be found in the  under the Kernel
+Dubugger Command Reference under the <A HREF="361_L3_MOFormatMemoryObject.html">.MO
+command description.</A>
+<P>
+We now look at some examples:
+<P>
+<U><I>File System - Device Driver</I></U>
+<PRE># .pb41
+ Slot  Sta BlockID  Name     Type        Addr        Symbol
+ 0041  blk 04085ca7 DEMO1
+# ln 408:5ca7
+No Symbols Found
+# .m 408:5ca7
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0079 %fef1fa70 00000010 %7bf27000 129 0078 0077 0000 0000 007b 0000   sel=0408
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 007b  0079 0000  0324 ffa1 0000  0000 00  00 00 00 sft
+
+# .d sft 408:5ca7
+      sf_ref_count: 0000                        sfi_mode: 0092
+        sf_usercnt: 0000                        sfi_hVPB: 0000
+          reserved: 00                         sfi_ctime: 0000
+       sf_flags(2): 02c0:0000                  sfi_cdate: 0000
+         sf_devptr: #0928:001c                 sfi_atime: 0000
+            sf_FSC: #00c8:ff40                 sfi_adate: 0000
+          sf_chain: #0000:0000                 sfi_mtime: 3ce1
+            sf_MFT: ffffffff                   sfi_mdate: 1eb0
+sfdFAT_firFILEclus: 0000                        sfi_size: 00000000
+    sfdFAT_cluspos: 0000                    sfi_position: 000013c0
+    sfdFAT_lstclus: 0000                         sfi_UID: 0000
+     sfdFAT_dirsec: 00000000                     sfi_PID: 0012
+     sfdFAT_dirpos: 00                           sfi_PDB: 0000
+       sfdFAT_name: DEMODEV2                      sfi_selfsfn: 00b5
+   sfdFAT_EAHandle: 0000                      sfi_tstamp: 00
+          sf_plock: 0000                     sfi_DOSattr: 00
+      sf_NmPipeSfn: 0000
+       sf_codepage: 0000
+
+# .p41
+ Slot  Pid  Ppid Csid Ord  Sta <!-- entering slot 181 -->Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 0041  0012 000f 0012 0001 blk 0300 7bd19000 7bdfc218 7bddfc68 0ebc 13 DEMO1
+
+# .s41
+Current slot number: 0041
+
+# .r
+eax=00000000 ebx=00000002 ecx=00000000 edx=4d3409ea esi=d02f0021 edi=000009ea
+eip=00000134 esp=0000a424 ebp=0000a43e iopl=2 -- -- -- nv up ei pl nz ac po nc
+cs=000f ss=005f ds=005f es=004f fs=150b gs=0000  cr2=00000000  cr3=001ac000
+000f:00000134 8946fe         mov     word ptr [bp-02],ax           ss:a43c=0d16
+
+# u cs:ip-20
+000f:00000114 681f00         push    001f
+000f:00000117 682d00         push    002d
+000f:0000011a 0e             push    cs
+000f:0000011b e87c19         call    1a9a
+000f:0000011e 83c40a         add     sp,+0a
+000f:00000121 8e06ee09       mov     es,word ptr [09ee]
+000f:00000125 8b5ef8         mov     bx,word ptr [bp-08]
+000f:00000128 d1e3           shl     bx,1
+000f:0000012a 26ffb764d2     push    word ptr es:[bx+d264]
+000f:0000012f 9a0000ab1d     call    1dab:0000
+000f:00000134 8946fe         mov     word ptr [bp-02],ax
+000f:00000137 8e06ee09       mov     es,word ptr [09ee]
+
+# dg 1dab
+1dab  CallG32 Sel:Off=0148:00004414     DPL=3 P  DWC=1
+
+# ln 148:4414
+0148:00004414 OS2KRNL DOSCLOSE
+</PRE>
+ 
+<P>
+Slot 41 is waiting on BlockId 04085ca7. This is too low to be a linear address.
+We assume selector:offset.
+<P>
+.M 408:5ca7 reveals the owner to be<B> sft</B>. This is a System File Table
+structure.
+<P>
+The .D command will format STFs, so we do so using the BlockId as the SFT
+address.
+<P>
+This SFT represents a device driver called<B> DEMODEV2</B>. We can tell
+because there is no MFT pointer in the SFT and the flags indicate a device.
+
+<P>
+From the application side we unassemble back from the CS:IP.
+<P>
+The application has just issued a call-gate instruction.
+<P>
+Examination of the call-gate GDT descriptor show we were calling DOSCLOSE
+in the kernel.
+<P>
+We are waiting for the close to complete, possibly the device driver has
+not returned completion status to the last I/O request. 
+<P>
+<U><I>Named Pipes</I></U>
+<PRE>#.s 18
+Current slot number: 0018
+# .pb#
+ Slot  Sta BlockID  Name     <!-- entering slot 182 -->Type        Addr        Symbol
+ 0018# blk 06700012 EPWPSI
+#
+
+#.m 670:12
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 00a8 %fef1fe7a 00000010 %7b563000 129 00a7 00a9 0000 0000 00b4 0000   sel=0670
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 00b4  00a8 0000  0124 ff31 0000  0000 00  00 00 00 npipenp
+
+#.p#
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 0018# 000c 0000 000c 0001 blk 0200 7bc70000 7bd79964 7bd5b5f0 0ec8 00 EPWPSI
+
+# .r
+eax=00000000 ebx=00005552 ecx=00050000 edx=0000f020 esi=00000446 edi=00000302
+eip=000014bb esp=000063da ebp=000063de iopl=2 -- -- -- nv up ei pl nz na po nc
+cs=d01f ss=002f ds=beb7 es=0077 fs=150b gs=0000  cr2=00000000  cr3=001ac000
+d01f:000014bb c9             leave
+# u.cs:ip-10
+Expression error
+# u cs:ip-10
+d01f:000014ab c9             leave
+d01f:000014ac ca0a00         retf    000a
+DOSCALL1 DOSCONNECTNMPIPE:
+d01f:000014af c8000000       enter   0000,00
+d01f:000014b3 ff7606         push    word ptr [bp+06]
+d01f:000014b6 9a0000131c     call    1c13:0000
+d01f:000014bb c9             leave
+d01f:000014bc ca0200         retf    0002
+DOSCALL1 DOSDISCONNECTNMPIPE:
+d01f:000014bf c8000000       enter   0000,00
+d01f:000014c3 ff7606         push    word ptr [bp+06]
+d01f:000014c6 9a00001b1c     call    1c1b:0000
+d01f:000014cb c9             leave
+d01f:000014cc ca0200         retf    0002
+
+# dg 1c13
+1c13  CallG32 Sel:Off=0148:0000540c     DPL=3 P  DWC=1
+# ln 148:540c
+0148:0000540c OS2KRNL DOSCONNECTNMPIPE
+#
+</PRE>
+
+<P>
+In this example the BlockId is<B> 06700012</B>. This is unlikely to be a
+linear address. We assume that it is<B> 670:12</B>.
+<P>
+.M 670:12 shows the owner to be<B> npipenm</B>. This is a named pipe name
+segment. Could the process be waiting for a pipe connection?
+<P>
+Looking at the application side we see that the last ring 3 instruction
+to be executed was a call-gate, which turns out to be DOSCONNECTNMPIPE in
+the Kernel. 
+<P>
+These last two examples were reasonably revealing. More often than not we
+use .M against a BlockId (<!-- entering slot 183 --> and other system data)
+and we get one of:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+vmkshrw<!-- lm: 0x2 6 -->
+<P>
+vmkshro<!-- lm: 0x2 6 -->
+<P>
+vmkrhrw<!-- lm: 0x2 6 -->
+<P>
+vmkrhro<!-- lm: 0x2 1 -->
+</UL>
+<P>
+These are, so called Public Kernel Heaps. Fortunately each allocated heap
+block is imbedded in a structure that reveals the owner of the block. This
+is discussed next.
+
+<P><HR>
+
+<A HREF="146_L4_BlockingVoluntarySus.html">[Back: Blocking - Voluntary Suspension]</A> <BR>
+<A HREF="148_L5_KernelPublicHeaps.html">[Next: Kernel Public Heaps]</A> 
+</BODY>
+</HTML>

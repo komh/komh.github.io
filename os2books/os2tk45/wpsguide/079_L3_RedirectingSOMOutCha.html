@@ -1,0 +1,71 @@
+<HTML>
+<HEAD>
+<TITLE>Redirecting SOMOutCharRoutine to a File</TITLE>
+</HEAD>
+<BODY>
+<H1>Redirecting SOMOutCharRoutine to a File</H1><!-- entering slot 83 -->
+<P>
+The following sample code shows how to direct somPrintf output to a file
+called C:\ERROR.TXT. Before enabling the replacement of SOMOutCharRoutine,
+the file is opened and a header is written to it.
+<PRE>#define INCL_DOS
+#define INCL_WINWORKPLACE
+
+#include &lt;os2.h&gt;
+#include &lt;io.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;fcntl.h&gt;
+#include &lt;sys\stat.h&gt;
+#include &lt;string.h&gt;
+#include &lt;som.h&gt;
+
+/* File to contain debugging error information */
+static FILE *ErrorFile;
+
+/**********************************************************************/
+/*   This is the replacement for the default SOMOutCharRoutine.       */
+/*   It writes the debugging information to a file on the hard drive  */
+/*   instead of to stdout.                                            */
+/**********************************************************************/
+
+#pragma linkage(myCharacterOutputRoutine, system)
+
+int SOMLINK myCharacterOutputRoutine(char chOut)
+{
+    fputc((int) chOut, ErrorFile);
+    fflush(ErrorFile);
+
+    return 1;   /* Indicate success */
+}
+   .
+   .
+   .
+
+/**********************************************************************/
+/*   Enable myCharacterOutputRoutine by opening the output error      */
+/*   file and then changing the output character routine.             */
+/**********************************************************************/
+
+ErrorFile = fopen ("c:\\error.txt", "a");
+
+fprintf (ErrorFile, "\nDebug information from my WPS Object\n");
+fprintf (ErrorFile,   "------------------------------------\n");
+setbuf  (ErrorFile, NULL);
+
+SOM_TraceLevel  = 2;   /* Request maximum debugging information */
+SOM_WarnLevel   = 2;
+SOM_AssertLevel = 2;
+
+/* All output goes to my routine after the next statement */
+
+SOMOutCharRoutine = myCharacterOutputRoutine;
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="078_L2_UsingSOMDebuggingTec.html">[Back: Using SOM Debugging Techniques]</A> <BR>
+<A HREF="080_L3_RedirectingSOMOutCha.html">[Next: Redirecting SOMOutCharRoutine to a Serial Port]</A> 
+</BODY>
+</HTML>

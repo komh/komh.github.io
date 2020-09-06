@@ -1,0 +1,112 @@
+<HTML>
+<HEAD>
+<TITLE>Clipboard</TITLE>
+</HEAD>
+<BODY>
+<H1>Clipboard</H1><!-- entering slot 57 -->
+<P>
+The clipboard is a mechanism provided by PM to allow the user to transfer
+data between different applications. To do so, the user selects some data
+in a window, "copies" (or "cuts") it to the clipboard and then "pastes"
+the data in the target application.
+<P>
+When dealing with bidirectional data, it may be required to transfer text
+data, that has different bidirectional attributes (i.e, different format
+of text) between applications. Accordingly, a conversion of the text must
+be performed, in order to transform the text to a format (identified by
+bidirectional attributes) which is compatible with the target application
+(the one that "pastes" the data).
+<P>
+The PM bidirectional support provides automatic conversion of text between
+source and target applications, based on their process bidirectional attributes.
+In addition, bidi-aware applications can explicitly set the bidirectional
+attributes managed by the clipboard in order to affect the conversion that
+is performed on the text.
+<P>
+In order to allow the automatic conversion of the clipboard, the following
+conditions must be met:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Both the source and the target applications have valid
+process bidirectional attributes (i.e, their bidi attributes are not 0).
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Exchange of CF_TEXT and CF_DSPTEXT format is performed.
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The source and target bidi attributes are different.
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->None of the applications (i.e, neither the source
+application nor the target one) have issued any APIs to cancel the conversion
+provided by the clipboard.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The clipboard maintains two sets of bidirectional attributes.
+<P>
+The first set is called the 'Clipboard Bidirectional Attributes' and is
+associated with the text data that is currently stored in the clipboard.
+The default value for this set is inherited from the process bidirectional
+attributes of the application that issues WinSetClipbrdData. The source
+application can optionally modify this set of attributes by using the WinSetLangInfo
+API with the LI_BD_CLIP_ATTR effect.
+<P>
+The second set is called the 'Conversion Bidirectional Attributes'. This
+set is associated with the target application, and its default value is
+inherited from the process bidirectional attributes of the application that
+issues the WinQueryClipbrdData API. The target application can optionally
+modify these attributes by using the WinSetLangInfo API with LI_BD_CLIP_CONV_ATTR
+effect.
+<P>
+When using the WinSetLangInfo API to change the clipboard data, bidi-aware
+applications must follow the following rules:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Setting of both the 'Clipboard bidi attributes' and
+the 'conversion bidi attributes' must be performed only when an application
+has access to the clipboard - i.e, after issuing WinOpenClipbrd and before
+issuing the WinCloseClipbrd APIs.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Setting LI_BD_CLIP_ATTR must be done AFTER data has
+been put into the clipboard (that is, after issuing WinSetClipbrdData).
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following is a typical scenario. Lines marked with '(BD)' are optional,
+and can be issued by bidi-aware applications.
+<PRE>  Setting Clipboard Bidirectional Data.  -------------------------------------
+
+  WinOpenClipbrd()
+  WinEmptyClipbrd()
+  WinSetClipbrdData(CF_TEXT)     (clipboard bidi attributes are set -
+                                  inheited from process bidi attributes).
+
+  (BD) WinSetLangInfo(LI_BD_CLIP_ATTR..) (clipboard bidi attribute are set)
+
+  WinCloseClipbrd()
+
+
+  Querying Clipboard Bidirectional Data
+  --------------------------------------
+
+   WinOpenClipbrd()
+
+   (BD) WinQueryLangInfo(LI_BD_CLIP_ATTR...)
+                                  (Queries the current clipboard
+                                   bidi attributes).
+   (BD) WinSetLangInfo(LI_BD_CLIP_CONV_ATTR...)
+                                  (sets the clipboard conversion
+                                   bidi attributes).
+    WinQueryClipbrdData(CF_TEXT)   (clipboard performs conversion on
+                                    the text, using the clipboard
+                                    and the conversion bidi attributes.
+    WinCloseClipbrd()
+</PRE>
+
+
+<P><HR>
+
+<A HREF="056_L1_BidirectionalTextExc.html">[Back: Bidirectional Text Exchange among Applications]</A> <BR>
+<A HREF="058_L2_DynamicDataExchangeD.html">[Next: Dynamic Data Exchange (DDE)]</A> 
+</BODY>
+</HTML>

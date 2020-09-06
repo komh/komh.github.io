@@ -1,0 +1,81 @@
+<HTML>
+<HEAD>
+<TITLE>16-bit Services</TITLE>
+</HEAD>
+<BODY>
+<H1>16-bit Services</H1><!-- entering slot 466 -->
+<P>
+In 16-bit services, you register a signal handler function that accepts
+the SIG_PFLG_A signal and acts on the information. To register the signal
+handler, call DosSetSigHandler() in your main program:
+<PRE>#define INCL_DOSSIGNALS
+#include &lt;os2.h&gt;         /* From the TOOLKT13\C\INCLUDE directory */
+#include &lt;netcons.h&gt;     /* From the header files supplied with LAN Server */
+#include &lt;service.h&gt;     /* From the header files supplied with LAN Server */
+.
+.
+.
+int main (void) /* or include argc, etc., to taste */
+{
+   
+.
+.
+.
+   DosSetSigHandler((PFNSIGHANDLER)&amp;sig_handler, /* Signal handler address  */
+                    NULL,                        /* Ignore previous handler */
+                    0,                           /* Ignore previous action  */
+                    SIGA_ACCEPT,                 /* Process the signal      */
+                    SERVICE_RCV_SIG_FLAG))       /* This constant is the
+                                                     same as SIG_PFLG_A     */
+   
+.
+.
+.
+}
+</PRE>
+
+<P>
+The outline of the signal handler looks like this:
+<PRE>void sig_handler(USHORT sig_info, USHORT sig_num)
+{
+    unsigned char opcode, arg;
+    struct service_status status;
+
+    opcode = (unsigned char)(sig_info &amp; 0xff);
+    arg = (unsigned char)((sig_info &gt;&gt; 8) &amp; 0xff);
+
+    switch (opcode) {
+    case SERVICE_CTRL_INTERROGATE:
+            /* Code for INTERROGATE */
+            break;
+    case SERVICE_CTRL_PAUSE:
+            /* Code for PAUSE */
+            break;
+    case SERVICE_CTRL_CONTINUE:
+            /* Code for CONTINUE */
+            break;
+    case SERVICE_CTRL_UNINSTALL:
+            /* Code for UNINSTALL */
+            break;
+    default:
+            /* Code for every other case*/
+            break;
+    } /* Endswitch */
+
+    /* Here or for each case, */
+    NetServiceStatus(status, sizeof(struct service_status));
+
+    /* Issue a 'reset' for this signal */
+    DosSetSigHandler(0,0,0,SIGA_ACKNOWLEDGE,sig_no);
+
+    return;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="357_L3_Differencesin16Bitan.html">[Back: Differences in 16-Bit and 32-bit Services]</A> <BR>
+<A HREF="359_L4_32bitServices.html">[Next: 32-bit Services]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,93 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>SplEnumQueueProcessor - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>SplEnumQueueProcessor - Example Code</H1><!-- entering slot 1318 -->
+<P>
+This sample code enumerates and prints all the queue processors on the local
+computer.
+<PRE>#define INCL_BASE
+#define INCL_SPL
+#define INCL_SPLDOSPRINT
+#define INCL_SPLERRORS
+
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;        /* for printf function   */
+
+INT main ()
+{
+   SPLERR splerr ;
+   ULONG  cbBuf ;
+   ULONG  cTotal ;
+   ULONG  cReturned ;
+   ULONG  cbNeeded ;
+   ULONG  i ;
+   PSZ    pszComputerName = NULL ;
+   PSZ    pszQProcName ;
+   PBYTE  pBuf ;
+
+   /* Call the function the first time with zero in cbBuf. The count  */
+   /* of bytes needed for the buffer to hold all the info will be     */
+   /* returned in cbNeeded.                                           */
+   splerr = SplEnumQueueProcessor(pszComputerName, 0L, NULL, 0L,
+                                  &amp;cReturned, &amp;cTotal,
+                                  &amp;cbNeeded,NULL );
+
+   /* If the return code is ERROR_MORE_DATA or NERR_BufTooSmall,     */
+   /* then all the parameters were correct; and we can continue.              */
+   if (splerr == ERROR_MORE_DATA || splerr == NERR_BufTooSmall)
+   {
+      /* Allocate memory for the buffer to hold the returned information. Use */
+      /* the count of bytes that were returned by our first call.             */
+      if (!DosAllocMem( &amp;pbuf, cbNeeded,
+                        PAG_READ|PAG_WRITE|PAG_COMMIT) )
+      {
+         /* Set count of bytes to the value returned by our first call.       */
+         cbBuf = cbNeeded ;
+
+         /* Now call the function a second time with the correct values, and  */
+         /* the information will be returned in the buffer.                   */
+         splerr = SplEnumQueueProcessor(pszComputerName, 0L, pBuf, cbBuf,
+                                        &amp;cReturned, &amp;cTotal,
+                                        &amp;cbNeeded,NULL ) ;
+
+         /* If we have no errors, then print out the buffer information.      */
+         if (splerr == NO_ERROR)
+         {
+            /* Set a pointer to point to the beginning of the buffer.         */
+            pszQProcName = (PSZ)pBuf;
+
+            /* Print the names that are in the buffer. The count of the number*/
+            /* of names in pBuf have been returned in cReturned.              */
+            for (i=0;i &lt; cReturned ; i++)
+            {
+               printf("Queue Processor name - %s\n", pszQProcName) ;
+
+               /* Increment the pointer to point to the next name.            */
+               pszQProcName += DRIV_NAME_SIZE + 1;
+            }
+         }
+         /* Free the memory allocated for the buffer.                         */
+         DosFreeMem(pBuf) ;
+      }
+   }
+   else
+   {
+      /* If the first call to the function returned any other error code      */
+      /* except ERROR_MORE_DATA or NERR_BufTooSmall, we print the    */
+      /* following.                                                           */
+      printf("SplEnumQueueProcessor error=%ld\n",splerr ) ;
+   }
+   DosExit( EXIT_PROCESS , 0 ) ;
+   return (splerr);
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1306_L2H_SplEnumQueueProcesso.html">[Back: SplEnumQueueProcessor - Related Functions]</A> <BR>
+<A HREF="1308_L2H_SplEnumQueueProcesso.html">[Next: SplEnumQueueProcessor - Topics]</A> 
+</BODY>
+</HTML>

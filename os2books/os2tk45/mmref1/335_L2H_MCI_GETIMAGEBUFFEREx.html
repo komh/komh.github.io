@@ -1,0 +1,141 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>MCI_GETIMAGEBUFFER - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>MCI_GETIMAGEBUFFER - Example Code</H1><!-- entering slot 339 -->
+<P>
+The following example shows how to capture a bitmap from video.
+<PRE>   USHORT usUserParm = 0;
+   BITMAPINFOHEADER2 *pBMPhdr;
+   ULONG   ulReturn;
+   CHAR    szInfoStr[500];
+   CHAR    szTempStr[100];
+   ULONG   ulFlags = 0;
+
+      ulFlags = MCI_CONVERT;
+
+   /**********************************************************/
+   /* Determine the length and characteristics of the buffer */
+   /**********************************************************/
+   memset ((PVOID)&amp;mciImageParms, 0x00, sizeof (MCI_IMAGE_PARMS));
+   mciImageParms.hwndCallback = hwndNotify;
+   mciImageParms.ulBufLen = 0;
+   mciImageParms.pPelBuffer = 0;
+
+   ulReturn = mciSendCommand(usDeviceID, MCI_GETIMAGEBUFFER,
+                  MCI_WAIT | ulFlags,
+                  (PVOID)&amp;mciImageParms,
+                  usUserParm);
+   /*************************************/
+   /* Allocate memory for the buffer    */
+   /*************************************/
+   DosAllocMem (&amp;mciImageParms.pPelBuffer,
+                mciImageParms.ulBufLen,
+                PAG_COMMIT | PAG_WRITE);
+
+   /*********************************/
+   /* Get the data from the buffer  */
+   /*********************************/
+   ulReturn = mciSendCommand(usDeviceID, MCI_GETIMAGEBUFFER,
+                  MCI_WAIT | ulFlags,
+                  (PVOID)&amp;mciImageParms,
+                  usUserParm);
+
+   pBMPhdr = (BITMAPINFOHEADER2 *)mciImageParms.pPelBuffer;
+</PRE>
+
+<P>
+<B>Note: </B> The digital video device returns<A><!-- external link: 1D B8 28 24 --> BITMAPFILEHEADER2
+</A>instead of<A><!-- external link: 1D B9 28 FC --> BITMAPINFOHEADER2</A>.
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+The following code illustrates how to capture an OS/2 bitmap from the hardware
+using the digital video device.
+<PRE>#define INCL_GPI
+#define INCL_GPIBITMAPS
+
+#include &lt;os2.h&gt;
+#include &lt;pmbitmap.h&gt;
+
+#define  INCL_MMIO
+#define  INCL_MMIO_CODEC
+#define  INCL_MMIO_DOSIOPROC
+#include &lt;os2me.h&gt;
+#include &lt;stdlib.h&gt;
+
+/*****************************************************************
+ * Name : BMPCaptureBitmap
+ *
+ * Function: Capture bitmap from hardware
+ *
+ ******************************************************************/
+ VOID BMPCaptureBitmap(PSWVRCB pCB, HWND hwnd)
+ {
+   MCI_IMAGE_PARMS  mciImageParms;
+   PCHAR            pBuf=0L;
+   HFILE            hBMP;
+   ULONG            ulAction;
+   ULONG            cBytes;
+   LONG             rc;
+
+   memset ((PVOID)&amp;mciImageParms, 0x00, sizeof (MCI_IMAGE_PARMS));
+
+   /* prepare structures */
+   mciImageParms.pPelBuffer   = 0L;
+   mciImageParms.ulBufLen     = 0L;
+
+   mciImageParms.rect.xLeft   = pCB-&gt;recopts[usIndex].usCapPosX;
+   mciImageParms.rect.yBottom = pCB-&gt;recopts[usIndex].usCapPosY;
+   mciImageParms.rect.xRight  = pCB-&gt;recopts[usIndex].usCapSizeX +
+                                pCB-&gt;recopts[usIndex].usCapPosX;
+   mciImageParms.rect.yTop    = pCB-&gt;recopts[usIndex]usCapSizeY +
+                                pCB-&gt;recopts[usIndex].usCapPosY;
+   mciImageParms.ulPelBufferWidth  = pCB-&gt;recopts[usIndex].usMovieSizeX;
+   mciImageParms.ulPelBufferHeight = pCB-&gt;recopts[usIndex].usMovieSizeY;
+
+   rc = mciSendCommand( pCB-&gt;OutputMovie.usDeviceID,
+                        MCI_GETIMAGEBUFFER,
+                        MCI_WAIT | MCI_USE_HW_BUFFER | MCI_CONVERT,
+                        (ULONG)&amp;mciImageParms,
+                        0);
+
+   rc = DosAllocMem ( (PPVOID) &amp;pBuf,
+                      (ULONG)   mciImageParms.ulBufLen,
+                      (ULONG)   PAG_COMMIT | PAG_READ | PAG_WRITE);
+                      mciImageParms.pPelBuffer=(PVOID)pBuf;
+
+   rc = mciSendCommand( pCB-&gt;OutputMovie.usDeviceID,
+                        MCI_GETIMAGEBUFFER,
+                        MCI_WAIT | MCI_USE_HW_BUFFER | MCI_CONVERT,
+                        (ULONG)&amp;mciImageParms,
+                        0);
+   if (!rc)
+    {
+     /* getimage buffer is successful open file and write out bitmap */
+     rc = DosOpen ( (PSZ)pCB-&gt;szBitmapFilename, &amp;hBMP, &amp;ulAction, 0, FILE_NORMAL,
+                    FILE_CREATE,
+                    OPEN_ACCESS_WRITEONLY | OPEN_SHARE_DENYWRITE,
+                    0L);
+
+     rc = DosWrite (hBMP, (PVOID)pBuf,
+                    mciImageParms.ulBufLen,
+                    &amp;cBytes);
+
+     rc = DosClose (hBMP);
+    }
+
+    /* free buffers */
+     DosFreeMem( pBuf );
+
+ }
+</PRE>
+
+
+<P><HR>
+
+<A HREF="334_L2H_MCI_GETIMAGEBUFFERRe.html">[Back: MCI_GETIMAGEBUFFER - Related Messages]</A> <BR>
+<A HREF="336_L2H_MCI_GETIMAGEBUFFERTo.html">[Next: MCI_GETIMAGEBUFFER - Topics]</A> 
+</BODY>
+</HTML>

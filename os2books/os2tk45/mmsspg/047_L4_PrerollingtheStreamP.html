@@ -1,0 +1,65 @@
+<HTML>
+<HEAD>
+<TITLE>Prerolling the Stream - Performance Considerations</TITLE>
+</HEAD>
+<BODY>
+<H1>Prerolling the Stream - Performance Considerations</H1><!-- entering slot 54 -->
+<P>
+Prerolling a stream allows the source stream handlers to start and fill
+the buffers.  An application can then start the streams for better real-time
+response and initial synchronization of streams.  This is accomplished by
+the SpiStartStream function with the SPI_START_PREROLL flag.
+<P>
+However, if a stream is already paused (STOP_PAUSED), the stream is already
+cued so there is no need to call SpiStartStream to refill the buffers. The
+following example illustrates how to check to see if a stream is in a paused
+state.
+<PRE>  /************************************
+  * If the stream is paused, there is no
+  * sense in cueing it since the buffers
+  * are full anyway
+  **************************************/
+
+  if ( STRMSTATE == MCI_PAUSE  ||
+       STRMSTATE == STOP_PAUSED )
+
+      {
+      /***********************************************
+      ** If the stream is going the right way
+      ** then we have the ability to avoid the cue
+      ** since the buffers have been filled up before
+      ** we did the pause
+      **********************************************/
+
+      if ( AMPMIX.ulOperation == OPERATION_RECORD &amp;&amp;
+           fCueInput )
+         {
+         ulpInstance-&gt;ulCreateFlag = PREROLL_STATE;
+         STRMSTATE = CUERECD_STATE;
+         return ( MCIERR_SUCCESS );
+         }
+
+      /*************************************************
+      * If the current stream is cued for playback and
+      * we have a cue_output request, our work is done
+      **************************************************/
+
+      else if ( AMPMIX.ulOperation == OPERATION_PLAY &amp;&amp;
+                fCueOutput )
+         {
+
+         ulpInstance-&gt;ulCreateFlag = PREROLL_STATE;
+         STRMSTATE = CUEPLAY_STATE;
+         return ( MCIERR_SUCCESS );
+         }
+
+      }   /* If the stream may be in cue state */
+</PRE>
+
+
+<P><HR>
+
+<A HREF="046_L4_ReassociatingtheStre.html">[Back: Reassociating the Stream on MCI_LOAD]</A> <BR>
+<A HREF="048_L3_WaveformAudioMCDModu.html">[Next: Waveform Audio MCD Modules]</A> 
+</BODY>
+</HTML>

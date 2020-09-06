@@ -1,0 +1,172 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Get default object settings</TITLE>
+</HEAD>
+<BODY>
+<H1>Get default object settings</H1><!-- entering slot 387 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+The default settings for the standard WPS objects are saved in the file
+<B>\OS2\INI.RC</B> . (see also <A HREF="661_L3_GetObjGetthedataofWP.html">GETOBJ.CMD</A>;
+see the routine<B> ShowObjectDate</B> in the section <A HREF="357_L4_Generalroutinesforth.html">General
+routines for the samples</A> for an example on how to get the settings of
+an object). 
+<PRE> 
+/* sample routine to get the default settings of an object            */
+/* This routine reads the file INI.RC to get the default settings     */
+/* of the object.                                                     */
+/* Note that object IDs are case sensitive!                           */
+
+                        /* path &amp; name of the RC file for MAKEINI     */
+  INIRCFile = 'C:\OS2\INI.RC'
+
+  do forever
+    call CharOut, 'Enter the object ID (&lt;RETURN&gt; to exit): '
+    objectID = strip( lineIn() )
+
+    if objectID = '' then
+      leave
+
+    if left( ObjectID,1 ) &lt;&gt; '&lt;' then
+      objectID = '&lt;' || objectID || '&gt;'
+
+    say 'Detecting the data of the object "' || ObjectID || '" ...'
+    rc = getObjectData( ObjectID, 'objectData', iniRCFile  )
+    if rc = 0 then
+    do
+      say 'title:     "' || objectData.title     || '"'
+      say 'className: "' || objectData.className || '"'
+      say 'location:  "' || objectData.location  || '"'
+      say 'setup:     "' || objectData.setup     || '"'
+    end /* if rc = 0  */
+    else
+    do
+      say 'Error ' || rc || ' detecing the object settings!'
+    end
+  end /* do forever */
+
+exit
+
+/* ------------------------------------------------------------------ */
+/* function: get the data of an object                                */
+/*                                                                    */
+/* call:     getObjectData objectID, resultStem, rcFile               */
+/*                                                                    */
+/* where:    objectID - the id of the object                          */
+/*           resultStem - name of the stem for the result             */
+/*           rcFile - name of the rc file with the object description */
+/*                    The format of the rc file must be equal to the  */
+/*                    format of the file \OS2\INI.RC.                 */
+/*                                                                    */
+/* returns:  0 - ok                                                   */
+/*           1 - rc file not found                                    */
+/*           2 - object not found in the RC file                      */
+/*         255 - invalid call                                         */
+/*                                                                    */
+/* output:   "objectData".title     = title                           */
+/*                       .className = className                       */
+/*                       .location  = location                        */
+/*                       .setup     = setup string                    */
+/*                                                                    */
+GetObjectData:
+  parse arg god.__objectID, god.__resultStem, god.__thisRCFile .
+
+                        /* constants for the comment begin and end    */
+                        /* strings used in the RC files               */
+  god.__CommentBegin = '/' || '*'
+  god.__CommentEnd   = '*' || '/'
+
+                        /* init the return code                       */
+  thisRC = 255
+
+  if god.__objectID &lt;&gt; '' &amp; god.__objectData &lt;&gt; '' then
+  do
+    thisRC = 1
+    if stream( god.__thisRCFile, 'c', 'QUERY EXISTS' ) &lt;&gt; '' then
+    do
+      thisRC = 2
+      god.__searchString = 'OBJECTID=' || god.__objectID
+
+                        /* open the RC file in READ ONLY mode         */
+      call stream god.__ThisRCFile, 'c', 'OPEN READ'
+
+                    /* search the object definition in the rc file    */
+      do god.__curRCLineNo = 1 while lines( god.__thisRCFile ) &lt;&gt; 0
+
+        god.__curRCFileLIne = strip( lineIn( god.__thisRCFile ) )
+
+                    /* discard comments                               */
+        do until god.__curComment = ''
+          parse var god.__curRCFileLine  ,
+                    god.__part1          ,
+                    (god.__CommentBegin) ,
+                    god.__curComment     ,
+                    (god.__CommentEnd)   ,
+                    god.__part2
+
+          god.__curRCFileLine = god.__part1 || god.__part2
+        end /* do until commentFound = '' */
+
+                        /* ignore empty lines                         */
+        if god.__curRCFileLine = '' then
+          iterate
+
+
+        if translate( word( god.__curRCFileLIne, 1 ) ) = '"PM_INSTALLOBJECT"' then
+        do
+          if pos( god.__searchString, god.__curRCFileLIne) &lt;&gt; 0 then
+          do
+                        /* object description found                   */
+            parse var god.__curRCFileLine  ,
+                      '"' . '"'            ,
+                      '"' ,
+                        god.__title . ';'       ,
+                        god.__className ';'     ,
+                        god.__location          ,
+                      '"'                  ,
+                      '"'                  ,
+                      god.__setup 'OBJECTID=' . ,
+                      '"'
+
+            parse var god.__location god.__location ';' .
+
+                            /* fill the result stem                   */
+            interpret god.__resultStem || '.title = '     || ,
+                      '"' || strip( god.__title )     || '"'
+
+            interpret god.__resultStem || '.className = ' || ,
+                      '"' || strip( god.__className ) || '"'
+
+            interpret god.__resultStem || '.location = '  || ,
+                      '"' || strip( god.__location )  || '"'
+
+            interpret god.__resultStem || '.setup = '     || ,
+                      '"' || strip( god.__setup )     || '"'
+
+            thisRC = 0
+            leave god.__curRCLineNo
+          end /* if pos( ... */
+
+        end /* if word(  */
+      end /* do god.__CurRCLineNo = 1 while ... */
+    end /* if stream( ... */
+  end /* if god.__ObjectID &lt;&gt; '' ... */
+
+                        /* close the RC file                          */
+  call stream god.__ThisRCFile, 'c', 'CLOSE'
+
+                        /* delete local variables                     */
+  drop god.
+RETURN thisRC
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="374_L3_GettheobjectIDforano.html">[Back: Get the object ID for an object handle]</A> <BR>
+<A HREF="376_L3_Checkifanobjectexist.html">[Next: Check if an object exist]</A> 
+</BODY>
+</HTML>

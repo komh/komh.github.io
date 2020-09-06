@@ -1,0 +1,84 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Get the current OS/2 version (w/o REXXUTIL)</TITLE>
+</HEAD>
+<BODY>
+<H1>Get the current OS/2 version (w/o REXXUTIL)</H1><!-- entering slot 510 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* sample routine to detect the current OS/2 Version without using    */
+/* REXXUTIL                                                           */
+
+  curVersion = GetOS2Version()
+  if curVersion = "" then
+    say "Cannot detect the current OS/2 version!"
+  else
+    say "The current OS/2 version is " || curVersion
+
+exit 0
+
+/* ------------------------------------------------------------------ */
+/* function: Get the current OS/2 version                             */
+/*                                                                    */
+/* call:     GetOS2Version                                            */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns: OS/2 Version as string (e.g. "V211")                      */
+/*          or an empty string in case of an error                    */
+/*                                                                    */
+/* note:    works with CMD.EXE and 4OS2.EXE                           */
+/*                                                                    */
+GetOS2Version: PROCEDURE
+  thisRC = ""
+
+                        /* install a local error handler              */
+  SIGNAL ON ERROR Name GetOS2VersionEnd
+
+  "@ver | rxqueue "
+
+                        /* read the lines from the QUEUE              */
+  do while queued() &lt;&gt; 0
+     queueLine = lineIn( "QUEUE:" )
+     IF QueueLine &lt;&gt; "" THEN
+     DO
+       IF WORD( QueueLine,1 ) = "Version" THEN
+         OS2Ver = WORD( QueueLine,2 )       /* this is cmd running!   */
+       ELSE
+         if word( queueLine,4 ) = "Version" THEN
+           OS2Ver = WORD( queueLine,6 )     /* this is 4OS2 running!  */
+     END /* if ... then do */
+  end /* do while ... */
+
+                        /* version string not found: invalid call     */
+  if OS2Ver &lt;&gt; "" then
+  do
+                        /* create the string to return                */
+    parse VALUE os2ver WITH mainVer "." minVer
+    if minVer = "30" &amp; mainVer = "2" then
+      thisRC = "V300"
+    else
+      thisRC = "V" || mainVer || minVer
+  end /* if OS2Ver &lt;&gt; "" then */
+
+GetOS2VersionEnd:
+  do while queued() &lt;&gt; 0
+    dummyLine = lineIN( "QUEUE:" )
+  end /* do while */
+
+RETURN thisRC
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="491_L3_Callbyvalue.html">[Back: Call by value]</A> <BR>
+<A HREF="493_L3_Gettheinvocationsynt.html">[Next: Get the invocation syntax]</A> 
+</BODY>
+</HTML>

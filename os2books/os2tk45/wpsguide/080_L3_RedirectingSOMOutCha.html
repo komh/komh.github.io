@@ -1,0 +1,87 @@
+<HTML>
+<HEAD>
+<TITLE>Redirecting SOMOutCharRoutine to a Serial Port</TITLE>
+</HEAD>
+<BODY>
+<H1>Redirecting SOMOutCharRoutine to a Serial Port</H1><!-- entering slot 84 -->
+<P>
+Instead of directing the output to a file, the SOMOutCharRoutine procedure
+can be used to direct the output to a serial port. By connecting another
+computer or a dumb terminal to the serial port with a NULL modem cable,
+debugging information can be received on the remote terminal. A NULL modem
+cable is a specialized serial cable that has the transmit and receive wires
+crossed so that transmissions from one serial port are received by another.
+
+<P>
+First, initialize the serial port using the OS/2<B> Mode</B> command. This
+command can be added to the STARTUP.CMD file or entered from an OS/2 command
+prompt. The following example shows how to use the<B> Mode</B> command:
+
+<PRE>MODE COM1 9600,n,8,1
+
+</PRE>
+
+<P>
+Replace SOMOutCharRoutine with your procedure which directs somPrintf output
+to the COM1 serial port as shown in the following sample code:
+<PRE>#define INCL_DOS
+#define INCL_WINWORKPLACE
+
+#include &lt;os2.h&gt;
+#include &lt;io.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;fcntl.h&gt;
+#include &lt;sys\stat.h&gt;
+#include &lt;string.h&gt;
+#include &lt;som.h&gt;
+
+/* COM1 port for debugging information */
+static FILE *DebugPort;
+
+/**********************************************************************/
+/*   This is the replacement for the default SOMOutCharRoutine.       */
+/*   It writes the debugging information to the COM1 serial port      */
+/*   instead of to stdout.                                            */
+/**********************************************************************/
+
+#pragma linkage(myCharacterOutputRoutine, system)
+
+int SOMLINK myCharacterOutputRoutine(char chOut)
+{
+    fputc((int) chOut, DebugPort);
+    fflush(DebugPort);
+
+    return 1;   /* Indicate success */
+}
+   .
+   .
+   .
+
+/**********************************************************************/
+/*   Enable myCharacterOutputRoutine by opening the serial port       */
+/*   and then changing the output character routine.                  */
+/**********************************************************************/
+
+DebugPort = fopen("COM1", "w");
+
+fprintf(DebugPort, "\nDebug information from my WPS Object\n");
+fprintf(DebugPort,   "------------------------------------\n");
+setbuf(DebugPort, NULL);
+
+SOM_TraceLevel  = 2;   /* Request maximum debugging information */
+SOM_WarnLevel   = 2;
+SOM_AssertLevel = 2;
+
+/* All output goes to my routine after the next statement */
+
+SOMOutCharRoutine = myCharacterOutputRoutine;
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="079_L3_RedirectingSOMOutCha.html">[Back: Redirecting SOMOutCharRoutine to a File]</A> <BR>
+<A HREF="081_L2_UsingWorkplaceShellD.html">[Next: Using Workplace Shell Debugging Techniques]</A> 
+</BODY>
+</HTML>

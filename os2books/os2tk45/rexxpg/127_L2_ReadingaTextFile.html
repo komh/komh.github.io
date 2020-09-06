@@ -1,0 +1,83 @@
+<HTML>
+<HEAD>
+<TITLE>Reading a Text File</TITLE>
+</HEAD>
+<BODY>
+<H1>Reading a Text File</H1><!-- entering slot 134 -->
+<P>
+Let's look at an example of reading a file. The following program, COUNT.CMD,
+counts the words in a text file. To run the program, enter COUNT followed
+by the name of the file to be processed:
+<PRE>count myfile.txt
+count r:\rexx\articles\devcon7.scr
+</PRE>
+
+<P>
+COUNT uses the String method WORDS to count the words, so COUNT actually
+counts blank-delimited tokens:
+<PRE>/* COUNT.CMD -- counts the words in a file                         */
+parse arg path              /* Get file name from command line     */
+count=0                     /* Initialize a counter                */
+file=.stream~new(path)      /* Create a stream object for the file */
+do while file~lines&lt;&gt;0      /* Loop while there are lines          */
+  text=file~linein          /* Read a line from the file           */
+  count=count+(text~words)  /* Count words and add to counter      */
+end
+say count                   /* Display the count                   */
+</PRE>
+
+<P>
+To read a file, COUNT first creates a stream object for the file by sending
+the NEW message to the Stream class. The file name (with or without a path)
+is specified as an argument on the NEW method.
+<P>
+Within the DO loop, COUNT reads the lines of the file by sending LINEIN
+messages to the stream object (pointed to by the variable File). The first
+LINEIN message causes REXX to open the file (the NEW method doesn't open
+the file). LINEIN, by default, reads one line from the file from the current
+read position.
+<P>
+REXX returns only the text of the line to your program. REXX does not return
+new-line characters.
+<P>
+The DO loop is controlled by the expression "file~lines&lt;&gt;0." The LINES
+method returns the number of lines remaining to be read in the file, so
+REXX processes the loop until no lines remain to be read.
+<P>
+In the COUNT program, the LINEIN request forced REXX to open the file, but
+you can also open the file yourself using the OPEN method of the Stream
+class. By using the OPEN method, you control the mode in which REXX opens
+the file. When REXX implicitly opens a file because of a LINEIN request,
+it tries to open the file for both reading and writing. If that fails, it
+opens the file for reading. To ensure that the file is opened only for reading,
+you could modify COUNT as follows:
+<PRE>/* COUNT.CMD -- counts the words in a file                         */
+parse arg path              /* Get file name from command line     */
+count=0                     /* Initialize a counter                */
+file=.stream~new(path)      /* Create a stream object for the file */
+openrc=file~open('read')    /* Open the file for reading           */
+if openrc&lt;&gt;'READY:' then do /* Check the return code               */
+   say 'Could not open' path||'. RC='||openrc
+   exit openrc              /* Bail out                            */
+end
+do while file~lines&lt;&gt;0      /* Loop while there are lines          */
+  text=file~linein          /* Read a line from the file           */
+  count=count+(text~words)  /* Count words and add to counter      */
+end
+file~close                  /* Close the file                      */
+say count                   /* Display the count                   */
+</PRE>
+
+<P>
+The CLOSE method, used near the end of the above example, closes the file.
+A CLOSE isn't required. REXX will close the stream for you when the program
+ends. However, it's a good idea to CLOSE streams when you are done with
+them so that the resource is immediately available for other uses (perhaps
+by other OS/2 processes).
+
+<P><HR>
+
+<A HREF="126_L2_MoreaboutStreamObjec.html">[Back: More about Stream Objects]</A> <BR>
+<A HREF="128_L2_ReadingaTextFileinto.html">[Next: Reading a Text File into an Array]</A> 
+</BODY>
+</HTML>

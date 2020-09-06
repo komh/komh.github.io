@@ -1,0 +1,116 @@
+<HTML>
+<HEAD>
+<TITLE>DmiListGroupReq</TITLE>
+</HEAD>
+<BODY>
+<H1>DmiListGroupReq</H1><!-- entering slot 106 -->
+<P>
+The following List Group commands use the DmiListGroupReq command block:
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->DmiListGroupCmd<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->DmiListFirstGroupCmd<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->DmiListNextGroupCmd<!-- lm: 0x2 1 -->
+</UL>
+<P>
+All three List Group commands use the DmiListGroupReq block: ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³Table27
+.DmiListGroupReqCommandBlock                   ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ OFFSET     ³ SIZE      ³ TYPE      ³ VARIABLE NAME         ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 0       ³ 64       ³ STRUCT     ³ DmiMgmtCommand        ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 64       ³ 4       ³ INT      ³ iComponentId         ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ :68      ³ 4       ³ INT      ³ iGroupId           ³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+<B><!-- lm: 0x2 1 -->
+<P>
+Variable Name<!-- lm: 0x2 21 -->
+<UL> Variable Description</B><!-- lm: 0x2 1 -->
+</UL> DmiMgmtCommand
+<!-- lm: 0x12 21 -->
+<UL>The command block.  The values of iCommand are:
+<!-- lm: 0x2 21 -->
+<P>
+DmiListGroupCmd<!-- lm: 0x2 51 -->
+<UL> 0x204<!-- lm: 0x2 21 -->
+</UL>DmiListFirstGroupCmd<!-- lm: 0x2 51 -->
+<UL> 0x205<!-- lm: 0x2 21 -->
+</UL>DmiListNextGroupCmd<!-- lm: 0x2 51 -->
+<UL> 0x206<!-- lm: 0x2 21 --><!-- lm: 0x2 1 -->
+</UL> iComponentId
+<!-- lm: 0x12 21 -->
+<UL>ID of the desired component.<!-- lm: 0x2 1 -->
+</UL> iGroupId
+<!-- lm: 0x12 21 -->
+<UL>ID of the desired group within the component identified
+by iComponentId. In DmiListFirstGroupCmd, this field is ignored.  For the
+DmiListNextGroupCmd command, the service layer starts filling confirm buffer
+beginning with the group ID that follows the value in this field. To start
+at the first group, set this field to zero. On return from the command,
+the service layer updates this field with the ID of the last group put in
+the confirm buffer.  The management application can continue issuing DmiListNextGroupCmd
+commands until the returned iStatus field indicates that there is no more
+data.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Issuing DmiListGroupReq displays an example of how to issue the DmiListGroupReq
+command to the MI. IssuingDmiListGroupReq
+<BR>
+
+<PRE>ULONG IssueListGroup(ULONG ComponentID,ULONG GroupID,SHORT ListType)
+{
+DMI_ListGroupReq_t *ListGroup;
+ULONG RC;
+
+    ListGroup = (DMI_ListGroupReq_t *)malloc(sizeof(DMI_ListGroupReq_t));
+    memset((void *)ListGroup,0,sizeof(DMI_ListGroupReq_t));
+    ListGroup-&gt;DmiMgmtCommand.iLevelCheck = DMI_LEVEL_CHECK;
+    ListGroup-&gt;DmiMgmtCommand.iMgmtHandle = YOUR_MGMT_HANDLE;     // set the app handle
+    ListGroup-&gt;DmiMgmtCommand.iCmdHandle = YOUR_COMMAND_HANDLE;   // set the command Handle
+    ListGroup-&gt;DmiMgmtCommand.iCnfBufLen = 8000UL;                // set the size of the response buffer
+    ListGroup-&gt;DmiMgmtCommand.pCnfBuf = (void *)malloc(8000UL);   // set up the response buffer
+    ListGroup-&gt;DmiMgmtCommand.iRequestCount = 1;
+    ListGroup-&gt;DmiMgmtCommand.iCmdLen = sizeof(DMI_ListGroupReq_t);
+    ListGroup-&gt;iComponentId = ComponentID;   // set to the currently selected component
+    ListGroup-&gt;iGroupId = GroupID;
+    switch(ListType){
+        case 1:
+            ListComp-&gt;DmiMgmtCommand.iCommand = DmiListFirstGroupCmd;  // set the command
+            break;
+        case 0:
+            ListComp-&gt;DmiMgmtCommand.iCommand = DmiListNextGroupCmd;   // look for the next one in the list
+            break;
+        case 10:
+            ListComp-&gt;DmiMgmtCommand.iCommand = DmiListGroupCmd;       // list just this one
+            break;
+    }
+    if((RC = DmiInvoke((DMI_MgmtCommand_t *)ListComp)) != SLERR_NO_ERROR){  // call the SL and register
+        free(ListComp-&gt;DmiMgmtCommand.pCnfBuf);                      // free up the confirm buffer
+        free(ListComp);                                              // free the command block
+    }
+    return RC;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="102_L3_DmiListComponentCnf.html">[Back: DmiListComponentCnf]</A> <BR>
+<A HREF="104_L3_DmiListGroupCnf.html">[Next: DmiListGroupCnf]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,273 @@
+<HTML>
+<HEAD>
+<TITLE>Creating the Stream</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating the Stream</H1><!-- entering slot 48 -->
+<P>
+After handler IDs are obtained and the SPCBKEY and DCB information is filled
+in, the MCD makes the call to SpiCreateStream.  At this point the two handlers
+are initiated to create their stream, buffers are allocated, and the stage
+is set for streaming.
+<P>
+The following example code illustrates how to create the stream.  The caller
+supplies the source and target stream handlers and the audio device control
+block should have been filled in previously (see MCIOPEN.C). The caller
+also supplies the EventProc(edure) where all of the stream events will be
+reported.
+<PRE>  ulrc = SpiCreateStream ( hidSrc,
+                           hidTgt,
+                           &amp;pInstance-&gt;StreamInfo.SpcbKey,
+                           (PDCB) &amp;pInstance-&gt;StreamInfo.AudioDCB,
+                           (PDCB) &amp;pInstance-&gt;StreamInfo.AudioDCB,
+                           (PIMPL_EVCB) &amp;pInstance-&gt;StreamInfo.Evcb,
+                           (PEVFN) EventProc,
+                           (ULONG) NULL,
+                           hStream,
+                           &amp;pInstance-&gt;StreamInfo.hEvent);
+
+</PRE>
+
+<P>
+When the MCD creates a stream, it must register a callback handle with SSM.
+ The callback handle is an entry point or function within the MCD code that
+processes events coming back from SSM during the streaming process.  The
+callback handle is a powerful mechanism because it frees the driver to do
+other work during the streaming process.  When an event occurs, SSM detects
+it and reports it to the callback address.
+<P>
+The waveform audio MCD sample includes the following event routines:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->RecordEventRoutine (ADMCRECD.C) as shown in the following
+example.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->PlayEventRoutine (ADMCPLAY.C) as shown in the next
+example.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>RC APIENTRY RecordEventRoutine ( MEVCB  *pevcb){
+  MTIME_EVCB        *pMTimeEVCB;    // Modified EVCB
+  INSTANCE          *ulpInstance;   // Instance Ptr
+
+  /***********************************************************
+  * EventProc receives asynchronous SSM event notifications
+  * When the event is received, the event semaphore is posted
+  * which will wake up the MCD thread(s) blocked on this
+  * semaphore.
+  * The semaphore is not posted for time events like
+  * cuepoint (TIME) and media position changes since they do
+  * not alter the state of the stream.
+  ************************************************************/
+
+
+  switch (pevcb-&gt;evcb.ulType)
+  {
+  case EVENT_IMPLICIT_TYPE:
+
+       /* Retrieve our instance from the EVCB */
+
+       ulpInstance = (INSTANCE *)pevcb-&gt;ulpInstance;
+
+       switch (pevcb-&gt;evcb.ulSubType)
+       {
+       case EVENT_ERROR:
+            ulpInstance-&gt;StreamEvent = EVENT_ERROR;
+
+            /****************************************
+            * Check for playlist specific error first
+            *****************************************/
+
+            /**************************************
+            * End of PlayList event is received
+            * as an implicit error event. It
+            * is treated as a normal EOS
+            ***************************************/
+            if (ulpInstance-&gt;usPlayLstStrm == TRUE)
+                if (pevcb-&gt;evcb.ulStatus == ERROR_END_OF_PLAYLIST)
+                    ulpInstance-&gt;StreamInfo.Evcb.evcb.ulStatus =
+                        MMIOERR_CANNOTWRITE;
+
+            DosPostEventSem (ulpInstance-&gt;hEventSem);
+           break;
+
+       case EVENT_STREAM_STOPPED:
+            /****************************************
+            * Event Stream Stopped. Release the
+            * Blocked thread
+            *****************************************/
+            ulpInstance-&gt;StreamEvent = EVENT_STREAM_STOPPED;
+            DosPostEventSem (ulpInstance-&gt;hEventSem);
+           break;
+
+       case EVENT_SYNC_PREROLLED:
+            /******************************************
+            * This event is received in response to a
+            * preroll start. A Preroll start is done
+            * on an MCI_CUE message.
+            *******************************************/
+            ulpInstance-&gt;StreamEvent = EVENT_SYNC_PREROLLED;
+            DosPostEventSem (ulpInstance-&gt;hEventSem);
+           break;
+.
+.
+.
+</PRE>
+
+<P>
+The MEVCB structure in the RecordEventRoutine is a modified IMPL_EVCB which
+SSM uses to<!-- entering slot 49 --> report events (see the<I> OS/2 Multimedia
+Programming Reference</I>).  You can add additional fields to extend the
+EVCB structure.  For example, MEVCB shown in the following example adds
+an instance pointer containing local instance data.  When the Sync/Stream
+Manager calls the waveform audio MCD, it allows the MCD to have access to
+the local instance data, which is tied to that event.
+<P>
+The PlayEventRoutine shown in the following example is presumed to receive
+all types of event notifications from SSM.  The types include implicit events
+and cue point notifications in terms of both time and data.  In response
+to cue point notifications a MCI_CUEPOINT message is returned to MDM by
+way of mdmDriverNotify.
+<PRE>RC APIENTRY PlayEventRoutine ( MEVCB     *pevcb)
+{
+  MTIME_EVCB        *pMTimeEVCB;      /* Modified Time EVCB*/
+  INSTANCE          * ulpInstance;    /* Current Instance*/
+  HWND              hWnd;             /* Callback Handle */
+  BOOL              fPlayListDone = FALSE;
+
+  /***********************************************************
+  * EventProc receives asynchronous SSM event notifications
+  * When the event is received, the event semaphore is posted
+  * which will wake up the MCD thread(s) blocked on this
+  * semaphore.
+  * The semaphore is not posted for time events like
+  * cuepoint (TIME) and media position changes since they do
+  * not alter the state of the stream.
+  ************************************************************/
+
+  switch (pevcb-&gt;evcb.ulType)
+  {
+  case EVENT_IMPLICIT_TYPE:
+
+       /* Retrieve our instance from the EVCB */
+
+       ulpInstance = (INSTANCE *)pevcb-&gt;ulpInstance;
+
+       /* Retrieve the callback handle to post messages on */
+
+       hWnd = ulpInstance-&gt;hwndCallBack;
+
+       switch (pevcb-&gt;evcb.ulSubType)
+       {
+       case EVENT_EOS:
+            ulpInstance-&gt;StreamEvent = EVENT_EOS;
+            DosPostEventSem (ulpInstance-&gt;hEventSem);
+           break;
+
+       case EVENT_STREAM_STOPPED:
+            /* Self explanatory--someone stopped the stream */
+
+            ulpInstance-&gt;StreamEvent = EVENT_STREAM_STOPPED;
+            DosPostEventSem (ulpInstance-&gt;hEventSem);
+           break;
+
+       case EVENT_SYNC_PREROLLED:
+            /******************************************
+            * This event is received in response to a
+            * preroll start. A Preroll start is done
+            * on an MCI_CUE message.
+            *******************************************/
+
+            ulpInstance-&gt;StreamEvent = EVENT_SYNC_PREROLLED;
+            DosPostEventSem (ulpInstance-&gt;hEventSem);
+           break;
+
+       case EVENT_PLAYLISTMESSAGE:
+
+            /******************************************
+            * We can receive this event if a playlist
+            * parser hits the MESSAGE COMMAND.
+            * NOTE: The MCD should return this message
+            * with the callback handle specified on the
+            * open.  This could be the source of much
+            * grief if you return on the wrong handle.
+            ******************************************/
+
+            mdmDriverNotify ( ulpInstance-&gt;usWaveDeviceID,
+                            ulpInstance-&gt;hwndOpenCallBack,
+                            MM_MCIPLAYLISTMESSAGE,
+                            (USHORT) MAKEULONG(pevcb-&gt;evcb.ulStatus,
+                                ulpInstance-&gt;usWaveDeviceID),
+                            (ULONG) pevcb-&gt;evcb.unused1);
+           break;
+
+       case EVENT_PLAYLISTCUEPOINT:
+
+            /************************************************
+            * We can receive this event if a playlist
+            * parser hits the CUEPOINT COMMAND opcode
+            * in the playlist.  This differs from a "normal"
+            * cuepoint because it is detected by the source,
+            * rather than the target stream handler.
+            ************************************************/
+
+
+            mdmDriverNotify ( ulpInstance-&gt;usWaveDeviceID,
+                              ulpInstance-&gt;hwndOpenCallBack,
+                              MM_MCICUEPOINT,
+                              (USHORT) MAKEULONG(pevcb-&gt;evcb.ulStatus,
+                                  ulpInstance-&gt;usWaveDeviceID),
+                              (ULONG) pevcb-&gt;evcb.unused1);
+           break;
+
+
+       } /* SubType case of Implicit Events */
+      break;
+
+  case EVENT_CUE_TIME_PAUSE:
+       {
+       /***************************************************
+       * This event will arrive if we played to a certain
+       * position in the stream.  Let the play thread know
+       * that we have reached the desired point.
+       ****************************************************/
+
+       pMTimeEVCB = (MTIME_EVCB *)pevcb;
+       ulpInstance = (INSTANCE *)pMTimeEVCB-&gt;ulpInstance;
+       ulpInstance-&gt;StreamEvent = EVENT_CUE_TIME_PAUSE;
+
+       DosPostEventSem (ulpInstance-&gt;hEventSem);
+       }
+       break;
+
+  case EVENT_CUE_TIME:
+
+       break;
+
+  } /* All Events case */
+
+  return (MCIERR_SUCCESS);
+
+} /* PlayEventProc */
+</PRE>
+
+<P>
+Events reported by SSM can be normal occurrences, such as an end-of-stream
+because<!-- entering slot 50 --> playback is complete, or the events can
+be abnormal occurrences, such as an error returned during the streaming
+process.  The driver needs to know about these events.
+<P>
+SSM reports two types of events:<I> implicit</I> and<I> explicit</I>. <I> Implicit
+</I>events are always reported.  When one occurs, the driver must receive
+the notification of its occurrence from SSM, however, it does not have to
+take any action.
+<P>
+An<I> explicit</I> event is reported to the driver only when the driver
+requests to be notified of the event's occurrence.  For example, the driver
+requests cuepoint notifications.
+
+<P><HR>
+
+<A HREF="042_L4_PreparingtoStreamthe.html">[Back: Preparing to Stream the Waveform Data]</A> <BR>
+<A HREF="044_L4_EventProcessing.html">[Next: Event Processing]</A> 
+</BODY>
+</HTML>

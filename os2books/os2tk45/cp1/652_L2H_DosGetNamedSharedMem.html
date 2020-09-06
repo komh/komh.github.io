@@ -1,0 +1,66 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosGetNamedSharedMem - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosGetNamedSharedMem - Example Code</H1><!-- entering slot 660 -->
+<P>
+This example allocates named shared memory, and shows how another process
+can access it. It finally frees the memory object.
+<PRE>#define INCL_DOSMEMMGR   /* Include DOS Memory Management APIs */
+#define INCL_DOSERRORS   /* DOS error values                   */
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+int main (VOID)
+{
+   PVOID  pvShrObject = NULL;      /* Pointer to shared memory object      */
+   PSZ    pszMemName  = "\\SHAREMEM\\MYTOOL\\APPLICAT.DAT"; /* Object name */
+   PVOID  pvAltObject = NULL;      /* Alternate pointer to shared memory   */
+   APIRET rc          = NO_ERROR;  /* Return code                          */
+   ULONG  ulObjSize   = 1024;   /* Size (system rounds to 4096 - page bdy) */
+
+   rc = DosAllocSharedMem(&amp;pvShrObject,   /* Pointer to object pointer     */
+                          pszMemName,     /* Name for shared memory        */
+                          ulObjSize,      /* Desired size of object        */
+                          PAG_COMMIT |    /* Commit memory                 */
+                          PAG_WRITE );    /* Allocate memory as read/write */
+   if (rc != NO_ERROR) {
+      printf("DosAllocSharedMem error:  return code = %u\n",rc);
+      return 1;
+   }
+
+   strcpy(pvShrObject, "Write your shared application data here.");
+
+      /* Get the address of the shared memory and reference it that way.
+         (Done for illustrative purposes only, this is how another process
+         would go about accessing the named shared memory.)            */
+
+   rc = DosGetNamedSharedMem(&amp;pvAltObject,  /* Pointer to pointer of object */
+                             pszMemName,    /* Name of shared memory        */
+                             PAG_READ);     /* Want read-only access        */
+   if (rc != NO_ERROR) {
+      printf("DosGetNamedSharedMem error:  return code = %u\n",rc);
+      return 1;
+   }
+
+   printf("Shared data read was \"%s\"\n",pvAltObject);
+
+   rc = DosFreeMem(pvShrObject);
+   if (rc != NO_ERROR) {
+      printf("DosFreeMem error:  return code = %u\n",rc);
+      return 1;
+   }
+
+   return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="651_L2H_DosGetNamedSharedMem.html">[Back: DosGetNamedSharedMem - Related Functions]</A> <BR>
+<A HREF="653_L2H_DosGetNamedSharedMem.html">[Next: DosGetNamedSharedMem - Topics]</A> 
+</BODY>
+</HTML>

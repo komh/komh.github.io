@@ -1,0 +1,171 @@
+<HTML XPOS=LEFT YPOS=BOTTOM WIDTH=100% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 44 01 00 08 00 11 64 00 64 00 --><TITLE>Example tunnel</TITLE>
+</HEAD>
+<BODY>
+<H1>Example tunnel</H1><!-- entering slot 45 -->
+<P>
+In this example, a simple tunnel will be created between two hosts:<!-- lm: 0x2 5 -->
+<UL><!-- lm: 0x2 5 -->
+<P>
+Host A<!-- lm: 0x2 15 -->
+<UL> 192.168.2.1<!-- lm: 0x2 5 -->
+</UL>Host B<!-- lm: 0x2 15 -->
+<UL> 192.168.2.4<!-- lm: 0x2 5 -->
+</UL><!-- lm: 0x2 1 --> 
+</UL>The tunnel will use the ESP protocol in tunnel
+mode, utilizing the DES_CBC_8 encryption algorithm.  The AH protocol will
+not be used.  The tunnel will have a lifetime of 8 hours, starting from
+the moment the tunnel is activated. 
+<P>
+
+<P>
+Host A
+<P>
+The configuration used by Host A is shown below. 
+<P>
+The following tunnel context entry is defined in %ETC%\SECURITY\FWMCTX.MAN
+on Host A.
+<PRE># Tunnel context entry defining IPSec tunnel with ID 1
+192.168.2.4                         #  1 - Partner's IP address
+192.168.2.1                         #  2 - My IP address
+1                                   #  3 - Tunnel ID
+500                                 #  4 - Partner's SA for ESP
+501                                 #  5 - Partner's SA for AH
+400                                 #  6 - My SA for ESP
+401                                 #  7 - My SA for AH
+DES_CBC_8                           #  8 - My encryption algorithm
+8                                   #  9 - My encryption key length
+0x08090a0b0c0d0e0f                  # 10 - My encryption key
+DES_CBC_8                           # 11 - Partner's encryption algorithm
+8                                   # 12 - Partner's encryption key length
+0x0001020304050607                  # 13 - Partner's encryption key
+KEYED_MD5                           # 14 - My authentication algorithm
+16                                  # 15 - My authentication key length
+0xffeeddccbbaa99887766554433221100  # 16 - My authentication key
+KEYED_MD5                           # 17 - Partner's authentication algorithm
+16                                  # 18 - Partner's authentication key length
+0x00112233445566778899aabbccddeeff  # 19 - Partner's authentication key
+0                                   # 20 - Start time (0 = current time)
+28800                               # 21 - Expiration time (in seconds)
+0.0.0.0                             # 22 - Reserved (must be 0.0.0.0)
+</PRE>
+ 
+<P>
+The following tunnel policy is defined in %ETC%\SECURITY\POLICY on Host
+A.
+<BR>
+
+<PRE># Tunnel policy definition for tunnel with ID 1
+# ESP=yes, AH=no, and tunnel mode is used.
+192.168.2.1  192.168.2.4  1  y/n  n/n  n
+</PRE>
+ 
+<P>
+The following packet filter rules are defined in %ETC%\SECURITY\FWFILTRS.CNF
+on Host A.
+<BR>
+
+<PRE># Rules for IPSec Tunnel #1
+# These two rules ensure that all traffic between these two systems passes
+# through the IPSec tunnel with ID 1.
+permit 192.168.2.1 255.255.255.0 192.168.2.4 255.255.255.0 all any 0 any 0 both local both l=yes t=1
+permit 192.168.2.4 255.255.255.0 192.168.2.1 255.255.255.0 all any 0 any 0 both local both l=yes t=1
+# Permit by default
+permit 0.0.0.0 0.0.0.0  0.0.0.0 0.0.0.0  all any 0 any   0 both both both l=no
+</PRE>
+ 
+<P>
+To activate the tunnel on Host A, the following commands should be run from
+within the %ETC%\SECURITY directory:
+<BR>
+
+<PRE>    hand_k fwmctx.man
+    fwinsert policy
+    cfgfilt -u
+</PRE>
+
+<P>
+ 
+<P>
+Host B
+<P>
+The configuration used by Host B is shown below. 
+<P>
+The following tunnel context entry is defined in %ETC%\SECURITY\FWMCTX.MAN
+on Host B.
+<BR>
+
+<PRE># Tunnel context entry defining IPSec tunnel with ID 1
+192.168.2.1                         #  1 - Partner's IP address
+192.168.2.4                         #  2 - My IP address
+1                                   #  3 - Tunnel ID
+400                                 #  4 - Partner's SA for ESP
+401                                 #  5 - Partner's SA for AH
+500                                 #  6 - My SA for ESP
+501                                 #  7 - My SA for AH
+DES_CBC_8                           #  8 - My encryption algorithm
+8                                   #  9 - My encryption key length
+0x0001020304050607                  # 10 - My encryption key
+DES_CBC_8                           # 11 - Partner's encryption algorithm
+8                                   # 12 - Partner's encryption key length
+0x08090a0b0c0d0e0f                  # 13 - Partner's encryption key
+KEYED_MD5                           # 14 - My authentication algorithm
+16                                  # 15 - My authentication key length
+0x00112233445566778899aabbccddeeff  # 16 - My authentication key
+KEYED_MD5                           # 17 - Partner's authentication algorithm
+16                                  # 18 - Partner's authentication key length
+0xffeeddccbbaa99887766554433221100  # 19 - Partner's authentication key
+0                                   # 20 - Start time (0 = current time)
+28800                               # 21 - Expiration time (in seconds)
+0.0.0.0                             # 22 - Reserved (must be 0.0.0.0)
+</PRE>
+ 
+<P>
+The following tunnel policy is defined in %ETC%\SECURITY\POLICY on Host
+B.
+<BR>
+
+<PRE># Tunnel policy definition for tunnel with ID 1
+# ESP=yes, AH=no, and tunnel mode is used.
+192.168.2.4  192.168.2.1  1  y/n  n/n  n
+</PRE>
+ 
+<P>
+The following packet filter rules are defined in %ETC%\SECURITY\FWFILTRS.CNF
+on Host B.
+<BR>
+
+<PRE># Rules for IPSec Tunnel #1
+#
+# These two rules permit ESP-encoded packets between the local system
+# (192.168.2.4) and the other end of our IPSec tunnel (192.168.2.1).
+# They are necessary because we are denying traffic by default.
+permit 192.168.2.1 255.255.255.0 192.168.2.4 255.255.255.0 esp any 0 any 0 both local inbound
+permit 192.168.2.4 255.255.255.0 192.168.2.1 255.255.255.0 esp any 0 any 0 both local outbound
+# These two rules ensure that all traffic between these two systems passes
+# through the IPSec tunnel with ID 1.
+permit 192.168.2.4 255.255.255.0 192.168.2.1 255.255.255.0 all any 0 any 0 both local both t=1
+permit 192.168.2.1 255.255.255.0 192.168.2.4 255.255.255.0 all any 0 any 0 both local both t=1
+# The default final rule (which need not be specified) is to deny everything.
+</PRE>
+ 
+<P>
+To activate the tunnel on Host B, the following commands should be run from
+within the %ETC%\SECURITY directory:
+<BR>
+
+<PRE>    hand_k fwmctx.man
+    fwinsert policy
+    cfgfilt -u
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="043_L3_IPfiltersfortunnelli.html">[Back: IP filters for tunnelling]</A> <BR>
+<A HREF="045_L2_Limitations.html">[Next: Limitations]</A> 
+</BODY>
+</HTML>

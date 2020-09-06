@@ -1,0 +1,156 @@
+<HTML>
+<HEAD>
+<TITLE>Sending and Receiving Data</TITLE>
+</HEAD>
+<BODY>
+<H1>Sending and Receiving Data</H1><!-- entering slot 48 -->
+<P>
+Sending and receiving data can be done with any one of several calls. The
+calls vary according to the amount of information to be transmitted and
+received and the state of the socket being used to perform the operation.
+<!-- lm: 0x2 2 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 5 -->The writev() call can be used with a socket that is
+in a connected state, as the destination of the data is implicitly specified
+by the connection.<!-- lm: 0x2 2 -->
+<P>
+<LI><!-- lm: 0x2 5 -->The sendto() and sendmsg() calls allow the process
+to specify the destination for a message explicitly.<!-- lm: 0x2 2 -->
+<P>
+<LI><!-- lm: 0x2 5 -->The recv() call allows a process to receive data on
+a connected socket without receiving the sender's address.<!-- lm: 0x2 2 -->
+<P>
+<LI><!-- lm: 0x2 5 -->The recvfrom() and recvmsg() calls allow the process
+to retrieve the incoming message and the sender's address.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+While the send() and recv() calls are virtually identical to the readv()
+and writev() calls, the extra flags argument in the send() and recv() calls
+is important. The flags, defined in the &lt;SYS\SOCKET.H&gt; file, can be
+defined as a nonzero value if the application program requires one or more
+of the following:<!-- lm: 0x2 0 -->
+<P>
+MSG_OOB<!-- lm: 0x2 20 -->
+<UL> Sends or receives out-of-band data.<!-- lm: 0x2 0 -->
+</UL>MSG_PEEK<!-- lm: 0x2 20 -->
+<UL> Looks at data without reading.<!-- lm: 0x2 0 -->
+</UL>MSG_DONTROUTE<!-- lm: 0x2 20 -->
+<UL> Sends data without routing packets.
+<!-- lm: 0x2 0 -->
+</UL>
+<P>
+Out-of-band data is specific to stream sockets. The option to have data
+sent without routing applied to the outgoing packets is currently used only
+by the routing table management process, and is unlikely to be of interest
+to the casual user. The ability to preview data is, however, of general
+interest. When the MSG_PEEK flag is specified with a recv() call, any data
+present is returned to the user, but treated as still unread. That is, the
+next readv() or recv() call applied to the socket returns the data previously
+previewed.
+<P>
+The following example shows an application sending data on a connected socket
+and receiving data in response. The<I> flags</I> field can be used to specify
+additional options to send() or recv(), such as sending out-of-band data.
+For additional information, see <A HREF="198_L2_send.html">send()</A> and
+<A HREF="193_L2_recv.html">recv()</A>. AnApplicationUsingthesend ( )andrecv
+( )Calls
+<BR>
+
+<PRE>int bytes_sent;
+int bytes_received;
+char data_sent[256] = "data to be sent on connected socket";
+char data_received[256];
+int s;
+...
+bytes_sent = send(s, data_sent, sizeof(data_sent), 0);
+...
+bytes_received = recv(s, data_received, sizeof(data_received), 0);
+</PRE>
+
+<P>
+An example of an application sending from a connected socket and receiving
+data in response is:
+<BR>
+An Application Using the sendto() and recvfrom() Call
+<BR>
+
+<PRE>int bytes_sent;
+int bytes_received;
+char data_sent[256] = "data to be sent using sendto()";
+char data_received[256];
+struct sockaddr_in to;
+struct sockaddr from;
+int addrlen;
+int s;
+...
+memset(&amp;to, 0, sizeof(to));
+to.sin_len = sizeof(to);
+to.sin_family = AF_INET;
+to.sin_addr.s_addr   = inet_addr("129.5.24.1");
+to.sin_port   = htons(1024);
+...
+bytes_sent = sendto(s, data_sent, sizeof(data_sent), 0, (struct sockaddr *) &amp;to, sizeof(to));
+...
+addrlen = sizeof(from); /* must be initialized */
+bytes_received = recvfrom(s, data_received, sizeof(data_received), 0, &amp;from, &amp;addrlen);
+</PRE>
+
+<P>
+The sendto() and recvfrom() calls take additional parameters that allow
+the caller to specify the recipient of the data or to be notified of the
+sender of the data. See <A HREF="194_L2_recvfrom.html">recvfrom()</A>, and
+<A HREF="201_L2_sendto.html">sendto()</A>, for more information about these
+additional parameters.
+<P>
+A list of the data transfer calls and a summary of some of their characteristics
+follows:
+<P>
+Data Transfer Calls
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Data Transfer Buffers      Option Flags? Sockets Used  Server       ³
+³Call                                     With          Address      ³
+³                                                       Required?    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³<A HREF="198_L2_send.html">send()</A>        Single       Yes           Connected     No           ³
+³                                         only                       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³<A HREF="193_L2_recv.html">recv()</A>        Single       Yes           Connected     No           ³
+³                                         only                       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³<A HREF="201_L2_sendto.html">sendto()</A>      Single       Yes           Any socket    Yes          ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³<A HREF="194_L2_recvfrom.html">recvfrom()</A>    Single       Yes           Any socket    Yes          ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³<A HREF="223_L2_writev.html">writev()</A>      <!-- entering slot 49 -->Multiple     No            Connected     No           ³
+³                                         only                       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³<A HREF="192_L2_readv.html">readv()</A>       Multiple     No            Connected     No           ³
+³                                         only                       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³<A HREF="200_L2_sendmsg.html">sendmsg()</A>     Multiple     Yes           Any socket    Yes          ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³<A HREF="195_L2_recvmsg.html">recvmsg()</A>     Multiple     Yes           Any socket    Yes          ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+For additional information that you may need when obtaining or setting socket
+options, see:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 5 --><A HREF="033_L2_SocketTypes.html">Socket Types</A><!-- lm: 0x2 2 -->
+<BR>
+<LI><!-- lm: 0x2 5 --><A HREF="046_L3_OutofBandData.html">Out-of-Band Data
+</A><!-- lm: 0x2 2 -->
+<BR>
+<LI><!-- lm: 0x2 5 --><A HREF="086_L2_IPMulticasting.html">IP Multicasting
+</A><!-- lm: 0x2 0 -->
+</UL>
+
+<P><HR>
+
+<A HREF="044_L2_SocketDataTransfer.html">[Back: Socket Data Transfer]</A> <BR>
+<A HREF="046_L3_OutofBandData.html">[Next: Out-of-Band Data]</A> 
+</BODY>
+</HTML>

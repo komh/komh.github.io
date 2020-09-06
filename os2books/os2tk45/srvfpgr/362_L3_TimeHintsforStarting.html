@@ -1,0 +1,71 @@
+<HTML>
+<HEAD>
+<TITLE>Time Hints for Starting and Stopping a Service</TITLE>
+</HEAD>
+<BODY>
+<H1>Time Hints for Starting and Stopping a Service</H1><!-- entering slot 471 -->
+<P>
+For the services that take a long time to start or to stop, a mechanism
+is provided to feed back or hint to the process that started or stopped
+them.  This mechanism allows the process to determine dynamically how long
+to wait for the service to (1) complete the startup or stop and (2) provide
+the estimated time to the user, if determined by the application. The service
+can set the text field<I> svci2_text</I> as part of its status information.
+
+<P>
+The services and programs that start or stop the services can use this mechanism
+to communicate during the start and stop operations.  The control completion
+pending (CCP) code values are used when a service expects to take a long
+time to start or stop.  Any service that has a nontrivial initialization
+or shutdown task can use this method.
+<P>
+If a service is not using CCP codes, the<I> svcs_code</I> field in the data
+structure should be set to 0 while the service status is INSTALL_PENDING
+or UNINSTALL_PENDING.
+<P>
+If a service is using CCP codes, then the<I> svcs_code</I> field is mapped
+as follows:
+<PRE>33322222 222221111 111111
+21098765 432109876 54321098 76543210
+ 
+xxxxxxxx xxxxxxxxH TTTTTTTT CCCCCCCC
+ 
+ 
+x = not used (must be 0)
+H = hint is given            SERVICE_CCP_QUERY_HINT
+T = time to wait             SERVICE_CCP_WAIT_TIME
+C = checkpoint number        SERVICE_CCP_CHKPT_NUM
+ 
+</PRE>
+
+<P>
+Bits that are not used must be set to 0.
+<P>
+The time to wait is the expected time to complete the current operation
+(start or stop), in tenths of a second.
+<P>
+The checkpoint number is a number that should be incremented, or at least
+changed to a higher value, each time the service calls the NetServiceStatus
+API.  A service should call the NetServiceStatus API fairly often to keep
+updating this number, remembering that it is an 8-bit quantity.
+<P>
+A controlling application assumes the service is still active if this checkpoint
+value constantly changes. For that reason, the code that calls the NetServiceStatus
+API to update the CCP code should be in the main code path, rather than
+in some time-triggered thread that might continue even while the current
+operation has halted as the result of an error.
+<P>
+The "hint" bit informs the application controlling the service that the
+other (time and count) information is valid.  If this bit is set, the field
+<I>svc2_text</I> can contain an ASCIIZ string that, when displayed to a
+user, provides some information about the current state of the service.
+ The service can continue to use a null string if it does not need to provide
+text.  It is up to the controlling application to make use of the text field,
+but it can assume that the text is suitable for display to the user.
+
+<P><HR>
+
+<A HREF="361_L3_StoppingaService.html">[Back: Stopping a Service]</A> <BR>
+<A HREF="363_L2_ServicesDataStructur.html">[Next: Services Data Structures]</A> 
+</BODY>
+</HTML>

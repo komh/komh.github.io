@@ -1,0 +1,116 @@
+<HTML>
+<HEAD>
+<TITLE>How To Use Both DBCS and SBCS in a String</TITLE>
+</HEAD>
+<BODY>
+<H1>How To Use Both DBCS and SBCS in a String</H1><!-- entering slot 28 -->
+<P>
+In host codes, the shiftÄout/shiftÄin control characters (SO/SI) are used
+as delimiters to distinguish DBCS characters when used with SBCS ones.
+<PRE>               ÚÄ Control Character ÄÄ¿
+               ³                      ³
+               V                      V
+ÚÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄ¿
+³ SBCS Data ³ SO ³    DBCS Data    ³ SI ³ SBCS Data ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÙ
+
+SO (0EH): Shift out from SBCS (Start of DBCS characters)
+SI (0FH): Shift in to SBCS (End of DBCS characters)
+</PRE>
+
+<P>
+<B>Note: </B> Some host products support pure DBCS strings or fields, which
+contains DBCS string without SO/SI.
+<P>
+PC code pages, however, require no delimiters such as SO/SI control characters
+because the code ranges of the first bytes of DBCS characters do not overlap
+SBCS characters. Code Ranges of DBCS First Bytes shows the code ranges of
+DBCS first bytes.
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³ Language                     ³ Code Ranges of ³ Code Ranges of ³
+³       (Combined Code page)   ³ DBCS 1st Byte  ³ DBCS 2nd Byte  ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ Japanese    (932/942)        ³  81Ä9F, E0ÄFC  ³  40Ä7E, 80ÄFC  ³
+³ Korean      (949)            ³  8FÄFE         ³  A1ÄFE         ³
+³ S. Chinese  (1381)           ³  8CÄFE         ³  A1ÄFE         ³
+³ T. Chinese  (938/948)        ³  81ÄFC         ³  40Ä7E, 80ÄFC  ³
+³ T. Chinese  (950)            ³  81ÄFE         ³  40Ä7E, 81ÄFE  ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+Code Ranges of DBCS First Bytes
+</PRE>
+
+<P>
+<B>Note: </B><!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->The ranges above can be used to test whether
+a byte is an SBCS character or the first byte of a DBCS character.  But
+this test can be used only when you are sure that the byte is either an
+SBCS character or the first byte of a DBCS character.  In other words, if
+the byte may be the second byte of a DBCS character, this test cannot be
+used since the code ranges of DBCS second bytes overlap SBCS characters
+and DBCS first bytes.
+<P>
+Because of this, keep track of the byte type (an SBCS character, the first
+or second byte of a DBCS character) of the current point when handling an
+SBCS/DBCS mixed string. Otherwise, you must reÄscan the string from the
+top.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Do not hardÄcode the code ranges in your program.
+See <A HREF="032_L3_OS2CommonDBCSRelated.html">OS/2 Common DBCS Related
+Functions</A> for more information.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Once the first byte of a DBCS character is identified by the above test,
+it should be handled together with its succeeding byte as one DBCS character.
+
+<P>
+<B>Note: </B> It is important to keep the integrity of DBCS character.  The
+system also handles the DBCS character by this logic.  For example, a string
+of DBCS character is displayed in a DBCS environment, if the second byte
+of one DBCS character in this string is deleted, then the system will treat
+the next character as the second byte of this DBCS, and the whole string
+can not be displayed correctly.  The end user will find the string not just
+losing one character but the whole string becomes a different string, or
+a strange string.  The following shows how it happened.
+<PRE>       ÚÄÄÄ take away the character 4.
+       ³
+       
+ÚÄÄÄÂÄÄÄÂÄÄÄÂÄÄÄ¿
+³1³2³3³4³5³6³7³8³       The byte data (1) (3) (5) (7) are
+ÀÄÄÄÁÄÄÄÁÄÄÄÁÄÄÄÙ       the DBCS first byte code,
+       X                and the (1,2) (3,4) (5,6) (7,8)
+       ³                form a DBCS string.
+       
+
+ÚÄÄÄÂÄÄÄÂÄÄÄÂÄ¿
+³1³2³3³5³6³7³8³         After the (4) is deleted,
+ÀÄÄÄÁÄÄÄÁÄÄÄÁÄÙ         If the (6) is in the DBCS first byte
+                        code range, and (8) is not, then
+                        the system displays the (1,2) (3,5)
+      or                (6,7) as DBCS and (8) as SBCS.
+
+ÚÄÄÄÂÄÄÄÂÄÄÄÂÄÄÄ¿       In case of the character 8 is also
+³1³2³3³5³6³7³8³?³       in the DBCS first byte code range,
+ÀÄÄÄÁÄÄÄÁÄÄÄÁÄÄÄÙ       then some system error may occur.
+             XXX
+
+The error case of the DBCS handling
+</PRE>
+
+<P>
+If your program needs to search for, for example, '%' (25H) whose code point
+is out of the current DBCS second byte code range, you may simply search
+for 25H disregarding whether or not each byte of the scanned data is SBCS
+or DBCS. <!-- entering slot 29 --> This logic will work now but may not
+in the future.  You are recommended to avoid this kind of optimizations.
+<!-- lm: 0x2 1 -->
+<P>
+
+
+<P><HR>
+
+<A HREF="026_L3_CountryCodeandCombin.html">[Back: Country Code and Combined Code Page]</A> <BR>
+<A HREF="028_L2_DBCSPersonalSystemHa.html">[Next: DBCS Personal System Hardware]</A> 
+</BODY>
+</HTML>

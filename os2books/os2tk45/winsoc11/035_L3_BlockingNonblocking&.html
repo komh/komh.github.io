@@ -1,0 +1,94 @@
+<HTML>
+<HEAD>
+<TITLE>Blocking/Non blocking & Data Volatility</TITLE>
+</HEAD>
+<BODY>
+<H1>Blocking/Non blocking & Data Volatility</H1><!-- entering slot 36 -->
+<P>
+One major issue in porting applications from a Berkeley sockets environment
+to a Windows environment involves "blocking"; that is, invoking a function
+which does not return until the associated operation is completed.  The
+problem arises when the operation may take an arbitrarily long time to complete:
+an obvious example is a <A HREF="062_L3_recv.html">recv()</A> which may
+block until data has been received from the peer system.  The default behavior
+within the Berkeley sockets model is for a socket to operate in a blocking
+mode unless the programmer explicitly requests that operations be treated
+as non-blocking. <B><I> It is strongly recommended that programmers use
+the nonblocking (asynchronous) operations if at all possible, as they work
+significantly better within the nonpreemptive Windows environment.  Use
+blocking operations only if absolutely necessary, and carefully read and
+understand this section if you must use blocking operations.</B></I>
+<P>
+Even on a blocking socket, some operations (e.g. <A HREF="048_L3_bind.html">bind()</A>,
+<A HREF="053_L3_getsockopt.html">getsockopt()</A>, <A HREF="051_L3_getpeername.html">getpeername()</A>)
+can be completed immediately.  For such operations there is no difference
+between blocking and non-blocking operation.  Other operations (e.g. <A HREF="062_L3_recv.html">recv()</A>)
+may be completed immediately or may take an arbitrary time to complete,
+depending on various transport conditions.  When applied to a blocking socket,
+these operations are referred to as blocking operations.  All routines which
+can block are listed with an asterisk in the tables above and below.
+<P>
+Within a Windows Sockets implementation, a blocking operation which cannot
+be completed immediately is handled as follows.  The DLL initiates the operation,
+and then enters a loop in which it dispatches any Windows messages (yielding
+the processor to another thread if necessary) and then checks for the completion
+of the Windows Sockets function.  If the function has completed, or if <A HREF="087_L3_WSACancelBlockingCal.html">WSACancelBlockingCall()
+</A>has been invoked, the blocking function completes with an appropriate
+result. Refer to <A HREF="091_L3_WSASetBlockingHook.html">WSASetBlockingHook()</A>,
+for a complete description of this mechanism, including pseudocode for the
+various functions.
+<P>
+If a Windows message is received for a process for which a blocking operation
+is in progress, there is a risk that the application will attempt to issue
+another Windows Sockets call.  Because of the difficulty of managing this
+condition safely, the Windows Sockets specification does not support such
+application behavior.  Two functions are provided to assist the programmer
+in this situation. <A HREF="090_L3_WSAIsBlocking.html">WSAIsBlocking()</A> may
+be called to determine whether or not a blocking Windows Sockets call is
+in progress. <A HREF="087_L3_WSACancelBlockingCal.html">WSACancelBlockingCall()
+</A>may be called to cancel an in-progress blocking call, if any. <B> Any
+other Windows Sockets function which is called in this situation will fail
+with the error WSAEINPROGRESS.</B>  It should be emphasized that this restriction
+applies to both blocking and non-blocking operations.
+<P>
+Although this mechanism is sufficient for simple applications, it cannot
+support the complex message-dispatching requirements of more advanced applications
+(for example, those using the MDI model).  For such applications, the Windows
+Sockets API includes the function <A HREF="091_L3_WSASetBlockingHook.html">WSASetBlockingHook()</A>,
+which allows the programmer to define a special routine which will be called
+instead of the default message dispatch routine described above.
+<P>
+The Windows Sockets DLL will call the blocking hook function only if all
+of the following are true: the routine is one which is defined as being
+able to block, the specified socket is a blocking socket, and the request
+cannot be completed immediately.  (A socket is set to blocking by default,
+but the IOCTL FIONBIO and <A HREF="085_L3_WSAAsyncSelect.html">WSAAsyncSelect()
+</A>both set a socket to nonblocking mode.)  If an application uses only
+non-blocking sockets and uses the <A HREF="085_L3_WSAAsyncSelect.html">WSAAsyncSelect()
+</A>and/or the <A HREF="036_L2_DatabaseFunctions.html"><!-- entering slot 37 -->WSAAsyncGetXByY()
+</A>routines instead of <A HREF="064_L3_select.html">select()</A> and the
+<A HREF="036_L2_DatabaseFunctions.html">getXbyY()</A> routines, then the
+blocking hook will never be called and the application does not need to
+be concerned with the reentrancy issues the blocking hook can introduce.
+
+<P>
+If an application invokes an asynchronous or non-blocking operation which
+takes a pointer to a memory object (e.g. a buffer, or a global variable)
+as an argument, it is the responsibility of the application to ensure that
+the object is available to the Windows Sockets implementation throughout
+the operation. The application must not invoke any Windows function which
+might affect the mapping or addressability of the memory involved.  In a
+multithreaded system, the application is also responsible for coordinating
+access to the object using appropriate synchronization mechanisms.  A Windows
+Sockets implementation cannot, and will not, address these issues.  The
+possible consequences of failing to observe these rules are beyond the scope
+of this specification.
+<P>
+
+
+<P><HR>
+
+<A HREF="034_L2_SocketFunctions.html">[Back: Socket Functions]</A> <BR>
+<A HREF="036_L2_DatabaseFunctions.html">[Next: Database Functions]</A> 
+</BODY>
+</HTML>

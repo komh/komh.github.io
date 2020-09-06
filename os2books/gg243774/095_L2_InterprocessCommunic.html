@@ -1,0 +1,72 @@
+<HTML>
+<HEAD>
+<TITLE>Interprocess Communication Using Queues (Part 2)</TITLE>
+</HEAD>
+<BODY>
+<H1>Interprocess Communication Using Queues (Part 2)</H1><!-- entering slot 97 -->
+<PRE>#define SRVQUEUENAME = "\\QUEUES\\SRV_QUEUE"    /* Server queue name     */
+#define REQQUEUENAME = "\\QUEUES\\REQ_QUEUE"    /* Requester queue name  */
+
+HQUEUE      hSrvQueue, hReqQueue;               /* Queue handles         */
+REQUESTDATA Requester;                          /* Requester win handle  */
+REQUEST     *Request;                           /* Request data buffer   */
+REPLY       *Reply;                             /* Reply data buffer     */
+BYTE        Priority;                           /* Element priority      */
+ULONG       ulBytes;                            /* Bytes read/written    */
+APIRET      rc;                                 /* Return code           */
+
+rc = DosCreateQueue(&amp;hSrvQueue,                 /* Create queue          */
+                    QUE_FIFO  |                 /* First-in, first-out   */
+                    QUE_CONVERT_ADDRESS,        /* Convert addresses     */
+                    SRVQUEUENAME);              /* Name of queue         */
+while (!ProcessEnded)                           /* Until process ends    */
+      {
+      rc = DosReadQueue(hSrvQueue,              /* Read queue            */
+                        &amp;Requester,             /* Control information   */
+                        &amp;ulBytes,               /* Bytes read            */
+                        &amp;Request,               /* Data buffer pointer   */
+                        0,                      /* Get first element     */
+                        DCWW_WAIT,              /* Wait synchronously    */
+                        &amp;Priority,              /* Priority of element   */
+                        0);                     /* No event semaphore    */
+
+      ServiceRequest(Request);                  /* Process request       */
+
+      rc = DosOpenQueue(&amp;Requester.idpid,       /* Open queue            */
+                        &amp;hReqQueue,             /* Queue handle          */
+                        REQQUEUENAME);          /* Server queue name     */
+      rc = DosAllocSharedMem(&amp;Reply,            /* Allocate shared mem   */
+                             NULL,              /* object for request    */
+                             sizeof(REPLY),     /* Size of memory object */
+                             PAG_WRITE |        /* Allow write access    */
+                             PAG_READ  |        /* Allow read access     */
+                             PAG_COMMIT);       /* Commit storage now    */
+      rc = DosGiveSharedMem(Reply,              /* Give mem to requester */
+                            &amp;Requester.idpid,   /* Req process id        */
+                            PAG_READ);          /* Allow read only       */
+      rc = DosWriteQueue(hReqQueue,             /* Add request to queue  */
+                         0L,                    /* No control info       */
+                         sizeof(REPLY),         /* Size of reply         */
+                         Reply,                 /* Reply buffer          */
+                         0);                    /* No priority           */
+      rc = DosCloseQueue(hReqQueue);            /* Close queue           */
+
+      DosFreeMem(Request);                      /* Free request buffer   */
+      WinPostMsg((HWND)Requester.ulData,        /* Post notification msg */
+                 WMP_REQUESTCOMPLETE,           /* to requester window   */
+                 (MPARAM)Reply,                 /* Reply buffer pointer  */
+                 0);
+      DosFreeMem(Reply);                        /* Free reply buffer     */
+      }
+</PRE>
+
+<P>
+This example shows the creation of a queue and the processing of items from
+the queue by a "server" process.
+
+<P><HR>
+
+<A HREF="094_L2_InterprocessCommunic.html">[Back: Interprocess Communication Using Queues (Part 1)]</A> <BR>
+<A HREF="096_L2_InterprocessCommunic.html">[Next: Interprocess Communication Using Queues (Part 3)]</A> 
+</BODY>
+</HTML>

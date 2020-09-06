@@ -1,0 +1,179 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>SMH_NOTIFY - Remarks</TITLE>
+</HEAD>
+<BODY>
+<H1>SMH_NOTIFY - Remarks</H1><!-- entering slot 597 -->
+<P>
+This message is used to get or return an empty or full buffer, depending
+on whether the stream handler is a target or source of data.  The message
+can return or request not only the next available buffer, but also the next
+<I>n</I> buffers.  For example, a target stream handler can request the
+next 3 available full buffers, instead of the next available buffer, if
+it needs to speed up its consumption of buffers.
+<P>
+The target stream handler should return the empty buffers in the reverse
+order in which they were retrieved from the Sync/Stream Manager.  The target
+stream handler must be able to accept a NULL buffer pointer on a BUF_GETFULL
+request because the BUF_EOS flag may be set, but there may not be any buffers
+left to consume.
+<P>
+All buffers allocated by the Sync/Stream Manager are fixed and cannot be
+swapped.
+<P>
+The Sync/Stream Manager provides the ability for a source stream handler
+to associate one cue point with a buffer that it passes to the Sync/Stream
+Manager.  This buffer and attribute remain in the data stream until the
+target stream handler requests it. The attribute for the buffer is passed
+with the buffer to the target. See the<I> ulMessageParm</I> and<I> mmtimeOffset
+</I>parameters for a description of the buffer attribute. The target stream
+handler then must report an EVENT_PLAYLISTCUEPOINT event, at the appropriate
+time, with the buffer attribute as the message parameter (the<I> ulMessageParm
+</I>field in the <A HREF="1997_L2_PLAYL_EVCB.html">PLAYL_EVCB</A> structure).
+
+<P>
+This source stream handler feature of the Sync/Stream Manager supports the
+memory-playlist ability to send a cue-point event as close to the actual
+time it occurs as possible.  For this to work, it must be the target stream
+handler that detects the cue-point event and reports it to the application
+media control driver.  If the system-memory stream handler is the source
+stream handler, it must notify the target stream handler to report a cue-point
+event.
+<P>
+The contents of the<I> ulMessageParm</I> parameter are defined by the user
+application. For example, if the system-memory stream handler is the source
+stream handler, and it receives a playlist from the user application, the
+playlist CUEPOINT instruction defines the contents of the buffer attribute
+passed to the target stream handler. The target stream handler then reports
+the event and passes the buffer attribute as an event parameter.
+<P>
+For split streams, a buffer can be divided into multiple variable-length
+records. This is useful for streaming interleaved data from one source stream
+handler, in multiple streams, to one or more target stream handlers, where
+each stream represents a different data type.
+<P>
+The source stream handler requests one buffer at a time from the Sync/Stream
+Manager and returns filled records to the Sync/Stream Manager.  The source
+stream handler specifies which stream the records will go in.  Each stream
+goes to a different target stream handler.  The<I> pRecord</I> field of
+the pointer table are not used for normal non-split streams. The source
+stream handler can return multiple records of a specific data type to a
+stream, but these all must be contained within the same buffer.  The last
+record of each buffer is indicated by using the BUF_LASTRECORD flag; it
+is only sent to the stream that receives the last record for a buffer.  The
+BUF_EOS flag, on the other hand, is sent to all streams when the last buffer
+or record is returned to the Sync/Stream Manager.
+<P>
+The SMH_NOTIFY message also can accept user-provided buffers into a stream
+to be passed directly from the source stream handler to the target stream
+handler.  This is accomplished with the BUF_GIVEBUF flag, which enables
+the source stream handler to<I> give</I> a buffer and length to the Sync/Stream
+Manager eventually to be passed to the target stream handler for a BUF_GETFULL
+request.  Each buffer given to the Sync/Stream Manager is used once.  The
+BUF_GIVEBUF is only available on DLL SMH_NOTIFY calls.  The Sync/Stream
+Manager returns ERROR_TOO_MANY_BUFFERS to the source stream handler if it
+attempts to give too many buffers.  The BUF_GIVEBUF feature is provided
+primarily for the memory stream handler to be able to stream data from an
+application's memory.
+<P>
+For DLL stream handlers, all pointers returned are 32-bit flat process linear
+addresses.  For device driver stream handlers, pointers returned in an SMH_NOTIFY
+message are either 32-bit, flat, global linear addresses, physical addresses,
+or<I> GDT</I> selector and offset addresses.  The latter is the default.
+ The others are selectable for each SMH_NOTIFY message.
+<P>
+<B>Note: </B> The physical addresses are pointers to physically contiguous
+memory, not a page table.  The SPCBBUF_NONCONTIGUOUS bit must not be set
+to On in the <A HREF="2102_L2_SPCB.html"><!-- entering slot 598 -->SPCB
+</A>to get a physical address from the Sync/Stream Manager.  The Sync/Stream
+Manager fails requests for physical addresses if this bit is set.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+<B>Valid Source SH (PRODUCER) Request Combinations to SMH_NOTIFY:</B>
+<P>
+Any combination of BUF_GETEMPTY and BUF_RETURNFULL can be used for the same
+SMH_NOTIFY function.
+<P>
+Either BUF_LINEAR or BUF_PHYSICAL can be used with any combination of BUF_GETEMPTY,
+BUF_RETURNFULL, BUF_GIVEBUF, BUF_GDT, and BUF_EXTENDEDPTR. BUF_LINEAR and
+BUF_PHYSICAL are valid only for device driver stream handlers.<!-- lm: 0x2 1 -->
+<P>
+BUF_GIVEBUF<!-- lm: 0x11 4 -->
+<UL> Give a user-provided buffer to SSM.
+ Refer to the bit-flag in the SPCB used to indicate that user-provided buffers
+are being used (Ring 3 only).  Buffer pointers are passed in<I> pRetBufTab</I>.
+<!-- lm: 0x2 1 -->
+</UL>BUF_EXTENDED<!-- lm: 0x11 4 -->
+<UL> Indicates extended
+notify structure.  It can be used with any other flag.<!-- lm: 0x2 1 -->
+</UL> BUF_GETEMPTY
+<!-- lm: 0x11 4 -->
+<UL>Get one or more empty buffers to fill.<!-- lm: 0x2 1 -->
+</UL> BUF_RETURNFULL
+<!-- lm: 0x11 4 -->
+<UL>Return one or more filled buffers.<!-- lm: 0x2 1 -->
+</UL> BUF_RETURNFULL
++ BUF_RECORDS<!-- lm: 0x11 4 -->
+<UL> Return one or more filled records.
+<!-- lm: 0x2 1 -->
+</UL>BUF_LASTRECORD<!-- lm: 0x11 4 -->
+<UL> Indicates
+that last record in a buffer is filled. This can be used with the BUF_RETURNFULL+BUF_RECORDS
+combination only.<!-- lm: 0x2 1 -->
+</UL> BUF_EOS<!-- lm: 0x11 4 -->
+<UL> Indicates
+end-of-stream (last buffer produced).  This must be used with BUF_RETURNFULL
+and BUF_GIVEBUF.  This flag is passed to the target stream handler with
+the last buffer in the stream.<!-- lm: 0x2 1 -->
+</UL> BUF_EXTENDEDPTR<!-- lm: 0x11 4 -->
+<UL> Indicates
+extended notify structures (<A HREF="1065_L2_EPSRCBUFTAB.html">EPSRCBUFTAB
+</A>and <A HREF="1074_L2_EPTGTBUFTAB.html">EPTGTBUFTAB</A>.) and implies
+BUF_EXTENDED.<!-- lm: 0x2 1 -->
+</UL> BUF_GDT<!-- lm: 0x11 4 -->
+<UL> Pointers
+are GDT sel:offset.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Valid Target SH (Consumer) Request Combinations to SMH_NOTIFY:</B>
+<P>
+Any combination of BUF_GETFULL and BUF_RETURNEMPTY can be used for the same
+SMH_NOTIFY function. As far as the target stream handler is concerned, records
+are the same as buffers.
+<P>
+Either BUF_LINEAR or BUF_PHYSICAL can be used with any combination of BUF_GETFULL
+and BUF_RETURNEMPTY. BUF_LINEAR and BUF_PHYSICAL are valid only for device
+driver stream handlers.<!-- lm: 0x2 1 -->
+<P>
+BUF_GETFULL<!-- lm: 0x11 4 -->
+<UL> Get one or more filled buffers to use.
+<!-- lm: 0x2 1 -->
+</UL>BUF_RETURNEMPTY<!-- lm: 0x11 4 -->
+<UL> Return one
+or more empty (use) buffers.<!-- lm: 0x2 1 -->
+</UL> BUF_EOS<!-- lm: 0x11 4 -->
+<UL> Received
+from the SSM with the last buffer in the stream. The target must set this
+flag when returning the last used buffers.<!-- lm: 0x2 1 -->
+</UL> BUF_EXTENDED
+<!-- lm: 0x11 4 -->
+<UL>Indicates extended notify structure (<A HREF="1894_L2_PARM_ENOTIFY.html">PARM_ENOTIFY</A>).
+ It can be used with any other flag.<!-- lm: 0x2 1 -->
+</UL> BUF_EXTENDEDPTR
+<!-- lm: 0x11 4 -->
+<UL>Indicates extended notify structures (<A HREF="1065_L2_EPSRCBUFTAB.html">EPSRCBUFTAB
+</A>and <A HREF="1074_L2_EPTGTBUFTAB.html">EPTGTBUFTAB</A>.) and implies
+BUF_EXTENDED.<!-- lm: 0x2 1 -->
+</UL> BUF_GDT<!-- lm: 0x11 4 -->
+<UL> Pointers
+are GDT sel:offset.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="596_L2H_SMH_NOTIFYDescriptio.html">[Back: SMH_NOTIFY - Description]</A> <BR>
+<A HREF="598_L2H_SMH_NOTIFYExampleCod.html">[Next: SMH_NOTIFY - Example Code]</A> 
+</BODY>
+</HTML>

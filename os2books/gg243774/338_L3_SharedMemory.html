@@ -1,0 +1,85 @@
+<HTML>
+<HEAD>
+<TITLE>Shared Memory</TITLE>
+</HEAD>
+<BODY>
+<H1>Shared Memory</H1><!-- entering slot 372 -->
+<P>
+Shared memory objects may be allocated and used to pass information between
+specific processes.  Such memory objects may be named or anonymous.
+<P>
+The example that follows assumes that two processes are created in the system:
+a client process that accepts user input and displays results, and a server
+process that accepts requests from the client,  accesses data objects and
+returns the requested data to the client.  Both of these processes create
+windows.
+<P>
+In order to communicate a request to the server, the client must  first
+allocate a shared memory object, using the <B> DosAllocSharedMem()</B> function
+as described in <A HREF="227_L1_TheFlatMemoryModel.html">The Flat Memory
+Model</A>.  Since the process  ID of the server process is known to the
+client, the client can provide  access to the shared memory object for the
+server process, using the <B> DosGiveSharedMem()</B> function, which is
+also described in <A HREF="227_L1_TheFlatMemoryModel.html">The Flat Memory
+Model</A>.  This technique  is shown in <A HREF="090_L2_InterprocessCommunic.html">Figure
+"Interprocess Communication Using Shared Memory (Part 1)"</A>.
+<P>
+If the technique described in <A HREF="327_L2_CreatingAnotherProce.html">Creating
+Another Process</A> is followed, and the  server process has posted a message
+to the client at the completion of  server initialization, containing the
+window handle of the server's  object window, the client can dispatch the
+request as an  application-defined Presentation Manager message to the server's
+object window, with  a pointer to the memory object as a message parameter.
+ The server process then obtains access to the object using the<B> DosGetSharedMem()
+</B>function, as shown in <A HREF="091_L2_InterprocessCommunic.html">Figure
+"Interprocess Communication Using Shared Memory (Part 2)"</A>.
+<P>
+In the simplest case where the client process has only one window,  the
+handle of this window is passed to the server process when it is  created,
+as part of the<B> DosExecPgm()</B> call, as shown in <A HREF="087_L2_StartingaChildProces.html">Figure
+"Starting a Child Process"</A>.  Hence the server has access to the client's
+ window handle and can pass the return data to the client.  In a more complex
+situation where the client process has several windows and where a request
+can come from any of these, the handle can be passed as part of the request
+structure, as shown in <A HREF="090_L2_InterprocessCommunic.html">Figure
+"Interprocess Communication Using Shared Memory (Part 1)"</A> and  <A HREF="091_L2_InterprocessCommunic.html">Figure
+"Interprocess Communication Using Shared Memory (Part 2)"</A>.
+<P>
+Another issue that arises when using shared memory to communicate  between
+processes is that of freeing the shared memory object.  When a  process
+issues a<B> DosGiveSharedMem()</B> or<B> DosGetSharedMem()</B> call, the
+operating system increments a usage counter for the shared memory object,
+and will not release the memory until all processes  using the object have
+issued a<B> DosFreeMem()</B> call.
+<P>
+For the server process that receives access to the shared memory  object,
+the<B> DosFreeMem()</B> call is simply made whenever the server process
+has finished with the contents of the memory object.  For the client process
+that initially creates the memory object, the<B> DosFreeMem()</B> call can
+be made  at either of two points:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->If the client process does not care whether the request
+is  correctly received by the server process, the<B> DosFreeMem()</B>  call
+can be made immediately after passing the message to the server,  as shown
+in <A HREF="090_L2_InterprocessCommunic.html">Figure "Interprocess Communication
+Using Shared Memory (Part 1)"</A>.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->If the client wishes to guarantee delivery of the
+request, it must pass the message, wait for an acknowledgement of receipt
+from the server, and then issue the<B> DosFreeMem()</B> call.  This  acknowledgement
+may simply be an indication of receipt, prior to the  server processing
+the request, or may be the returned data from the  request.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+Note that it is common for returned data from a request to be passed  using
+the same memory object as was used to contain the original  request.  In
+such cases, the memory object cannot be freed by the  client process until
+the returned data is received and processed.
+
+<P><HR>
+
+<A HREF="337_L3_PresentationManagerM.html">[Back: Presentation Manager Messages]</A> <BR>
+<A HREF="339_L3_Atoms.html">[Next: Atoms]</A> 
+</BODY>
+</HTML>

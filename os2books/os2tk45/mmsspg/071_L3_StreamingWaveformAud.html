@@ -1,0 +1,133 @@
+<HTML>
+<HEAD>
+<TITLE>Streaming Waveform Audio Data from the File System</TITLE>
+</HEAD>
+<BODY>
+<H1>Streaming Waveform Audio Data from the File System</H1><!-- entering slot 88 -->
+<P>
+This scenario describes creating a waveform audio data stream and associating
+a file containing waveform audio with the source stream handler (File System
+Stream Handler DLL), where the target handler is the Audio Stream Handler,
+as shown in the following example.
+<PRE> /**************************************************************/
+ /*                         M A I N                            */
+ /**************************************************************/
+ #include        &lt;os2.h&gt;
+ #include        &lt;stdlib.h&gt;
+ #include        &lt;stdio.h&gt;
+ #include        &lt;conio.h&gt;
+ #include        &lt;string.h&gt;
+ #include        "os2me.h"
+
+ main()
+ {
+ RC           ulRC;             /* Error return code */
+ SPCBKEY      SPCBkey;          /* Data type to stream */
+ IMPL_EVCB    EVCB;             /* Event control block for implicit events */
+ ACB_MMIO     acb;              /* Associate control block used to assoc */
+                                /* The file to stream (play) */
+ DCB_AUDIOSH  dcb;              /* Audio device driver information */
+ HAND         ahand[5];         /* Enumerate handler info */
+ ULONG        ulNumHand = 5;
+ HID          hidSource, hidTarget, hidunused; /* Handler ID */
+ HSTREAM      hstream;          /* Stream handle */
+ HEVENT       hevent;           /* Event handle for implicit events */
+ HMMIO        hmmioIn;          /* Handle to mmio file open */
+ /* Get list of all stream handlers in system */
+ if (rc = SpiEnumerateHandlers(&amp;ahand, &amp;ulNumHand))
+    return(rc);    /* error! */
+ /* Get the stream handler ID for the File System Stream Handler */
+ if (rc = SpiGetHandler("FSSH",&amp;hidSource,&amp;hidunused))
+    return(rc);    /* error! */
+ /* Get the stream handler ID for the Audio Stream Handler */
+ if (rc = SpiGetHandler("AUDIOSH$",&amp;hidunused,&amp;hidTarget))
+    return(rc);    /* error! */
+ /* Create a data stream from the file system to the */
+ /* waveform audio ACPA device connected to speakers. */
+ SPCBkey.ulDataType = DATATYPE_WAVEFORM;
+ SPCBkey.ulDataSubType = WAVE_FORMAT_4S16;
+ SPCBkey.ulINtKey = 0;
+ strcpy(dcb.szDevName,"AUDIO1$");
+ dcb.ulDCBLen = sizeof(dcb);
+ dcb.hSysFileNum = (** hSysFileNum returned by audio dd on audio_init call)
+ if (rc = SpiCreateStream(hidSource,
+                          hidTarget,
+                          &amp;SPCBkey,
+                          NULL,
+                          (PDCB)&amp;dcb,
+                          (PEVCB)&amp;EVCB,
+                          EventProc,
+                          0,
+                          &amp;hstream,
+                          &amp;hevent))
+    return(rc);    /* error! */
+ /* USE MMIO to access a waveform audio object */
+ if ((hmmioIn = mmioOpen("c:\lawton\files\waveform\hendrix.jim"
+                         NULL,
+                         MMIO_READWRITE|
+                         MMIO_DENYNONE)) == NULL)
+    return(ERROR_FILE_NOT_FOUND);
+ /* Fill in acb with data object info */
+ acb.ulACBLen = sizeof(ACB_MMIO);
+ acb.ulObjType = ACBTYPE_MMIO;
+ acb.hmmio = hmmioIn;
+ /* Associate the waveform data object with the source handler */
+ if (rc = SpiAssociate(hstream,hidSource,&amp;acb))
+    return(rc);    /* error! */
+ /* Start the streaming */
+ if (rc = SpiStartStream(hstream, SPI_START_STREAM))
+    return(rc);    /* error! */
+ /* Do other processing */
+
+ /* Create a semaphore and block this thread on the semaphore */
+ /* until the streaming is complete                           */
+                    .
+                    .
+                    .
+ /* Destroy the stream  */
+ if (rc = SpiDestroyStream(hstream))
+    return(rc);    /* error! */
+
+ /* Perform any other resource cleanup */
+
+ /**************************************************************/
+ /*                E v e n t   P r o c e d u r e               */
+ /**************************************************************/
+ RC EventProc(EVCB *pEVCB)
+ {
+ /* Handle events from the Sync/Stream Manager */
+ switch (pEVCB-&gt;ulType) {
+
+    case EVENT_IMPLICIT_TYPE:
+       switch (pEVCB-&gt;ulSubType) {
+          case EVENT_EOS:     /* End of Stream */
+             /* Clear the semaphore so that the main */
+             /* routine can continue execution.      */
+             break;
+          case EVENT_ERROR:   /* Error <!-- entering slot 89 -->occurred */
+             /* flag error condition in main line application */
+             break;
+          case EVENT_STREAM_STOPPED:  /* Discard/Flush Stop */
+             /* Do processing while stream stopped */
+             break;
+          case EVENT_SYNC_PREROLLED:  /* Stream is prerolled */
+             /* Now that the producers are prerolled, do a real
+                start to the stream handlers */
+             break;
+          default:
+             /* Unknown event, do something */
+          }
+       break;
+    default:
+       /* Unknown event, do something */
+    }
+ }
+</PRE>
+
+
+<P><HR>
+
+<A HREF="070_L2_StreamingScenarios.html">[Back: Streaming Scenarios]</A> <BR>
+<A HREF="072_L3_SynchronizedMIDIandW.html">[Next: Synchronized MIDI and Waveform Streams]</A> 
+</BODY>
+</HTML>

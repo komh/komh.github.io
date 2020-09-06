@@ -1,0 +1,322 @@
+<HTML>
+<HEAD>
+<TITLE>Finding Handles From File Names</TITLE>
+</HEAD>
+<BODY>
+<H1>Finding Handles From File Names</H1><!-- entering slot 232 -->
+<P>
+File system names are recorded in the <A HREF="3295_L0_.html">MFT</A> control
+block. Each<B> MFT</B> has a handle, which is its linear address and a key
+which is the concatenation of the<B> hVPB</B> with the file name considered
+as a string of bytes. The<B> MFT</B> keys are managed in a <A HREF="3293_L0_.html">Patricia
+Tree</A> structure similar to that described by<I> Knuth</I> in<I> The Art
+of computer Programming, Volume 3, Sorting and Searching Algorithms</I> However,
+note that the implementation of the<B> PTree</B> in OS/2 is slightly modified
+from the<I> Knuth</I> treatment.
+<P>
+The <A HREF="3294_L0_.html">SAS</A> gives us the address of the header node
+for the<B> MFT</B><B> PTree</B>. The header node points to the first<B> PTree
+</B>entry. Each entry comprises a bit index, a key length, a left pointer,
+a right pointer and an<B> MFT</B> handle. The bit-index is used to specify
+the bit in the key to be tested. If the bit 0 then the left pointer is taken,
+otherwise the right pointer is taken. When the selected pointer points back
+to the same<B> PTree</B> entry then the search stops and the required<B> MFT
+</B>is found from the<B> MFT</B> handle. The bit index count the bits of
+each byte of the key from left to right. 
+<P>
+This technique is now illustrated in the following example:
+<PRE>
+&gt;&gt;&gt; Who's got C:\OS2\HELP\HMHELP.HLP open?
+
+&gt;&gt;&gt; First look through VPBs to find hVPB for C:
+&gt;&gt;&gt; Find the VPB segment and chain through them starting with the
+&gt;&gt;&gt; first at offset 0x12.
+
+# ln gdt_vpb
+0138:00000098 OS2KRNL GDT_VPB
+# .d vpb 98:12
+        vpb_flink: 0000                  vpdFAT_cluster_mask: 02
+        vpb_blink: 008d                 vpdFAT_cluster_shift: 00
+    vpb_ref_count: 0057                     vpdFAT_first_FAT: 0000
+ vpb_search_count: 0004                     vpdFAT_FAT_count: 00
+ vpb_first_access: 00                    vpdFAT_root_entries: 0030
+    vpb_signature: 444a                  vpdFAT_first_sector: 06001100
+     vpb_flags(2): 02:00                  vpdFAT_max_cluster: 7d5c
+          vpb_FSC: #00c8:0008                vpdFAT_FAT_size: b213
+           vpi_ID: 25be2014                vpdFAT_dir_sector: fc04b800
+         vpi_pDPB: #04c8:0038                   vpdFAT_media: 0a
+     vpi_cbSector: 0200                     vpdFAT_next_free: 00b2
+       vpi_totsec: 00049020                  vpdFAT_free_cnt: 04b8
+       vpi_trksec: 0023                  vpdFAT_FATentrysize: b2
+        vpi_nhead: 000c                      vpdFAT_IDsector: 00000000
+         vpi_pDCS: #0000:0000                  vpdFAT_access: 0000
+         vpi_pVCS: #0000:0000                 vpdFAT_accwait: 0000
+        vpi_drive: 02                          vpdFAT_pEASFT: #0000:0000
+         vpi_unit: 02
+         vpi_text: UNLABELED
+         vpi_flags: 0003
+
+&gt;&gt;&gt; We get lucky the first time. This VPD is for drive 2, that is C:
+&gt;&gt;&gt; So the hVPB=0012 (i.e the offset into the VPD segment).
+
+&gt;&gt;&gt; We now need to form the MFT key for the file name we wish to
+&gt;&gt;&gt; look up. So convert the file name to ASCII and concatenate to the
+&gt;&gt;&gt; hVPB (as a byte <!-- entering slot 233 -->pair, that is, reversed)
+&gt;&gt;&gt;       C  :  \  O  S  2  \  H  E  L  P  \  H  M  H  E  L  P  .  H  L  P
+&gt;&gt;&gt; 12 00 43 3a 5c 4f 53 32 5c 48 45 4c 50 5c 48 4d 48 45 4c 50 2e 48-4c 50
+
+&gt;&gt;&gt; Locate the MFT PTree head from the SAS - in a dump use .A
+&gt;&gt;&gt; otherwise unravel the SAS from selector 70
+
+# .a
+--- SAS Base Section ---
+                      SAS signature: SAS
+           offset to tables section: 0016
+      FLAT selector for kernel data: 0168
+    offset to configuration section: 001E
+    offset to device driver section: 0020
+   offset to Virtual Memory section: 002C
+          offset to Tasking section: 005C
+              offset to RAS section: 006E
+      offset to File System section: 0074
+          offset to infoseg section: 0080
+--- SAS Protected Modes Tables Section ---
+                   selector for GDT: 0008
+                   selector for LDT: 0000
+                   selector for IDT: 0018
+               selector for GDTPOOL: 0100
+--- SAS Device Driver Section ---
+    offset for the first bimodal dd: 0CB9
+  offset for the first real mode dd: 0000
+      sel for Drive Parameter Block: 04C8
+       sel for ABIOS prot. mode CDA: 0000
+        seg for ABIOS real mode CDA: 0000
+                   selector for FSC: 00C8
+--- SAS Task Section ---
+          selector for current PTDA: 0030
+  FLAT offset for process tree head: FFF10910
+ FLAT address for TCB address array: FFF06BB6
+      offset for current TCB number: FFDFFB5E
+             offset for ThreadCount: FFDFFB62
+--- SAS File System Section ---
+                handle to MFT PTree: FE72CFBC
+     selector for System File Table: 00C0
+     sel. for Volume Parameter Bloc: 0788
+   sel. for Current Directory Struc: 07B8
+        selector for buffer segment: 00A8
+--- SAS Information Segment Section ---
+       selector for global info seg: 0428
+   address of curtask local infoseg: 03C80000
+      address of DOS task's infoseg: FFFFFFFF
+         selector for Codepage Data: 07CB
+--- SAS RAS Section ---
+selector for System Trace Data Area: 04B0
+ segment for System Trace Data Area: 04B0
+        offset for trace event mask: 0B28
+--- SAS Configuration Section ---
+    offset for Device Config. Table: 0D50
+--- SAS Virtual Memory Mgt. Section ---
+       Flat offset of arena records: FFF13304
+      Flat offset of object records: FFF1331C
+     Flat offset of context records: FFF1330C
+  Flat offset of kernel mte records: FFF0A891
+     Flat offset of linked mte list: FFF07934
+    Flat offset of page frame table: FFF11A70
+    Flat offset of page range table: FFF111EC
+    Flat offset of swap frame array: FFF03BAC
+           Flat offset of Idle Head: FFF10090
+           Flat offset of Free Head: FFF10080
+          Flat offset of Heap Array: FFF11B78
+     Flat offset of all mte records: FFF12E04
+
+&gt;&gt;&gt; MFT Ptree is at %fe72cfbc
+&gt;&gt;&gt; each entry including the header has the following format:
+&gt;&gt;&gt; +0 W Bit index
+&gt;&gt;&gt; +2 W key length
+&gt;&gt;&gt; +4 D left link
+&gt;&gt;&gt; +8 D right link
+&gt;&gt;&gt; +c D MFT handle (MFT pointer)
+
+&gt;&gt;&gt; dump the header and the first entry pointed to by the left link
+# dd %FE72CFBC l4
+%fe72cfbc  ffffffff fe867f10 fe72cfbc 00000000
+# dd %FE867f10 l4
+%fe867f10  00100000 <!-- entering slot 234 -->fe861454 fe861470 fe721a04
+&gt;&gt;&gt;        ----.... -------- -------- --------
+&gt;&gt;&gt;         Kl  BI    left     right    MFT
+&gt;&gt;&gt;
+&gt;&gt;&gt; Note the word reversal of the Bit index and the Key length because
+&gt;&gt;&gt; we dumped double-words.
+&gt;&gt;&gt; BI tells us to test bit 0 of the key (numbering from the left
+&gt;&gt;&gt; starting with 0). 12 00 .. .. .. = 0001 0010 0000 0000 .... ....
+&gt;&gt;&gt; Bit zero is 0 so take the left link.
+
+# dd %FE861454 l4
+%fe861454  00100001 fe73d194 fe845370 fe72196c
+
+&gt;&gt;&gt; Now test bit 1. This is still zero. Again take the left link.
+
+# dd %FE73d194 l4
+%fe73d194  00190003 fe72cf3c fe87ec34 fe72dea4
+
+&gt;&gt;&gt; Now test bit 3. This is 1 so take the right link.
+
+# dd %FE87ec34 l4
+%fe87ec34  000b0029 fe87ebdc fe834308 fe87ebf0
+
+&gt;&gt;&gt; Now test bit 29.  ..... 4f .... = 0100 1111
+&gt;&gt;&gt; This is 1 so take the right link.
+
+# dd %FE834308 l4
+%fe834308  0019002b fe869f30 fe834254 fe834274
+
+&gt;&gt;&gt; Test bit 2b. This is 0. Turn left.
+
+# dd %FE869f30 l4
+%fe869f30  0017002c fe885ac4 fe87ec90 fe869ee0
+
+&gt;&gt;&gt; Test bit 2c. This is 1. Turn right.
+
+# dd %FE87ec90 l4
+%fe87ec90  000f002d fe87ec90 fe834ac8 fe87ec48
+
+&gt;&gt;&gt; Test bit 2d. This is 1. Turn right.
+
+# dd %FE834ac8 l4
+%fe834ac8  001a0044 fe845ef8 fe724fe4 fe845c0c
+
+&gt;&gt;&gt; Test bit 44. .....5c.... = 0101 1100.
+&gt;&gt;&gt; This is 1. Turn right.
+
+# dd %FE724fe4 l4
+%fe724fe4  001b004b fe801414 fe862de8 fe722fac
+
+&gt;&gt;&gt; Test bit 4b. .....48..... = 0100 1000
+&gt;&gt;&gt; This is 0. Turn left.
+
+# dd %FE801414 l4
+%fe801414  0017004c fe801d90 fe7cef84 fe7dffb0
+
+&gt;&gt;&gt; Test bit 4c. This is 1. Turn right.
+
+# dd %FE7cef84 l4
+%fe7cef84  00180073 fe7cef84 fe801414 fe7cef30
+
+&gt;&gt;&gt; Test bit 73. .....48.... = 0100 1000
+&gt;&gt;&gt; This is zero and the left link points to the same node.
+&gt;&gt;&gt; Therefore the search ends and we should have found the MFT
+&gt;&gt;&gt; for our file name. Dump the MFT to check .....
+
+
+# db %FE7cef30 l50
+%fe7cef30 4b 53 45 4d 01 02 00 00-00 00 00 00 00 00 00 00 KSEM............
+%fe7cef40 00 00 28 31 38 04 00 00-00 00 4b 53 45 4d 01 02 ..(18.....KSEM..
+%fe7cef50 00 00 00 00 00 00 00 00-00 00 00 00 69 03 00 00 ............i...
+%fe7cef60 6d 46 12 00 43 3a 5c 4f-53 32 5c 48 45 4c 50 5c mF..C:\OS2\HELP\
+%fe7cef70 48 4d 48 45 4c 50 2e 48-4c 50 00 00 16 e6 7c fe HMHELP.HLP...f|~
+
+&gt;&gt;&gt; The MFT + 0x22 points is the SFT segment's offset. So dump the
+&gt;&gt;&gt; SFT ....
+
+# ln gdt_sft
+0138:000000c0 OS2KRNL GDT_SFT
+dw c0:0l1
+#00c0:00000000 0438
+
+# .d sft 438:3128
+      sf_ref_count: 0001                        sfi_mode: 00a0
+        sf_usercnt: 0000                        sfi_hVPB: 0012
+          reserved: 00                         sfi_ctime: 0000
+       sf_flags(2): 0000:0000                  sfi_cdate: 0000
+         sf_devptr: #0000:0000                 sfi_atime: 0000
+            sf_FSC: #00c8:0008                 sfi_adate: 0000
+          sf_chain: #0438:33b7                 sfi_mtime: 0000
+            sf_MFT: fe7cef30                   sfi_mdate: 0000
+sfdFAT_firFILEclus: <!-- entering slot 235 -->3344                        sfi_size: 00007058
+    sfdFAT_cluspos: 0f10                    sfi_position: 00000a90
+    sfdFAT_lstclus: 0000                         sfi_UID: 0000
+     sfdFAT_dirsec: 00000000                     sfi_PID: 0012
+     sfdFAT_dirpos: 00                           sfi_PDB: 0000
+       sfdFAT_name:                       sfi_selfsfn: 0060
+   sfdFAT_EAHandle: 0000                      sfi_tstamp: 00
+          sf_plock: 0000                     sfi_DOSattr: 00
+      sf_NmPipeSfn: 0000
+       sf_codepage: 0000
+
+&gt;&gt;&gt; sfi_PID tells us PID 12 has opened this file. But the
+&gt;&gt;&gt; sf_chain is not zero, so other processes have also opened
+&gt;&gt;&gt; this file. Follow the sf_chain .....
+
+# .d sft 438:33b7
+      sf_ref_count: 0001                        sfi_mode: 00a0
+        sf_usercnt: 0000                        sfi_hVPB: 0012
+          reserved: 00                         sfi_ctime: 0000
+       sf_flags(2): 0000:0000                  sfi_cdate: 0000
+         sf_devptr: #0000:0000                 sfi_atime: 0000
+            sf_FSC: #00c8:0008                 sfi_adate: 0000
+          sf_chain: #0438:2d10                 sfi_mtime: 0000
+            sf_MFT: fe7cef30                   sfi_mdate: 0000
+sfdFAT_firFILEclus: 284a                        sfi_size: 00007058
+    sfdFAT_cluspos: 0f10                    sfi_position: 00000a90
+    sfdFAT_lstclus: 0000                         sfi_UID: 0000
+     sfdFAT_dirsec: 00000000                     sfi_PID: 000c
+     sfdFAT_dirpos: 00                           sfi_PDB: 0000
+       sfdFAT_name:                       sfi_selfsfn: 0065
+   sfdFAT_EAHandle: 0000                      sfi_tstamp: 00
+          sf_plock: 0000                     sfi_DOSattr: 00
+      sf_NmPipeSfn: 0000
+       sf_codepage: 0000
+
+
+# .d sft 438:2d10
+      sf_ref_count: 0001                        sfi_mode: 00a0
+        sf_usercnt: 0000                        sfi_hVPB: 0012
+          reserved: 00                         sfi_ctime: 0000
+       sf_flags(2): 0000:0000                  sfi_cdate: 0000
+         sf_devptr: #0000:0000                 sfi_atime: 0000
+            sf_FSC: #00c8:0008                 sfi_adate: 0000
+          sf_chain: #0438:2e16                 sfi_mtime: 0000
+            sf_MFT: fe7cef30                   sfi_mdate: 0000
+sfdFAT_firFILEclus: 1986                        sfi_size: 00007058
+    sfdFAT_cluspos: 0f10                    sfi_position: 00000a90
+    sfdFAT_lstclus: 0000                         sfi_UID: 0000
+     sfdFAT_dirsec: 00000000                     sfi_PID: 000b
+     sfdFAT_dirpos: 00                           sfi_PDB: 0000
+       sfdFAT_name:                       sfi_selfsfn: 0058
+   sfdFAT_EAHandle: 0000                      sfi_tstamp: 00
+          sf_plock: 0000                     sfi_DOSattr: 00
+      sf_NmPipeSfn: 0000
+       sf_codepage: 0000
+
+
+# .d sft 438:2e16
+      sf_ref_count: 0001                        sfi_mode: 00a0
+        sf_usercnt: 0000                        sfi_hVPB: 0012
+          reserved: 00                         sfi_ctime: 0000
+       sf_flags(2): 0000:0000                  sfi_cdate: 0000
+         sf_devptr: #0000:0000                 sfi_atime: 0000
+            sf_FSC: #00c8:0008                 sfi_adate: 0000
+          sf_chain: #0000:0000                 sfi_mtime: 3ca2
+            sf_MFT: fe7cef30                   sfi_mdate: 1d62
+sfdFAT_firFILEclus: 050c                        sfi_size: 00007058
+    sfdFAT_cluspos: 0f10                    sfi_position: 00000a90
+    sfdFAT_lstclus: 0000                         sfi_UID: 0000
+     sfdFAT_dirsec: 00000000                     sfi_PID: 000d
+     sfdFAT_dirpos: 00                           sfi_PDB: 0000
+       sfdFAT_name: SINGLEQ$                      sfi_selfsfn: 005a
+   sfdFAT_EAHandle: 0000                      sfi_tstamp: 00
+          sf_plock: 0000                     sfi_DOSattr: 00
+      sf_NmPipeSfn: 0000
+       sf_codepage: 0000
+
+&gt;&gt;&gt; In all, PIDs 0012, 000c, 000b and 000d have opened
+&gt;&gt;&gt; C:\OS2\HELP\HMHELP.HLP
+</PRE>
+ 
+
+<P><HR>
+
+<A HREF="172_L5_FindingFilesFromHand.html">[Back: Finding Files From Handles in a VDM]</A> <BR>
+<A HREF="174_L4_TheRecordLockRecord.html">[Next: The Record Lock Record]</A> 
+</BODY>
+</HTML>

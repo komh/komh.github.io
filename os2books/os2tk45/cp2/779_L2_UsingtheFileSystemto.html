@@ -1,0 +1,82 @@
+<HTML>
+<HEAD>
+<TITLE>Using the File System to Access Devices</TITLE>
+</HEAD>
+<BODY>
+<H1>Using the File System to Access Devices</H1><!-- entering slot 792 -->
+<P>
+An application can use the OS/2 file system functions-<A><!-- external link: 1D 9F C3 3F -->DosOpen</A>,
+<A><!-- external link: 1D D7 C3 FC -->DosRead</A>,<A><!-- external link: 1D 0F C4 FC --> DosWrite</A>,
+and<A><!-- external link: 1D 65 C3 FC --> DosClose</A>-with the standard
+(predefined) devices. The application simply specifies the name of the device
+in the call to<A><!-- external link: 1D 9F C3 FC --> DosOpen</A>, then uses
+the returned handle to read from and write to the device. When the application
+has finished using the device, the application should close the device handle
+by using<A><!-- external link: 1D 65 C3 FC --> DosClose</A>.
+<P>
+The following code fragment shows how an application can open the COM1 device
+(serial port 1) and write the contents of a disk file to the communications
+port:
+<PRE>    #define INCL_DOSFILEMGR    /* File System values */
+    #define INCL_DOSDEVIOCTL   /* DosDevIOCtl values */
+    #include &lt;os2.h&gt;
+
+    BYTE abBuf[512];
+    HFILE hfCom, hfFile;
+    ULONG ulAction, cbRead, cbWritten;
+
+    DosOpen("COM1",
+            &amp;hfCom,
+            &amp;ulAction,
+            0,
+            FILE_NORMAL,
+            FILE_OPEN,
+            OPEN_ACCESS_READWRITE |
+            OPEN_SHARE_DENYNONE,
+            (PEAOP2) NULL);
+
+    DosOpen("testfile",
+            &amp;hfFile,
+            &amp;ulAction,
+            0,
+            FILE_NORMAL,
+            FILE_OPEN,
+            OPEN_ACCESS_READONLY |
+            OPEN_SHARE_DENYWRITE,
+            (PEAOP2) NULL);
+
+    do {
+        DosRead(hfFile,
+                abBuf,
+                sizeof(abBuf),
+                &amp;cbRead);
+
+        DosWrite(hfCom,
+                 abBuf,
+                 cbRead,
+                 &amp;cbWritten);
+
+    } while(cbRead);
+
+    DosClose(hfCom);
+
+    DosClose(hfFile);
+
+</PRE>
+
+<P>
+<B>Note: </B> In this example code fragment and the ones that follow, error
+checking was left out to conserve space. Applications should always check
+the return code that the functions return. Control Program functions return
+an APIRET value. A return code of 0 indicates success. If a non-zero value
+is returned, an error occurred.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+
+<P><HR>
+
+<A HREF="778_L4_ParameterandDataPack.html">[Back: Parameter and Data Packets]</A> <BR>
+<A HREF="780_L2_UsingIOCtlFunctionst.html">[Next: Using IOCtl Functions to Access Devices]</A> 
+</BODY>
+</HTML>

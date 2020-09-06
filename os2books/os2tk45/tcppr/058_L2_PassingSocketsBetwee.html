@@ -1,0 +1,34 @@
+<HTML>
+<HEAD>
+<TITLE>Passing Sockets Between Processes</TITLE>
+</HEAD>
+<BODY>
+<H1>Passing Sockets Between Processes</H1><!-- entering slot 63 -->
+<P>
+Because sockets are not file handles on OS/2, sockets are not automatically
+passed from a parent process to a child process. Instead, sockets are global
+to the system and unsecure, so that any process may access any valid socket.
+To ensure sockets are always properly closed when a process terminates,
+TCPIP32.DLL installs an exit list handler (with an order code of 0x99) that
+closes all remaining sockets that were opened by that process. If a process
+attempts to pass a socket to a child process, both the parent and child
+need to notify TCPIP32.DLL that a change in ownership occurred so that the
+exit list handler for the two processes close the correct sockets when the
+processes terminate.
+<P>
+To pass ownership from parent to child, the parent process needs to issue
+removesocketfromlist() with the socket number that is being transferred
+to the child. The child process needs to issue addsockettolist() with the
+same socket number to assume ownership of it. After these two calls are
+completed, the child process's exit list handler will automatically close
+the socket that was passed once the child terminates (unless the child application
+closes the socket itself before it terminates.) See <A HREF="181_L2_addsockettolist.html">addsockettolist()
+</A>and <A HREF="196_L2_removesocketfromlist.html">removesocketfromlist()
+</A>for additional details.
+
+<P><HR>
+
+<A HREF="057_L3_FreeingHPSMemory.html">[Back: Freeing HPS Memory]</A> <BR>
+<A HREF="059_L2_MultithreadingConsid.html">[Next: Multithreading Considerations]</A> 
+</BODY>
+</HTML>

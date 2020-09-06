@@ -1,0 +1,99 @@
+<HTML>
+<HEAD>
+<TITLE>Using Standard I/O</TITLE>
+</HEAD>
+<BODY>
+<H1>Using Standard I/O</H1><!-- entering slot 146 -->
+<P>
+All of the preceding topics dealt with reading and writing files. You can
+use the same methods to read from standard input (usually the keyboard)
+and to write to standard output (usually the display). You can also use
+the methods to write to the standard error stream. In Object REXX, these
+default streams are represented by public objects of the Monitor class:
+.input, .output, and .error.
+<P>
+The streams STDIN, STDOUT, and STDERR are transient streams. For transient
+streams, you cannot use any method or method argument for positioning the
+read and write pointers. (You can't, for example, use the SEEK method on
+STDOUT.)
+<P>
+Writing to STDOUT has the same effect as using the SAY instruction. However,
+the SAY instruction always writes line-end characters at the end of the
+string. By using the CHAROUT method to write to STDOUT, you can control
+when line-end characters are written.
+<P>
+The following example shows a modified COUNT program. COUNT was introduced
+earlier in this section. We've modified COUNT to display a progress indicator.
+For every line processed, COUNT now uses CHAROUT to display a single period.
+COUNT doesn't write any line-end characters, so the periods wrap to the
+next line when they reach the end of the line in the OS/2 window.
+<PRE>/* COUNT counts the words in a file                    */
+parse arg path                    /* Get the file name */
+count=0                                 /* Initialize the count */
+file=.stream~new(path)     /* Create a stream object for the input file */
+do while file~lines&lt;&gt;0        /* Process each line of the file */
+   text=file~linein           /* Read a line                   */
+   count=count+(text~words)   /* Count blank-delimited tokens  */
+   .output~charout('.')       /* Write period to STDOUT        */
+end
+say ''
+say count
+</PRE>
+
+<P>
+Reading from STDIN using LINEIN is similar to reading with the PARSE PULL
+instruction:
+<PRE>/* INEXAM.CMD -- example of reading STDIN with LINEIN */
+
+/* Prompt for input with SAY and PARSE instructions   */
+say 'What is your name?'
+parse pull response
+say 'Hi' response
+say ''
+
+/* Now prompt using LINEOUT and LINEIN                */
+.output~lineout('What is your name?')
+response=.input~linein
+.output~lineout('Hi' response)
+</PRE>
+
+<P>
+Using character methods with STDIN and STDOUT gives you more control over
+the reading and writing of line-end characters. In the following example,
+the prompting string is written to STDOUT using CHAROUT. Because CHAROUT
+doesn't add any line-end characters to the stream, the display cursor is
+positioned after the prompt string on the same line.
+<PRE>/* INCHAR.CMD -- example of reading STDIN with CHARIN */
+.output~charout('What is your name? ')
+response=.input~charin(,10)
+.output~charout('Hi' response)
+</PRE>
+
+<P>
+CHARIN is used to read the user's response. The user's keystrokes are not
+returned to your program until the user presses the Enter key. In the example,
+a length of 10 is specified. If fewer characters than the specified length
+are available, CHARIN waits until they become available. Otherwise, the
+characters are returned to your program. As usual, CHARIN does not strip
+any carriage-return or line-feed characters before returning the string
+to your program. You can observe this with INCHAR by typing several strings
+that are fewer than ten characters and pressing Enter after each string:
+
+<PRE>[C:\]inchar
+What is your name? John
+Q.
+Public
+Hi John
+Q.
+Pu
+</PRE>
+
+<P>
+
+
+<P><HR>
+
+<A HREF="137_L2_GettingOtherInformat.html">[Back: Getting Other Information about a File]</A> <BR>
+<A HREF="139_L2_UsingDevices.html">[Next: Using Devices]</A> 
+</BODY>
+</HTML>

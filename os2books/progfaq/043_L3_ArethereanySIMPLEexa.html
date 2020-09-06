@@ -1,0 +1,359 @@
+<HTML>
+<HEAD>
+<TITLE>Are there any SIMPLE examples of printing?</TITLE>
+</HEAD>
+<BODY>
+<H1>Are there any SIMPLE examples of printing?</H1><!-- entering slot 50 -->
+<P>
+Here is some sample code, but also check out PRINTQ12.ZIP on cdrom.com in
+2_x/program. PRINTQ12.ZIP contains a DLL that encapselates alot of the messy
+details.
+<P>
+Here is the working code for allowing the user to change the printer setup.
+I've also included the code that I use to start and end printing, so you
+can see how it all works.
+<P>
+If you have any questions or comments, feel free to write.
+<P>
+PrinterSetup() is the routine that gets the printer setup information from
+the user.
+<P>
+GetPrinterHPS() is the routine that gets the DC and PS for the printer,
+and starts the document.
+<P>
+EndPrint() is the routine that ends the document, and closes the DC.
+<P>
+First, here's a little sample of how to use PrinterSetup(), GetPrinterHPS(),
+and EndPrint():
+<PRE>{
+   HPS          hPrinterPS;
+   HDC          hPrinterDC;
+   DEVOPENSTRUC dops;
+
+   ...
+
+   dops-&gt;pszLogAddress = NULL;  // in case PrinterSetup fails, this will tell
+                                // GetPrinterHPS() to use default printer info
+
+   PrinterSetup(&amp;dops);
+
+   hPrinterPS = GetPrinterHPS(&amp;dops, &amp;hPrinterDC,
+                              "Document Name", 0L, 0L);
+   if (hPrinterPS != GPI_ERROR) {
+      // do your printing here
+
+      EndPrint(hPrinterPS, hPrinterDC, "Document Name");
+   }
+
+   ...
+}
+
+
+/*
+******************************************************************************
+**  FUNCTION: PrinterSetup
+**  PURPOSE :   This function allows the user to change printer settings.
+**
+**  PARAMS  :   lpdos - the printer info
+**  RETURN  :   BOOL   (TRUE = success)
+**
+**  DATE    :   11-Dec-1992
+**  AUTHOR  :   Carl Samos
+******************************************************************************
+**  Modified: Date:     Description of changes
+**  CNS     :   11-Dec-1992 Initial version
+******************************************************************************
+*/
+BOOL PrinterSetup(DEVOPENSTRUC FAR *lpdos)
+{
+   PDRIVDATA     pDriveData;      /*  The drive data  */
+   unsigned long ulSize;          /*  The buffer size required  */
+   char          szPrinter[32];   /*  The printer name  */
+   PSZ           pszDriver;       /*  The driver name  */
+   PSZ           pszLogicalPort;  /*  The logical port  */
+   char          szDeviceName[32];/*  The printer's name */
+
+
+   // get the printer driver, name and logical port
+   // GetPrinterInformation allocates space for pszDriver and pszLogicalPort
+   if (!GetPrinterInformation(szPrinter, &amp;pszDriver,
+                              szDeviceName,&amp;pszLogicalPort))
+      return(FALSE);
+
+
+   // get the size needed for the DRIVDATA struct
+   ulSize = DevPostDeviceModes(habMain, NULL, pszDriver, NULL, szPrinter, 0L);
+
+
+   if (ulSize != DPDM_NONE &amp;&amp; ulSize != DPDM_ERROR) {
+      pDriveData = (PDRIVDATA) _fmalloc(ulSize);
+      pDriveData-&gt;cb = ulSize;
+
+      // bring up the dialog boxes, and fill the DRIVDATA struct
+      ulSize = DevPostDeviceModes(habMain, pDriveData, pszDriver, NULL,
+                                  szPrinter, 0L);
+
+      if (ulSize == DEV_OK) {
+          // if there is a printer name, copy it into the DRIVDATA
+          if (szDeviceName[0] != '\0')
+             strcpy(pDriveData-&gt;szDeviceName, szDeviceName);
+
+          // remove the old information
+          if (lpdos-&gt;pszLogAddress != NULL) {
+             _ffree(lpdos-&gt;pszLogAddress);
+          }
+          if (lpdos-&gt;pszDriverName != NULL) {
+             _ffree(lpdos-&gt;pszDriverName);
+          }
+          if (lpdos-&gt;pdriv != NULL)
+             _ffree(lpdos-&gt;pdriv);
+
+          /*  Setup the DEVOPENSTRUC  */
+          lpdos-&gt;pszLogAddress = pszLogicalPort;
+          lpdos-&gt;pszDriverName = pszDriver;
+          lpdos-&gt;pszDataType   = NULL;
+          lpdos-&gt;pdriv         = pDriveData;
+      }
+      else {
+          _ffree(pszDriver);
+          _ffree(pszLogicalPort);
+          _ffree(pDriveData);
+      }
+   }
+   else {
+      _ffree(pszDriver);
+      _ffree(pszLogicalPort);
+   }
+
+   return(TRUE);
+}
+
+
+/*
+******************************************************************************
+**  FUNCTION:   GetPrinterInformation
+**  PURPOSE :   This function gets the current printer information from the
+**                    os2.ini file.
+**
+**  PARAMS  :   PSZ pszPrinter
+**              PSZ pszDriver
+**              PSZ pszDeviceName
+**              PSZ pszLogicalPort
+**
+**  RETURN  :   void
+**
+**  DATE    :   11-Dec-1992
+**  AUTHOR  :   Carl Samos
+******************************************************************************
+**  Modified: Date:     Description of changes
+**  CNS     :   11-Dec-1992 Initial version
+******************************************************************************
+*/
+BOOL GetPrinterInformation(PSZ pszPrinter, PSZ FAR *lpszDriver,
+                           PSZ pszDeviceName, PSZ FAR *lpszLogicalPort)
+{
+   int  cb;
+   char szDetails[256];
+   PSZ  pszBegin;
+   PSZ  pszTemp;
+   char szPort[64];
+   char szDriver[64];
+   char szLogPort[64];
+
+   /*  Get the printer name  */
+   cb = WinQueryProfileString(habMain, "PM_SPOOLER",
+                              "PRINTER", "", pszPrinter,32);
+   pszPrinter[cb-2] = 0;
+
+
+   /*  Get the other details  */
+   WinQueryProfileString(habMain, "PM_SPOOLER_PRINTER", pszPrinter, "",
+                         szDetails, 256);
+
+   // the profile string has the following format:
+   // PORT;<!-- entering slot 51 -->DRIVER;LOGICAL PORT;NETWORK INFO;
+   // fields can have more than one entry, separated by a comma
+   // the printer's name will follow the driver, separated by a period.
+
+   pszBegin = szDetails;
+
+   // get the printer port
+   pszTemp = strchr(pszBegin, ';');
+   if (pszTemp != NULL) {
+      *pszTemp = '\0';
+      strcpy(szPort, pszBegin);
+      *pszTemp = ';';
+      pszBegin = pszTemp + 1;
+
+      // check for a comma in the string
+      pszTemp = strchr(szPort, ',');
+      if (pszTemp != NULL) *pszTemp = '\0';
+   }
+   else {
+      return(FALSE);
+   }
+
+   // now get the driver and printer name
+   pszTemp = strchr(pszBegin, ';');
+   if (pszTemp != NULL) {
+      *pszTemp = '\0';
+      strcpy(szDriver, pszBegin);
+      *pszTemp = ';';
+      pszBegin = pszTemp + 1;
+
+      // check for a period (printer name follows it)
+      pszTemp = strchr(szDriver, '.');
+      if (pszTemp != NULL) {
+         strcpy(pszDeviceName, pszTemp+1);
+         *pszTemp = '\0';
+      }
+      else {
+         pszDeviceName[0] = '\0';
+      }
+
+      // check for a comma in the string
+      pszTemp = strchr(szDriver, ',');
+      if (pszTemp != NULL)
+        *pszTemp = '\0';
+   }
+   else {
+      return(FALSE);
+   }
+
+
+   // now get the logical port
+   pszTemp = strchr(pszBegin, ';');
+   if (pszTemp != NULL) {
+      *pszTemp = '\0';
+      strcpy(szLogPort, pszBegin);
+      *pszTemp = ';';
+      pszBegin = pszTemp + 1;
+
+      // check for a comma in the string
+      pszTemp = strchr(szLogPort, ',');
+      if (pszTemp != NULL)
+        *pszTemp = '\0';
+   }
+   else {
+      return(FALSE);
+   }
+
+   *lpszDriver = _fmalloc(sizeof(char) * (strlen(szDriver)+1));
+   strcpy(*lpszDriver, szDriver);
+
+   *lpszLogicalPort = _fmalloc(sizeof(char) * (strlen(szLogPort)+1));
+   strcpy(*lpszLogicalPort, szLogPort);
+
+   return(TRUE);
+}
+
+
+/*
+******************************************************************************
+**  FUNCTION: GetPrinterHPS
+**  PURPOSE :   Gets the presentation space for a printer, and starts the doc
+**  PARAMS  :   lpdos
+**          :   lphDC           - the printer's hdc
+**          :   pszDocName      - the name of the document
+**          :   lWidth          - the width of the document
+**          :   lHeight         - the height of the document
+**  RETURN  : hPS
+**  DATE    :   11-Dec-1992
+**  AUTHOR  :   Carl Samos
+******************************************************************************
+**  Modified: Date:     Description of changes
+**  CNS     :   11-Dec-1992 Initial version
+******************************************************************************
+*/
+HPS GetPrinterHPS(DEVOPENSTRUC FAR *lpdos, HDC FAR* lphDC, PSZ pszDocName,
+		  LONG lWidth, LONG lHeight)
+{
+   LONG  lReturn;
+   SIZEL sizl;
+   HPS   hPS;
+
+   if (lpdops-&gt;pszLogAddress == NULL) {  // get the default settings
+      char szPrinter[32];   /*  The printer name	*/
+      PSZ  pszDriver;       /*  The driver name  */
+      PSZ  pszLogicalPort;  /*  The logical port	*/
+      char szDeviceName[32];/*  The printer's name */
+
+      // GetPrinterInformation allocates space for pszDriver and pszLogicalPort
+      if (!GetPrinterInformation(szPrinter, &amp;pszDriver, szDeviceName,
+                                 &amp;pszLogicalPort))
+      return(GPI_ERROR);
+
+      lpdops-&gt;pszLogAddress = pszLogicalPort;
+      lpdops-&gt;pszDriverName = pszDriver;
+      lpdops-&gt;pszDataType   = NULL;
+      lpdops-&gt;pdriv         = NULL;
+   }
+
+   // open the printer DC
+   *lphDC = DevOpenDC (habMain, OD_QUEUED, "*", 4L, lpdops, (HDC) NULL);
+   if (*lphDC == DEV_ERROR) {
+      return(GPI_ERROR);
+   }
+
+   // start the document
+   lReturn = DevEscape(*lphDC, DEVESC_STARTDOC, strlen(pszDocName),
+                       pszDocName,NULL, NULL);
+
+   // get the PS for the printer
+   if (lReturn == DEV_OK) {
+       sizl.cx = lWidth;
+       sizl.cy = lHeight;
+
+       if (lWidth == 0) {
+          hPS =  GpiCreatePS (habMain, *lphDC, &amp;sizl,
+                              PU_LOENGLISH | GPIF_DEFAULT |
+                              GPIT_NORMAL | GPIA_ASSOC);
+          return(hPS);
+       }
+       else {
+          hPS = GpiCreatePS (habMain, *lphDC, &amp;sizl,
+                              PU_ARBITRARY | PU_LOENGLISH |
+                              GPIF_DEFAULT | GPIT_NORMAL |
+                              GPIA_ASSOC);
+          return(hPS);
+      }
+   }
+
+   return(GPI_ERROR);
+}
+
+
+/*
+******************************************************************************
+**  FUNCTION: EndPrint
+**  PURPOSE : To close the hdc and end the document
+**  PARAMS  : hpsPrinter - the printer's presentation space
+**     : hdcPrinter - the printer's device context
+**     : pszDocName - the name of the document
+**  RETURN  : nothing
+**  DATE    :   11-Dec-1992
+**  AUTHOR  :   Carl Samos
+******************************************************************************
+**  Modified: Date:     Description of changes
+**  CNS     :   11-Dec-1992 Initial version
+******************************************************************************
+*/
+void EndPrint(HPS hpsPrinter, HDC hdcPrinter, PSZ pszDocName)
+{
+DevEscape(hdcPrinter, DEVESC_ENDDOC, strlen(pszDocName),
+pszDocName, NULL,NULL);
+GpiAssociate(hpsPrinter, (HDC) NULL);
+DevCloseDC(hdcPrinter);
+GpiDestroyPS(hpsPrinter);
+}
+</PRE>
+
+<P>
+Credit:  Carl Samos 
+
+<P><HR>
+
+<A HREF="042_L2_Printing.html">[Back: Printing]</A> <BR>
+<A HREF="044_L3_Isthereaneasywaytoge.html">[Next: Is there an easy way to get printer output (another opinion)?]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,104 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Writing filter programs in REXX</TITLE>
+</HEAD>
+<BODY>
+<H1>Writing filter programs in REXX</H1><!-- entering slot 160 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+Filter programs are programs that read from standard input, convert the
+input in some way, and write the converted lines to standard output. Filter
+programs are heavily used in UNIX systems, but you can use them on any operating
+system supporting redirection of standard input and standard output with
+pipes, for example, OS/2.
+<P>
+In OS/2 you can write filter programs very simply in REXX (see the example
+below). But you should take care to be aware of the following points:
+<P>
+Write all messages (error messages, logos, etc.) to STDERR instead of STDOUT,
+e.g. use
+<PRE> 
+  call LineOut "STDERR", "This is an error message"
+</PRE>
+
+<P>
+
+<P>
+Always use
+<PRE> 
+  call trace "OFF"
+</PRE>
+
+<P>
+as<B> first</B> statement in a filter program (after the required REXX comment
+delimiters on line 1, of course). This statement makes sure that your program
+ignores the environment variable <A HREF="180_L2_Specialenvironmentva.html">RXTRACE</A>.
+
+<P>
+Also be aware that the function <A HREF="278_L3_ThefunctionLINESinOb.html">LINES()
+</A>does not work as expected in <A HREF="269_L1_HintsforObjectREXX.html">Object-Oriented
+REXX</A> (see <A HREF="278_L3_ThefunctionLINESinOb.html">The function LINES()
+in Object REXX</A>). Therefore, you must distinguish between the different
+REXX versions in your filter program. 
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* Simple filter program in REXX                                      */
+/*                                                                    */
+/* A filter program reads lines from STDIN, does something with them, */
+/* and writes the changed lines to STDOUT                             */
+/*                                                                    */
+/* In this example we simply convert the lines to uppercase.          */
+/* This program works for Classic REXX and for Object REXX.           */
+/*                                                                    */
+
+  call trace "OFF"
+
+  signal on notready name ProgramEnd
+
+                    /* check the REXX interpreter version             */
+  parse version rexxVersion .
+  if rexxVersion = "OBJREXX" then
+  do;
+                    /* current REXX version is Object REXX            */
+
+                    /* main loop for Object REXX                      */
+                    /* (The loop is aborted by a NOTREADY condition)  */
+    do forever
+      .output~lineout( convert( .input~linein ) )
+    end /* do forever */
+
+  end /* if rexxVersion = "OBJREXX" then */
+  else
+  do
+                    /* current REXX version is Classic REXX           */
+
+                    /* main loop for Classic REXX                     */
+    do while lines( "STDIN" ) &lt;&gt; 0
+      call lineOut "STDOUT", convert( lineIn( "STDIN" ) )
+    end /* do while lines() &lt;&gt; 0 */
+
+  end /* else */
+
+programEnd:
+
+exit 0
+
+/* ------------------------------------------------------------------ */
+/* this function returns the parameter in uppercase                   */
+/*                                                                    */
+Convert: PROCEDURE
+  parse arg inputLine
+  return translate( inputLine )
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="158_L2_WritingOSindependent.html">[Back: Writing OS independent programs]</A> <BR>
+<A HREF="160_L2_CallingREXXprogramsi.html">[Next: Calling REXX programs in the CONFIG.SYS]</A> 
+</BODY>
+</HTML>

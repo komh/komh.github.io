@@ -1,0 +1,223 @@
+<HTML>
+<HEAD>
+<TITLE>An Application Thread's Messaging Structures</TITLE>
+</HEAD>
+<BODY>
+<H1>An Application Thread's Messaging Structures</H1><!-- entering slot 276 -->
+<P>
+The previous section introduced the notion of a message queue and list,
+of where there is one pair per PM message thread. We now look at these in
+more detail, with the associated PM system structures that comprise the
+applications's messaging environment.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<U><I>The Message Queue Header (MQ)</I></U><!-- lm: 0x11 11 -->
+<UL> This
+structure acts an anchor for all the message processing structures of an
+application message thread. It is created by<B> WinCreateMsgQueue</B>, and
+the returned<B> HMQ</B> (message queue handle) is the address of this structure.
+PM often refers to the address of a<B> MQ</B> as its<B> PMQ</B>.
+<P>
+The principle fields of interest are:<!-- lm: 0x2 16 -->
+<UL>
+<P>
+<I>Offset</I><!-- lm: 0x2 26 -->
+<UL><I> Description</I><!-- lm: 0x2 11 -->
+</UL> +0x14
+<!-- lm: 0x2 26 -->
+<UL>The current read position of the message queue.
+
+<P>
+Since the message queue is a circular array, four pointers have to be maintained:
+the current read position, current write position, top and bottom of array.
+
+<P>
+Each queue entry is a<B> QMSG</B> structure.
+<P>
+Entries are added to the queue in increasing address order, until the maximum
+(bottom) is reached then entries are added from the top.
+<P>
+Removal of entries only involves updating the current read pointer. Thus,
+a small trace of past message activity may be seen by scanning backwards
+from the current read pointer to the current write pointer.<!-- lm: 0x2 11 -->
+</UL> +0x18
+<!-- lm: 0x2 26 -->
+<UL>The current write pointer.<!-- lm: 0x2 11 -->
+</UL> +0x24
+<!-- lm: 0x2 26 -->
+<UL>The <A HREF="3322_L0_.html">Pid</A> of the message
+thread to which this<B> MQ</B> belongs.<!-- lm: 0x2 11 -->
+</UL> +0x28<!-- lm: 0x2 26 -->
+<UL> The
+<A HREF="3321_L0_.html">Tid</A> of the message thread to which this<B> MQ
+</B>belongs.<!-- lm: 0x2 11 -->
+</UL> +0x44<!-- lm: 0x2 26 -->
+<UL> The
+most recent<B> SMS</B> on which a response is awaited.
+<P>
+The presence of a non-zero value in this field implies that the message
+thread is currently blocked in<B> WinSendMsg</B> waiting for a response.
+
+<P>
+If the message thread recurses, for example through the receipt of a synchronous
+message, then a subsequent<B> WinSendMsg</B> will cause this field to be
+updated. The previous contents are saved on the stack.
+<P>
+A non-zero value in this field is of prime interest when diagnosing hangs.
+It immediately focuses our attention on the recipient of this message.<!-- lm: 0x2 11 -->
+</UL> +0x48
+<!-- lm: 0x2 26 -->
+<UL>The current<B> SMS</B> received.
+<P>
+This field is non-zero when an<B> SMS</B> is removed from the receive list
+for processing by its associated window procedure.
+<P>
+When this field is non-zero, it implies that the thread's window procedure
+has been dispatched to process a received message.<!-- lm: 0x2 11 -->
+</UL> +09c
+<!-- lm: 0x2 26 -->
+<UL>The Received message list.
+<P>
+<B>SMSs</B> are chained from this location pending dispatch.
+<P>
+Upon dispatch the oldest message is removed from the list and pointed to
+from offset +0x48 of the<B> MQ</B>.<!-- lm: 0x2 11 -->
+</UL> +0xa4<!-- lm: 0x2 26 -->
+<UL> The
+<A HREF="3320_L0_.html">thread slot number</A> of the message thread to
+which this<B> MQ</B> belongs.
+<P>
+This is very useful for correlating<B> MQs</B> to threads.<!-- lm: 0x2 11 -->
+<!-- lm: 0x2 1 -->
+</UL><U><I>The Send Message Structure (SMS)</I></U><!-- lm: 0x11 11 -->
+<UL> The
+<B>SMS</B> is created for synchronous messages and linked to the receive
+list (<B>MQ+0x9c</B>) when<B> WinSendMsg</B> is called.
+<P>
+The principle fields of interest are:<!-- lm: 0x2 16 -->
+<UL>
+<P>
+<I>Offset</I><!-- lm: 0x2 26 -->
+<UL><I> Description</I><!-- lm: 0x2 11 -->
+</UL> +0c
+<!-- lm: 0x2 26 -->
+<UL>Pointer to the next (more recent)<B> SMS</B> in
+the receive list.<!-- lm: 0x2 11 -->
+</UL> +14<!-- lm: 0x2 26 -->
+<UL> Pointer
+to the<B> MQ</B> to which this<B> SMS</B> has been sent.<!-- lm: 0x2 11 -->
+</UL> +18
+<!-- lm: 0x2 26 -->
+<UL>Pointer to the<B> MQ</B> of the thread from which
+this<B> SMS</B> was sent.<!-- lm: 0x2 11 -->
+</UL> +24<!-- lm: 0x2 26 -->
+<UL> Pointer
+to the<B> WND</B> the represents the Window to which this message has been
+sent.<!-- lm: 0x2 11 -->
+</UL> +28<!-- lm: 0x2 26 -->
+<UL> The message Id.
+<!-- lm: 0x2 11 -->
+</UL>+2c<!-- lm: 0x2 26 -->
+<UL> Message parameter 1.
+<!-- lm: 0x2 11 -->
+</UL>+30<!-- lm: 0x2 26 -->
+<UL> Message parameter 2.
+<!-- lm: 0x2 11 -->
+</UL>Offsets +0x14 and +0x18 are of prime interest in
+diagnosing hangs. They enable us to locate the recipient of a message, of
+which a response is pending and therefore the thread which is causing our
+thread to remain blocked. <!-- lm: 0x2 1 -->
+</UL><U><I> The Queue Message
+Structure (QMSG)</I></U><!-- lm: 0x11 11 -->
+<UL> This is the structure
+used by applications when calling<B> WinDispatchMsg</B>.
+<P>
+The<B> QMSG</B> is also the form of an entry on the application's message
+queue.
+<P>
+The principle fields of interest are:<!-- lm: 0x2 16 -->
+<UL>
+<P>
+<I>Offset</I><!-- lm: 0x2 26 -->
+<UL><I> Description</I><!-- lm: 0x2 11 -->
+</UL> +0
+<!-- lm: 0x2 26 -->
+<UL>The window handle (<B>HWND</B>). This is an index
+(ignoring the high-order bit) in to the handle table. From the handle table
+<!-- entering slot 277 -->we can obtain the equivalent<B> PWND</B> or pointer
+to the<B> WND</B>.<!-- lm: 0x2 11 -->
+</UL> +4<!-- lm: 0x2 26 -->
+<UL> The
+message Id.<!-- lm: 0x2 11 -->
+</UL> +8<!-- lm: 0x2 26 -->
+<UL> Message
+parameter 1.<!-- lm: 0x2 11 -->
+</UL> +c<!-- lm: 0x2 26 -->
+<UL> Message
+parameter 2.<!-- lm: 0x2 11 --> <!-- lm: 0x2 1 -->
+</UL><U><I> The Handle
+Table</I></U><!-- lm: 0x11 11 -->
+<UL> This is a global table that is used
+to correlate window handles (<B>HWNDs</B>) with pointers to<B> WNDs</B> (<B>PWNDs</B>).
+The table comprises a 0x20 byte header with 8-byte entries. The first word
+of each entry is a<B> PWND</B>  and the second a Boolean flag, which if
+non-zero, indicates that an<B> HWND</B>/<B>PWND</B> combination is non-deleteable.
+
+<P>
+The handle table may be located from the address at symbol:
+<PRE>    pHandleTable
+</PRE>
+ <!-- lm: 0x2 1 -->
+</UL><U><I>The Window Structure (WND)</I></U><!-- lm: 0x11 11 -->
+<UL> This
+structure represents a window. It is created by<B> WinCreateWindow</B>.
+
+<P>
+The<B> WND</B> has two main functions:<!-- lm: 0x2 11 -->
+<P>
+&gt;&gt;<!-- lm: 0x2 26 -->
+<UL> It acts as the link between the<B> MQ</B> and
+the thread's window procedure<!-- lm: 0x2 11 -->
+</UL> &gt;&gt;<!-- lm: 0x2 26 -->
+<UL> It
+establishes the<B> WND</B> hierarchy.<!-- lm: 0x2 11 -->
+</UL> The principle
+fields of interest are:<!-- lm: 0x2 16 -->
+<UL>
+<P>
+<I>Offset</I><!-- lm: 0x2 26 -->
+<UL><I> Description</I><!-- lm: 0x2 11 -->
+</UL> +0
+<!-- lm: 0x2 26 -->
+<UL>Next sibling<B> WND</B>.<!-- lm: 0x2 11 -->
+</UL> +4
+<!-- lm: 0x2 26 -->
+<UL>Parent<B> WND</B>.<!-- lm: 0x2 11 -->
+</UL> +8<!-- lm: 0x2 26 -->
+<UL> First
+Child<B> WND</B>.<!-- lm: 0x2 11 -->
+</UL> +28<!-- lm: 0x2 26 -->
+<UL> The
+pointer to the<B> MQ</B> that will queue messages sent and posted to this
+window.<!-- lm: 0x2 11 -->
+</UL> +2c<!-- lm: 0x2 26 -->
+<UL> The windows's
+<B>HWND</B>.<!-- lm: 0x2 11 -->
+</UL> +30<!-- lm: 0x2 26 -->
+<UL> A Boolean,
+which if non-zero, indicates that the window procedure address is a 16-bit
+far pointer.<!-- lm: 0x2 11 -->
+</UL> +34<!-- lm: 0x2 26 -->
+<UL> The address
+of the window procedure.<!-- lm: 0x2 11 --> <!-- lm: 0x2 1 -->
+</UL>
+<P>
+This scenario is illustrated in the following diagram:<!-- Unable to decode bitmap format --><IMG SRC="186_L4_AnApplicationThreads_19.gif" WIDTH=717 HEIGHT=1011>
+
+
+<P><HR>
+
+<A HREF="185_L4_PMMessageQueues.html">[Back: PM Message Queues]</A> <BR>
+<A HREF="187_L4_PMMessageProcessingL.html">[Next: PM Message Processing Logic]</A> 
+</BODY>
+</HTML>

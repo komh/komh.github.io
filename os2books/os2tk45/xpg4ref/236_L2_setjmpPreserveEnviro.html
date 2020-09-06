@@ -1,0 +1,142 @@
+<HTML>
+<HEAD>
+<TITLE>setjmp - Preserve Environment</TITLE>
+</HEAD>
+<BODY>
+<H1>setjmp - Preserve Environment</H1><!-- entering slot 254 -->setjmp - Preserve Environment<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>#include &lt;setjmp.h&gt;
+int setjmp(jmp_buf <I>env</I>);
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Description
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+setjmp saves a stack environment that can subsequently be restored by longjmp.
+setjmp and longjmp provide a way to perform a nonlocal goto. They are often
+used in signal handlers.
+<P>
+A call to setjmp causes it to save the current stack environment in<I> env</I>.
+ A subsequent call to longjmp restores the saved environment and returns
+control to a point corresponding to the setjmp call.  The values of all
+variables (except register variables) accessible to the function receiving
+control contain the values they had when longjmp was called. The values
+of variables that are allocated to registers by the compiler are unpredictable.
+Because any auto variable could be allocated to a register in optimized
+code, you should consider the values of all auto variables to be unpredictable
+after a longjmp call.
+<P>
+
+<P>
+<B>C++ Considerations </B> When you call setjmp in a C++ program, ensure
+that that part of the program does not also create C++ objects that need
+to be destroyed. When you call longjmp, objects existing at the time of
+the setjmp call will still exist, but any destructors called after setjmp
+are not called. See <A HREF="181_L2_longjmpRestoreStackE.html">longjmp</A> for
+an example.<!-- lm: 0x2 10 -->
+<P>
+<!-- lm: 0x2 1 -->
+</UL>Returns
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+setjmp returns the value 0 after saving the stack environment. If setjmp
+returns as a result of a longjmp call, it returns the<I> value</I> argument
+of longjmp, or 1 if the<I> value</I> argument of longjmp is 0. There is
+no error return value.<!-- lm: 0x2 1 -->
+</UL> Example Code
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+This example stores the stack environment at the statement
+<PRE>   if(setjmp(mark) != 0) ...
+</PRE>
+
+<P>
+When the system first performs the if statement, it saves the environment
+in<I> mark</I> and sets the condition to FALSE because setjmp returns a
+0 when it saves the environment. The program prints the message
+<PRE>   setjmp has been called
+</PRE>
+
+<P>
+The subsequent call to function p tests for a local error condition, which
+can cause it to perform the longjmp function. Then, control returns to the
+original setjmp function using the environment saved in<I> mark</I>. This
+time, the condition is TRUE because -1 is the return value from the longjmp
+function. The program then performs the statements in the block and prints
+
+<PRE>   longjmp has been called
+</PRE>
+
+<P>
+Then the program calls the recover function and exits.
+<PRE>#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;setjmp.h&gt;
+
+jmp_buf mark;
+
+void p(void)
+{
+   int error = 0;
+
+   error = 9;
+
+   if (error != 0)
+      longjmp(mark, -1);
+}
+
+void recover(void)
+{
+}
+
+int main(void)
+{
+   if (setjmp(mark) != 0) {
+      printf("longjmp has been called\n");
+      recover();
+      return 0;
+   }
+   printf("setjmp has been called\n");
+
+   p();
+
+   return 0;
+
+   /****************************************************************************
+      The output should be:
+
+      setjmp has been called
+      longjmp has been called
+   ****************************************************************************/
+}
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Related Information
+<P>
+<!-- lm: 0x2 10 -->
+<UL><!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 --><A HREF="181_L2_longjmpRestoreStackE.html">longjmp
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 -->goto in the<I> Language Reference</I><!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="235_L2__set_crt_msg_handleC.html">[Back: _set_crt_msg_handle - Change Run-Time Message Output Destination]</A> <BR>
+<A HREF="237_L2_setlocaleSettheLocal.html">[Next: setlocale - Set the Locale of the Program]</A> 
+</BODY>
+</HTML>

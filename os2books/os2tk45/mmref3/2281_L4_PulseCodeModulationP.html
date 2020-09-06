@@ -1,0 +1,157 @@
+<HTML>
+<HEAD>
+<TITLE>Pulse Code Modulation (PCM) Format</TITLE>
+</HEAD>
+<BODY>
+<H1>Pulse Code Modulation (PCM) Format</H1><!-- entering slot 2287 -->
+<P>
+If the<I> usFormatTag</I> field of the<B> &lt;fmt-ck&gt;</B> is set to WAVE_FORMAT_PCM,
+then the waveform data consists of samples represented in pulse code modulation
+(PCM) format.  For PCM waveform data, the<B> &lt;format-specific-fields&gt;
+</B>is defined as follows:
+<PRE>&lt;PCM-format-specific&gt; 
+          struct
+          {
+               USHORT   usBitsPerSample;      /* Sample size */
+          }
+</PRE>
+
+<P>
+The<I> usBitsPerSample</I> field specifies the number of bits of data used
+to represent each sample of each channel.  If there are multiple channels,
+the sample size is the same for each channel.
+<P>
+For PCM data, the<I> usAvgBytesPerSec</I> field of the 'fmt' chunk should
+be equal to the following formula rounded up to the next whole number: usChannels
+x usBitsPerSample x ulSamplesPerSec x .125
+<BR>
+
+<P>
+The<I> usBlockAlign</I> field should be equal to the following formula,
+rounded to the next whole number:   usChannels x usBitsPerSample x .125
+<BR>
+
+<P>
+<B>Data Packing for PCM WAVE Files</B>
+<P>
+In a single-channel WAVE file, samples are stored consecutively.  For stereo
+WAVE files, channel 0 represents the left channel, and channel 1 represents
+the right channel.  The speaker position mapping for more than two channels
+is currently undefined.  In multiple-channel WAVE files, samples are interleaved.
+
+<P>
+The following diagrams show the data packing for a 8-bit mono and stereo
+WAVE files:
+<PRE>    <B>Sample 1          Sample 2        Sample 3         Sample 4</B>
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³   Channel 0   ³      Channel 0   ³     Channel 0     ³   Channel 0   ³
+³               ³                  ³                   ³               ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+                     Data Packing for 8-Bit Mono PCM
+
+
+             <B>Sample 1                            Sample 2</B>
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³   Channel 0   ³     Channel 1    ³     Channel 0     ³   Channel 1   ³
+³    (left)     ³      (right)     ³      (left)       ³    (right)    ³
+³               ³                  ³                   ³               ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+                    Data Packing for 8-Bit Stereo PCM
+</PRE>
+
+<P>
+The following diagrams show the data packing for 16-bit mono and stereo
+WAVE files:
+<PRE>              <B>Sample 1                           Sample 2</B>
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³   Channel 0    ³    Channel 0     ³    Channel 0     ³   Channel 0    ³
+³                ³                  ³                  ³                ³
+³low-order byte  ³  high-order byte ³  low-order byte  ³ high-order byte³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+                    Data Packing for 16-Bit Mono PCM
+</PRE>
+
+<PRE>              <B>Sample 1                           Sample 2</B>
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³  Channel 0     ³    Channel 0     ³   Channel 1      ³    Channel 1   ³
+³   (left)       ³     (left)       ³    (right)       ³     (right)    ³
+³low-order byte  ³  high-order byte ³ low-order byte   ³ high-order byte³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+                    Data Packing for 16-Bit Stereo PCM
+</PRE>
+
+<P>
+<B>Data Format of the Samples</B>
+<P>
+Each sample is contained in an integer<I> i</I>. The size of<I> i</I> is
+the smallest number of bytes required to contain the specified sample size.
+The least significant byte is stored first. The bits that represent the
+sample amplitude are stored in the most significant bits of<I> i</I>, and
+the remaining bits are set to zero.
+<P>
+For example, if the sample size (recorded in<I> nBitsPerSample</I>) is 12
+bits, then each sample is stored in a two-byte integer. The least significant
+four bits of the first (least significant) byte is set to zero.
+<P>
+The data format and maximum and minimums values for PCM waveform samples
+of various sizes are as follows:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄ¿
+³Sample Size         ³Data Format         ³Maximum   ³Minimum   ³
+³                    ³                    ³Value     ³Value     ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄ´
+³One to eight bits   ³Unsigned integer    ³255 (0xFF)³0         ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄ´
+³Nine or more bits   ³Signed integer <I>i</I>    ³Largest   ³Most      ³
+³                    ³                    ³positive  ³negative  ³
+³                    ³                    ³value of <I>i</I>³value of <I>i</I>³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+For example, the maximum, minimum, and midpoint values for 8-bit and 16-bit
+PCM waveform data are as follows:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄ¿
+³Format    ³Maximum Value       ³Minimum Value       ³Midpoint  ³
+³          ³                    ³                    ³Value     ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄ´
+³8-bit PCM ³255 (0xFF)          ³0                   ³128 (0x80)³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄ´
+³16-bit PCM³32767 (0x7FFF)      ³-32768 (-0x8000)    ³0         ³
+ÀÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+<B>Examples of PCM WAVE Files</B>
+<P>
+Example of a PCM WAVE file with 11.025 kHz sampling rate, mono, 8 bits per
+sample:
+<PRE>RIFF(     'WAVE'      fmt(1, 1, 11025, 11025, 1, 8)
+                          data( &lt;wave-data&gt; ) )
+</PRE>
+
+<P>
+Example of a PCM WAVE file with 22.05 kHz sampling rate, stereo, 8 bits
+per sample:
+<PRE>RIFF(     'WAVE'      fmt(1, 2, 22050, 44100, 2, 8)
+                          data( &lt;wave-data&gt; ) )
+</PRE>
+
+<P>
+Example of a PCM WAVE file with 44.1 kHz sampling rate, mono, 20 bits per
+sample:
+<PRE>RIFF(     'WAVE'      INFO(INAM("O Canada"Z))
+                          fmt(1, 1, 44100, 132300, 3, 20)
+                          data( &lt;wave-data&gt; ) )
+</PRE>
+
+
+<P><HR>
+
+<A HREF="2280_L3_WAVEFormatCategories.html">[Back: WAVE Format Categories]</A> <BR>
+<A HREF="2282_L3_StorageofWAVEData.html">[Next: Storage of WAVE Data]</A> 
+</BODY>
+</HTML>

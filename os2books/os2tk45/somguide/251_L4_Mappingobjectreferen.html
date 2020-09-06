@@ -1,0 +1,63 @@
+<HTML>
+<HEAD>
+<TITLE>Mapping object references to objects</TITLE>
+</HEAD>
+<BODY>
+<H1>Mapping object references to objects</H1><!-- entering slot 288 -->
+<P>
+The<B> somdSOMObjFromRef</B> method maps<B> SOMDObjects</B> to<B> SOMObjects.
+</B>This method is invoked by<B>  SOMOA</B> on the server object, for each
+object reference found as a parameter in a request.
+<P>
+The default implementation for<B> somdSOMObjFromRef</B> returns the address
+of the<B> SOMObject</B> for which the specified object reference was create
+(using the<B> somdRefFromSOMObj</B> method). If the object reference was
+not created by the same server process, then an exception (BadObjref) is
+raised. The default implementation does not, however, verify that the original
+object (for which the object reference was created) still exists. If the
+original object has been deleted (for example, by another client program),
+then the address returned will not represent a valid object, and any methods
+invoked on that object pointer will result in server failure. Note: The
+default implementation of<B> somdSOMObjFromRef</B> does not check that the
+original object address is still valid because the check is very expensive
+and seriously degrades server performance.
+<P>
+To have a server verify that all results from<B> somdSOMObjFromRef</B> represent
+valid objects, server programmers can subclass<B> SOMDServer</B> and override
+the<B> somdSOMObjFromRef</B> method to perform a validity check on the result
+(using the<B> somIsObj</B> function). For example, a subclass "MySOMDServer"
+of<B> SOMDServer</B> could implement the<B> somdSOMObjFromRef</B> method
+as follows:
+<PRE>SOM_Scope SOMObject SOMLINK somdSOMObjFromRef(MySOMDServer somSelf,
+                                              Environment * ev,
+                                              SOMDObject objref)
+{
+    SOMObject obj;
+    StExcep_INV_OBJREF *ex;
+
+    /* MySOMDServerData *somThis = MySOMDServerGetData(somSelf); */
+    MySOMDServerMethodDebug(*MySOMDServer*, *somdSOMObjFromRef");
+
+    obj = MySOMDServer_parent_SOMDServer_somdSOMObjFromRef(somSelf,
+                                                    ev, objref);
+    if (somIsObj(obj))
+        return (obj);
+    else {
+        ex = (StExcep_INV_OBJREF *)
+              SOMMalloc(sizeof(StExcep_INV_OBJREF));
+        ex-&gt;minor = SOMDERROR_BadObjref;
+        ex-&gt;completed = NO;
+        somSetException(ev, USER_EXCEPTION,
+                        ex_StExcep_INV_OBJREF, ex);
+        return (NULL);
+    }
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="250_L4_Hintsontheuseofcreat.html">[Back: Hints on the use of create vs. create_constant]</A> <BR>
+<A HREF="252_L4_Dispatchingamethod.html">[Next: Dispatching a method]</A> 
+</BODY>
+</HTML>

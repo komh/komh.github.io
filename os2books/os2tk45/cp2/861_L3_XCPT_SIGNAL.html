@@ -1,0 +1,99 @@
+<HTML>
+<HEAD>
+<TITLE>XCPT_SIGNAL</TITLE>
+</HEAD>
+<BODY>
+<H1>XCPT_SIGNAL</H1><!-- entering slot 881 -->
+<P>
+<B>Signal Exceptions</B>
+<P>
+An OS/2 Version 2.X application may receive three signals:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+XCPT_SIGNAL_INTR (Ctrl+C)<!-- lm: 0x2 6 -->
+<BR>
+XCPT_SIGNAL_KILLPROC (<A><!-- external link: 1D 9A C3 4B -->DosKillProcess</A>)
+<!-- lm: 0x2 6 -->
+<BR>
+XCPT_SIGNAL_BREAK (Ctrl+Break).<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The signal being sent may be determined by examining the exception information
+in the ExceptionReportRecord.<!-- lm: 0x2 1 -->
+<P>
+Exception Code:<!-- lm: 0x11 4 -->
+<UL> XCPT_SIGNAL (0xC0010003)<!-- lm: 0x2 1 -->
+</UL> Default
+Action:<!-- lm: 0x11 4 -->
+<UL> The process is ended.<!-- lm: 0x2 1 -->
+</UL> Additional
+Parameters (1):<!-- lm: 0x11 4 -->
+<UL><!-- lm: 0x2 4 -->
+<P>
+ExceptionInfo[ 0 ]<!-- lm: 0x2 31 -->
+<UL> Signal Number<!-- lm: 0x2 31 -->
+<P>
+Number<!-- lm: 0x2 46 -->
+<UL> Signal<!-- lm: 0x2 31 -->
+</UL>1<!-- lm: 0x2 46 -->
+<UL> XCPT_SIGNAL_INTR<!-- lm: 0x2 31 -->
+</UL>3<!-- lm: 0x2 46 -->
+<UL> XCPT_SIGNAL_KILLPROC<!-- lm: 0x2 31 -->
+</UL>4<!-- lm: 0x2 46 -->
+<UL> XCPT_SIGNAL_BREAK<!-- lm: 0x2 31 --><!-- lm: 0x2 4 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+XCPT_SIGNAL is called a "signal exception" and is sent only to thread 1
+in the process receiving the exception. This is consistent with 16-bit signals,
+and provides greater consistency in the environment of the process for handling
+the various asynchronous exceptions. For example, since a repeated typematic
+Ctrl+C could possibly cause the thread to recursively process the exception
+and consume stack space without ever being able to handle the first "signal",
+the exception dispatcher "holds" each exception of the same type until a
+handler either returns XCPT_CONTINUE_EXECUTION to the exception dispatcher,
+or the process calls<A><!-- external link: 1D 5C C3 4A --> DosAcknowledgeSignalException
+</A>for that signal. Only one signal or exception is actually held (they
+are not queued by the system).
+<P>
+<A><!-- external link: 1D 5C C3 4A -->DosAcknowledgeSignalException</A> indicates
+to the system that the process wants to receive the XCPT_SIGNAL_INTR and
+XCPT_SIGNAL_BREAK signals. Previously, when a process called<A><!-- external link: 1D 5C C3 4A --> DosAcknowledgeSignalException
+</A>the system noted that the process was aware of the particular signal
+for which it was registering the handler. When a process called<A><!-- external link: 1D 5C C3 FC --> DosAcknowledgeSignalException</A>,
+it became a candidate for the "signal focus" for its session. At any point
+in time, the focus for a session is the last process to register a signal
+handler for that signal. When the user presses Ctrl+C on the keyboard, the
+system delivers an XCPT_SIGNAL_INTR signal to the current keyboard focus.
+The user could also press Ctrl+Break to deliver an XCPT_SIGNAL_BREAK signal,
+but this would only work if input were in raw mode.
+<P>
+Note that all exception handlers (on thread 1) must be prepared to "see"
+signal exceptions. It is always possible that a previous handler has issued
+DosSetSignalExceptionFocus, or that a Dos16SetSigHandler has been issued
+by some 16-bit code in the path. They can always be ignored by returning
+XCPT_CONTINUE_SEARCH to the exception dispatcher. Note that signals result
+in a call to the 16-bit signal handler (if installed) if all the 32-bit
+exception handlers return XCPT_CONTINUE_SEARCH.
+<P>
+<A><!-- external link: 1D F6 C3 4C -->DosSetSession</A> performs the function
+of assigning the signal focus exactly as if the application had called<A><!-- external link: 1D 5C C3 4A --> DosAcknowledgeSignalException
+</A>twice, once for each signal. The process calls<A><!-- external link: 1D F6 C3 4C --> DosSetSession
+</A>when it wants to indicate that it expects to receive XCPT_SIGNAL_INTR
+or XCPT_SIGNAL_BREAK after it has registered an exception handler to process
+the signal when it comes. Each call to<A><!-- external link: 1D F6 C3 4C --> DosSetSession
+</A>increments a counter in the PTDA of the process. When the system attempts
+to send XCPT_SIGNAL_INTR or XCPT_SIGNAL_BREAK to a process, it first checks
+to see if either this counter is greater than zero, or if the process has
+registered a 16-bit signal handler for that signal. If either of these is
+true, the signal will be sent. If the process has registered both 16-bit
+and 32-bit handlers, the 32-bit handlers are called first. If they do not
+handle the signal, the 16-bit handlers are called. If the 32-bit handlers
+are called and do not handle the signal, and there are no 16-bit handlers,
+the process is terminated.
+
+<P><HR>
+
+<A HREF="860_L3_XCPT_UNWIND.html">[Back: XCPT_UNWIND]</A> <BR>
+<A HREF="862_L1_ExtendedAttributes.html">[Next: Extended Attributes]</A> 
+</BODY>
+</HTML>

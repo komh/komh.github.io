@@ -1,0 +1,141 @@
+<HTML>
+<HEAD>
+<TITLE>Threads Containing Object Windows</TITLE>
+</HEAD>
+<BODY>
+<H1>Threads Containing Object Windows</H1><!-- entering slot 358 -->
+<P>
+In the case where the processing of an event involves access to and manipulation
+of another data object, the secondary thread should create its own message
+queue and one or more object windows with window procedures to process any
+messages passed by the primary thread.  This technique preserves the object-oriented
+nature of the application by isolating data objects from one another.
+<P>
+The primary thread then passes messages to the secondary thread's object
+windows, in an identical manner to that used when passing  messages to a
+window procedure in the primary thread; it is recommended that this be achieved
+using the<B> WinPostMsg()</B> function, since this call allows asynchronous
+processing of the message and preserves the correct serialization of messages
+in the system, as described in <A HREF="215_L3_WindowProcedures.html">Window
+Procedures (Invoking a Window Procedure)</A>.
+<P>
+Asynchronous threads with object windows are normally created by  window
+procedures in the application's primary thread issuing a<B> _beginthread()
+</B>function call.  This call is typically made  by a window procedure during
+its processing of the WM_CREATE message;  the secondary thread and its object
+window (or windows) are then  initialized and able to accept any requests
+passed to them.  An example  of the<B> _beginthread()</B> function is shown
+in <A HREF="083_L2_CreatingaThreadWitha.html">Figure "Creating a Thread
+With an Object Window"</A>.
+<P>
+Note that when using the IBM C Set/2 compiler, the second parameter in the
+<B>_beginthread()</B> function call (the pointer to the stack)  is ignored,
+since the<B> _beginthread()</B> function automatically  allocates memory
+for the stack. This parameter is included merely to allow source code compatibility
+with applications written for the earlier IBM C/2 and Microsoft C compilers,
+which required the  application to explicitly allocate stack space for a
+secondary thread.  Note that the minimum recommended stack size for a thread
+containing object windows is 8192 bytes (8 KB).
+<P>
+The handle of the window from which the secondary thread is being created
+is passed to the thread in the<B> _beginthread()</B> call.  The secondary
+thread's main routine may then pass this handle to the object window created
+in the thread.  Upon successful creation, the object window can then pass
+an acknowledgement message back to the window that created it, containing
+the handle of the object window, in order that the calling window may then
+post messages to the object window.  This acknowledgement message also ensures
+that the object window is correctly created and initialized before any messages
+are posted to it.
+<P>
+The secondary thread's main routine is similar in structure to the main
+routine of the primary thread in a Presentation Manager application.  The
+main  routine registers the object window class, creates a window of that
+ class and enters a message processing loop.
+<P>
+It should be noted that the secondary thread's main routine is  identical
+to that of the application's primary thread, with the  exception that a
+secondary thread need not register itself to Presentation Manager, since
+this is typically done once per application, by the primary thread.  However,
+if certain functions such as error processing are required on a per-thread
+basis, a separate anchor block must be created for the secondary thread,
+and hence an additional<B> WinInitialize()</B> call must be made.
+<P>
+<A HREF="084_L2_SecondaryThreadCreat.html">Figure "Secondary Thread Creating
+an Object Window"</A> shows a secondary thread that registers an  object
+window class and creates a window of that class.
+<P>
+An object window is created using the normal<B> WinCreateWindow()</B> call,
+as illustrated in <A HREF="084_L2_SecondaryThreadCreat.html">Figure "Secondary
+Thread Creating an Object Window"</A>.  The window's parent is  specified
+as the conceptual object window, the handle of which is obtained from the
+<B>WinQueryObjectWindow()</B> function, or using the defined constant HWND_OBJECT.
+ Note that the  handle of the window that created the thread is passed to
+the object  window in the<I> CtlData</I> parameter of the<B> WinCreateWindow()
+</B>call, in order that the object window may pass its handle back to the
+calling window to indicate its readiness to receive messages.
+<P>
+The secondary thread retrieves messages from its input queue in the conventional
+manner using<B> WinGetMsg()</B>, and invokes Presentation Manager  using
+<B>WinDispatchMsg()</B> to pass the message to its object window procedure.
+ Thus a secondary thread has a message processing loop similar to that of
+the application's (primary thread's) main routine.
+<P>
+An object window procedure is identical in structure to a "normal" display
+window procedure.  An example of an object window  procedure is illustrated
+in <A HREF="085_L2_SampleObjectWindowPr.html">Figure "Sample Object Window
+Procedure"</A>.
+<P>
+Upon creation, an object window receives a WM_CREATE message in the same
+way as a standard window.  The window may capture and explicitly process
+this message in order to open or create data objects, initialize instance
+data, etc., as illustrated in <A HREF="085_L2_SampleObjectWindowPr.html">Figure
+"Sample Object Window Procedure"</A>. <!-- entering slot 359 --> Once opened,
+however,  an object window typically only receives a number of application-defined
+<BR>
+messages requesting certain actions on  data objects owned by the window.
+
+<P>
+The object window procedure shown in <A HREF="085_L2_SampleObjectWindowPr.html">Figure
+"Sample Object Window Procedure"</A>  also extracts the handle of the window
+that issued the<B> WinCreateWindow()</B> function call, which is normally
+passed to the object window as part of the WM_CREATE message.  The window
+procedure then uses this handle to send an acknowledgement message back
+to this window, containing its own window handle and thus enabling the two
+windows to communicate with one another.  This is necessary when object
+windows are created in secondary threads, as described in <A HREF="333_L2_CommunicatingWithaSe.html">Communicating
+With a Secondary Thread</A>.  Note that the object window procedure must
+use  the<I> system</I> linkage convention; this is achieved using the EXPENTRY
+keyword.
+<P>
+The only other system-defined message class normally received by an  object
+window is the WM_DESTROY message class passed to the window by  Presentation
+Manager when a<B> WinDestroyWindow()</B> call is issued by the  thread.
+ An object window should respond to the WM_DESTROY message by  closing,
+destroying or freeing any data objects to which it has  obtained access,
+and backing out any uncommitted units of work.
+<P>
+<A HREF="085_L2_SampleObjectWindowPr.html">Figure "Sample Object Window
+Procedure"</A> shows a number of application-defined message  classes being
+processed by the object window procedure.  These message  classes are typically
+defined by the application during its initialization.  For message classes
+that will be processed by an object window procedure loaded from a DLL module,
+the message classes should be defined in the include file for that DLL module,
+rather than explicitly within the application that uses the DLL module.
+ This further enhances the isolation of the internal workings of the object
+window from other components of the application, and facilitates reusability
+of the code.
+<P>
+The window procedure in the primary thread must have some way of determining
+when the object window has completed its processing, at which point it may
+safely assume that the previous event has been processed successfully and
+allow the user to continue operating upon  the data object, or take appropriate
+error action.  This indication may  be provided in a number of ways, which
+are discussed in <A HREF="343_L2_MaintainingSynchroni.html">Maintaining
+Synchronization</A>.
+
+<P><HR>
+
+<A HREF="324_L2_CreatingaSecondaryTh.html">[Back: Creating a Secondary Thread]</A> <BR>
+<A HREF="326_L3_ThreadsWithoutObject.html">[Next: Threads Without Object Windows]</A> 
+</BODY>
+</HTML>

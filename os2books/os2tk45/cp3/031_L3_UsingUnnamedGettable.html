@@ -1,0 +1,60 @@
+<HTML>
+<HEAD>
+<TITLE>Using Unnamed Gettable Shared Memory</TITLE>
+</HEAD>
+<BODY>
+<H1>Using Unnamed Gettable Shared Memory</H1><!-- entering slot 31 -->
+<P>
+A process allocates unnamed gettable shared memory by using<A><!-- external link: 1D 5F C3 29 --> DosAllocSharedMem
+</A>with the object name (pszName parameter) set to NULL and the memory
+options (flag parameter) set to OBJ_GETTABLE. The allocating process must
+pass a pointer to the shared memory to another process. This is typically
+done by using some form of interprocess communication, such as a queue or
+a named pipe.
+<P>
+If an application allocates shared memory with the OBJ_GETTABLE option,
+it passes a pointer to the shared memory to the second process. The second
+process gets access to the shared memory by using<A><!-- external link: 1D 97 C3 2A --> DosGetSharedMem
+</A>to validate the passed pointer.
+<P>
+The following code fragment allocates 24576 bytes (24KB) of unnamed gettable
+shared memory:
+<PRE>    #define  INCL_DOSMEMMGR   /* Memory Manager values */
+    #include &lt;os2.h&gt;
+
+    APIRET  ulrc;
+    PBYTE   pb;
+
+    ulrc = DosAllocSharedMem((PVOID *) &amp;pb,
+                             (PSZ) NULL,
+                             24576,
+                             fALLOC |
+                             OBJ_GETTABLE); /* gettable memory */
+
+</PRE>
+
+<P>
+Once the memory is allocated, the process can pass the memory pointer to
+a second process through interprocess communication. Once the second process
+receives the pointer, it validates the memory with<A><!-- external link: 1D 97 C3 FC --> DosGetSharedMem</A>,
+as shown in the following code:
+<PRE>    #define  INCL_DOSMEMMGR   /* Memory Manager values */
+    #include &lt;os2.h&gt;
+
+    APIRET  ulrc;
+    PBYTE   pb2;
+
+    ulrc = DosGetSharedMem(pb2,  /* validating the memory allocated by */
+                                 /* the allocating process             */
+                           PAG_READ |
+                           PAG_WRITE);
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="030_L3_UsingUnnamedGiveable.html">[Back: Using Unnamed Giveable Shared Memory]</A> <BR>
+<A HREF="032_L1_MessageManagement.html">[Next: Message Management]</A> 
+</BODY>
+</HTML>

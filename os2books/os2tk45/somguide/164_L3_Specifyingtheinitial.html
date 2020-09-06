@@ -1,0 +1,79 @@
+<HTML>
+<HEAD>
+<TITLE>Specifying the initialization function</TITLE>
+</HEAD>
+<BODY>
+<H1>Specifying the initialization function</H1><!-- entering slot 198 -->
+<P>
+An initialization function for the class library must be provided to support
+dynamic loading of the library by the SOM Class Manager. The SOM Class Manager
+expects that, whenever it loads a class library, the initialization function
+will create and register class objects for all of the classes contained
+in the library.
+<P>
+These classes are then managed as a group (called an<I> affinity group</I>).
+One class in the affinity group has a privileged position-namely, the class
+that was specifically requested when the library was loaded. If that class
+(that is, the class that caused loading to occur) is subsequently unregistered,
+the SOM Class Manager will automatically unregister all of the other classes
+in the affinity group as well, and will unload the class library. Similarly,
+if the SOM Class Manager is explicitly asked to unload the class library,
+it will also automatically unregister and free all of the classes in the
+affinity group.
+<P>
+It is the responsibility of the class-library creator to supply the initialization
+function. The interface to the initialization function is given by the following
+C/C++ prototype:
+<PRE><B>#ifdef __IBMC__
+  #pragma linkage (SOMInitModule, system)
+#endif
+
+SOMEXTERN void  SOMLINK SOMInitModule ( long</B> <I>majorVersion</I><B>,
+                                        long</B> <I>minorVersion</I><B>,
+                                        string</B> <I>className</I><B>);</B>
+</PRE>
+
+<P>
+The parameters provided to this function are the<I> className</I> and the
+major/minor version numbers of the class that was requested when the library
+was loaded (that is, the class that caused loading). The initialization
+function is free to use or to disregard this information; nevertheless,
+if it fails to create a class object with the required name, the SOM Class
+Manager considers the load to have failed. As a rule of thumb, however,
+if the initialization function invokes a &lt;<I>className</I>&gt;<B>NewClass
+</B>procedure for each class in the class library, this condition will always
+be met. Consequently, the parameters supplied to the initialization function
+are not needed in most cases.
+<P>
+Here is a typical class-library initialization function, written in C, for
+a library with three classes ("A", "B", and "C"):
+<PRE>   #include "a.h"
+   #include "b.h"
+   #include "c.h"
+   #ifdef __IBMC__
+     #pragma linkage (SOMInitModule, system)
+   #endif
+
+   SOMEXTERN void  SOMLINK SOMInitModule (long majorVersion,
+                             long minorVersion, string className)
+   {
+       SOM_IgnoreWarning (majorVersion);  /* This function makes */
+       SOM_IgnoreWarning (minorVersion);  /* no use of the passed */
+       SOM_IgnoreWarning (className);     /* arguments.   */
+       ANewClass (A_MajorVersion, A_MinorVersion);
+       BNewClass (B_MajorVersion, B_MinorVersion);
+       CNewClass (C_MajorVersion, C_MinorVersion);
+   }
+</PRE>
+
+<P>
+The source code for the initialization function can be added to one of the
+implementation files for the classes in the library, or you can put it in
+a separate file and compile it independently.
+
+<P><HR>
+
+<A HREF="163_L3_Buildingexportfiles.html">[Back: Building export files]</A> <BR>
+<A HREF="165_L4_UsingWindowsclasslib.html">[Next: Using Windows class libraries]</A> 
+</BODY>
+</HTML>

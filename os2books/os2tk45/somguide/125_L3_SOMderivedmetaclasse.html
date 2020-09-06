@@ -1,0 +1,149 @@
+<HTML>
+<HEAD>
+<TITLE>SOM-derived metaclasses</TITLE>
+</HEAD>
+<BODY>
+<H1>SOM-derived metaclasses</H1><!-- entering slot 153 -->
+<P>
+As previously discussed, a class object can perform any of the class methods
+that its metaclass defines. New metaclasses are typically created to modify
+existing class methods or introduce new class method(s). Chapter 8, "Metaclass
+Framework," discusses metaclass programming.
+<P>
+Three factors are essential for effective use of metaclasses in SOM:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->First, every class in SOM is an object that is implemented
+by a metaclass.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Second, programmers can define and name new metaclasses,
+and can use these metaclasses when defining new SOM classes.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Finally, and most importantly, metaclasses cannot
+interfere with the fundamental guarantee required of every OOP system: specifically,
+any code that executes without method-resolution error on instances of a
+given class will also execute without method-resolution errors on instances
+of any subclass of this class.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Surprisingly, SOM is currently the only OOP system that can make this final
+guarantee while also allowing programmers to explicitly define and use named
+metaclasses. This is possible because SOM automatically determines an appropriate
+metaclass that supports this guarantee, automatically deriving new metaclasses
+by subclassing at run time when this is necessary. As an example, suppose
+class "A" is an instance of metaclass "AMeta".
+<P>
+Assume that "AMeta" supports a method "bar" and that "A" supports a method
+"foo" that uses the expression "_bar( _somGetClass(somSelf ) )." That is,
+method "foo" invokes "bar" on the class of the object on which "foo" is
+invoked. For example, when method "foo" is invoked on an instance of class
+"A" (say, object "O{1}"), this in turn invokes "bar" on class "A" itself.
+
+<P>
+Now consider what happens if class "A" were subclassed by "B," a class that
+has the explicit metaclass "BMeta" declared in its SOM IDL source file (and
+assuming "BMeta" is not derived from "AMeta"). Also assume that object "O{2}"
+is an instance of class "B."
+<P>
+Recall that "AMeta" supports method "bar" and that class "A" supports method
+"foo" (which incorporates "bar" in its definition). Given the hierarchy
+described above, an invocation of "foo" on "O {2}" would fail, because metaclass
+"BMeta" does not support the "bar" method. ExampleofMetaclassIncompatibility
+<BR>
+<!-- Unable to decode bitmap format --><IMG SRC="125_L3_SOMderivedmetaclasse_3.gif" WIDTH=496 HEIGHT=316 ALIGN=center>
+<P>
+
+<P>
+There is only one way that "BMeta" can support this specific method-by inheriting
+it from "AMeta" ("BMeta" could introduce another method named "bar", but
+this would be a<I> different</I> method from the one introduced by "AMeta").
+Therefore, in this example, because "BMeta" is not a subclass of "AMeta",
+"BMeta" cannot be allowed to be the metaclass of "B". That is, "BMeta" is
+not compatible with the requirements placed on "B" by the fundamental principle
+of OOP referred to above. This situation is referred to as<I> metaclass
+incompatibility</I>.
+<P>
+SOM does not allow hierarchies with metaclass incompatibilities. Instead,
+SOM automatically builds<I> derived metaclasses</I> when this is necessary.
+For example, SOM would create a "DerivedMeta" metaclass that has both "AMeta"
+and "BMeta" as parents. This ensures that the invocation of method "foo"
+on instances of class "B" will not fail, and also ensures that the desired
+class methods provided by "BMeta" will be available on class "B".
+<BR>
+Example of a Derived Metaclass
+<BR>
+<!-- Unable to decode bitmap format --><IMG SRC="125_L3_SOMderivedmetaclasse_4.gif" WIDTH=499 HEIGHT=328 ALIGN=center>
+<P>
+There are three important aspects of SOM's approach to derived metaclasses:
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->First, the creation of SOM-derived metaclasses is
+integrated with programmer-specified metaclasses. If a programmer-specified
+metaclass already supports all the class methods and variables needed by
+a new class, then the programmer-specified metaclass will be used as is.
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Second, if SOM must derive a different metaclass than
+the one explicitly indicated by the programmer (in order to support all
+the necessary class methods and variables), then the SOM-derived metaclass
+inherits from the explicitly indicated metaclass first. As a result, the
+method procedures defined by the specified metaclass take precedence over
+other possibilities (see the following section on<!-- entering slot 154 --> inheritance
+and the discussion of resolution of ambiguity in the case of multiple inheritance).
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Finally, the class methods defined by the derived
+metaclass invoke the appropriate initialization methods of its parents to
+ensure that the class variables of its instances are correctly initialized.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+As further explanation for the automatic derivation of metaclasses, consider
+the following multiple-inheritance example. Class "C" (derived from classes
+"A" and "B") does not have an explicit metaclass declaration in its SOM
+IDL, yet its parents "A" and "B" do. As a result, class "C" requires a derived
+metaclass. (If you still have trouble following the reasoning behind derived
+metaclasses, ask yourself the following question: What class should "C"
+be an instance of? After a bit of reflection, you will conclude that, if
+SOM did not build the derived metaclass, you would have to do so yourself.)
+MultipleInheritancerequiresDerivedMetaclasses
+<BR>
+<!-- Unable to decode bitmap format --><IMG SRC="125_L3_SOMderivedmetaclasse_5.gif" WIDTH=506 HEIGHT=328 ALIGN=center>
+<P>
+In summary, SOM allows and encourages the definition and explicit use of
+named metaclasses. With named metaclasses, programmers can not only affect
+the behavior of class instances by choosing the parents of classes, but
+they can also affect the behavior of the classes themselves by choosing
+their metaclasses.  Because the behavior of classes in SOM includes the
+implementation of inheritance itself, metaclasses in SOM provide an extremely
+flexible and powerful capability allowing classes to package solutions to
+problems that are otherwise very difficult to address within an OOP context.
+
+<P>
+At the same time, SOM is unique in that it relieves programmers of the responsibility
+for avoiding metaclass incompatibility when defining a new class. At first
+glance, this might seem to be merely a useful (though very important) convenience.
+But, in fact, it is absolutely essential, because SOM is predicated on binary
+compatibility with respect to changes in class implementations.
+<P>
+A programmer might, at one point in time, know the metaclasses of all ancestor
+classes of a new subclass, and, as a result, be able to explicitly derive
+an appropriate metaclass for the new class. Nevertheless, SOM must guarantee
+that this new class will still execute and perform correctly when any of
+its ancestor class's implementations are changed (which could even include
+specifying different metaclasses). Derived metaclasses allow SOM to make
+this guarantee.  A SOM programmer need never worry about the problem of
+metaclass incompatibility; SOM does this for the programmer. Instead, explicit
+metaclasses can simply be used to "add in" whatever behavior is desired
+for a new class. SOM automatically handles anything else that is needed.
+Chapter 10 provides useful examples of such metaclasses. A SOM programmer
+should find numerous applications for the techniques that are illustrated
+there.
+
+<P><HR>
+
+<A HREF="124_L3_Parentclassvsmetacla.html">[Back: Parent class vs. metaclass]</A> <BR>
+<A HREF="126_L2_Inheritance.html">[Next: Inheritance]</A> 
+</BODY>
+</HTML>

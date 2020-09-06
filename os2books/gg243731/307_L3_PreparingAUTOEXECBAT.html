@@ -1,0 +1,272 @@
+<HTML>
+<HEAD>
+<TITLE>Preparing AUTOEXEC.BAT and CONFIG.SYS</TITLE>
+</HEAD>
+<BODY>
+<H1>Preparing AUTOEXEC.BAT and CONFIG.SYS</H1><!-- entering slot 353 -->
+<P>
+The AUTOEXEC.BAT and CONFIG.SYS that will be used by the VMB at initialization
+are not the ones found in the root directory of the OS/2 V2.0 boot drive.
+<A HREF="077_L2_LocationofAUTOEXECBA.html">Table "Location of AUTOEXEC.BAT
+and CONFIG.SYS"</A> explains which AUTOEXEC.BAT and CONFIG.SYS will be used
+for the different DOS session types under OS/2 V2.0.
+<P>
+CONFIG.SYS requires special attention for the following reasons:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Write access to the hard disk is denied the Virtual
+Machine Boot session to preserve system integrity, since the real DOS is
+unaware of OS/2 V2.0 and the other applications running.
+<P>
+The OS/2 device driver FSFILTER.SYS is provided to address the above problem.
+<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->HPFS partitions are not visible to the real DOS
+running.
+<P>
+FSFILTER.SYS allows the DOS in the Virtual Machine Boot to access HPFS files.
+<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->OS/2 V2.0 provides its own mouse, EMS and XMS
+to each virtual DOS machine, so there is no need to load the equivalent
+drivers available for native DOS. Those provided with the real DOS should
+not be used.
+<P>
+However, some DOS programs test for the presence of these drivers. OS/2
+V2.0 provides the equivalent "stub" drivers to satisfy these programs that
+the services actually are available.
+<P>
+The following types of device drivers should also be omitted from CONFIG.SYS:
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 5 -->Disk cache<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 5 -->Print spooler<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 5 -->RAM disk<!-- lm: 0x2 4 -->
+<UL>
+<P>
+These facilities are already provided by OS/2 Version 2.0 and may be accessed
+by virtual DOS machines and VMB sessions; including them with DOS leads
+to unnecessary duplication, and may impact overall performance.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+When the Virtual Machine Boot is started from a diskette image on the hard
+disk, the real DOS sees the diskette image as drive A:. The real drive A:
+cannot be accessed. OS/2 V2.0 provides a DOS program, FSACCESS.EXE, that
+can be used from the DOS command prompt or inserted in AUTOEXEC.BAT to overcome
+this problem.
+<P>
+We will cover each of these special requirements in detail in the following
+sections.
+<P>
+<B>Drive Letter Allocation and Access</B>
+<P>
+Drive letter allocation and access is one of the more complex areas of VMB,
+mainly due to the automatic drive letter allocation performed by DOS, and
+the limitations of earlier DOS versions. The following possible areas of
+confusion may arise for the user:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->If DOS is booted from an image file, it sees this
+image file as its A: drive. This prevents access to the<I> real</I> A:  diskette
+drive. Attempts to write to the apparent A: drive will fail.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Unlike the DOS Emulation kernel provided by OS/2 Version
+2.0, the "real" DOS booted by VMB cannot see or access an HPFS partition
+on the hard disk.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->A DOS 3.x VDM cannot see a large (&gt;32MB) FAT partition
+on the fixed disk, or FAT partitions beyond an HPFS partition on the disk.
+<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Even if the booted DOS can otherwise see the hard
+disk partition, it is only given read access. Attempts to write will fail
+with simulated errors such as General failure writing drive C:". The user
+might mistake this for a genuine hardware fault.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->If the booted DOS loads a block device-driver, the
+allocated drive letter may be the same as that of a different device outside
+this VDM, thereby preventing access to that device from within the VDM.
+<!-- lm: 0x2 0 -->
+<P>
+The results could be somewhat disorienting for the user. To help resolve
+these<!-- entering slot 354 --> issues, two utilities<B> FSFILTER</B> and
+<B>FSACCESS</B> are provided with OS/2 Version 2.0.
+<P>
+It is recommended that disk volumes should always be given a meaningful
+name, either when formatting or later using the LABEL command. This name
+will remain constant regardless of drive letter allocation, and will aid
+in identifying a particular volume, even if the assigned drive letter is
+different.<B> FSFILTER</B>
+<P>
+FSFILTER.SYS is a device driver which manages DOS VDM access to OS/2 disks.
+FSFILTER.SYS should be copied from the \OS2\MDOS directory to the DOS diskette,
+and the following statement added to the CONFIG.SYS file of the bootable
+DOS diskette or image.
+<PRE>device=a:fsfilter.sys
+</PRE>
+
+<P>
+This statement should precede any DEVICE= statements which load block device
+drivers.
+<P>
+Note that FSFILTER.SYS gives DOS full access to all OS/2 partitions, regardless
+of their file system type or partition size.
+<P>
+This is an important and somewhat surprising point. For example, DOS 3.3
+(in a VDM) has no problem accessing a 300MB HPFS partition, once FSFILTER
+is loaded. I/O calls within the DOS virtual machine are passed transparently
+to OS/2 Version 2.0. DOS itself is unaware of the underlying file system.
+DOS can read, write and modify files on the hard disk, and for most configurations
+the drive letter mapping within the VMB session will match those of OS/2
+Version 2.0.
+<P>
+The FSFILTER device driver occupies approximately 11KB of memory.  It can
+be loaded into high memory under DOS 5.0 by specifying the command DEVICEHIGH
+= FSFILTER.SYS in CONFIG.SYS.
+<P>
+The users should also specify the path to COMMAND.COM in the SHELL= statement
+of CONFIG.SYS.  For example, if DOS files have been copied to C:\DOS, the
+CONFIG.SYS file on a diskette intended for VMB should contain the following
+statement:
+<PRE>SHELL=c:\DOS\COMMAND.COM c:\dos /p
+</PRE>
+
+<P>
+The first parameter specifies the command processor to be loaded. The second
+parameter specifies the reload path (that is, the COMSPEC path). This is
+preferable to a SET COMSPEC = command in AUTOEXEC.BAT.
+<P>
+Each block device driver loaded in DOS CONFIG.SYS is allocated the next
+free OS/2 letter<I> excluding LAN drives</I>.  This can result in a drive
+letter clash.  An example may illustrate the point. OS/2 drives are:<!-- lm: 0x2 0 -->
+<P>
+<B>A:</B><!-- lm: 0x2 5 -->
+<UL> Diskette drive 0<!-- lm: 0x2 0 -->
+</UL><B>B:</B><!-- lm: 0x2 5 -->
+<UL> Diskette drive 1<!-- lm: 0x2 0 -->
+</UL><B>C:</B><!-- lm: 0x2 5 -->
+<UL> Hard disk<!-- lm: 0x2 0 -->
+</UL><B>D:</B><!-- lm: 0x2 5 -->
+<UL> External diskette drive<!-- lm: 0x2 0 -->
+</UL><B>E:</B><!-- lm: 0x2 5 -->
+<UL> Remote LAN drive on a server<!-- lm: 0x2 0 -->
+</UL>
+<P>
+FSFILTER will ensure that a booted DOS sees these drives by the same letter.
+The booted DOS has the same access to the external diskette drive and LAN
+resources as does OS/2 itself. This is true whether the VMB session is started
+before or after user logon to the network, when remote drive letters are
+assigned.
+<P>
+However, a block device driver in a VMB session will also initialize as
+E:, so LAN drive access is lost. To remedy this, issue an "fsaccess f=e"
+command. The LAN drive is now accessible as F:  within the DOS session.
+
+<P>
+Note that even when FSFILTER is loaded, the following restrictions still
+apply:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->A VMB session cannot<!-- entering slot 355 --> see
+HPFS files or directories which have:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 5 -->Long file names (9 or more characters)<!-- lm: 0x2 3 --> -<!-- lm: 0x2 5 -->
+<UL>Invalid
+FAT characters (for example, plus, comma, blank)<!-- lm: 0x2 3 -->
+</UL>-<!-- lm: 0x2 5 -->
+<UL>Multiple dot separators.<!-- lm: 0x2 2 --><!-- lm: 0x2 0 -->
+</UL> <!-- lm: 0x2 2 -->
+<UL>HPFS
+file names containing lowercase letters are folded to uppercase.<!-- lm: 0x2 0 -->
+</UL> <!-- lm: 0x2 2 -->
+<UL>PC
+DOS commands which require low-level disk access will fail.  These include:
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 5 -->CHKDSK<!-- lm: 0x2 3 --> -<!-- lm: 0x2 5 -->
+<UL>SYS
+<!-- lm: 0x2 3 -->
+</UL>-<!-- lm: 0x2 5 -->
+<UL>UNDELETE<!-- lm: 0x2 3 -->
+</UL>-<!-- lm: 0x2 5 -->
+<UL>FORMAT<!-- lm: 0x2 3 -->
+</UL>-<!-- lm: 0x2 5 -->
+<UL>UNFORMAT<!-- lm: 0x2 3 -->
+</UL>-<!-- lm: 0x2 5 -->
+<UL>MIRROR.<!-- lm: 0x2 2 -->
+</UL> In such cases
+OS/2 Version 2.0 will simulate a disk error condition. DOS may interpret
+this as a hardware fault, or report that the command is not supported on
+a network or assigned drive.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>FSACCESS</B>
+<P>
+FSACCESS.EXE is a utility supplied with OS/2 Version 2.0 but intended to
+run in a VMB session. It cooperates with FSFILTER to manage drive letters
+within the VMB session. This serves three purposes:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Drives may be registered for filtering.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The drive letter for a device can be changed,
+giving consistency across sessions.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Letters can be removed in order to hide the OS/2
+device from the VMB session.<!-- lm: 0x2 0 -->
+<P>
+The syntax of the FSACCESS command is:
+<PRE>FSACCESS ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄ¿
+                         ÃÄÂÄÄÄÂÄ DOSletter ÄÄÄÄÄÄÄÙ     ³
+                         ³ À ! Ù                         ³
+                         ÃÄÄÄÄÄÄ DOSletter - DOSletter ÄÄ´
+                         ³                               ³
+                         ÀÄÄÄÄÄÄ DOSletter = OS2drive  ÄÄÙ
+</PRE>
+<!-- lm: 0x2 0 -->
+<P>
+FSACCESS<!-- lm: 0x2 20 -->
+<UL> Lists the current drive mapping. For example:
+
+<PRE>             Local C: is mapped to OS/2 C:
+             Local D: is mapped to OS/2 D:
+             Local E: is mapped to OS/2 K:</PRE>
+<!-- lm: 0x2 0 -->
+</UL>FSACCESS F:<!-- lm: 0x2 20 -->
+<UL> Registers DOS
+letter F: for filtering. References to F:  will be sent to OS/2 Version
+2.0.<!-- lm: 0x2 0 -->
+</UL> FSACCESS !F:<!-- lm: 0x2 20 -->
+<UL> De-registers
+DOS letter F: from filtering.<!-- lm: 0x2 0 -->
+</UL> FSACCESS F:-H:<!-- lm: 0x2 20 -->
+<UL> Registers
+DOS letters F: through H: for filtering.<!-- lm: 0x2 0 -->
+</UL> FSACCESS
+M:=C:<!-- lm: 0x2 20 -->
+<UL> Routes requests for DOS letter M: to OS/2
+drive C:<!-- lm: 0x2 0 -->
+</UL>
+<P>
+Parameters can be combined on a single command line, and the colon is optional.
+
+<P>
+When booting from an image file, it is often desirable to issue the command
+<I>FSACCESS A:</I> in order to access the A:  diskette drive.  This will
+remove access to the image file, so the booted DOS will be unable to reload
+its COMMAND.COM when necessary.  It may be useful to copy all the DOS files
+to a subdirectory on hard disk, ensuring the PATH and COMSPEC point there.
+
+<P>
+An alternative is to access the diskette drive via a different letter. For
+example, a user may issue the command<I> FSACCESS G:=A</I>, then use G:
+to access the real A:  drive.  The image file remains as A:, avoiding PATH
+and COMSPEC problems.
+
+<P><HR>
+
+<A HREF="306_L2_ConfiguringVirtualMa.html">[Back: Configuring Virtual Machine Boot]</A> <BR>
+<A HREF="308_L3_MouseEMSandXMSSuppor.html">[Next: Mouse, EMS and XMS Support]</A> 
+</BODY>
+</HTML>

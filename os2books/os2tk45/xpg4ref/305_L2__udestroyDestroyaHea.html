@@ -1,0 +1,159 @@
+<HTML>
+<HEAD>
+<TITLE>_udestroy - Destroy a Heap</TITLE>
+</HEAD>
+<BODY>
+<H1>_udestroy - Destroy a Heap</H1><!-- entering slot 332 -->_udestroy - Destroy a Heap<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>#include &lt;umalloc.h&gt;
+int _udestroy(Heap_t <I>heap</I>, int <I>force</I>);
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Description
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+<LI>udestroy destroys the<I> heap</I> you specify. It also returns the heap's
+memory to the system by calling the<I> release_fn</I> you supplied to _ucreate
+when you created the heap. If you did not supply a<I> release_fn</I>, _udestroy
+simply marks the heap as destroyed so no further operations can be performed.
+You must then return all the memory in the heap to the system.
+<P>
+<B>Note: </B> Whether or not you provide a<I> release_fn</I>, you must always
+return the initial block of memory (that you provided to _ucreate) to the
+system.<!-- lm: 0x2 10 -->
+<P>
+
+<P>
+The<I> force</I> parameter controls the behavior of _udestroy if all allocated
+objects from the heap have not been freed. If you specify _FORCE for this
+parameter, _udestroy destroys the heap regardless of whether allocated objects
+remain in that process or in any other process that shares the heap. If
+you specify !_FORCE, the heap will not be destroyed if any objects are still
+allocated from it.
+<P>
+Typically, you call _uclose to close the heap before you destroy it. After
+you have destroyed a heap, any attempt to access it will have undefined
+results.
+<P>
+You cannot destroy<I> The Developer's Toolkit</I> run-time heap (_RUNTIME_HEAP).
+<!-- lm: 0x2 1 -->
+</UL>Returns
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+<LI>udestroy returns 0 whether the heap was destroyed or not. If the heap
+passed to it is not valid, _udestroy returns a nonzero value.<!-- lm: 0x2 1 -->
+</UL> Example
+Code
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+The following example creates and opens a heap, performs operations on it,
+and then closes it. The program then calls _udestroy with the _FORCE parameter
+to force the destruction of the heap. _udestroy calls release_fn to return
+the memory to the system.
+<PRE>#define  INCL_DOSMEMMGR             /* Memory Manager values */
+#include &lt;os2.h&gt;
+#include &lt;bsememf.h&gt;                /* Get flags for memory management  */
+#include &lt;stdlib.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;umalloc.h&gt;
+
+static void *get_fn(Heap_t usrheap, size_t *length, int *clean)
+{
+   void *p;
+
+   /* Round up to the next chunk size */
+   *length = ((*length) / 65536) * 65536 + 65536;
+   *clean = _BLOCK_CLEAN;
+   DosAllocMem(&amp;p, *length, PAG_COMMIT | PAG_READ | PAG_WRITE);
+   return (p);
+}
+
+static void release_fn(Heap_t usrheap, void *p, size_t size)
+{
+   DosFreeMem(p);
+   return;
+}
+
+int main(void)
+{
+   void    *initial_block;
+   APIRET  rc;
+   Heap_t  myheap;
+   char    *ptr;
+
+   /* Call DosAllocMem to get the initial block of memory */
+   if (0 != (rc = DosAllocMem(&amp;initial_block, 65536,
+                              PAG_WRITE | PAG_READ | PAG_COMMIT))) {
+      printf("DosAllocMem error: return code = %ld\n", rc);
+      exit(EXIT_FAILURE);
+   }
+   /* Create an expandable heap starting with the block declared earlier */
+   if (NULL == (myheap = _ucreate(initial_block, 65536, _BLOCK_CLEAN,
+                                  _HEAP_REGULAR, get_fn, release_fn))) {
+      puts("_ucreate failed.");
+      exit(EXIT_FAILURE);
+   }
+   if (0 != _uopen(myheap)) {
+      puts("_uopen failed.");
+      exit(EXIT_FAILURE);
+   }
+
+   /* Force user heap to grow */
+   ptr = _umalloc(myheap, 100000);
+
+   _uclose(myheap);
+
+   if (0 != _udestroy(myheap, _FORCE)) {
+      puts("_udestroy failed.");
+      exit(EXIT_FAILURE);
+   }
+   if (0 != (rc = DosFreeMem(initial_block))) {
+      printf("DosFreeMem error: return code = %ld\n", rc);
+      exit(EXIT_FAILURE);
+   }
+   return 0;
+}
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Related Information
+<P>
+<!-- lm: 0x2 10 -->
+<UL><!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 --><A HREF="300_L2__uaddmemAddMemorytoa.html"><LI>uaddmem
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="303_L2__ucreateCreateaMemor.html"><LI>ucreate
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="317_L2__uopenOpenHeapforUse.html"><LI>uopen
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="302_L2__ucloseCloseHeapfrom.html"><LI>uclose
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="046_L2_Differentiatingbetwe.html">Differentiating
+between Memory Management Functions</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><LI>Managing Memory" in the<I> VisualAge C++ Programming
+Guide</I><!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="304_L2__udefaultChangetheDe.html">[Back: _udefault - Change the Default Heap]</A> <BR>
+<A HREF="306_L2__uheapchkValidateMem.html">[Next: _uheapchk - Validate Memory Heap]</A> 
+</BODY>
+</HTML>

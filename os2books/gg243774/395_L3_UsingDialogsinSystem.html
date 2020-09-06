@@ -1,0 +1,65 @@
+<HTML>
+<HEAD>
+<TITLE>Using Dialogs in System Object Model Objects</TITLE>
+</HEAD>
+<BODY>
+<H1>Using Dialogs in System Object Model Objects</H1><!-- entering slot 437 -->
+<P>
+In the folder example, a dialog box is used to prompt the user for the folder's
+password, and for the user to enter the password.  Creating and invoking
+the dialog is done in the normal way.  However, invoking an object's methods
+from within a dialog procedure requires that the dialog procedure know the
+pointer to the object that invokes the method (that is,<I> somSelf</I>).
+ This is done through the use of the<I> pCreateParams</I> parameter of the
+<B>WinDialogBox()</B> function.  In this way, the pointer to somSelf is
+passed to the dialog procedure as follows:
+<PRE>   pCreateParams = (PVOID)somSelf;
+</PRE>
+
+<P>
+The dialog procedure may then store the pointer in the reserved window word
+QWL_USER:
+<PRE>    case WM_INITDLG:
+         WinSetWindowULong(hwndDlg,      /* Set window word           */
+                           QWL_USER,     /* Offset of window word     */
+                           (ULONG) mp2); /* Value to be stored        */
+        break;
+</PRE>
+
+<P>
+When an instance method must be invoked from the dialog procedure, the object
+pointer may easily be retrieved from the window words and used to invoke
+the method.
+<PRE>   {
+      PWFolder *aPWF;                         /* Object pointer       */
+
+      PWF_INFO pwfolderInfo;                  /* Folder info struct   */
+
+      aPWF = (PWFolder *)WinQueryWindowULong( /* Get object pointer   */
+                            hwndDlg,          /* Dialog box handle    */
+                            QWL_USER);        /* Offset of win word   */
+
+      _QueryInfo(                             /* Invoke method        */
+                 aPWF,                        /* Object pointer       */
+                 &amp;pwfolderInfo);              /* Folder info struct   */
+   }
+</PRE>
+
+<P>
+In the above example, a<B> WinQueryWindowULong()</B> call is used to retrieve
+the object pointer from the window word, and store it in<I> aPWF</I>.  This
+variable is then used as the first parameter when invoking the method<I> _QueryInfo</I>.
+
+<P>
+Note that the method name<I> _QueryInfo</I> is in fact fully defined as
+<I>pwfolder_QueryInfo</I>.  However, as noted in <A HREF="276_L3_CImplementationofanO.html">C
+Implementation of an Object Class</A>, the SOM Precompiler automatically
+generates a macro to define the abbreviated form of the function name, in
+order to avoid the necessity for the programmer to type the full name.
+
+<P><HR>
+
+<A HREF="394_L3_PresentationManagerR.html">[Back: Presentation Manager Resources in a DLL]</A> <BR>
+<A HREF="396_L2_Summary.html">[Next: Summary]</A> 
+</BODY>
+</HTML>

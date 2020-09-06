@@ -1,0 +1,408 @@
+<HTML>
+<HEAD>
+<TITLE>Kernel Debugger Breakpoints</TITLE>
+</HEAD>
+<BODY>
+<H1>Kernel Debugger Breakpoints</H1><!-- entering slot 356 -->
+<P>
+The <A HREF="275_L3_BBreakpointCommandFa.html">break-point command set</A> of
+the Kernel Debugger provides a mechanism for intercepting the execution
+of code through a particular path. For debugging application programs, break-points
+are generally required within the application itself or on call to or return
+from one or more system APIs.
+<P>
+Each system API results either in a call to a system DLL or to the Kernel
+through a CallGate. The name of a system interface that is called when an
+application uses an API is either identical to the API name or may be determined
+from one of the following conventions:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+DosI<I>name</I><!-- lm: 0x2 11 -->
+<UL> Kernel Callgate name corresponding
+to API Dos<I>name</I>.<!-- lm: 0x2 1 -->
+</UL> Dos32<I>name</I><!-- lm: 0x2 11 -->
+<UL> DOSCALL1
+32-bit entry point corresponding to API Dos<I>name</I>.<!-- lm: 0x2 1 -->
+</UL> Dos16<I>name
+</I><!-- lm: 0x2 11 -->
+<UL>DOSCALL1 16-bit entry point corresponding to
+API Dos<B>name</B>.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Other system DLLs such as PMWIN.DLL, PMMERGE.DLL, etc. adopt similar conventions,
+for example API<B> WinCreateWindow</B> calls<B> Win32CreateWindow</B> in
+PMMERGE.DLL.
+<P>
+In nearly all cases the system entry points have corresponding system tracepoints
+with the entry point name prefixed with either<I> pre</I> or<I> post</I>.
+Thus the <A HREF="445_L1_SystemTracepointsRef.html">System Tracepoints Reference
+</A>provides a comprehensive source for deriving API related break-points.
+
+<P>
+Physical Device Driver helper routines pass through a common router, then
+to specific worker routines. Worker entry point names generally adhere to
+the following convention:<!-- lm: 0x2 1 -->
+<P>
+DosHlp_<I>name</I><!-- lm: 0x2 11 -->
+<UL> worker routine dh_<I>name</I>.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Virtual Device Driver helper routines have entry points in the kernel with
+identical names (folded to uppercase) to the helper name.
+<P>
+File System Driver and Mini-File System Driver helper routines have entry
+points in the kernel with identical names to the helper name.
+<P>
+In addition to API and Driver Helper related break-points, the following
+system labels may also prove useful when intercepting errors or program
+initiation:<!-- lm: 0x2 1 -->
+<P>
+<LI>tkSchedNext<!-- lm: 0x11 11 -->
+<UL> This routine is called when a new
+thread is selected for scheduling. The out-going thread slot number is recorded
+in variable<B> Tasknumber</B>.
+<P>
+<B>_tkSchedNext</B> exits from one of two points:<!-- lm: 0x2 11 -->
+<P>
+SchedNextRet<!-- lm: 0x2 36 -->
+<UL> A new thread slot is selected.<!-- lm: 0x2 11 -->
+</UL> SchedNextRet2
+<!-- lm: 0x2 36 -->
+<UL>The same thread slot is selected.<!-- lm: 0x2 11 -->
+</UL> These
+labels maybe used to obtain a trace of dispatching activity. This is particularly
+useful when trying to establish the scope of hang conditions.
+<P>
+The following example illustrates how to obtain a trace of dispatched tasks
+using this break-point.
+<PRE>##bp _tkschednext,".p #;g"##g
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+*0033# 0019 0000 0019 0001 blk 081e 7b98c000 7bb4b288 7bb2d394 1bf8 10 wkstahlp
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+*0034# 0018 0000 0018 0002 run 021f 7b98e000 7bb4aa5c 7bb2d548 1ea8 10 wksta
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+*0008# 0006 0001 0006 0001 blk 0500 7b936000 7bb460d0 7bb28a58 1eb8 01 pmshell
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+*0034# 0018 0000 0018 0002 blk 021f 7b98e000 7bb4aa5c 7bb2d548 1f00 10 wksta
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+*0038# 0018 0000 0018 0003 blk 0200 7b996000 7bb4aa5c 7bb2dc18 1eb8 10 wksta
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+*0008# 0006 0001 0006 0001 blk 0500 7b936000 7bb460d0 7bb28a58 1eb8 01 pmshell
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+*000b# 0004 0000 0004 0001 blk <!-- entering slot 357 -->080b 7b93c000 7bb45078 7bb28f74 1cf0 00 landll
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+*0008# 0006 0001 0006 0001 blk 0500 7b936000 7bb460d0 7bb28a58 1eb8 01 pmshell
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+*0008# 0006 0001 0006 0001 blk 0500 7b936000 7bb460d0 7bb28a58 1eb8 01 pmshell
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+*0008# 0006 0001 0006 0001 blk 0500 7b936000 7bb460d0 7bb28a58 1eb8 01 pmshell
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+*0008# 0006 0001 0006 0001 blk 0500 7b936000 7bb460d0 7bb28a58 1eb8 01 pmshell
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+*0008# 0006 0001 0006 0001 blk 0500 7b936000 7bb460d0 7bb28a58 1eb8 01 pmshell
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+*0008# 0006 0001 0006 0001 blk 0500 7b936000 7bb460d0 7bb28a58 1eb8 01 pmshell
+</PRE>
+
+<P>
+<B>Note: </B>
+<P>
+The status shows as blocked since<B> _tkSchedNext</B> has been called because
+the current thread is giving up its time-slice.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL> DosLibIDisp
+<!-- lm: 0x11 11 -->
+<UL>This API is called to initiate DLL initialisation
+whenever a new module is loaded into memory. Since this is called for every
+.EXE at load time, in the context of the new process and thread, it provides
+an excellent breakpoint for intercepting the loading of a new module in
+a new process.
+<P>
+When DosLibIDisp receives control, the <A HREF="3342_L0_.html">MTE, SMTE
+</A>have been created and the program module has been loaded. From the SMTE
+we can determine the entry point of the new module and thus set a breakpoint
+on this address.
+<P>
+The following example illustrates how to set a breakpoint on entry to a
+new module.
+<PRE>&gt;&gt; Add breakpoint at DosLibIDisp, then start CMD.EXE
+
+##bp doslibDisp
+##g
+eax=00000000 ebx=000029f4 ecx=00000010 edx=00000014 esi=00000bc8 edi=00000c0a
+eip=00000294 esp=0000773c ebp=00007752 iopl=2 -- -- -- nv up ei pl nz na po nc
+cs=ffd7 ss=001f ds=ffa7 es=ffaf fs=150b gs=0000  cr2=1fc70490  cr3=001d0000
+doscall1:CODE16_GROUP:DOSLIBIDISP:
+ffd7:00000294 b80100         mov     ax,0001          ;br0
+
+##.p#
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+*0044# 002c 0006 002c 0001 run 0400 7b9ae000 7bb4fc14 7bb2f088 1f48 19 cmd
+
+
+&gt;&gt; The hmte for the current process is found in the PTDA at
+&gt;&gt; ptda_module
+
+##dw ptda_module l1
+0030:0000ffaa  03a1
+
+##.lmo 3a1
+hmte=03a1 pmte=%fe97ebe4 mflags=84903152 c:\os2\cmd.exe
+obj   vsize    vbase    flags   ipagemap cpagemap hob  sel
+0001 0000c6a8 00010000 80001025 00000001 0000000d 03a0 000f r-x shr alias
+0002 00007efa 00020000 80001025 0000000e 00000008 03a2 0017 r-x shr alias
+0003 00009730 00030000 80001043 00000016 00000002 0000 001f <!-- entering slot 358 -->rw- prel alias
+
+
+
+&gt;&gt; Now dump the MTE and SMTE, whose address is at MTE+0x4
+
+##dd %fe97ebe4 l8
+%fe97ebe4  03a10002 fd4341d0 fe97ec1c fe9a143c
+%fe97ebf4  84903152 00000007 00060050 fe908e74
+
+##dd %fd4341d0
+%fd4341d0  00000017 00000002 000044fa 00000003
+%fd4341e0  00007790 00000009 000005d9 fd434261
+%fd4341f0  00000003 fd4342a9 00000a00 00000000
+%fd434200  00000000 fd434361 fd434368 fd434369
+%fd434210  fd4343c9 fd4348f1 fd434924 00000a00
+%fd434220  00000000 00000000 00000003 00000000
+%fd434230  00000000 00001fa0 fd434252 00000000
+%fd434240  00000000 00003f40 00000000 0000000e
+
+&gt;&gt; SMTE+0x4 is the entry point object number
+&gt;&gt; SMTE+0x8 is the entry point offset offset
+&gt;&gt; For CMD.EXE this is 2:44fa
+&gt;&gt; Since object 2 starts at %20000, we can define a breakpoint on
+&gt;&gt; entry to CMD.EXE at %20000+44fa
+
+##bp %00020000 +44fa
+
+##bl
+0 e  ffd7:00000294 [DOSLIBIDISP]
+1 e  %000244fa [__astart]
+
+&gt;&gt; Disable BP 0 since DosLibIDisp is called for every DLL that will be
+&gt;&gt; initialised in the new process.
+
+##bd 0
+##g
+eax=00000027 ebx=00000491 ecx=00009730 edx=0000f834 esi=00001fa0 edi=000003a1
+eip=000044fa esp=00007790 ebp=00000000 iopl=2 -- -- -- nv up ei pl nz na po nc
+cs=0017 ss=001f ds=001f es=0000 fs=150b gs=0000  cr2=00063ffe  cr3=001d0000
+cmd:_TEXT3:__astart:
+0017:000044fa fc             cld                      ;br2
+
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>VMLockMem<!-- lm: 0x11 11 -->
+<UL> This breakpoint
+is on entry to the memory locking subroutine of Virtual Memory Management.
+It may be used in conjunction with the <A HREF="233_L3_VirtualMemoryManagem.html">VM
+Lock Trace</A><!-- lm: 0x2 1 -->
+</UL> _XCPTBuildR3DispatcherStack<!-- lm: 0x11 11 -->
+<UL> This
+routine is called whenever a process fatal exception is generated by the
+kernel, regardless of whether exception handlers are registered. It therefore
+makes a stronger method than<B> VSF *</B> for intercepting fatal user exceptions.
+
+<P>
+Exception management and how to intercept exceptions is discussed in more
+detail in <A HREF="240_L2_TrapandExceptionProc.html">Trap and Exception
+Processing</A>.<!-- lm: 0x2 1 -->
+</UL> Dos32R3ExceptionDispatcher<!-- lm: 0x11 11 -->
+<UL> This
+entry-point is DOSCALL1.DLL is called by the kernel to process all user
+exception handlers. A breakpoint on the label allows one to intercept user
+exceptions before the user context is modified by any user exception handlers.
+On entry<B> ESP+0x4</B> contains the trap number,<B> ESP+0x8</B> points
+to the <A HREF="3195_L3_ExceptionHandlerStru.html">exception report record
+</A>and<B> ESP+0xc</B> points to the <A HREF="3195_L3_ExceptionHandlerStru.html">exception
+context record.</A><!-- lm: 0x2 1 -->
+</UL> _xcptR3ExceptionDispatcher.
+<!-- lm: 0x11 11 -->
+<UL>This routine is called from<B> Dos32R3ExceptionDispatcher
+</B>to process each of the user exception handers. It does this by locating
+exception registration records from the <A HREF="3273_L0_.html">TIB</A> at
++0x0.
+<P>
+On entry to the Ring 3 Exception Dispatcher,<B> ESP+0x4</B> and<B> EXP+0x8
+</B>point to the exception report record and exception context record,<!-- entering slot 359 --> respectively.
+
+<P>
+The exception report record contains the exception number, and exception
+address.
+<P>
+The exception context record contains all register values at the time of
+exception.
+<P>
+The layout for both these records is given in the<B> BSEXCPT.H</B> header
+file of the OS/2 Programmer's Toolkit.
+<P>
+Most exceptions are generated from a hardware detected exception such as
+a trap. These are readily intercepted by using the Kernel Debugger <A HREF="313_L3_VExceptionTrapFaultV.html">VSF
+</A>command. Exceptions may also be generated by the DosRaiseException API.
+Whatever the source all exceptions will eventually result in a call to<B> _xcptrR3ExceptionDispatcher</B>.
+This makes this label an excellent break-point for intercepting and filtering
+any exception that will drive a user's exception handler.
+<P>
+The following example illustrates the use of this break-point, where the
+system generates a<B> C0000005</B> exception following a Trap E in an application
+program.
+<PRE>&gt;&gt; Beak on entry to the Ring 3 Exception Handler Dispatcher
+##bp _xcptr3exceptiondispatcher
+
+&gt;&gt; Intercept all fatal exceptions
+##vsf *
+##g
+Symbols linked (trape)
+Trap 14 (0EH) - Page Fault 0004, Not Present, Read Access, User Mode
+eax=00000000 ebx=00000000 ecx=0002059c edx=000a0000 esi=00000000 edi=00000000
+eip=0001011c esp=00022e6c ebp=00022e74 iopl=2 rf -- -- nv up ei pl nz ac pe nc
+cs=005b ss=0053 ds=0053 es=0053 fs=150b gs=0000  cr2=00000000  cr3=001d0000
+005b:0001011c 8b00           mov     eax,dword ptr [eax]    ds:00000000=invalid
+
+&gt;&gt; A fatal exception has been intercepted at %1011c
+&gt;&gt; Now GT and see the exception dispatcher called.
+
+##gt
+eax=00022d18 ebx=00000000 ecx=0002059c edx=000a0000 esi=00000000 edi=00000000
+eip=1ff9c8d8 esp=00022bf0 ebp=00022d04 iopl=2 -- -- -- nv up ei pl zr na pe nc
+cs=005b ss=0053 ds=0053 es=0053 fs=150b gs=0000  cr2=00000000  cr3=001d0000
+doscall1:FLAT32:_xcptR3ExceptionDispatcher:
+005b:1ff9c8d8 55             push    ebp              ;br0
+
+
+&gt;&gt; %ESP+4 points to the exception report record
+&gt;&gt; %ESP+8 points to the exception context record
+
+##dd %esp
+%00022bf0  1ff9c7e9 00022d18 00022d3c 00000000
+%00022c00  00000000 2c1a0002 154b0000 00100000
+%00022c10  00010002 00000000 032b0000 ffa72212
+%00022c20  0058ffaf 2c520066 154b0000 033e0002
+%00022c30  52110000 ff9f3130 00000000 00172c52
+%00022c40  e91f0000 e9270116 ffa70066 3029ffa7
+%00022c50  0008ffa7 e9170000 00570000 00000019
+%<!-- entering slot 360 -->00022c60  00008000 00000000 00f80000 80000000
+
+
+&gt;&gt; The exception report record contains the exception code at
+&gt;&gt; offset +0x0 (in this case C0000005).
+&gt;&gt; At offset +0xc is the address at which the exception occurred.
+&gt;&gt; This agrees with the address seen after VSF intercepted the fatal
+&gt;&gt; exception.
+
+##dd %00022d18
+%00022d18  c0000005 00000000 00000000 0001011c
+%00022d28  00000002 00000001 00000000 7bb4fc94
+%00022d38  ffdf9264 00000007 0000699c fff5416b
+%00022d48  00000433 ffdf9264 7b9afe0c ffdf6378
+%00022d58  00000433 000069bc fff54ef2 ffdf9264
+%00022d68  ff1f5a50 fe86106c 00000000 fed022d0
+%00022d78  00000000 00006a04 fff6d8d9 00000053
+%00022d88  00000000 7b9afe3c ff1f5a50 7cf8014c
+
+
+&gt;&gt; The context record contains the registers at time of exception.
+&gt;&gt; Note the cs:eip at +0xa0 and +0x9c. Also the ss:esp at +0xbc abd
+&gt;&gt; +0xb8 and ebp at +0x98.
+
+##dd %00022d3c
+%00022d3c  00000007 0000699c fff5416b 00000433
+%00022d4c  ffdf9264 7b9afe0c ffdf6378 00000433
+%00022d5c  000069bc fff54ef2 ffdf9264 ff1f5a50
+%00022d6c  fe86106c 00000000 fed022d0 00000000
+%00022d7c  00006a04 fff6d8d9 00000053 00000000
+%00022d8c  7b9afe3c ff1f5a50 7cf8014c 7cf80088
+%00022d9c  00000001 7cf80088 00000001 7bb2fdb2
+%00022dac  00000000 0000150b 00000053 00000053
+##d
+%00022dbc  00000000 00000000 00000000 00000000
+%00022dcc  0002059c 000a0000 00022e74 0001011c
+%00022ddc  0000005b 00012216 00022e6c 00000053
+%00022dec  00060210 00000000 00000000 000205fc
+%00022dfc  000205fc 00020a40 00000000 00000000
+%00022e0c  00000000 00000000 00000000 000a0000
+%00022e1c  00002000 00000000 00090000 00022e50
+%00022e2c  00011fa8 000205fc 00090000 00000000
+
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Dos32Exit and DosR3ExitAddr<!-- lm: 0x11 11 -->
+<UL> Both
+these labels provide good breakpoints to catch an application terminating
+normally.
+<P>
+Dos32Exit is the entry point for the DosExit API.
+<P>
+DosR3ExitAddr is the entry point in DOSCALL1.DLL, called when an application
+issues the<B> return</B> statement to return to the system. <!-- lm: 0x2 1 -->
+</UL> Win32SetErrorInfo
+<!-- lm: 0x11 11 -->
+<UL>This API is called by PM whenever it needs to record
+a PM error. When this is used as a break-point, the double-word at<B> %esp+0x4
+</B>contains the PM Error code about to be recorded.<!-- lm: 0x2 1 -->
+</UL> NWDHandler
+<!-- lm: 0x11 11 -->
+<UL>This symbol is the entry point to the trap 2 interrupt
+handler. The <A HREF="3278_L0_.html">IDT</A> entry for trap 2 contains a
+Task Gate that points to NWDHandler.  When NWDHandler receives control the
+Task Register will contain the selector for the current <A HREF="3275_L0_.html">TSS</A>.
+The link field of the current TSS will contain the previous value of the
+TR, where the processor saved the current registers when the interrupt occurred.
+
+<P>
+Frequently NMI interrupts are associated with disabled code and obscure
+hardware or software problems. If can be useful on these occasions to set
+up a KDB.INI file with the following commands to display information when
+the trap 2 occurs. This is particularly advantageous when dealing with NMI
+interrupts caused by the NMI Watch Dog timer firing.
+<PRE>   bp nwdhandler,"? 'curr tss';dt tr:<!-- entering slot 361 -->0;? 'prev tss';dt #(wo(tr:0)):0"
+</PRE>
+
+<P>
+<B>Note: </B>
+<P>
+When the first NMI occurs, the following would be displayed:
+<PRE>curr tss
+
+eax=00000000 ebx=00000000 ecx=00000000 edx=00000000 esi=00000000 edi=00000000
+eip=fff4074c esp=00000400 ebp=00000000 iopl=0 -- -- -- nv up di pl nz na po nc
+cs=0170 ss=1ea0 ds=0168 es=0168 fs=0000 gs=0000  cr3=001dd000
+ss0=0000  esp0=00000000  ss1=0000  esp1=00000000  ss2=0000  esp2=00000000
+ldtr=0000  link=0010  tflags=0000  i/o map=ffff
+ports trapped: 0-ffff
+prev tss
+
+eax=000002ff ebx=139b0000 ecx=00000400 edx=00009ae8 esi=139b993c edi=139d0400
+eip=1b7228fe esp=0006eeaa ebp=0006eee0 iopl=2 -- -- -- nv up ei pl nz na po nc
+cs=005a ss=004a ds=0053 es=0053 fs=150b gs=0000  cr3=001dd000
+ss0=0030  esp0=00006d80  ss1=0000  esp1=00000000  ss2=0036  esp2=0000f000
+ldtr=0028  link=0000  tflags=0000  i/o map=dfff
+ports trapped: 0-ffff
+##
+</PRE>
+
+<P>
+The register values when the NMI occurred are displayed under the label
+<I>prev tss</I>.
+<P>
+After NDWHandler has processed the NMI it performs a task-switch back to
+the pervoius TSS, but only after editing the previous TSS to ensure that
+control is passed to TRAPCommonFaultEntry. The task switch is effected using
+IRETD with the NT flag set in EFLAGS. This leaves the NMI TSS' EIP pointing
+at the instruction following the IRETD at aproximately NWDHandler+25. To
+allow more that one NMI to be handled the instruction following the IRETD
+is a JMP NDWHandler. Therefore whenever the NMI TSS' EIP doesn't point to
+the NDWHandler entry point it is a sure indication that at least one NMI
+has occurred.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="238_L3_DosPTraceLoggingFaci.html">[Back: DosPTrace Logging Facility]</A> <BR>
+<A HREF="240_L2_TrapandExceptionProc.html">[Next: Trap and Exception Processing]</A> 
+</BODY>
+</HTML>

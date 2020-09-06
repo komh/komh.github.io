@@ -1,0 +1,82 @@
+<HTML>
+<HEAD>
+<TITLE>Synchronizing Audio Attribute Settings</TITLE>
+</HEAD>
+<BODY>
+<H1>Synchronizing Audio Attribute Settings</H1><!-- entering slot 63 -->
+<P>
+In an organized multimedia environment applications must be able to synchronize
+their audio settings with other applications. Whenever a user makes changes
+to an application's audio settings, other applications need to be informed
+of the changes so they can update their settings to conform to the changes
+made by the user.
+<P>
+An application can request notification about mixer events by sending an
+MCI_MIXNOTIFY message with MCI_MIXNOTIFY_ON specified. The application will
+then receive an MM_MCIEVENT message whenever a mixer attribute is changed,
+or a connector is enabled or disabled. When the system passes the MM_MCIEVENT
+message, the<I> usEventCode</I> field of the<I> MsgParam1</I> parameter
+contains MM_MIXEVENT, and the<I> MsgParam2</I> parameter contains a pointer
+to MCI_MIXEVENT_PARMS.
+<P>
+<B>Attention:</B>  To avoid creating a terminal loop, the application must
+not set an audio attribute while processing the MM_MCIEVENT message.
+<PRE>typedef struct_MCI_MIXEVENT_PARMS {
+
+  ULONG   ulLength;         /* Length of structure             */
+  HWND    hwndMixer;        /* Window to receive mixer changes */
+  ULONG   ulFlags;          /* Either MCI_MIX_ATTRIBUTE
+                               or MCI_MIX_CONNECTOR            */
+  USHORT  usDeviceID;       /* Device ID to notify of change   */
+  ULONG   ulDeviceType;     /* Device type that caused change  */
+  ULONG   ulDeviceOrdinal;  /* Ordinal of device type          */
+  ULONG   ulAttribute;      /* Attribute that changed          */
+  ULONG   ulValue;          /* New value of changed attribute  */
+  ULONG   ulConnectorType;  /* Connector type                  */
+  ULONG   ulConnectorIndex; /* Connector index                 */
+  ULONG   ulConnStatus;     /* Connector enabled/disabled      */
+
+} MCI_MIXEVENT_PARMS;
+
+typedef MCI_MIXEVENT_PARMS *PMCI_MIXEVENT_PARMS;
+</PRE>
+
+<P>
+The<I> ulFlags</I> field contains one of the following values:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->MIX_ATTRIBUTE<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->MIX_CONNECTOR<!-- lm: 0x2 1 -->
+</UL>
+<P>
+If the mixer event is the changing of an attribute,<I> ulAttribute</I>,
+<I>ulDeviceType</I>, and<I> ulValue</I> fields are valid.
+<P>
+If the mixer event is the changing of a connector,<I> ulConnectorType</I>,
+<I>ulConnectorIndex</I>, and<I> ulConnStatus</I> fields are valid.
+<P>
+The following example illustrates how an application can set up notification
+for every audio attribute change.
+<PRE>MCI_GENERIC_PARMS mixevent;
+mixevent.hwndCallback = hwndmixer;
+
+if (hMixer)
+   {
+   mciSendCommand(hMixer,
+                  MCI_MIXNOTIFY,
+                  MCI_WAIT | MCI_MIXNOTIFY_ON
+                  (PVOID) &amp;mixevent,
+                  0);
+</PRE>
+
+<P>
+When MCI_MIXNOTIFY_ON is specified, the<I> hwndCallback</I> field of MCI_GENERIC_PARMS
+must contain a valid window handle.
+
+<P><HR>
+
+<A HREF="054_L2_AmpMixerConnectors.html">[Back: Amp Mixer Connectors]</A> <BR>
+<A HREF="056_L2_DirectAudioRouTinesD.html">[Next: Direct Audio RouTines (DART) Interface]</A> 
+</BODY>
+</HTML>

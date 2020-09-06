@@ -1,0 +1,62 @@
+<HTML>
+<HEAD>
+<TITLE>How to Display Dispatching Priority</TITLE>
+</HEAD>
+<BODY>
+<H1>How to Display Dispatching Priority</H1><!-- entering slot 147 -->
+<P>
+Use the '.p' command on the slot of interest, and find the pTCB, which is
+the linear address of the Thread Control Block.
+<P>
+For slot F, below, we see the following FOR .p output:
+<PRE>                              *
+Slot Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+000c 0005 0000 0005 0001 blk 0200 7cf7f000 7d1858a4 7d16a0d8 1eb8 00 pgma
+0008 0005 0000 0005 0002 blk 081f 7cf77000 7d1858a4 7d169a28 1ea8 00 pgma
+000e 0005 0000 0005 0003 blk 021f 7cf83000 7d1858a4 7d16a430 1ea8 00 pgma
+000f 0005 0000 0005 0004 blk 061f 7cf85000 7d1858a4 7d16a5dc 1ea8 00 pgma
+0010 0005 0000 0005 0005 blk 0200 7cf87000 7d1858a4 7d16a788      00 pgma
+000d 0006 0000 0006 0001 blk 0200 7cf81000 7d1860d0 7d16a284 1eb8 00 pgmb
+000a 0006 0000 0006 0002 blk 021f 7cf7b000 7d1860d0 7d169d80 1eb8 00 pgmb
+0013 0006 0000 0006 0003 blk 0800 7cf8d000 7d1860d0 7d16ac8c 1eb8 00 pgmb
+
+DB  %7D16A5DC+164  L 6           would show ( for slot f )
+                                 SEE CAUTION, BELOW
+%7D16A740   02  1F  xx  xx  1F  06
+    class  /   /            ------  the word value 061F
+      level  /              actually used by the dispatcher
+
+</PRE>
+
+<P>
+CAUTION: the offset used is correct for WARP CONNECT, but the addresses
+are what were used in OS/2 2.11, so this is a somewhat mixed example. Any
+offset in any control block may change any time a fix or new version is
+installed. Please refer to the <A HREF="3172_L3_ThreadControlBlockOS.html">Thread
+Control Block</A> in the System Diagnostic Reference for offsets relating
+to other versions.
+<P>
+The first byte is the programmer's priority class, ranging from 1 to 4.
+The second byte is the level within the class, ranging from 00 to 1F. The
+third and fourth bytes are not useful. The fifth and sixth bytes are OS/2's
+computed dispatching priority. This field is a word, so the high order part
+is byte 6.
+<BR>
+081F is the highest possible value.
+<BR>
+0100 is the lowest possible value.
+<P>
+On a uniprocessor, using DosSetPriority to make yourself time-critical at
+the highest delta value would give you an extremely good chance of not being
+pre-empted, and was occasionally misused for serialization. This will never
+work on a multiprocessor, and is risky even on a uniprocessor, because a
+page fault will cause you to lose control while the page is processed, just
+as doing I/O to a file will cause a thread to block if access to the actual
+device is required.
+
+<P><HR>
+
+<A HREF="120_L2_TheDispatcherPriorit.html">[Back: The Dispatcher, Priorities, and Dispatching Classes]</A> <BR>
+<A HREF="122_L3_TheStatusofaThread.html">[Next: The Status of a Thread]</A> 
+</BODY>
+</HTML>

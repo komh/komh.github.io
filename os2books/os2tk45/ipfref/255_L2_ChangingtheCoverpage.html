@@ -1,0 +1,85 @@
+<HTML>
+<HEAD>
+<TITLE>Changing the Coverpage Window</TITLE>
+</HEAD>
+<BODY>
+<H1>Changing the Coverpage Window</H1><!-- entering slot 269 -->
+<P>
+One of the IPF customizations you can do with your communication object
+is manipulating the IPF coverpage window.
+<P>
+When an online book is opened or when an application requests that IPF create
+a help instance, IPF creates a<I> coverpage</I> frame window. The coverpage
+window is the window in which all other information is displayed. IPF-controlled
+windows are children of the coverpage window, as are application-controlled
+windows.
+<P>
+IPF communication objects can change the look and functionality of the coverpage
+window. For example, a communication object can change the size or location
+of the coverpage, or remove its menu bar.
+<P>
+For HLP files, applications can change only the size of a help window. The
+application would do this by sending HM_SET_COVERPAGE_SIZE to the help instance
+created with <A HREF="281_L2_WinCreateHelpInstanc.html">WinCreateHelpInstance</A>.
+Note that applications must not move the help window.
+<P>
+For INF files, the communication object must handle the OPEN_COVERPAGE event
+of the HM_NOTIFY message, then use WinSetWindowPos to set the size and position
+of the coverpage. The coverpage window's handle is in<I> mp2</I>.
+<P>
+When using WinSetWindowPos to change the position and size of the coverpage
+window, you must OR SWP_SHOW with SWP_MOVE or SWP_SIZE, or both.
+<P>
+You must return directly from your code when you handle this event. Do not
+pass the HM_NOTIFY message on to the default window procedure.
+<P>
+In addition to the techniques specified here for resizing and positioning
+the coverpage, once you have the handle to the coverpage you can use any
+of the other PM window manipulation techniques, such as manipulating the
+frame controls or menus. For example, to remove the coverpage's menu bar,
+you would call WinDestroyWindow in response to an OPEN_COVERPAGE event,
+as in the following example:
+<PRE>WinDestroyWindow(WinWindowFromID((HWND) mp2, FID_MENU));
+
+</PRE>
+
+<P>
+Use other FID_* IDs to work with other parts of the coverpage window.
+<P>
+The code fragment in the following figure illustrates these techniques by
+changing the size and location of the coverpage and removing the menu bar.
+
+<PRE>HWND hwndCoverPage;
+   .
+   .
+   .
+   /* Inside the main switch statement in your window procedure... */
+   case HM_NOTIFY:
+
+      switch (SHORT1FROMMP(mp1)) {
+
+         case OPEN_COVERPAGE:
+            hwndCoverPage = (HWND) mp2;   /* Handle to coverpage is in mp2 */
+
+            /* Remove the menu */
+            WinDestroyWindow(WinWindowFromID(hwndCoverPage, FID_MENU));
+
+            /* Change the size and location of coverpage */
+            WinSetWindowPos(hwndCoverPage, 0, 10, 10, 200, 200,
+                            SWP_SIZE | SWP_MOVE | SWP_SHOW);
+
+            return TRUE;
+
+      } /* endswitch */
+
+      break;
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="254_L5_RemovingYourCommunic.html">[Back: Removing Your Communication Object from the Chain]</A> <BR>
+<A HREF="256_L1_ControllingWindowswi.html">[Next: Controlling Windows with Applications (ACVIEWPORTS)]</A> 
+</BODY>
+</HTML>

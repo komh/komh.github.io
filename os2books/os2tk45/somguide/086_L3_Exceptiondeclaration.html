@@ -1,0 +1,159 @@
+<HTML>
+<HEAD>
+<TITLE>Exception declarations</TITLE>
+</HEAD>
+<BODY>
+<H1>Exception declarations</H1><!-- entering slot 104 -->
+<P>
+IDL specifications may include<B> exception</B> declarations, which define
+data structures to be returned when an exception occurs during the execution
+of a method. (IDL exceptions are implemented by simply passing back error
+information after a method call, as opposed to the "catch/throw" model where
+an exception is implemented by a long jump or signal.)  Associated with
+each type of exception is a name and, optionally, a struct-like data structure
+for holding error information. Exceptions are declared as follows:
+<P>
+<B>exception</B> <I> identifier</I><B> {</B><I> member</I>*<B> };</B>
+<P>
+The "identifier" is the name of the exception, and each "member" has the
+following form:
+<P>
+<I>type-spec declarators ;</I>
+<P>
+where "type-spec" is a valid IDL type specification and "declarators" is
+a list of identifiers, array declarators, or pointer declarators, delimited
+by commas. The members of an exception structure should contain information
+to help the caller understand the nature of the error. The exception declaration
+can be treated like a<B> struct</B>  definition; that is, whatever you can
+access in an IDL<B> struct</B>, you can access in an<B> exception</B> declaration.
+ Alternatively, the structure can be<I> empty</I>, whereby the exception
+is just identified by its name.
+<P>
+If an<B> exception</B> is returned as the outcome of a method, the exception
+"identifier" indicates which exception occurred. The values of the members
+of the exception provide additional information specific to the exception.
+The topic "Method declarations" below describes how to indicate that a particular
+method may raise a particular exception, and <A HREF="025_L1_UsingSOMClassesinCli.html">Using
+SOM Classes in Client Programs</A>, describes how exceptions are handled,
+in the section entitled "Exceptions and error handling."
+<P>
+Following is an example declaration of a "BAD_FLAG" exception:
+<PRE>   exception BAD_FLAG { long ErrCode; char Reason[80]; };
+</PRE>
+
+<P>
+The SOM Compiler will map the above exception declaration to the following
+C language constructs:
+<PRE>   #define ex_BAD_FLAG "::BAD_FLAG"
+   typedef struct BAD_FLAG {
+       long  ErrCode;
+       char  Reason[80];
+   } BAD_FLAG;
+</PRE>
+
+<P>
+Thus, the ex_BAD_FLAG symbol can be used as a shorthand for naming the exception.
+
+<P>
+An exception declaration within an interface "Hello", such as this:
+<PRE>   interface Hello {
+       exception LOCAL_EXCEPTION { long ErrCode; };
+   };
+</PRE>
+
+<P>
+would map onto:
+<PRE>   #define ex_Hello_LOCAL_EXCEPTION "::Hello::LOCAL_EXCEPTION"
+   typedef struct Hello_LOCAL_EXCEPTION {
+       long  ErrCode;
+   } Hello_LOCAL_EXCEPTION;
+   #define ex_LOCAL_EXCEPTION ex_Hello_LOCAL_EXCEPTION
+</PRE>
+
+<P>
+In addition to user-defined exceptions, there are several predefined exceptions
+for system run-time errors. The standard exceptions as prescribed by CORBA
+are shown in the table "Standard Exceptions Defined by CORBA". These exceptions
+correspond to standard run-time errors that may occur during the execution
+of any method (regardless of the list of exceptions listed in its IDL specification).
+
+<P>
+Each of the standard exceptions has the same structure: an error code (to
+designate the subcategory of the exception) and a completion status code.
+For example, the NO_MEMORY standard exception has the following definition:
+
+<PRE>   enum completion_status {YES, NO, MAYBE};
+   exception NO_MEMORY { unsigned long minor;
+                         completion_status completed; };
+</PRE>
+
+<P>
+The "completion_status" value indicates whether the method was never initiated
+(NO), completed its execution prior to the exception (YES), or the completion
+status is indeterminate (MAYBE).
+<P>
+Since all the standard exceptions have the same structure,<B>  somcorba.h
+</B> (included by<B> som.h</B>) defines a generic<B> StExcep</B> typedef
+which can be used instead of the specific typedefs:
+<PRE>   typedef struct StExcep {
+        unsigned long minor;
+        completion_status completed;
+   } StExcep;
+</PRE>
+
+<P>
+The standard exceptions shown in the table "Standard Exceptions Defined
+by CORBA". are defined in an IDL module called<B> StExcep</B>, in the file
+called<B> stexcep.idl</B>, and the C definitions can be found in<B> stexcep.h</B>.
+
+<P>
+
+<P>
+<B>Standard Exceptions Defined by CORBA</B>
+<PRE>module StExcep {
+  #define ex_body { unsigned long minor; completion_status completed; }
+
+  enum completion_status { YES, NO, MAYBE };
+
+  enum exception_type {NO_EXCEPTION, USER_EXCEPTION, <!-- entering slot 105 -->SYSTEM_EXCEPTION};
+
+  exception UNKNOWN              ex_body;   // the unknown exception
+  exception BAD_PARAM            ex_body;   // an invalid parameter was passed
+  exception NO_MEMORY            ex_body;   // dynamic memory allocation failure
+  exception IMP_LIMIT            ex_body;   // violated implementation limit
+  exception COMM_FAILURE         ex_body;   // communication failure
+  exception INV_OBJREF           ex_body;   // invalid object reference
+  exception NO_PERMISSION        ex_body;   // no permission for attempted op.
+  exception INTERNAL             ex_body;   // ORB internal error
+  exception MARSHAL              ex_body;   // error marshalling param/result
+  exception INITIALIZE           ex_body;   // ORB initialization failure
+  exception NO_IMPLEMENT         ex_body;   // op. implementation unavailable
+  exception BAD_TYPECODE         ex_body;   // bad typecode
+  exception BAD_OPERATION        ex_body;   // invalid operation
+  exception NO_RESOURCES         ex_body;   // insufficient resources for
+                                 request
+  exception NO_RESPONSE          ex_body;   // response to req. not yet
+                                 available
+  exception PERSIST_STORE        ex_body;   // persistent storage failure
+  exception BAD_INV_ORDER        ex_body;   // routine invocations out
+                                 of order
+  exception TRANSIENT            ex_body;   // transient failure - reissue
+                                 request
+  exception FREE_MEM             ex_body;   // cannot free memory
+  exception INV_IDENT            ex_body;   // invalid identifier syntax
+  exception INV_FLAG             ex_body;   // invalid flag was specified
+  exception INTF_REPOS           ex_body;   // error accessing interface
+                                 repository
+  exception CONTEXT              ex_body;   // error processing context object
+  exception OBJ_ADAPTER          ex_body;   // failure detected by object adapter
+  exception DATA_CONVERSION      ex_body;   // data conversion error
+};
+</PRE>
+
+
+<P><HR>
+
+<A HREF="085_L4_Objecttypes.html">[Back: Object types]</A> <BR>
+<A HREF="087_L3_Interfacedeclaration.html">[Next: Interface declarations]</A> 
+</BODY>
+</HTML>

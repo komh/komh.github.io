@@ -1,0 +1,124 @@
+<HTML>
+<HEAD>
+<TITLE>Terminating a Process</TITLE>
+</HEAD>
+<BODY>
+<H1>Terminating a Process</H1><!-- entering slot 107 -->
+<P>
+A process can end the execution of a descendant process by calling<A><!-- external link: 1D 9A C3 FC --> DosKillProcess</A>.
+This causes OS/2 to send a XCPT_SIGNAL_KILLPROC exception to the target
+process. The child processes of the target process can also be ended.
+<P>
+The following code fragment ends the specified process and all child processes
+belonging to that process:
+<PRE>    #define INCL_DOSPROCESS       /* Process and thread values */
+    #include &lt;os2.h&gt;
+
+    PID pidProcess;
+
+    DosKillProcess(DKP_PROCESSTREE,
+                   pidProcess);
+
+</PRE>
+
+<P>
+In this example, the<I> pidProcess</I> parameter specifies which descendant
+process to end. The process identifier is returned by<A><!-- external link: 1D 83 C3 4B --> DosExecPgm
+</A>in the<I> codeTerminate</I> field of the<A><!-- external link: 1D CA C4 A2 --> RESULTCODES
+</A>structure when you start the child process.
+<P>
+The parameter DKP_PROCESSTREE in the example indicates that the specified
+process,<I> pidProcess</I>, and all of its descendant processes are to be
+ended.
+<P>
+If you specify DKP_PROCESS in a call to<A><!-- external link: 1D 9A C3 FC --> DosKillProcess</A>,
+only the specified process is ended. Its child processes, if any, continue
+to run.
+<P>
+The process to be ended must either be the current process, or it must have
+been directly created by the current process with<A><!-- external link: 1D 83 C3 4B --> DosExecPgm
+</A>for asynchronous execution. That is, a process can end itself and its
+descendants.
+<P>
+The process to be ended need not still be executing. If it has started its
+own child processes, but has stopped executing, its children can still be
+flagged for termination.
+<P>
+<B>Obtaining the Termination Status of a Child Process</B>
+<BR>
+
+<P>
+OS/2 saves the termination status for a process if the process was started
+by using the EXEC_ASYNCRESULT constant in the call to<A><!-- external link: 1D 83 C3 FC --> DosExecPgm</A>.
+
+<BR>
+You can retrieve the termination status of the most recently ended process
+by using the DCWW_NOWAIT constant with<A><!-- external link: 1D 0A C4 4E --> DosWaitChild
+</A>and setting the child process identification parameter to 0. The DCWW_NOWAIT
+constant directs the function to return immediately, without waiting for
+a process to end. Instead, the function retrieves the termination status
+from the process that most recently ended. If you specify a child process
+identification with DCWW_NOWAIT,<A><!-- external link: 1D 0A C4 4E --> DosWaitChild
+</A>returns ERROR_CHILD_NOT_COMPLETE if the child process has not ended.
+Once the specified process has ended,<A><!-- external link: 1D 0A C4 4E --> DosWaitChild
+</A>returns its termination code.
+<P>
+The following code fragment starts a child session (the program SIMPLE.EXE),
+and then retrieves the termination status from the process that most recently
+ended.
+<PRE>    #define INCL_DOSPROCESS         /* Process and thread values */
+    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+
+    #define START_PROGRAM "SIMPLE.EXE"
+
+    CHAR         szLoadError[100];
+    PSZ          pszArgs;
+    PSZ          pszEnvs;
+    RESULTCODES  rcReturnCodes;
+    ULONG        ulPid;           /* Process ID (returned)             */
+    ULONG        ulTarget;        /* Process ID of process to wait for */
+    APIRET       ulrc;            /* Return code                       */
+
+    strcpy(pszArgs,
+           "-a2 -l");   /* Pass arguments "-a2" and "-l"                         */
+
+    ulTarget = 0;       /* Process ID for the most recently ended process   */
+
+    ulrc = DosExecPgm(szLoadError,            /* Object name buffer                */
+                      sizeof(szLoadError),    /* Length of object name buffer      */
+                      EXEC_ASYNCRESULT,       /* Asynchronous/Trace flags          */
+                      pszArgs,                /* Argument string                   */
+                      pszEnvs,                /* Environment string                */
+                      &amp;rcReturnCodes,         /* Termination codes                 */
+                      START_PROGRAM);         /* Program file name                 */
+
+    if (ulrc != 0) {
+        printf("DosExecPgm error: return code = %ld",
+               ulrc);
+        return;
+    }
+
+    ulrc = DosWaitChild(DCWA_PROCESS,         /* Execution options                 */
+                        DCWW_NOWAIT,          /* Wait options                      */
+                        &amp;rcReturnCodes,       /* Termination codes                 */
+                        &amp;ulPid,               /* Process ID (returned)             */
+                        ulTarget);            /* Process ID of process to wait for */
+
+    if (ulrc != 0) {
+        printf("DosWaitChild error: return code = %ld",
+               ulrc);
+        return;
+    }
+
+</PRE>
+
+<P>
+
+
+<P><HR>
+
+<A HREF="102_L3_EndingtheCurrentProc.html">[Back: Ending the Current Process]</A> <BR>
+<A HREF="104_L3_CreatinganExitList.html">[Next: Creating an Exit List]</A> 
+</BODY>
+</HTML>

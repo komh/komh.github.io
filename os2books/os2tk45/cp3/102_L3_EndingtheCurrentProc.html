@@ -1,0 +1,70 @@
+<HTML>
+<HEAD>
+<TITLE>Ending the Current Process</TITLE>
+</HEAD>
+<BODY>
+<H1>Ending the Current Process</H1><!-- entering slot 106 -->
+<P>
+You end the current process by calling<A><!-- external link: 1D 84 C3 FC --> DosExit</A>.
+When you exit, the system stops the process and frees any existing resources
+the process owns.
+<P>
+
+<P>
+In the following code fragment,<A><!-- external link: 1D 84 C3 39 --> DosExit
+</A>is used to end the process if the given file does not exist:
+<PRE>    #define INCL_DOSPROCESS     /* Process and thread values */
+    #include &lt;os2.h&gt;
+
+    #define HF_STDERR 2         /* Standard error handle     */
+
+    HFILE   hf;
+    ULONG   ulAction, ulWritten;
+    APIRET  rc;
+
+    rc = DosOpen("SAMPLE.TXT",
+                 &amp;hf,
+                 &amp;ulAction,
+                 0,
+                 FILE_NORMAL,
+                 FILE_OPEN,
+                 OPEN_ACCESS_WRITEONLY |
+                 OPEN_SHARE_DENYWRITE,
+                 (PEAOP2) NULL);
+
+    if (rc) {
+        DosWrite(HF_STDERR,
+                 "Cannot open file\r\n",
+                 18,
+                 &amp;ulWritten);
+
+        DosExit(EXIT_PROCESS,
+                rc);
+    }
+
+</PRE>
+
+<P>
+EXIT_PROCESS directs<A><!-- external link: 1D 84 C3 39 --> DosExit</A> to
+end all the threads in a process including the calling thread, thus ending
+the process.<A><!-- external link: 1D 84 C3 39 --> DosExit</A> includes
+an error value that is returned to the parent process through the<A><!-- external link: 1D CA C4 75 --> RESULTCODES
+</A>structure specified in the<A><!-- external link: 1D 83 C3 38 --> DosExecPgm
+</A>call that started the process. If you started the application from the
+command line, the command processor, CMD.EXE, makes this value available
+through the ERRORLEVEL variable. If another process started the application,
+that process can call<A><!-- external link: 1D 0A C4 3C --> DosWaitChild
+</A>to determine the error value.
+<P>
+If you want to exit only from a given thread, you can call<A><!-- external link: 1D 84 C3 39 --> DosExit
+</A>with the EXIT_THREAD constant. This will end only the calling thread;
+ other threads in the process are not affected. If the thread you end is
+the last thread in the process, the process also ends. If the thread consists
+of a function, the thread ends when the function returns.
+
+<P><HR>
+
+<A HREF="101_L3_WaitingforaChildProc.html">[Back: Waiting for a Child Process to End]</A> <BR>
+<A HREF="103_L3_TerminatingaProcess.html">[Next: Terminating a Process]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,339 @@
+<HTML>
+<HEAD>
+<TITLE>NetAuditRead or Net32AuditRead</TITLE>
+</HEAD>
+<BODY>
+<H1>NetAuditRead or Net32AuditRead</H1><!-- entering slot 166 -->NetAuditRead or Net32AuditRead
+<P>
+The NetAuditRead API reads from the audit log on a server.
+<P>
+The NetAuditRead API replaces the NetAuditOpen API, which is now obsolete.
+
+<P>
+To read an entire audit log, an application must call NetAuditRead repeatedly
+until the API indicates that there is no more data to be read. Each call
+to NetAuditRead returns a handle that must be provided to any subsequent
+call to NetAuditRead.  This handle changes with each subsequent call; it
+is<I> not</I> a system file handle and never should be treated as such.
+
+<P>
+<B>Note: </B> The audit log can contain more than 64KB of data. If<I> pusBytesReturned
+</I>is 0 and<I> pusBytesAvail</I> is not 0,<I> usBuflen</I> is too small
+to hold all the records in the file, and the application should continue
+to reiterate calls to this API until<I> pusBytesReturned</I> is returned
+as 0.
+<P>
+The value of<I> pusBytesAvail</I> can be 0xFFFF. This value means there
+can be 0xFFFF or more bytes of data available, which possibly is even more
+than 64KB (the maximum buffer size). In order to receive all the data available
+from this API, an application must reiterate the call until<I> pusBytesReturned
+</I>and<I> pusBytesAvail</I> both are returned as 0.
+<P>
+<I>pusBytesReturned</I> applies to the last complete record in the buffer.
+However, a partial record may be left at the end of the buffer.  You may
+not know whether the area following the last entry is null unless you check.
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+<!-- lm: 0x2 1 -->
+</UL>Restrictions
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+This API can be called from DLS and OS/2 workstations, but DLS workstations
+can issue this call only to a remote LAN Server workstation. Administrator
+authority is required to call this API.<!-- lm: 0x2 1 -->
+</UL> Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>#include &lt;netcons.h&gt;
+#include &lt;audit.h&gt;
+ 
+NetAuditRead(<I>pszServername</I>, <I>reserved1</I>, <I>pLogHandle</I>, <I>offset</I>,
+             <I>reserved2</I>, <I>reserved3</I>, <I>flags</I>, <I>buf</I>,
+             <I>usBuflen</I>, <I>pusBytesReturned</I>, <I>pusBytesAvail</I>);     /* 16 bit */
+ 
+Net32AuditRead(<I>pszServername</I>, <I>reserved1</I>, <I>pLogHandle</I>, <I>offset</I>,
+             <I>reserved2</I>, <I>reserved3</I>, <I>flags</I>, <I>buf</I>,
+             <I>ulBuflen</I>, <I>pulBytesReturned</I>, <I>pulBytesAvail</I>);     /* 32 bit */
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Parameters
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+See <A HREF="021_L2_CommonParameterDefin.html">Common Parameter Definitions
+</A>for descriptions of parameters not defined here.<!-- lm: 0x2 10 -->
+<P>
+<I>reserved1</I><!-- lm: 0x12 20 -->
+<UL> (const unsigned char LSFAR *)
+must be NULL.<!-- lm: 0x2 10 -->
+</UL><I> pLogHandle</I><!-- lm: 0x12 20 -->
+<UL> (HLOG
+LSFAR *) is the pointer to the returned log handle.
+<P>
+An application calling NetAuditRead for the first time must initialize the
+128-bit log handle as follows: ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+<BR>
+³ BITS        ³ VALUE                           ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 127(MSB)-64    ³ 0                             ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 63-0(LSB)     ³ 1                             ³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+
+<P>
+The most significant bit (MSB) is the leftmost bit, and the least significant
+(LSB) is the rightmost bit. To initialize, use the fields in the log-handle
+structure, which is defined in the AUDIT.H header file. The structure definition
+is:
+<PRE> typedef struct loghandle {
+       unsigned long   time;
+       unsigned long   last_flags;
+       unsigned long   offset;
+       unsigned long   rec_offset;
+    } HLOG;
+</PRE>
+
+<P>
+Using the log-handle structure, you can initialize the bits in the following
+manner:
+<PRE>  ploghndl.time = 0L;
+  ploghndl.last_flags = 0L;
+  ploghndl.offset = 0xFFFFFFFF;
+  ploghndl.rec_offset = 0xFFFFFFFF;
+</PRE>
+
+<P>
+Thereafter, each call to NetAuditRead must be given the value for the log
+handle that was returned by the previous call to NetAuditRead.<!-- lm: 0x2 10 -->
+</UL><I> offset
+</I><!-- lm: 0x12 20 -->
+<UL>(unsigned long) is the offset of the record
+to begin the read. This parameter is<!-- entering slot 167 --> ignored unless
+the<I> flags</I> bit 1 is set.  If the<I> flags</I> bit 1 is set,<I> offset
+</I>is taken as a zero-based offset based on the record number, not bytes,
+at which the data returned should begin.  The<I> offset</I> parameter is
+dependent on which direction a file is read.  If the file is being read
+backward, record 0 is the last record in the file.  If the file is being
+read forward, record 0 is the first record in the file.<!-- lm: 0x2 10 -->
+</UL><I> reserved2
+</I><!-- lm: 0x12 20 -->
+<UL>(16-bit unsigned short LSFAR * or 32-bit unsigned
+long LSFAR *) must be NULL.<!-- lm: 0x2 10 -->
+</UL><I> reserved3</I><!-- lm: 0x12 20 -->
+<UL> (unsigned
+long) must be 0.<!-- lm: 0x2 10 -->
+</UL><I> flags</I><!-- lm: 0x12 20 -->
+<UL> (unsigned
+long) is a bit mask, mapped as follows: ÚÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+<BR>
+³ BITS  ³ MEANING                                ³
+<BR>
+ÃÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 0   ³ If 0, the file is read normally.  If 1, the file is read backward
+  ³
+<BR>
+³    ³ and records are returned in the buffer in reverse chronology (newest
+³
+<BR>
+³    ³ records first).                            ³
+<BR>
+ÃÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 1   ³ If 0, read proceeds normally and sequentially.  If 1, read proceeds
+ ³
+<BR>
+³    ³ from the nth record from the start of the file, where n is the  
+³
+<BR>
+³    ³ offset parameter.                           ³
+<BR>
+ÃÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 2-31  ³ Reserved; must be 0.                         ³
+<BR>
+ÀÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+<!-- lm: 0x2 10 -->
+</UL><I>buf</I><!-- lm: 0x12 20 -->
+<UL> (unsigned char
+LSFAR *) points to the local memory address where the audit log file entries
+are to be placed.<!-- lm: 0x2 10 -->
+</UL><I> usBuflen</I><!-- lm: 0x12 20 -->
+<UL> (16-bit
+unsigned short or 32-bit unsigned long) specifies the amount of local memory
+(in bytes) allocated to receive data from this API.<!-- lm: 0x2 10 -->
+</UL><!-- lm: 0x2 1 -->
+</UL>Return Codes
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+The following table lists the return codes most significant to this API.
+ (See <A HREF="462_L1_APIReturnCodes.html">API Return Codes</A> for a complete
+list of return codes.) ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³SYMBOLICCONSTANT
+    ³VALUE³MEANING                ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_Success         ³ 0   ³ No errors were encountered.       ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_ACCESS_DENIED     ³ 5   ³ Administrator privilege is required.  ³
+
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_SHARING_VIOLATION   ³ 32   ³ A sharing violation occurred.      ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_BAD_NETPATH      ³ 53   ³ The network path cannot be found.    ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_NETWORK_ACCESS_DENIED ³ 65   ³ Network access is denied.        ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_INVALID_PARAMETER   ³ 87   ³ At least one parameter value is not
+  ³
+<BR>
+³               ³    ³ valid.                 ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_NET_WRITE_FAULT    ³ 88   ³ A network data fault has occurred. 
+³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_NetNotStarted      ³ 2102  ³ The redirector NETWKSTA.200 has not
+  ³
+<BR>
+³               ³    ³ been started.              ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_RemoteOnly       ³ 2106  ³ This operation is not supported on   ³
+
+<BR>
+³               ³    ³ workstations.              ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_BufTooSmall       ³ 2123  ³ The buffer is too small for fixed-   ³
+
+<BR>
+³               ³    ³ length data.              ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_WkstaNotStarted     ³ 2138  ³ The Requester service has not been
+  ³
+<BR>
+³               ³    ³ started.                ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_InternalError      ³ 2140  ³ An internal error has occurred.     ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_BadTransactConfig    ³ 2141  ³ The server is not configured for 
+ ³
+<BR>
+³               ³    ³ transactions.              ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_InvalidAPI       ³ 2142  ³ The requested API is not supported on
+ ³
+<BR>
+³               ³    ³ the remote server.           ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_InvalidComputer     ³ 2351  ³ The specified computer name is not
+  ³
+<BR>
+³               ³    ³ valid.                 ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_LogFileChanged     ³ 2378  ³ This log file has changed between  
+³
+<BR>
+³               ³    ³ reads.                 ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_LogFileCorrupt     ³ 2379  ³ This log file is damaged.        ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_InvalidLogSeek     ³ 2440  ³ The log file does not contain the  
+³
+<BR>
+³               ³    ³ requested record number.        ³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+
+<P>
+Other codes could be returned from the following functions:<!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 -->DosChgFilePtr<!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 -->DosClose<!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 -->DosFsCtl<!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 -->DosGetShrSeg<!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 -->DosOpen<!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 -->DosRead<!-- lm: 0x2 10 -->
+</UL><!-- lm: 0x2 1 -->
+</UL>Related Information
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+For information about:<!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 --><!-- entering slot 168 -->Clearing an audit log file,
+see <A HREF="134_L2_NetAuditClearorNet32.html">Auditing - NetAuditClear</A>.
+<!-- lm: 0x2 12 --><!-- lm: 0x2 15 -->
+<UL>Closing an audit log file, see
+DosClose in the<I> OS/2 Technical Library, Programming Guide Volume 1</I>.
+<!-- lm: 0x2 12 -->
+</UL><!-- lm: 0x2 15 -->
+<UL>Reading an audit log file, see DosRead in
+the<I> OS/2 Technical Library, Programming Guide Volume 1</I>.<!-- lm: 0x2 12 -->
+</UL><!-- lm: 0x2 15 -->
+<UL>Writing an entry to the audit log file, see
+<A HREF="136_L2_NetAuditWriteorNet32.html">Auditing - NetAuditWrite</A>.
+<!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="134_L2_NetAuditClearorNet32.html">[Back: NetAuditClear or Net32AuditClear]</A> <BR>
+<A HREF="136_L2_NetAuditWriteorNet32.html">[Next: NetAuditWrite or Net32AuditWrite]</A> 
+</BODY>
+</HTML>

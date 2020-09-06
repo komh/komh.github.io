@@ -1,0 +1,120 @@
+<HTML>
+<HEAD>
+<TITLE>Application Main Routine</TITLE>
+</HEAD>
+<BODY>
+<H1>Application Main Routine</H1><!-- entering slot 259 -->
+<P>
+A sample application main routine is illustrated in <A HREF="024_L2_SampleApplicationMai.html">Figure
+"Sample Application Main Routine (Part 1) - Registration"</A> and <A HREF="025_L2_SampleApplicationMai.html">Figure
+"Sample Application Main Routine (Part 2) - Window Creation"</A>. The functions
+performed by the main routine are as follows:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Register the application to Presentation Manager,
+and obtain an anchor block handle (that is, an application handle), using
+the<B> WinInitialize()</B> function.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Create a message queue, into which Presentation
+Manager will place all messages intended for the application, using the
+<B>WinCreateMsgQueue()</B> function and passing both the anchor block handle
+and the required queue size to Presentation Manager, which returns a message
+queue handle to the application.  Note that if the queue size specified
+is zero (as shown in the example above) then the default queue size of 10
+messages is used.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Register one or more window classes, for the
+windows that will be created by the application, and associate a window
+procedure with each window class, using using the<B> WinRegisterClass()
+</B>function.  Parameters passed to this function include the name of the
+window class and the name of the window procedure to be associated with
+the class.  Presentation Manager returns a Boolean value indicating success
+or failure.  Note the 4 bytes (32 bits) requested for window words, which
+may be used by the window procedure to store the address of its instance
+data block.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Create a main display window for the application,
+using two consecutive<B> WinCreateWindow()</B> calls (as shown in <A HREF="025_L2_SampleApplicationMai.html">Figure
+"Sample Application Main Routine (Part 2) - Window Creation"</A>) or a single
+<B>WinCreateStdWindow()</B> call.  Note the separate handles used for the
+frame and client windows. The values specified for<I> fcdata.flCreateFlags
+</I>control the appearance of the window, the controls it contains and its
+position on the screen.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Optionally, create an entry for the application
+in the Workplace Shell Window List, using the<B> WinAddSwitchEntry()</B> function.
+ Note that this step is omitted from <A HREF="025_L2_SampleApplicationMai.html">Figure
+"Sample Application Main Routine (Part 2) - Window Creation"</A> for reasons
+of clarity, and is shown separately in <A HREF="026_L2_WinAddSwitchEntryFun.html">Figure
+"WinAddSwitchEntry() Function"</A>.
+<P>
+Note that under OS/2 Version 2.0, the<B> WinCreateSwitchEntry()</B> function
+is provided in addition to the<B> WinAddSwitchEntry()</B> function. These
+two functions accept identical parameters and carry out identical tasks;
+the<B> WinCreateSwitchEntry()</B> function is intended to provide consistent
+function naming conventions.  The<B> WinAddSwitchEntry()</B> function is
+retained under OS/2 Version 2.0 for compatability with existing applications,
+but use of the<B> WinCreateSwitchEntry()</B> function is recommended.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Establish a message processing loop, whereby
+the application requests Presentation Manager to supply messages from the
+system queue and subsequently invokes Presentation Manager to dispatch them
+to the appropriate window procedure. This loop uses nested<B> WinGetMsg()
+</B>and<B> WinDispatchMsg()</B> calls.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Upon receivng the special message class WM_QUIT,
+which will cause<B> WinGetMsg()</B> to return false and hence terminate
+the<I> while</I> loop, remove any remaining windows using the<B> WinDestroyWindow()
+</B>function, remove the application's entry from the Window List using
+the<B> WinRemoveSwitchEntry()</B> function, destroy the message queue and
+deregister the application before terminating.  These latter functions are
+achieved using the<B> WinDestroyMsgQueue()</B> and<B> WinTerminate()</B> calls.
+<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+The structure of the main routine is similar for both the application (that
+is, the application's primary thread) and any secondary threads created
+by the application.  See <A HREF="323_L1_MultitaskingConsider.html">Multitasking
+Considerations</A> for further discussion on secondary threads.
+<P>
+In <A HREF="024_L2_SampleApplicationMai.html">Figure "Sample Application
+Main Routine (Part 1) - Registration"</A>, note the use of the EXPENTRY
+keyword in the function prototype to specify the<I> system</I> linkage<!-- entering slot 260 --> convention
+for the window procedure<I> wpMain</I>.  This is required whenever declaring
+a window procedure or dialog procedure, since such procedures are normally
+invoked by Presentation Manager on the application's behalf, rather than
+directly by the application.
+<P>
+If the application is to appear in and be selectable from the Workplace
+Shell Window List, the main routine must issue a<B> WinAddSwitchEntry()
+</B>function call, after creating the application's main window and before
+entering the message processing loop. [Note that under OS/2 Version 2.0,
+use of the<B> WinCreateSwitchEntry()</B> function is recommended, for reasons
+of consistency in function names. ] This function call is shown in <A HREF="026_L2_WinAddSwitchEntryFun.html">Figure
+"WinAddSwitchEntry() Function"</A>.
+<P>
+Note that the application may set the<I> swTitle</I> field of the<I> SwitchData
+</I>structure to NULL.  Presentation Manager will then determine the title
+under which the application was started from the Presentation Manager shell,
+and use this title for the switch entry.
+<P>
+The<B> WinAddSwitchEntry()</B> function returns a switch entry handle, which
+may be stored by the application and used during termination to remove the
+switch entry from the Workplace Shell Window List using the<B> WinRemoveSwitchEntry()
+</B>function.
+<P>
+The switch entry may be accessed by a window procedure at any time during
+application execution.  The switch entry handle is obtained using the<B> WinQuerySwitchHandle()
+</B>function, and the<I> SwitchData</I> control structure may then be obtained
+using the<B> WinQuerySwitchEntry()</B> function, and altered using the<B> WinChangeSwitchEntry()
+</B>function.  This capability may be used to allow a window procedure to
+obtain the handle of the application's main window, in order to post or
+send messages to that window.  This is discussed in <A HREF="254_L3_IdentifyingtheDestin.html">Identifying
+the Destination Window</A>.
+
+<P><HR>
+
+<A HREF="241_L2_ObjectOrientedProgra.html">[Back: Object-Oriented Programming Practices]</A> <BR>
+<A HREF="243_L2_UsingWindows.html">[Next: Using Windows]</A> 
+</BODY>
+</HTML>

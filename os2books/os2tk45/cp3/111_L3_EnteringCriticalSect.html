@@ -1,0 +1,88 @@
+<HTML>
+<HEAD>
+<TITLE>Entering Critical Sections</TITLE>
+</HEAD>
+<BODY>
+<H1>Entering Critical Sections</H1><!-- entering slot 116 -->
+<P>
+A thread can prevent execution of any of the other threads in its process
+by calling<A><!-- external link: 1D 7E C3 FC --> DosEnterCritSec</A>.
+<P>
+This function temporarily prevents a thread from being preempted by other
+threads within its process. The other threads in the process will not be
+executed until the current thread calls<A><!-- external link: 1D 85 C3 FC --> DosExitCritSec</A>.
+This enables the calling thread to access a time-critical resource of the
+process.
+<P>
+The following code fragment enters a section that will not be preempted,
+performs a simple task, and then exits quickly.
+<PRE>    #define INCL_DOSPROCESS     /* Process and thread values */
+    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+
+    BOOL    flag;         /* Program control flag */
+    APIRET  ulrc;         /* Return code          */
+
+    ulrc = DosEnterCritSec();
+
+    if (ulrc != 0) {
+        printf("DosEnterCritSec error: return code = %ld",
+               ulrc);
+        return;
+    }
+
+    flag = TRUE;           /* Set the flag */
+
+    ulrc = DosExitCritSec();
+
+    if (ulrc != 0) {
+        printf("DosExitCritSec error: return code = %ld",
+               ulrc);
+        return;
+    }
+
+</PRE>
+
+<P>
+A count is maintained of the outstanding<A><!-- external link: 1D 7E C3 42 --> DosEnterCritSec
+</A>requests. The count is incremented when a<A><!-- external link: 1D 7E C3 42 --> DosEnterCritSec
+</A>request is made, and decremented when a<A><!-- external link: 1D 85 C3 43 --> DosExitCritSec
+</A>request is made. A<A><!-- external link: 1D 85 C3 43 --> DosExitCritSec
+</A>request will not cause normal thread dispatching to be restored while
+the count is greater than 0.
+<P>
+This count is maintained in a WORD-sized variable. If overflow occurs, the
+count is set to its maximum value, and an error is returned. The operation
+is not performed when this occurs.
+<P>
+Threads that call<A><!-- external link: 1D 7E C3 42 --> DosEnterCritSec
+</A>must not must not make dynamic link calls within these critical sections.
+The dynamic link procedure could be using semaphores to serialize a resource.
+If a thread entering the critical section blocks another thread that already
+owns the resource which the dynamic link function is about to request, a
+deadlock occurs.
+<P>
+For example, threads of an application are serializing their access to a
+queue by means of a semaphore. A thread enters a critical section and makes
+a request to read the queue while another thread already has the semaphore
+that controls access to the queue. The thread that has the semaphore is
+now effectively blocked by<A><!-- external link: 1D 7E C3 FC --> DosEnterCritSec</A>,
+and the thread that has requested the queue waits forever to access it.
+
+<P>
+<B>Note: </B> Thread 1 is the initial thread of execution. It handles all
+signals (Ctrl+C, Ctrl+Break, and KillProcess). If a signal occurs while
+<A><!-- external link: 1D 7E C3 42 -->DosEnterCritSec</A> is active, thread
+1 can begin execution to process the signal. Thread 1 must not access the
+critical resource that is being protected by the use of<A><!-- external link: 1D 7E C3 FC --> DosEnterCritSec</A>.
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+
+<P><HR>
+
+<A HREF="110_L3_SuspendingandResumin.html">[Back: Suspending and Resuming Execution of a Thread]</A> <BR>
+<A HREF="112_L3_WaitingforaThreadtoE.html">[Next: Waiting for a Thread to End]</A> 
+</BODY>
+</HTML>

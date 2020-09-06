@@ -1,0 +1,58 @@
+<HTML>
+<HEAD>
+<TITLE>A20 Line Services (64KB Wraparound)</TITLE>
+</HEAD>
+<BODY>
+<H1>A20 Line Services (64KB Wraparound)</H1><!-- entering slot 125 -->
+<P>
+The region from 1MB to 1MB+64KB is known as the<I> A20 wrap area</I>. Due
+to the segmented scheme for generating 20-bit physical addresses on an 8088,
+it is possible for a DOS program to generate physical addresses in the range
+from 1MB to 1MB + 64KB. On an 8088 system, these addresses wrap to the low
+64KB of physical memory.
+<P>
+In the 16-bit version of OS/2, OS/2 V1.x, 80286 physical addresses are 24
+bits. The<I> twenty-first</I> address line of the 80286 is called the<I> A20
+line</I>, and its setting determines whether real-mode programs wrap low
+physical memory, or directly access the range from 1MB to 1MB + 64KB. When
+an 80286 is started, the A20 line is disabled, causing the 80286 to emulate
+the 8088 environment. When the 80286 is switched to protected mode, the
+A20 line is enabled, since the protected mode of the 80286 generates 24-bit
+physical addresses. However, the A20 wrap area can be addressed in real
+mode in OS/2 V1.x if the A20 line is enabled manually. OS/2 V1.x can thus
+use the memory in the A20 wrap area for bimodal code (for example, OS/2
+V1.x device drivers) by managing the state of the A20 line. When running
+a DOS application in real mode, OS/2 V1.x disables the A20 line to force
+the 8088 segment wrapping semantics on DOS applications. When accessing
+bimodal code in the range from 1MB to 1MB + 64KB in real mode, the OS/2
+V1.x kernel enables the A20 line.
+<P>
+In OS/2 V2.0 however, the area between 1MB and 1MB + 65519 bytes, cannot
+be accessed by a DOS program in V86 mode using 20 address lines (that is
+lines 0 to 19). For example, addressing 1MB + 1 byte from within a DOS application
+in V86 mode would access physical memory at address 0;  in other words,
+the memory addressing would wrap around to access the extra byte of memory.
+ This is known as<I> wraparound</I>.  Under OS/2 Version 2.0, the addressing
+of memory beyond 1MB would result in an addressing exception because although
+address line 20 is activated, it is not valid for a V86 mode process. This
+is shown in <A HREF="020_L2_A20LineService64KBWr.html">Figure "A20 Line
+Service (64KB Wraparound)"</A>.
+<P>
+In order to avoid addressing exceptions in OS/2 Version 2.0, the wraparound
+feature must be simulated with <A HREF="373_L2_aliasedpage.html"><B>aliased
+pages</B></A>. The 1MB V86 address space requires a page table with 256
+entries (256 x 4KB = 1MB).  Sixteen additional page table entries are used
+for the 65519 bytes above 1MB.  These 16 entries are identical to the first
+16 entries for the 1MB area, thereby mapping the wraparound area to the
+address range 0 to 65519.
+<P>
+The wraparound feature requires some additional housekeeping by the OS/2
+Version 2.0 kernel.  When an aliased page is swapped to disk, both page
+table entries must be flagged as not present.
+
+<P><HR>
+
+<A HREF="117_L2_IOPortTrapping.html">[Back: I/O Port Trapping]</A> <BR>
+<A HREF="119_L2_Summary.html">[Next: Summary]</A> 
+</BODY>
+</HTML>

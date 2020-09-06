@@ -1,0 +1,104 @@
+<HTML>
+<HEAD>
+<TITLE>Querying and Setting Presentation Parameters</TITLE>
+</HEAD>
+<BODY>
+<H1>Querying and Setting Presentation Parameters</H1><!-- entering slot 64 -->
+<P>
+To implement support for a presentation parameter in a window, you need
+to find out what its value is and when that value has been changed. To query
+a presentation parameter's value use WinQueryPresParam, passing in the index
+of the presentation parameter and a buffer large enough for the value to
+be returned in. For presentation parameters that have string values, the
+buffer should be large enough to include the null termination character.
+
+<P>
+The flag QPF_NOINHERIT can be specified if the presentation parameter should
+not be inherited from the window's owner. Otherwise the system looks up
+the window's owner chain until it finds an occurrence of the same presentation
+parameter index.
+<P>
+When a presentation parameter is set or changed, the window receives a WM_PRESPARAMCHANGED
+message. If only one value is changed, that presentation parameter's index
+is passed with the message. If more than one value is changed, zero is passed.
+In the latter case, the window must query all its presentation parameters
+to find out which ones have changed. In response to the WM_PRESPARAMCHANGED
+message, the receiving window should repaint itself according to the new
+values received. It is not possible to reject a presentation parameter change;
+the new value has already been set by the time the notification message
+has been received.
+<P>
+WinRemovePresParam is available for removing a presentation parameter from
+a window.
+<PRE>   /*******************************************************************/
+   /* Set the background color of the window                          */
+   /*******************************************************************/
+
+   lColor = RGB_RED;                         /* RGB color value       */
+
+   WinSetPresParam(hwndMain,                 /* window handle         */
+                   PP_BACKGROUNDCOLOR,       /* background pres param */
+                   sizeof(lColor),           /* length of pres param  */
+                   &amp;lColor);                 /* pres param value      */
+
+   ---------------------------------------------------------------------
+
+   ... in window procedure for hwndMain ...
+
+
+   case WM_PRESPARAMCHANGED:
+
+      /****************************************************************/
+      /* Message received when a presparam has been changed.          */
+      /* Invalidate the window to repaint with new color.             */
+      /****************************************************************/
+
+      WinInvalidateRect(hwndMain, NULL, FALSE);
+      break;
+
+   case WM_PAINT:
+
+      /****************************************************************/
+      /* Repaint the window                                           */
+      /****************************************************************/
+
+      hps = WinBeginPaint(hwndMain, NULLHANDLE, NULL);
+
+      /****************************************************************/
+      /* Put presentation space into RGB mode                         */
+      /****************************************************************/
+
+      GpiCreateLogColorTable(hps, 0, LCOLF_RGB, 0, 0, NULL);
+
+      /****************************************************************/
+      /* Query presentation parameter value for background color      */
+      /****************************************************************/
+
+      WinQueryPresParam(hwndMain,            /* Window handle         */
+                        PP_BACKGROUNDCOLOR,  /* Background presparam  */
+                        0,
+                        NULL,
+                        sizeof(lColor),      /* Length of data buffer */
+                        &amp;lColor,             /* Data buffer returned  */
+                        0);
+
+      /****************************************************************/
+      /* Fill window with background color retrieved from presparam   */
+      /****************************************************************/
+
+      WinQueryWindowRect(hwndMain, &amp;rectMain);
+      WinFillRect(hps, &amp;rectMain, lColor);
+
+      ... rest of painting code ...
+
+      WinEndPaint(hps);
+      break;
+</PRE>
+
+
+<P><HR>
+
+<A HREF="063_L2_AboutPresentationPar.html">[Back: About Presentation Parameters]</A> <BR>
+<A HREF="065_L2_CreatingaWindowwitha.html">[Next: Creating a Window with a Presentation Parameter]</A> 
+</BODY>
+</HTML>

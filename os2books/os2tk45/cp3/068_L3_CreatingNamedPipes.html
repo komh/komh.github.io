@@ -1,0 +1,260 @@
+<HTML>
+<HEAD>
+<TITLE>Creating Named Pipes</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating Named Pipes</H1><!-- entering slot 69 -->
+<P>
+The server process creates a named pipe by using<A><!-- external link: 1D 71 C3 FC --> DosCreateNPipe</A>.
+
+<P>
+To create a named pipe, specify on the<A><!-- external link: 1D 71 C3 57 --> DosCreateNPipe
+</A>function:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->The name of the pipe<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->The access modes<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->The type of pipe (byte or message)<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->The sizes of the input and output buffers<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<A><!-- external link: 1D 71 C3 57 -->DosCreateNPipe</A> returns a pipe
+handle that can be used in subsequent pipe operations.
+<P>
+Each named pipe must have a unique name of the following form:
+<PRE>    \PIPE\PipeName</PRE>
+
+<P>
+The "\PIPE\" in the name above is required, but need not be uppercase.  It
+is not the name of a subdirectory.
+<P>
+To open a pipe on a remote computer, the client process must specify the
+name of the server process that opened the pipe as part of the pipe name,
+as follows:
+<PRE>    \\Server\PIPE\PipeName
+</PRE>
+
+<P>
+"\\Server" in the name above is the name of the remote computer; again,
+"\PIPE\" is required.
+<P>
+The name parameter must conform to the rules for OS/2 file names, but no
+actual file is created for the pipe.
+<P>
+Named pipes created with certain access modes prevent the named pipes' clients
+from using certain functions. If the named pipe is created with access mode
+NP_ACCESS_INBOUND, the named pipe's client cannot use these functions:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 --><A><!-- external link: 1D 63 C3 FC -->DosCallNPipe
+</A><!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 --><A><!-- external link: 1D 07 C4 FC -->DosTransactNPipe
+</A><!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 --><A><!-- external link: 1D A5 C3 FC -->DosPeekNPipe
+</A><!-- lm: 0x2 1 -->
+</UL>If the named pipe is created with access mode NP_ACCESS_OUTBOUND, the
+named pipe's client cannot use these functions:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 --><A><!-- external link: 1D 63 C3 FC -->DosCallNPipe
+</A><!-- lm: 0x2 3 --><!-- lm: 0x2 6 -->
+<UL><A><!-- external link: 1D 07 C4 FC -->DosTransactNPipe
+</A><!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL><A><!-- external link: 1D 0F C4 FC -->DosWrite
+</A><!-- lm: 0x2 1 -->
+</UL>
+<P>
+If the named pipe's client uses an incorrect function, the function returns
+error code 5 (ERROR_ACCESS_DENIED).
+<P>
+In the following code fragment,<A><!-- external link: 1D 71 C3 57 --> DosCreateNPipe
+</A>creates a pipe named \pipe\pipe1 and supplies a unique handle identifying
+the pipe.<I> OpenMode</I> is set to NP_ACCESS_DUPLEX. This activates full
+duplex access to the named pipe. There will be no inheritance to child process,
+and no write-through (write-through only affects remote pipes).<I> PipeMode
+</I>is set to "NP_WMESG | NP_RMESG | 0x01". This specifies that the pipe
+should be read as a message stream for both reading and writing and an instance
+count of 1 (only one instance of the named pipe can be created at a time).
+The pipe will block on Read/Write if no data is available.
+<PRE>    #define INCL_DOSNMPIPES   /* Named-pipe values */    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+
+    UCHAR   ucFileName[40];  /* Pipe name              */
+    HPIPE   hpPipeHandle;    /* Pipe handle (returned) */
+    ULONG   ulOpenMode;      /* Open-mode parameters   */
+    ULONG   ulPipeMode;      /* Pipe-mode parameters   */
+    ULONG   ulOutBufSize;    /* Size of the out-buffer */
+    ULONG   ulInBufSize;     /* Size of the in-buffer  */
+    ULONG   ulTimeOut;       /* Default value for      */
+                             /* DosWaitNPipe time-out  */
+                             /* parameter              */
+    APIRET  ulrc;            /* Return code            */
+
+    strcpy(ucFileName,
+           "\\PIPE\\PIPE1");
+
+    ulOpenMode = NP_ACCESS_DUPLEX;            /* Full duplex, no inheritance,     */
+                                              /* no write-through                 */
+
+    ulPipeMode = NP_WMESG |
+                 NP_RMESG |
+                 0x01;     /* Block on read and write, message                   */
+                           /* stream, instance count of 1                        */
+
+    ulOutBufSize = 4096;   /* The outgoing buffer must be 4KB in size            */
+
+    ulInBufSize = 2048;    /* The incoming buffer must be 2KB in size            */
+
+    ulTimeOut = 10000;     /* Time-out is 10 seconds (units are in milliseconds) */
+
+    ulrc = DosCreateNPipe(ucFileName,
+                          &amp;hpPipeHandle,
+                          ulOpenMode,
+                          ulPipeMode,
+                          ulOutBufSize,
+                          ulInBufSize,
+                          ulTimeOut);
+
+    if (ulrc != 0) {
+        printf("DosCreateNPipe error: return code = %ld",
+               ulrc);
+        return;
+    }
+
+</PRE>
+
+<P>
+Once the named pipe is created, the application can call<A><!-- external link: 1D 6B C3 56 --> DosConnectNPipe
+</A>to connect a client process to the pipe.
+<P>
+Once a client process<!-- entering slot 70 --> connects to the pipe, the
+process can read from and write to the pipe. The preceding example creates
+a byte pipe, so the process can use<A><!-- external link: 1D D7 C3 55 --> DosRead
+</A>and<A><!-- external link: 1D 0F C4 56 --> DosWrite</A> to read from
+and write to the pipe.
+<P>
+After the client process finishes using the pipe, the server process can
+disconnect the pipe by using<A><!-- external link: 1D 7B C3 FC --> DosDisConnectNPipe</A>.
+The server process can either connect again or close the named pipe by using
+<A><!-- external link: 1D 65 C3 FC -->DosClose</A>.
+<P>
+When a server process creates a named pipe, it defines the pipe to the system
+by specifying the file write-through mode, the inheritance mode, the access
+and blocking modes, the pipe type, the read mode, the size of the in and
+out buffers, and the instance count.  The following list describes these
+modes, types, and buffers.<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->The<I> file write-through mode</I> has significance
+only for communication with remote client processes. When the file write-through
+bit is set, data is sent across the network as soon as it is written; otherwise,
+OS/2 will in some cases hold data briefly in a local buffer before sending
+it across the network.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The<I> inheritance mode</I> specifies whether or not
+the pipe handle will be inherited by a child process.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The<I> access mode</I> specifies the direction in
+which data will flow through the pipe. The server creates an inbound pipe
+(a pipe with inbound access mode) if it intends to read data from the client
+process, an outbound pipe if it intends to write data to the client process,
+or a duplex pipe if it intends to both read from and write to the client
+process.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The<I> blocking mode</I> specifies whether or not
+<A><!-- external link: 1D D7 C3 55 -->DosRead</A> and<A><!-- external link: 1D 0F C4 56 --> DosWrite
+</A>will block when no data is available to read, or there is no room to
+write data.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The<I> pipe type</I> is the form in which a stream
+of data is written to the pipe. If the pipe is a byte pipe, the server and
+client processes write data as an undifferentiated stream of bytes. If the
+pipe is a message pipe, the processes write data as a stream of messages;
+ messages are blocks of data, each with a system-supplied header, that are
+written as single units. The server and client processes define the size
+and format of a message.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The<I> read mode</I> is the form in which data is
+read from the pipe. The data in a pipe that was created as a byte pipe can
+only be read as bytes; therefore, a byte pipe will always be in byte-read
+mode. The data in a message pipe, however, can be read either as messages
+or as bytes.  (If it is to be read as bytes,<A><!-- external link: 1D D7 C3 55 --> DosRead
+</A>skips over the message headers). Therefore, message pipes can be in
+either message-read mode or byte-read mode.
+<P>
+<B>Note: </B> The terms "byte pipe" and "message pipe" always refer to the
+pipe type-the form in which data is written to the pipe. When the read mode
+of a pipe is being referred to, it is always explicitly identified as either
+message-read mode or byte-read mode.<!-- lm: 0x2 6 -->
+<UL><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>The
+<I>in</I> and<I> out buffers</I> can be up to 64KB in size. If the pipe
+will be read in message-read mode, and if the message size is known, the
+server can control how many messages the buffer will hold at one time by
+specifying the appropriate buffer size.<!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>The
+<I>instance count</I> is the maximum number of instances of the named pipe
+that can be created. A pipe instance is actually a separate pipe-that is,
+a unique set of pipe buffers with unique handles. However, the term "pipe
+instance" is used to distinguish pipes that share the same name from pipes
+with different names. Because a client process uses only the name of the
+pipe when opening it, the existence of multiple pipe instances is transparent
+to a client process.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Creating Multiple Instances of a Named Pipe</B> Although each named pipe
+must have a unique name, a server process can create multiple<I> instances
+</I>of a pipe, all of which have the same name. A pipe instance is actually
+a separate pipe-that is, a unique set of pipe buffers with unique handles.
+
+<P>
+The ability to create multiple pipe instances enables the server to communicate
+with multiple client processes at the same time. Because a client process
+uses only the name of the pipe when opening it, the existence of multiple
+pipe instances is transparent to a client process.
+<P>
+The<I> ICount</I> parameter of<A><!-- external link: 1D 71 C3 53 --> DosCreateNPipe
+</A>specifies the maximum number of named pipe instances that can be created.
+(An unlimited number can also be specified.) This parameter is specified
+only when the first instance of a named pipe is created; any subsequent
+attempt to redefine the instance count will be ignored.
+<P>
+If the instance count is greater than 1, the server process can create additional
+pipe instances by specifying the same pipe name in subsequent calls to<A><!-- external link: 1D 71 C3 FC --> DosCreateNPipe</A>.
+Generally, the attributes of the subsequent pipe instances are defined to
+be the same as those of the original pipe instance, because a client process
+that requests the pipe has no way of controlling which pipe instance will
+be assigned to it.
+<P>
+After an additional pipe instance has been created, it is used in the same
+manner as the original pipe instance.  That is, the same sequence of named
+pipe functions is used in the control or management of all named pipe instances.
+(See <A HREF="059_L4_StepsinManagingServe.html">Steps in Managing Server-Client
+Transactions</A> for more<!-- entering slot 71 --> information.)
+<P>
+<B>Note: </B> If all of the instances of a named pipe are in use when a
+client calls<A><!-- external link: 1D 9F C3 FC --> DosOpen</A>, ERROR_PIPE_BUSY
+is returned. However, the client can wait for an instance of that pipe to
+become available by calling<A><!-- external link: 1D 0D C4 FC --> DosWaitNPipe</A>.
+
+<P>
+Multiple instances of a named pipe can be created by different processes.
+That is, multiple server processes can create and use instances of the same
+named pipe to communicate with their clients.<!-- lm: 0x2 1 -->
+<P>
+
+
+<P><HR>
+
+<A HREF="067_L2_UsingNamedPipes.html">[Back: Using Named Pipes]</A> <BR>
+<A HREF="069_L3_OpeningNamedPipes.html">[Next: Opening Named Pipes]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,98 @@
+<HTML>
+<HEAD>
+<TITLE>Position Advises</TITLE>
+</HEAD>
+<BODY>
+<H1>Position Advises</H1><!-- entering slot 47 -->
+<P>
+In addition to notification messages at discrete locations in the media,
+periodic notification of elapsed media time can also be requested.  These
+periodic messages, referred to as "position advise" messages, are requested
+for a device context based on a specified time interval.  Position advise
+messages are requested by issuing the MCI_SET_POSITION_ADVISE message to
+a device context as shown in the following code fragment.
+<PRE>        MCI_OPEN_PARMS   mop;
+static  MCI_PLAY_PARMS   mpp;      /* parms for MCI_PLAY         */
+static  MCI_POSITION_PARMS mppPos; /* parms for
+                                      MCI_SET_POSITION_ADVISE */
+
+iState = ST_PLAYING;           /* Set state to reflect play mode   */
+
+mppPos.hwndCallback = hwndMainDlg;
+mppPos.ulUnits    = 1500;      /* Request position advise messages */
+mppPos.usUserParm = usPositionUP;
+mppPos.Reserved0  = 0;
+mciSendCommand    ( mop.usDeviceID,
+                    MCI_SET_POSITION_ADVISE,
+                    MCI_NOTIFY | MCI_SET_POSITION_ADVISE_ON,
+                    (PVOID) &amp;mppPos,
+                    UP_POSITION );
+</PRE>
+
+<P>
+This causes MM_MCIPOSITIONCHANGE messages to be returned to the application
+window specified in the MCI_POSITION_PARMS structure at the requested frequency
+as media time passes in the device context.  Only one position advise frequency
+may be active for a device context, and having position advise notification
+active in one device context does not cause messages to be generated in
+other device contexts.  Position advise messages can be set only when a
+device element is loaded in the device context, and are reset when a new
+device element is loaded.
+<P>
+Like MM_MCICUEPOINT messages, MM_MCIPOSITIONCHANGE message parameters contain
+the device ID of the device context that generated the position advise message,
+as well as the media position and an additional application-defined parameter
+that can be specified when the position advise notification is requested.
+ Although the media position interval (frequency) specified by the application
+on the MCI_SET_POSITION_ADVISE message is in the currently set device units,
+the media position returned on the MM_MCIPOSITIONCHANGE message is always
+in MMTIME units. MMTIME units are used because the time format set when
+the position advise notification is set might not be the same time format
+set when the position advise notification messages are returned.
+<P>
+Position advise notifications are generated only during playback or recording.
+ MM_MCIPOSITIONCHANGE messages are usually not generated during seek operations
+initiated by the application. The exception is a device, such as a tape
+recorder, that has a discernible position during the seek operation.  A
+device like this can generate position advise messages as the media is traversed,
+to indicate the progress of the seek operation.
+<P>
+The following code fragment shows how the Caption Sample application handles
+the MM_MCIPOSITIONCHANGE message. When the Caption Sample application receives
+a position change message, it updates its media position slider arm allowing
+the application to advance the media position slider smoothly as the audio
+plays.
+<PRE>case MM_MCIPOSITIONCHANGE:
+ /*
+  * This message will be returned (in MMTIME) to the application
+  * whenever the audio position changes. This time will be used to
+  * increment the audio position slider. This message is only
+  * generated during playback.
+  */
+ if ( eState == ST_PLAYING )
+ {
+    ulTime = (ULONG) LONGFROMMP(mp2);
+
+    /*
+     * Get the new slider arm position and set it.
+     */
+    sArmPosition =
+       (SHORT) ( ( ulTime * ( sAudioArmRange - 1) ) / ulAudioLength );
+    WinSendMsg(
+       hwndAudioSlider,
+       SLM_SETSLIDERINFO,
+       MPFROM2SHORT( SMA_SLIDERARMPOSITION, SMA_RANGEVALUE ),
+       MPFROMSHORT( sArmPosition ));
+ }
+ return 0;
+</PRE>
+
+<P>
+
+
+<P><HR>
+
+<A HREF="038_L3_CuePoints.html">[Back: Cue Points]</A> <BR>
+<A HREF="040_L2_SystemValues.html">[Next: System Values]</A> 
+</BODY>
+</HTML>

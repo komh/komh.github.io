@@ -1,0 +1,148 @@
+<HTML>
+<HEAD>
+<TITLE>DosReplaceModule</TITLE>
+</HEAD>
+<BODY>
+<H1>DosReplaceModule</H1><!-- entering slot 88 -->
+<P>
+<B>Purpose</B>
+<P>
+DosReplaceModule replaces or caches a module that is in use.
+<P>
+<B>Syntax</B>
+<PRE>#define INCL_DOSMEMMGR
+#include  os2.h&gt;
+
+</PRE>
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+APIRET APIENTRY DosReplaceModule<!-- lm: 0x2 11 -->
+<UL><B> (PSZ pszOldModule,
+PSZ pszNewModule, PSZ pszBackupModule)</B><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Parameters</B><!-- lm: 0x2 1 -->
+<P>
+pszOldModule (PSZ)  input<!-- lm: 0x11 11 -->
+<UL> Points to the name of
+the existing module. Required.<!-- lm: 0x2 1 -->
+</UL> pszNewModule (PSZ)
+ input<!-- lm: 0x11 11 -->
+<UL> Points to the name of the new module. Optional.
+<!-- lm: 0x2 1 -->
+</UL>pszBackupModule (PSZ)  input<!-- lm: 0x11 11 -->
+<UL> Points
+to the name to be used for saving a copy of the old module. Optional.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Returns</B><!-- lm: 0x2 1 -->
+<P>
+ulrc (APIRET)  returns<!-- lm: 0x11 11 -->
+<UL> Return Code.
+<P>
+DosReplaceModule returns one of the following values <!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->NO_ERROR<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->ERROR_FILE_NOT_FOUND<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->ERROR_PATH_NOT_FOUND<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->ERROR_ACCESS_DENIED<!-- lm: 0x2 11 -->
+<P>
+17<!-- lm: 0x2 26 -->
+<UL> ERROR_NOT_THE_SAME_DEVICE<!-- lm: 0x2 11 -->
+</UL> 26
+<!-- lm: 0x2 26 -->
+<UL>ERROR_NOT_DOS_DISK<!-- lm: 0x2 11 -->
+</UL> 32<!-- lm: 0x2 26 -->
+<UL> ERROR_SHARING
+VIOLATION<!-- lm: 0x2 11 -->
+</UL> 87<!-- lm: 0x2 26 -->
+<UL> ERROR_INVALID_PARAMETER
+<!-- lm: 0x2 11 -->
+</UL>108<!-- lm: 0x2 26 -->
+<UL> ERROR_DRIVE_LOCKED
+<!-- lm: 0x2 11 -->
+</UL>112<!-- lm: 0x2 26 -->
+<UL> ERROR_DISK_FULL<!-- lm: 0x2 11 -->
+</UL> 267
+<!-- lm: 0x2 26 -->
+<UL>ERROR_DIRECTORY<!-- lm: 0x2 11 -->
+</UL> 296<!-- lm: 0x2 26 -->
+<UL> ERROR_MODULE_IN_USE
+<!-- lm: 0x2 11 -->
+</UL>731<!-- lm: 0x2 26 -->
+<UL> ERROR_MODULE_CORRUPTED
+<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Remarks</B>
+<P>
+When a DLL or EXE file is in use by the system, the file is locked. It cannot,
+therefore, be replaced on the harddisk by a newer copy. DosReplaceModule
+allows the replacement on the disk of the module while the system continues
+to run the old module. The contents of the old module file are cached in
+the swap file by the system and the load module file is closed. A backup
+copy of the file may be created for recovery purposes should the install
+program fail. If a backup module is not specified, then no backup will be
+made. The new module takes the place of the original module on the disk.
+
+<P>
+<B>Note: </B> The system will continue to use the cached old module until
+all references to it are released. The next reference to the module will
+cause a reload from the new module on disk. If a new module is not specified,
+then the old module file will be cached and the file closed.<!-- lm: 0x2 1 -->
+<P>
+Protect mode executable files only can be replaced by DosReplaceModule.
+It cannot be used for DOS/Windows(R) programs or for data files.
+<P>
+<B>Related Functions</B><!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->DosLoadModule<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosCopy<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Example Code</B>
+<PRE>int main(int argc, char *argv[], char *envp[])
+{
+   APIRET rc=0;
+   PSZ pszOld;
+   PSZ pszNew = NULL;
+   PSZ pszBak = NULL;
+
+   if (argc==1) {
+      printf("REPMOD oldmod  \n");
+      return rc;
+   }
+
+   if (argc&gt;1) pszOld = argv[1];
+   if (argc&gt;2) pszNew = argv[2];
+   if (argc&gt;3) pszBak = argv[3];
+
+   rc = DosReplaceModule(pszOld, pszNew, pszBak);
+
+   if (rc) printf("DosReplaceModule returned %u\n",rc);
+
+   else {
+      if (argc==2) printf("%s successfully cached and closed\n", pszOld);
+      else if (argc==3)
+         printf("%s successfully cached and replaced with %s\n", pszOld, pszNew);
+      else if (argc==4)
+         printf("%s successfully copied to %s and replaced with %s\n", pszOld, pszBak, pszNew);
+   }
+
+   return rc;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="052_L2_DosRead.html">[Back: DosRead]</A> <BR>
+<A HREF="054_L2_DosSetFileInfo.html">[Next: DosSetFileInfo]</A> 
+</BODY>
+</HTML>

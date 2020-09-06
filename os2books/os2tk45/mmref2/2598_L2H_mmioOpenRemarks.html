@@ -1,0 +1,124 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>mmioOpen - Remarks</TITLE>
+</HEAD>
+<BODY>
+<H1>mmioOpen - Remarks</H1><!-- entering slot 2604 -->
+<P>
+If the<I> pmmioinfo</I> parameter is provided the following fields must
+be filled in by the caller as described:
+<P>
+<I>fccIOProc</I> - If this field is not NULL, it is the four character code
+of an installed I/O procedure that will handle I/O.  If<I> fccIOProc</I> and
+<I>pIOProc</I> are NULL, mmioOpen determines which I/O procedure to use
+based on the syntax of the<I> pszFileName</I> parameter. (See description
+of<I> pszFileName</I>.) If<I> fccIOProc</I> is NULL, but<I> pIOProc</I> is
+not NULL, the custom I/O procedure (<I>pIOProc</I>) is used. This I/O procedure
+does not need to be installed using <A HREF="2570_L2_mmioInstallIOProc.html">mmioInstallIOProc</A>.
+
+<P>
+The following I/O procedure identifiers are defined:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+FOURCC_DOS<!-- lm: 0x2 20 -->
+<UL><I> pszFileName</I> is assumed to be either
+the name of a DOS file (which is to be opened using the file system opening
+procedure), or<I> aulInfo</I> contains the DOS file handle of an open file
+handle (directed to a<A><!-- external link: 1D 7B 29 FC --> PSZ</A>).<!-- lm: 0x2 1 -->
+</UL> FOURCC_BND
+<!-- lm: 0x2 20 -->
+<UL>A RIFF compound file element is opened.  This procedure
+calls mmioCFOpen if necessary to read the CTOC into memory before the element
+can be accessed.
+<P>
+If MMIO_CREATE or MMIO_APPEND is specified when opening an element, the
+system automatically accesses the element as exclusive until the element
+is closed.<!-- lm: 0x2 1 -->
+</UL> FOURCC_MEM<!-- lm: 0x2 20 -->
+<UL> A
+memory file is opened.  The<I> pszFileName</I> parameter should be NULL.
+ There are two ways to set up a memory file:<!-- lm: 0x2 21 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 25 -->The<I> pchBuffer</I> field points to a caller-supplied
+memory buffer, and the<I> cchBuffer</I> field indicates the size of the
+buffer.  The memory file can be read and written like an ordinary file,
+but the file can not be expanded larger than the number of bytes specified
+in<I> cchBuffer</I>.  If the MMIO_CREATE flag is specified, the end of the
+file is initially at the beginning of the buffer.  If MMIO_CREATE is NULL,
+the user specifies in<I> aulInfo[1]</I> the number of bytes of data in the
+memory buffer.  For the default case, where<I> aulInfo[1]</I> is 0, the
+end of the file is set to the end of the buffer.<!-- lm: 0x2 21 -->
+<P>
+ <LI><LI><!-- lm: 0x2 25 -->mmioOpen can allocate the memory block for the
+memory file.  The<I> cchBuffer</I> field is the desired initial size of
+the memory I/O buffer.  The<I> aulInfo[0]</I> field must be the number of
+bytes by which to expand the memory file if the initial buffer becomes filled.
+ The MMIO_CREATE flag must be specified.  The end of the file is initially
+at the beginning of the buffer, and if the memory file must be expanded,
+it is expanded at least<I> aulInfo[0]</I> bytes at a time.  If<I> aulInfo[0]
+</I>is 0, the buffer cannot expand.  There is no default for<I> cchBuffer
+</I>when used to open a memory file.<!-- lm: 0x2 20 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+The<I> pIOProc</I> field uses a custom I/O procedure defined in this field.
+ Set the<I> fccIOProc</I> field to NULL, and set the<I> pIOProc</I> field
+to the address of the custom I/O procedure to use.  Otherwise,<I> pIOProc
+</I>must be zero.
+<P>
+<I>cchBuffer</I> specifies the size of the memory block to use as an I/O
+buffer or as a memory file.  See descriptions of<I> pchBuffer</I> and the
+MMIO_ALLOCBUF flag for more information.
+<P>
+The<I> pchBuffer</I> field points to a caller-provided memory buffer to
+use as an I/O buffer or as a memory file.  The<I> cchBuffer</I> field must
+be the size of the buffer.  If the caller-provided memory buffer is not
+provided,<I> pchBuffer</I> must be NULL.
+<P>
+To open a memory file that performs I/O on an already allocated memory block,
+set the<I> pszFileName</I> parameter to NULL, the<I> fccIOProc</I> field
+to FOURCC_MEM, the<I> pchBuffer</I> field to point to the memory buffer,
+the<I> cchBuffer</I> field to the size of the memory buffer, the<I> ulOpenFlags
+</I>parameter to MMIO_READWRITE (plus MMIO_CREATE if the memory file is
+initially empty), and set all other fields of the<A><!-- external link: 1D 42 29 81 --> MMIOINFO
+</A>structure passed in the<I> pmmioinfo</I> parameter to zero.
+<P>
+For example, to open a memory file that is initially 32KB in size, but can
+be expanded at least 16KB at a time:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Set<I> aulInfo[0]</I> = 16K<!-- lm: 0x2 2 -->
+2.<!-- lm: 0x2 6 -->
+<UL>Set<I> cBytes</I>  =16K<!-- lm: 0x2 2 -->
+</UL> 3.<!-- lm: 0x2 6 -->
+<UL>Set<I> pszFileName</I> to NULL<!-- lm: 0x2 2 -->
+</UL> 4.<!-- lm: 0x2 6 -->
+<UL>Set<I> fccIOProc</I> to FOURCC_MEM<!-- lm: 0x2 2 -->
+</UL> 5.<!-- lm: 0x2 6 -->
+<UL>Set<I> ulOpenFlags</I> to indicate MMIO_READWRITE
+plus MMIO_CREATE<!-- lm: 0x2 2 -->
+</UL> 6.<!-- lm: 0x2 6 -->
+<UL>Set other fields of<I> pmmioinfo</I> to zero
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Initially this file will be empty.
+<P>
+A system-allocated memory buffer must be opened as MMIO_READWRITE, which
+is the default for that case. If this does not happen, the open-a-memory
+file process fails.
+<P>
+If both a user buffer is specified, and an expansion size is requested,
+the open-a-memory file process fails because it is not possible to later
+expand the buffer size in this situation.
+<P>
+As with DOS file handles, different applications cannot share a single<I> hmmio</I>.
+ In other words, MMIO handles (<A><!-- external link: 1D E0 28 68 -->HMMIO</A>)
+are unique to a process.
+
+<P><HR>
+
+<A HREF="2597_L2H_mmioOpenParameters.html">[Back: mmioOpen - Parameters]</A> <BR>
+<A HREF="2599_L2H_mmioOpenRelatedFunct.html">[Next: mmioOpen - Related Functions]</A> 
+</BODY>
+</HTML>

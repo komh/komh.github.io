@@ -1,0 +1,137 @@
+<HTML>
+<HEAD>
+<TITLE>CTOI Program</TITLE>
+</HEAD>
+<BODY>
+<H1>CTOI Program</H1><!-- entering slot 297 -->
+<P>
+The conversion from a .CSC file to an .IDL file is handled by the CTOI program.
+For example, to convert the file MYDOG.CSC to an IDL file, make sure all
+the CSC, SC, and PSC files referenced by MYDOG.CSC are accessible, and then
+invoke the program as shown in the following command line:
+<PRE>ctoi mydog.csc
+</PRE>
+
+<P>
+
+<P>
+<B>Note: </B> Converting a Workplace Shell application from a CSC file to
+an IDL file requires the SC files from the previous OS/2 Toolkit installed
+on your system (in the SC directory), and all the ones that you might have
+created. The IDL subdirectory from the OS/2 Toolkit contains the IDL files
+for the public Workplace Shell classes and objects.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+In this example, the CTOI program produces a file called MYDOG.IDL containing
+the definitions in IDL format. In many cases, you should be able to compile,
+install and run your application without further modification. However,
+the following situations will require manual intervention:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Any classes that use IDL reserved words as functions
+or variable names need to be changed. For example, "string", "context",
+"interface".<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The SOM compiler no longer generates .SC, .PSC, or
+.PH files. Installation and make files that refer to .CSC, .SC, .PSC, or
+.PH files need to be changed.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The data declaration changes. Public and private instance
+variables are converted to attributes. However, structures and arrays require
+manual changes, as shown in the following figure:
+<PRE><B>OIDL</B>                           <B>IDL</B>
+
+data:
+  struct info infoBuffer;      interface: ...   {
+                                  typedef struct info info;
+                                  ...
+                               implementation {
+                                  info infoBuffer;
+                                  ...
+                                  };
+
+data:
+  char achMyArray[20];         interface: ...   {
+                                  typedef char myarraytype[20];
+                                  ...
+                               implementation {
+                                  attribute myarraytype achMyArray;
+                                  ...
+                                  };
+
+data:
+  unsigned char chFlag;        attribute octet chFlag;
+
+data:
+  char    *argv[];             char   **argv;
+
+</PRE>
+
+<P>
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->IDL does not permit structures to be passed by value.
+Instead, methods must pass a pointer to a structure. Methods can return
+a structure, and if a method does so, it should have the modifier<I> struct
+</I>attached to it, as shown in the following figure:
+<PRE>AStructure resolveMyIdentity(in string pszIdent), struct;
+</PRE>
+
+<P>
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The OIDL private qualifier has been removed. Private
+instance data and methods must now be enclosed in a special #ifdef directive,
+as shown in the following figure:
+<PRE><B>OIDL</B>                             <B>IDL</B>
+
+int x, private;                  #ifdef __PRIVATE__
+                                    int x;
+VOID mymethod(), private;           VOID mymethod();
+                                 #endif
+</PRE>
+
+<P>
+To include private data and methods in the processing of an IDL file, the
+SOM compiler should be invoked with either the -P option or the -D_PRIVATE_
+option, as shown in the following command lines:
+<PRE>sc -p yourname.idl
+
+sc -d__PRIVATE__ yourname.idl
+</PRE>
+
+<P>
+Note that there are two underscore ( __ ) characters before and after the
+word PRIVATE.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Passthru statement processing has changed. Passthru
+statements should only be used to pass #include directives to the language
+binding files. In addition:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->Information can no longer be directed to the implementation
+(.C) file<!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 11 -->Most information directed to implementation Header
+(.IH) files should be moved to the implementation (.C) file<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>Forward
+<!-- entering slot 298 -->references are required in IDL. Thus, classes
+and objects must be declared before being referenced. The following figure
+shows an example to forward reference the M_Cat class:
+<PRE>interface M_Cat;
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Because IDL is strongly typed (unlike OIDL), data structures and constants
+should be declared before referencing them, in order to eliminate unnecessary
+warning messages during compilation. This is required if an interface repository
+(.IR) file is to be created from the IDL file.
+
+<P><HR>
+
+<A HREF="276_L3_ConvertingCSCFilesto.html">[Back: Converting CSC Files to IDL Files]</A> <BR>
+<A HREF="278_L1_WorkplaceShellDistri.html">[Next: Workplace Shell Distributed SOM]</A> 
+</BODY>
+</HTML>

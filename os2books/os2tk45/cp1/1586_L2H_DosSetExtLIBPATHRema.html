@@ -1,0 +1,83 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosSetExtLIBPATH - Remarks</TITLE>
+</HEAD>
+<BODY>
+<H1>DosSetExtLIBPATH - Remarks</H1><!-- entering slot 1604 -->
+<P>
+The LIBPATH string is an environment variable found in the CONFIG.SYS file
+consisting of a set of paths. If a fully-qualified path is not specified
+when a module is loaded, the system searches these paths to find the DLL.
+
+<P>
+There are two extended LIBPATH strings, BeginLIBPATH and EndLIBPATH. BeginLIBPATH
+is searched before the system LIBPATH, and EndLIBPATH is searched after
+both BeginLIBPATH and the system LIBPATH. These extended LIBPATHs can be
+set either from the command line using the "SET" command, or by calling
+DosSetExtLIBPATH. When DosSetExtLIBPATH is called, all modifications become
+specific to that process. Initial settings can be set for all processes
+in the system by setting the values in CONFIG.SYS using the "set" command.
+
+<P>
+<B>Note: </B> The extended LIBPATHs are not true environment variables,
+and do not appear when querying the environment.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Every process inherits the settings of BeginLIBPATH and EndLIBPATH from
+the process that starts it. If the extended library paths are initialized
+in CONFIG.SYS, those extended library paths become the initial settings
+for new processes. If a process changes BeginLIBPATH or EndLIBPATH and starts
+a new process, the new child process inherits the changed contents. Child
+processes that inherit their parent's extended LIBPATHs maintain their own
+copy. Modifications made by the parent after the child has been created
+have no effect on the children.
+<P>
+This function permits the use of two symbols within the path string: %BeginLIBPATH%
+and %EndLIBPATH%. These symbols are replaced with the current string settings
+for the extended library paths. For example, if BeginLIBPATH is set to
+<PRE>
+d:\MYDLLS;
+
+</PRE>
+and your application calls
+<PRE>
+DosSetExtLIBPATH("d:\TOMSDLLS;%BeginLIBPATH%;d:\JOESDLLS;", 1);
+
+</PRE>
+the resulting BeginLIBPATH is
+<PRE>
+d:\TOMSDLLS;d:\MYDLLS;d:\JOESDLLS;
+
+</PRE>
+
+<P>
+The LIBPATHs strings are only searched when the specified DLL is not currently
+loaded. The only way to guarantee that the DLL being used is the correct
+version is to set the fully-qualified path in <A HREF="721_L2_DosLoadModule.html">DosLoadModule</A>.
+When a request is made to load a module and a path is not specified, the
+system searches the paths in the LIBPATH string and uses the first instance
+of the specified DLL it finds. If the new paths are added to the search
+strings, the system does not check those directories to see if a different
+version exists. Consequently, if two processes started from different directories
+use the same DLL, but different versions of that DLL exist in both directories,
+the version of the DLL loaded by the first process is the one used by both
+processes. The only way to prevent this from occurring is to specify the
+path to the DLL when <A HREF="721_L2_DosLoadModule.html">DosLoadModule</A> is
+called.
+<P>
+Consequently, if one process sets its BeginLIBPATH to C:\PROCESS1\DLL and
+loads the DLL MYAPP.DLL from that directory, and then a second process sets
+its BeginLIBPATH to C:\PROCESS2\DLL and there is for a different version
+of MYAPP.DLL in C:\PROCESS2\DLL, the second process will link to the DLL
+from C:\PROCESS1\DLL since it was already loaded.
+<P>
+Both BeginLIBPATH and EndLIBPATH can be set from the command line using
+the SET command. For more information about setting LIBPATHS from the command
+line, see the<I> OS/2 Command Reference</I>.
+
+<P><HR>
+
+<A HREF="1585_L2H_DosSetExtLIBPATHPara.html">[Back: DosSetExtLIBPATH - Parameters]</A> <BR>
+<A HREF="1587_L2H_DosSetExtLIBPATHRela.html">[Next: DosSetExtLIBPATH - Related Functions]</A> 
+</BODY>
+</HTML>

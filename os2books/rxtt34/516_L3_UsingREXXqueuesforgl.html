@@ -1,0 +1,219 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Using REXX queues for global variables</TITLE>
+</HEAD>
+<BODY>
+<H1>Using REXX queues for global variables</H1><!-- entering slot 536 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* The following routines use REXX queues to store global variables.  */
+/*                                                                    */
+/* The routines assume you are not using a queue name "GLVname" for   */
+/* anything else (name is the variable name). It should safely handle */
+/* code that uses RXQUEUE to do other IPC since it restores the       */
+/* queue after it is done with it.                                    */
+/*                                                                    */
+/* Author: Harold Putman (see <A HREF="958_L2H_EMailaddressesP.html">EMail Addresses</A>)                        */
+/*         (with some enhancements by me)                             */
+/*                                                                    */
+
+/* ------------------------------------------------------------------ */
+/* function: Set the value of a global variable                       */
+/*           If the variable name doesn't exist it will be created.   */
+/*                                                                    */
+/* call:     rc = SetGlobalVar( name, value )                         */
+/*                                                                    */
+/* where:    name - name of the varialbe                              */
+/*           value - the new value                                    */
+/*                                                                    */
+/* returns:   1 - ok                                                  */
+/*            0 - error                                               */
+/*                                                                    */
+/* note:     SetGlobalVar uses a REXX queue to store the global       */
+/*           variable.                                                */
+/*           Please note that SetGlobalVar creates a new entry for    */
+/*           every new value. Therefore it is possible to get a       */
+/*           history list of all variable values.                     */
+/*           (see the procedure ClearGlobalVar below)                 */
+/*                                                                    */
+SetGlobalVar: PROCEDURE
+  arg name
+  parse arg ., value
+
+  name = "GLV" || name
+
+  thisRC = 0
+  if CheckQueueName( name ) = 1 then
+  do
+    thisRC = 1
+    current = rxqueue( "Set", name )
+
+    if queued() = 0 then
+    do
+      que = rxqueue( "Create", name );
+      if que &lt;&gt; name then
+      do
+        ok = rxqueue( "delete", que )
+      end /* if que &lt;&gt; name then */
+    end /* if queued() = 0 then  */
+
+    if thisRC = 1 then
+    do
+                    /* store the value                                */
+       push value
+    end /* if */
+                    /* restore the old REXX queue                     */
+    ok = rxqueue( "Set", current )
+
+  end /* if CheckQueueName( name ) = 1 then */
+
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: Get the value of a global variable                       */
+/*                                                                    */
+/* call:     rc = GetGlobalVar( name {,DeleteValue } )                */
+/*                                                                    */
+/* where:    name - name of the varialbe                              */
+/*           DeleteValue - if 1: Restore the previous value after     */
+/*                               reading the current value            */
+/*                         This parameter is optional; the default    */
+/*                         is 0.                                      */
+/*                                                                    */
+/* returns:  the value of the variable. If the global variable does   */
+/*           not exist it returns the name in all caps                */
+/*                                                                    */
+/* note:     GetGlobalVar uses a REXX queue to store the global       */
+/*           variable.                                                */
+/*                                                                    */
+GetGlobalVar: PROCEDURE
+  arg name, DeleteValue
+
+  value = name
+  name = "GLV" || name
+
+  if CheckQueueName( name ) = 1 then
+  do
+    current = rxqueue( "Set", name )
+    if queued() &lt;&gt; 0 then
+    do
+      parse pull value
+
+                    /* put it back after reading                      */
+                    /* (if deleteValue &lt;&gt; 1)                          */
+      if DeleteValue &lt;&gt; 1 then
+        push value
+    end /* else */
+
+                    /* restore the old REXX queue                     */
+    ok = rxqueue( "Set", current )
+  end /* if CheckQueueName( name ) = 1 then */
+return value
+
+/* ------------------------------------------------------------------ */
+/* function: Remove a global variable                                 */
+/*                                                                    */
+/* call:     rc = DropGlobalVar( name )                               */
+/*                                                                    */
+/* where:    name - name of the varialbe                              */
+/*                                                                    */
+/* returns:  1 - ok                                                   */
+/*           0 - error                                                */
+/*                                                                    */
+/* note:     DropGlobalVar uses a REXX queue to store the global      */
+/*           variable.                                                */
+/*           If you do not Drop a global variable its value will      */
+/*           hang around until the system reboots                     */
+/*                                                                    */
+DropGlobalVar: PROCEDURE
+  arg name
+  name = "GLV" || name
+  if CheckQueueName( name ) = 1 then
+    thisRC = ( rxqueue( "Delete", name ) = 0 )
+  else
+    thisRC = 0
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: Clear the value of a global variable                     */
+/*                                                                    */
+/* call:     rc = ClearGlobalVar( name {, getValues } )               */
+/*                                                                    */
+/* where:    name - name of the varialbe                              */
+/*           getValues - if 1: save the history of the variable       */
+/*                       values in the global stem globalVarHistory.  */
+/*                       This parameter is optional; the default is 0 */
+/*                                                                    */
+/* returns:  1 - ok                                                   */
+/*           0 - error                                                */
+/*                                                                    */
+ClearGlobalVar: PROCEDURE expose GlobalVarHistory.
+  arg name, getValues
+
+                    /* init the return code                           */
+  thisRC = 0
+
+  if getValues = 1 then
+  do
+                    /* clear the stem globalVarHistory.               */
+    globalVarHistory. = ''
+    globalVarHistory.0 = 0
+  end /* if getValues = 1 then */
+
+  name = "GLV" || name
+
+  if CheckQueueName( name ) = 1 then
+  do
+    current = rxqueue( "Set", name )
+    if queued() &lt;&gt; 0 then
+    do
+      if getValues = 1 then
+      do
+                    /* save the history of the values in the global   */
+                    /* stem globalVarHistory.                         */
+        do i=1 while queued() &lt;&gt; 0
+          parse pull globalVarHistory.i
+        end /* do i=1 while queued() &lt;&gt; 0 */
+        globalVarHistory.0 = i-1
+      end /* if getValues = 1 then */
+      else
+      do
+        do while queued() &lt;&gt; 0 ; parse pull; end;
+      end /* else */
+    end /* if queued() &lt;&gt; 0 then */
+
+    thisRC = 1
+                    /* restore the old REXX queue                     */
+    ok = rxqueue( "Set", current )
+  end /* if CheckQueueName( name ) = 1 then */
+
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: Check a queue name                                       */
+/*                                                                    */
+/* call:     rc = CheckQueueName( name )                              */
+/*                                                                    */
+/* where:    name - name of the queue                                 */
+/*                                                                    */
+/* returns:  1 if name is a valid queue name; else 0.                 */
+/*                                                                    */
+/*                                                                    */
+CheckQueueName: PROCEDURE
+return ( symbol( arg(1) ) &lt;&gt; 'BAD' )
+
+</PRE>
+
+<P>
+
+
+<P><HR>
+
+<A HREF="515_L3_Sampleforpersistentv.html">[Back: Sample for persistent variables]</A> <BR>
+<A HREF="517_L2_Sortalgorithms.html">[Next: Sort algorithms]</A> 
+</BODY>
+</HTML>

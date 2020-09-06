@@ -1,0 +1,233 @@
+<HTML>
+<HEAD>
+<TITLE>setsockopt()</TITLE>
+</HEAD>
+<BODY>
+<H1>setsockopt()</H1><!-- entering slot 76 -->
+<P>
+<B>Description</B>
+<P>
+Set a socket option.
+<PRE>#include &lt;winsock.h&gt;</PRE>
+ 
+<P>
+<B>int PASCAL FAR setsockopt ( SOCKET</B><I> s</I><B>, int</B><I> level</I><B>,
+int</B><I> optname</I><B>, const char FAR *</B><I> optval</I><B>, int</B><I> optlen</I><B>);
+</B><!-- lm: 0x2 1 -->
+<UL>
+<P>
+<I>s</I><!-- lm: 0x11 3 -->
+<UL> A descriptor identifying a socket.<!-- lm: 0x2 1 -->
+</UL><I> level
+</I><!-- lm: 0x11 3 -->
+<UL>The level at which the option is defined; the
+only supported<I> levels</I> are SOL_SOCKET and IPPROTO_TCP.<!-- lm: 0x2 1 -->
+</UL><I> optname
+</I><!-- lm: 0x11 3 -->
+<UL>The socket option for which the value is to
+be set.<!-- lm: 0x2 1 -->
+</UL><I> optval</I><!-- lm: 0x11 3 -->
+<UL> A
+pointer to the buffer in which the value for the requested option is supplied.
+<!-- lm: 0x2 1 -->
+</UL><I>optlen</I><!-- lm: 0x11 3 -->
+<UL> The size of
+the<I> optval</I> buffer.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Remarks</B>
+<P>
+<B>setsockopt()</B> sets the current value for a socket option associated
+with a socket of any type, in any state.  Although options may exist at
+multiple protocol levels, this specification only defines options that exist
+at the uppermost "socket" level.  Options affect socket operations, such
+as whether expedited data is received in the normal data stream, whether
+broadcast messages may be sent on the socket, etc. There are two types of
+socket options: Boolean options that enable or disable a feature or behavior,
+and options which require an integer value or structure. To enable a Boolean
+option,<I> optval</I> points to a nonzero integer.  To disable the option
+<I>optval</I> points to an integer equal to zero.<I> optlen</I> should be
+equal to sizeof(int) for Boolean options.  For other options,<I> optval
+</I>points to the an integer or structure that contains the desired value
+for the option, and<I> optlen</I> is the length of the integer or structure.
+
+<P>
+SO_LINGER controls the action taken when unsent data is queued on a socket
+and a <A HREF="049_L3_closesocket.html">closesocket()</A> is performed.
+ See <A HREF="049_L3_closesocket.html">closesocket()</A> for a description
+of the way in which the SO_LINGER settings affect the semantics of <A HREF="049_L3_closesocket.html">closesocket()</A>.
+The application sets the desired behavior by creating a<I> struct linger
+</I>(pointed to by the<I> optval</I> argument) with the following elements:
+
+<P>
+
+<PRE>struct linger {        int     l_onoff;
+        int     l_linger;
+}
+</PRE>
+
+<P>
+To enable SO_LINGER, the application should set<I> l_onoff</I> to a non-zero
+value, set<I> l_linger</I> to 0 or the desired timeout (in seconds), and
+call<B> setsockopt()</B>.  To enable SO_DONTLINGER (i.e. disable SO_LINGER)
+<I>l_onoff</I> should be set to zero and<B> setsockopt()</B> should be called.
+
+<P>
+By default, a socket may not be bound (see <A HREF="048_L3_bind.html">bind()</A>)
+to a local address which is already in use.  On occasions, however, it may
+be desirable to "re-use" an address in this way.  Since every connection
+is uniquely identified by the combination of local and remote addresses,
+there is no problem with having two sockets bound to the same local address
+as long as the remote addresses are different.  To inform the Windows Sockets
+implementation that a <A HREF="048_L3_bind.html">bind()</A> on a socket
+should not be disallowed because the desired address is already in use by
+another socket, the application should set the SO_REUSEADDR socket option
+for the socket before issuing the <A HREF="048_L3_bind.html">bind()</A>.
+Note that the option is interpreted only at the time of the <A HREF="048_L3_bind.html">bind()</A>:
+it is therefore unnecessary (but harmless) to set the option on a socket
+which is not to be bound to an existing address, and setting or resetting
+the option after the <A HREF="048_L3_bind.html">bind()</A> has no effect
+on this or any other socket..
+<P>
+An application may request that the Windows Sockets implementation enable
+the use of "keep-alive" packets on TCP connections by turning on the SO_KEEPALIVE
+socket option.  A Windows Sockets implementation need not support the use
+of keep-alives: if it does, the precise semantics are implementation-specific
+but should conform to section 4.2.3.6 of RFC 1122:<I> Requirements for Internet
+Hosts -- Communication Layers</I>. <!-- entering slot 77 --> If a connection
+is dropped as the result of "keep-alives" the error code WSAENETRESET is
+returned to any calls in progress on the socket, and any subsequent calls
+will fail with WSAENOTCONN.
+<P>
+The TCP_NODELAY option disables the Nagle algorithm.  The Nagle algorithm
+is used to reduce the number of small packets sent by a host by buffering
+unacknowledged send data until a full-size packet can be sent.  However,
+for some applications this algorithm can impede performance, and TCP_NODELAY
+may be used to turn it off.  Application writers should not set TCP_NODELAY
+unless the impact of doing so is well-understood and desired, since setting
+TCP_NODELAY can have a significant negative impact of network performance.
+ TCP_NODELAY is the only supported socket option which uses<I> level</I> IPPROTO_TCP;
+all other options use level SOL_SOCKET.
+<P>
+Windows Sockets suppliers are encouraged (but not required) to supply output
+debug information if the SO_DEBUG option is set by an application.  The
+mechanism for generating the debug information and the form it takes are
+beyond the scope of this specification. The following options are supported
+for<B> setsockopt()</B>.  The Type identifies the type of data addressed
+by<I> optval</I>.
+<PRE><B>Value             Type            Meaning</B>
+--------------- --------------- -----------------------------------------------
+SO_BROADCAST    BOOL            Allow transmission of broadcast messages on the
+                                socket.
+
+SO_DEBUG        BOOL            Record debugging information.
+
+SO_DONTLINGER   BOOL            Don't block close waiting for unsent data to be
+                                sent.  Setting this option is equivalent to
+                                setting SO_LINGER with <I>l_onoff</I> set to
+                                zero.
+
+SO_DONTROUTE    BOOL            Don't route: send directly to interface.
+
+SO_KEEPALIVE    BOOL            Send keepalives
+
+SO_LINGER       struct linger   Linger on close if unsent data is present
+                FAR *
+
+SO_OOBINLINE    BOOL            Receive out-of-band data in the normal data
+                                stream.
+
+SO_RCVBUF       int             Specify buffer size for receives
+
+SO_REUSEADDR    BOOL            Allow the socket to be bound to an address
+                                which is already in use.  (See <A HREF="048_L3_bind.html">bind()</A>.)
+
+SO_SNDBUF       int             Specify buffer size for sends
+
+TCP_NODELAY     BOOL            Disables the Nagle algorithm for send
+                                coalascing.
+</PRE>
+
+<P>
+BSD options not supported for<B> setsockopt()</B> are:
+<P>
+
+<PRE><B>Value             Type            Meaning</B>
+--------------- --------------- -----------------------------------------------
+SO_ACCEPTCON    BOOL            Socket is listening
+
+SO_ERROR        int             Get error status and clear
+
+SO_RCVLOWAT     int             Receive low water mark
+
+SO_RCVTIMEO     int             Receive timeout
+
+SO_SNDLOWAT     int             Send low water mark
+
+SO_SNDTIMEO     int             Send timeout
+
+SO_TYPE         int             Type of the socket
+
+IP_OPTIONS                      Set options field in IP header.
+</PRE>
+
+<P>
+<B>Return Value</B>
+<P>
+If no error occurs,<B> setsockopt()</B> returns 0. Otherwise, a value of
+SOCKET_ERROR is returned, and a specific error code may be retrieved by
+calling <A HREF="089_L3_WSAGetLastError.html">WSAGetLastError()</A>.
+<P>
+<B>Error Codes</B>
+<P>
+<!-- lm: 0x2 1 -->
+<P>
+WSANOTINITIALISED<!-- lm: 0x11 11 -->
+<UL> A successful <A HREF="093_L3_WSAStartup.html">WSAStartup()
+</A>must occur before using this API.<!-- lm: 0x2 1 -->
+</UL><!-- entering slot 78 --> WSAENETDOWN
+<!-- lm: 0x11 11 -->
+<UL>The Windows Sockets implementation has detected
+that the network subsystem has failed.<!-- lm: 0x2 1 -->
+</UL> WSAEFAULT
+<!-- lm: 0x11 11 -->
+<UL><I>optval</I> is not in a valid part of the process
+address  space.<!-- lm: 0x2 1 -->
+</UL> WSAEINPROGRESS<!-- lm: 0x11 11 -->
+<UL> A
+blocking Windows Sockets operation is in progress.<!-- lm: 0x2 1 -->
+</UL> WSAEINVAL
+<!-- lm: 0x11 11 -->
+<UL><I>level</I> is not valid, or the information in
+optval is not valid.<!-- lm: 0x2 1 -->
+</UL> WSAENETRESET<!-- lm: 0x11 11 -->
+<UL> Connection
+has timed out when SO_KEEPALIVE is set.<!-- lm: 0x2 1 -->
+</UL> WSAENOPROTOOPT
+<!-- lm: 0x11 11 -->
+<UL>The option is unknown or unsupported.  In particular,
+SO_BROADCAST is not supported on sockets of type SOCK_STREAM, while SO_DONTLINGER,
+SO_KEEPALIVE, SO_LINGER and SO_OOBINLINE are not supported on sockets of
+type SOCK_DGRAM.<!-- lm: 0x2 1 -->
+</UL> WSAENOTCONN<!-- lm: 0x11 11 -->
+<UL> Connection
+has been reset when SO_KEEPALIVE is set.<!-- lm: 0x2 1 -->
+</UL> WSAENOTSOCK
+<!-- lm: 0x11 11 -->
+<UL>The descriptor is not a socket.<!-- lm: 0x2 1 -->
+</UL> 
+<P>
+<B>See Also</B>
+<P>
+<A HREF="048_L3_bind.html">bind()</A><B>,</B> <A HREF="053_L3_getsockopt.html">getsockopt()</A><B>,
+</B><A HREF="058_L3_ioctlsocket.html">ioctlsocket()</A><B>,</B> <A HREF="069_L3_socket.html">socket()</A><B>,
+</B><A HREF="085_L3_WSAAsyncSelect.html">WSAAsyncSelect()</A>
+<P>
+
+
+<P><HR>
+
+<A HREF="066_L3_sendto.html">[Back: sendto()]</A> <BR>
+<A HREF="068_L3_shutdown.html">[Next: shutdown()]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,337 @@
+<HTML>
+<HEAD>
+<TITLE>sysctl()</TITLE>
+</HEAD>
+<BODY>
+<H1>sysctl()</H1><!-- entering slot 240 -->
+<P>
+The sysctl() call performs special operations on the TCP/IP stack. Unlike
+<A HREF="186_L2_getsockopt.html">getsockopt()</A> or <A HREF="202_L2_setsockopt.html">setsockopt()</A>,
+sysctl() accesses and modifies systemwide parameter values for the entire
+TCP/IP stack.
+<P>
+<B>Syntax</B>
+<PRE>#include &lt;types.h&gt;
+#include &lt;netinet\in.h&gt;
+#include &lt;netinet\ip_var.h&gt;
+#include &lt;sys\socket.h&gt;
+#include &lt;sys\sysctl.h&gt;
+int sysctl(<I>mib</I>, <I>namelen</I>, <I>oldp</I>, <I>oldenp</I>, <I>newp</I>, <I>newlen</I>)
+int *<I>mib</I>;
+u_int <I>namelen</I>;
+void *<I>oldp</I>;
+size_t <I>newlen</I>;
+size_t *<I>oldlenp</I>;
+void   *<I>newp</I>;
+
+</PRE>
+
+<P>
+<B>Parameters</B><!-- lm: 0x2 0 -->
+<P>
+<I>mib</I><!-- lm: 0x11 2 -->
+<UL> Array of integers consisting of command,
+protocol, and control functions.<!-- lm: 0x2 0 -->
+</UL><I> namelen</I><!-- lm: 0x11 2 -->
+<UL> Length
+of<I> mib</I> array.<!-- lm: 0x2 0 -->
+</UL><I> oldp</I><!-- lm: 0x11 2 -->
+<UL> Data
+pointer or xxx_ctl structure pointer pointing to data to be sent.<!-- lm: 0x2 0 -->
+</UL><I> oldenp
+</I><!-- lm: 0x11 2 -->
+<UL>Pointer to length of<I> oldp</I>.<!-- lm: 0x2 0 -->
+</UL><I> newp
+</I><!-- lm: 0x11 2 -->
+<UL>Data pointer or xxx_ctl structure pointer pointing
+to location where data is to be received.<!-- lm: 0x2 0 -->
+</UL><I> newlen
+</I><!-- lm: 0x11 2 -->
+<UL>Length of<I> newp</I>.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>Description</B>
+<P>
+The sysctl() call is functionally similar to the ioctl() call but does not
+need a socket to carry the options to and from the stack.
+<P>
+The sysctl() function retrieves stack parameters and allows them to be set.
+The information available from sysctl() consists of integers, strings, and
+tables. Unless explicitly noted below, sysctl() returns a consistent snapshot
+of the data requested. Consistency is achieved by locking the destination
+buffer into memory so that the data may be copied without blocking.
+<P>
+Calls to sysctl() are serialized to avoid deadlock. The state is described
+using a Management Information Base (MIB) style name, listed below, which
+is a<I> namelen</I> length array of integers. The information is copied
+into the buffer specified by<I> oldp</I>. The size of the buffer is given
+by the location specified by<I> oldlenp</I> before the call, and that location
+gives the amount of data copied after a successful call. If the amount of
+data available is greater than the size of the buffer supplied, the call
+supplies as much data as fits in the buffer provided and returns with the
+error code SOCENOMEM.
+<P>
+If the old value is not desired,<I> oldp</I> and<I> oldlenp</I> should be
+set to NULL. The size of the available data can be determined by calling
+sysctl() with a NULL parameter for<I> oldp</I>.
+<P>
+The size of the available data will be returned in the location pointed
+to by<I> oldenp</I>. For some operations, the amount of space may change
+often. For these operations, the system attempts to round up so that the
+returned size is large enough for a call to return the data shortly thereafter.
+
+<P>
+To set a new value,<I> newp</I> is set to point to a buffer of length<I> newlen
+</I>from which the requested value is to be taken. If a new value is not
+to be set,<I> newp</I> should be set to NULL and<I> newlen</I> set to 0.
+
+<P>
+An Inetcfg sysctl needs a fifth mib argument, mib[4], to specify the actual
+inet configuration command.
+<P>
+All route sysctl() calls use another additional argument to be carried in
+mib[5] for rt_flags.   The old<I> newp</I> may be pointing to a single integer
+or char buffer. Also, there are two special control structures (inetver_ctl
+and intecfg_ctl) used as<I> oldp</I>/<I>newp</I> structures. Similarly,
+for statistics the xxxstat structures should be used.
+<P>
+An application uses the OS2_MEMMAPIO sysctl() call to request the TCP/IP
+stack to provide kernel memory for performing High Performance Send (HPS).
+<!-- entering slot 241 -->One such call can return up to 60K (as 15 4K buffers)
+of memory. The calling application provides an array named<I> oldp</I> of
+up to 15 pointers (to char). On return from this call, these pointers point
+to the 4K buffers. The memory acquired in this way is now owned by the application,
+and it resides in the address space of this application. As a result, the
+application is now responsible for the management of this memory from a
+reusability point of view. Applications can use either semaphores or the
+OS2_QUERY_MEMMAPIO sysctl() call for this purpose. Typically, before calling
+the next high performance send (which may use one of these buffers), the
+application needs to verify that the buffers are free to be reused. Sysctl()
+supports a maximum of 64 such calls. Thus, the kernel can provide up to
+64 times 60K of high speed send memory to an application. An ENOMEM error
+code is returned to any sysctl() call beyond this limit. A sample of usage
+of this call for supporting HPS is contained in <A HREF="053_L2_HighPerformanceSend.html">High
+Performance Send</A>.
+<P>
+An application uses the OS2_QUERY_MEMMAPIO sysctl() call to verify the reusability
+of the buffers provided by the kernel through the OS2_MEMMAPIO sysctl()
+call. This call sends the<I> oldp</I> array of pointers which were filled
+in by the kernel during the OS2_MEMMAPIO sysctl() call.<I> oldenp</I> is
+used to pass the number of 4K buffers referred to in the<I> oldp</I> array.
+If a particular pointer in the<I> oldp</I> array is left unchanged on return
+from this call, that buffer has been freed for reuse. Conversely, if a particular
+pointer in this array is returned as NULL, this buffer is not yet freed
+and may not be reused. It is the responsibility of the application to make
+these checks. Alternatively, an application may use semaphores to manage
+the reusability of these buffers. The<I> oldp</I> array can be passed with
+any number of HPS buffers in a single call and this number of buffers (<I>oldenp</I>)
+need not be an integer multiple of 15. The HPS buffers in<I> oldp</I> need
+not be arranged in the same order in which they were obtained. Applications
+should save a copy of the obtained HPS buffer pointers before calling OS2_QUERY_MEMMAPIO,
+so that the pointers are not lost if the buffers are not available.
+<P>
+<B>Values</B>
+<P>
+The values that are supported for different categories of mib values are
+listed in the following tables.
+<P>
+The generic mib array has the following structure
+<P>
+
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³mib Index        Description                                      ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³0                Top Level identifier                             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³1                Protocol Family                                  ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³2                Protocol                                         ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³3                Address Family or Control Command                ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³4                Control Command                                  ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³5                Flags, etc.                                      ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+The mib[0] Top Level values are:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Value                            Description                     ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³CTL_KERN                         Sockets (kernel) domain.        ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³CTL_NET                          Routing domain.                 ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³CTL_OS2                          Local Interprocess Communication³
+³                                 (afos2) domain.                 ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+The mib[1] Protocol Family values are:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Value                            Description                     ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³PF_INET                          Internet protocol family.       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³PF_OS2                           LIPC (afos2) protocol family.   ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³PF_ROUTE                         Route protocol family.          ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³KERN_HOSTID                                                      ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+The mib[2] Protocols values are:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Value                            Description                     ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³IPPROTO_IP                       Internet Protocol.              ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³IPPROTO_TCP                      Transmission Control Protocol.  ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³IPPROTO_UDP                      User Datagram Protocol.         ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+The mib[3] Control Command values for inetcfg are:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Value                            Description                     ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³IPCTL_INETCFG                    IP inet configuration.          ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³<!-- entering slot 242 -->TCPCTL_INETCFG                   TCP inet configuration.         ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³UDPCTL_INETCFG                   UDP inet configuration.         ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³LIPCCTL_INETCFG                  LIPC inet configuration.        ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+The following table is an overview of the sysctl() calls structure, with
+links to the descriptions of the mib values. The table is the calling tree
+to get to individual leaves, which are the supported mib values. You read
+the table by looking on the right-hand side for the leaf for the value you
+are seeking, then taking the link to the table that defines that value and
+describes the function of the value. For example, the first leaf, KERNCTL_INETVER,
+will get you to the table for mib[0]=CTL_KERN, mib[1]=KERN_HOSTID, and mib[2]=IPPROTO_IP.
+
+<PRE>       mib numbers
+[0] [1] [2] [3] [4] [5]
+CTL_KERN
+....KERN_HOSTID
+........IPPROTO_IP
+............<A HREF="209_L3_mibsforINETVersionso.html">KERNCTL_INETVER</A> on page <A HREF="209_L3_mibsforINETVersionso.html">mibs for INET Version (sockets.sys)</A>.
+CTL_OS2
+....PF_OS2
+........IPPROTO_IP
+............<A HREF="210_L3_mibsforINETVersionaf.html">LIPCCTL_INETVER</A> on page <A HREF="210_L3_mibsforINETVersionaf.html">mibs for INET Version (afos2.sys)</A>.
+............LIPCCTL_INETCFG
+................<A HREF="211_L3_mibsforafos2inetconf.html">LIPCCTL_DG_RECVSPACE</A> on page <A HREF="211_L3_mibsforafos2inetconf.html">mibs for afos2 inetconfig</A>.
+................<A HREF="211_L3_mibsforafos2inetconf.html">LIPCCTL_DG_SENDSPACE</A> on page <A HREF="211_L3_mibsforafos2inetconf.html">mibs for afos2 inetconfig</A>.
+................<A HREF="211_L3_mibsforafos2inetconf.html">LIPCCTL_ST_RECVSPACE</A> on page <A HREF="211_L3_mibsforafos2inetconf.html">mibs for afos2 inetconfig</A>.
+................<A HREF="211_L3_mibsforafos2inetconf.html">LIPCCTL_ST_SENDSPACE</A> on page <A HREF="211_L3_mibsforafos2inetconf.html">mibs for afos2 inetconfig</A>.
+....PF_INET
+........IPPROTO_IP
+............<A HREF="212_L3_mibsforHighPerforman.html">OS2_MEMMAPIO</A> on page <A HREF="212_L3_mibsforHighPerforman.html">mibs for High Performance Memory</A>.
+............<A HREF="212_L3_mibsforHighPerforman.html">OS2_QUERY_MEMMAPIO</A> on page <A HREF="212_L3_mibsforHighPerforman.html">mibs for High Performance Memory</A>.
+CTL_NET
+....PF_INET
+........IPPROTO_TCP
+............TCPCTL_INETCFG
+................<A HREF="213_L3_mibsforTCPCTLinetcon.html">TCPCTL_CC</A> on page <A HREF="213_L3_mibsforTCPCTLinetcon.html">mibs for TCPCTL inetconfig</A>.
+................<A HREF="213_L3_mibsforTCPCTLinetcon.html">TCPCTL_KEEPCNT</A> on page <A HREF="213_L3_mibsforTCPCTLinetcon.html">mibs for TCPCTL inetconfig</A>.
+................<A HREF="213_L3_mibsforTCPCTLinetcon.html">TCPCTL_LINGERTIME</A> on page <A HREF="213_L3_mibsforTCPCTLinetcon.html">mibs for TCPCTL inetconfig</A>.
+................<A HREF="213_L3_mibsforTCPCTLinetcon.html">TCPCTL_MSL</A> on page <A HREF="213_L3_mibsforTCPCTLinetcon.html">mibs for TCPCTL inetconfig</A>.
+................<A HREF="213_L3_mibsforTCPCTLinetcon.html">TCPCTL_MTU</A> on page <A HREF="213_L3_mibsforTCPCTLinetcon.html">mibs for TCPCTL inetconfig</A>.
+................<A HREF="213_L3_mibsforTCPCTLinetcon.html">TCPCTL_REALSLOW</A> on page <A HREF="213_L3_mibsforTCPCTLinetcon.html">mibs for TCPCTL inetconfig</A>.
+................<A HREF="213_L3_mibsforTCPCTLinetcon.html">TCPCTL_TCPRWIN</A> on page <A HREF="213_L3_mibsforTCPCTLinetcon.html">mibs for TCPCTL inetconfig</A>.
+................<A HREF="213_L3_mibsforTCPCTLinetcon.html">TCPCTL_TCPSWIN</A> on page <A HREF="213_L3_mibsforTCPCTLinetcon.html">mibs for TCPCTL inetconfig</A>.
+................<A HREF="213_L3_mibsforTCPCTLinetcon.html">TCPCTL_TIMESTMP</A> on page <A HREF="213_L3_mibsforTCPCTLinetcon.html">mibs for TCPCTL inetconfig</A>.
+................<A HREF="213_L3_mibsforTCPCTLinetcon.html">TCPCTL_TTL</A> on page <A HREF="213_L3_mibsforTCPCTLinetcon.html">mibs for TCPCTL inetconfig</A>.
+................<A HREF="213_L3_mibsforTCPCTLinetcon.html">TCPCTL_WINSCALE</A> on page <A HREF="213_L3_mibsforTCPCTLinetcon.html">mibs for TCPCTL inetconfig</A>.
+............<A HREF="214_L3_mibsforTCPCTL.html">TCPCTL_MSSDFLT</A> on page <A HREF="214_L3_mibsforTCPCTL.html">mibs for TCPCTL</A>.
+............<A HREF="214_L3_mibsforTCPCTL.html">TCPCTL_RTTDFLT</A> on page <A HREF="214_L3_mibsforTCPCTL.html">mibs for TCPCTL</A>.
+............<A HREF="214_L3_mibsforTCPCTL.html">TCPCTL_STATS</A> on page <A HREF="214_L3_mibsforTCPCTL.html">mibs for TCPCTL</A>.
+........IPPROTO_UDP
+............UDPCTL_INETCFG
+................<A HREF="215_L3_mibsforUDPCTLinetcon.html">UDPCTL_TTL</A> on page <A HREF="215_L3_mibsforUDPCTLinetcon.html">mibs for UDPCTL inetconfig</A>.
+................<A HREF="215_L3_mibsforUDPCTLinetcon.html">UDPCTL_UDPRWIN</A> on page <A HREF="215_L3_mibsforUDPCTLinetcon.html">mibs for UDPCTL inetconfig</A>.
+................<A HREF="215_L3_mibsforUDPCTLinetcon.html">UDPCTL_UDPSWIN</A> on page <A HREF="215_L3_mibsforUDPCTLinetcon.html">mibs for UDPCTL inetconfig</A>.
+............<A HREF="216_L3_mibsforUDPCTL.html">UDPCTL_CHECKSUM</A> on page <A HREF="216_L3_mibsforUDPCTL.html">mibs for UDPCTL</A>.
+............<A HREF="216_L3_mibsforUDPCTL.html">UDPCTL_STATS</A> on page <A HREF="216_L3_mibsforUDPCTL.html">mibs for UDPCTL</A>.
+........IPPROTO_IP
+............<A HREF="217_L3_mibsforIPCTL.html">IPCTL_INETVER</A> on page <A HREF="217_L3_mibsforIPCTL.html">mibs for IPCTL</A>.
+............<A HREF="217_L3_mibsforIPCTL.html">IPCTL_FORWARDING</A> on page <A HREF="217_L3_mibsforIPCTL.html">mibs for IPCTL</A>.
+............<A HREF="217_L3_mibsforIPCTL.html">IPCTL_SENDREDIRECTS</A> on page <A HREF="217_L3_mibsforIPCTL.html">mibs for IPCTL</A>.
+............IPCTL_INETCFG
+................<A HREF="218_L3_mibsforIPCTLinetconf.html">FRAGCTL_TTL</A> on page <A HREF="218_L3_mibsforIPCTLinetconf.html">mibs for IPCTL inetconfig</A>.
+................<A HREF="218_L3_mibsforIPCTLinetconf.html">ICMPCTL_TTL</A> on page <A HREF="218_L3_mibsforIPCTLinetconf.html">mibs for IPCTL inetconfig</A>.
+................<A HREF="218_L3_mibsforIPCTLinetconf.html">IPCTL_ARPTKILLC</A> on page <A HREF="218_L3_mibsforIPCTLinetconf.html">mibs for IPCTL inetconfig</A>.
+................<A HREF="218_L3_mibsforIPCTLinetconf.html">IPCTL_ARPTKILLI</A> on page <A HREF="218_L3_mibsforIPCTLinetconf.html">mibs for IPCTL inetconfig</A>.
+................<A HREF="218_L3_mibsforIPCTLinetconf.html">IPCTL_FIREWALL</A> on page <A HREF="218_L3_mibsforIPCTLinetconf.html">mibs for IPCTL inetconfig</A>.
+................<A HREF="218_L3_mibsforIPCTLinetconf.html">IPCTL_FORWARD</A> on page <A HREF="218_L3_mibsforIPCTLinetconf.html">mibs for IPCTL inetconfig</A>.
+................<A HREF="218_L3_mibsforIPCTLinetconf.html">IPCTL_MULTIDEFROUTES</A> on page <A HREF="218_L3_mibsforIPCTLinetconf.html">mibs for IPCTL inetconfig</A>.
+................<A HREF="218_L3_mibsforIPCTLinetconf.html">IPCTL_SYNATTACK</A> on page <A HREF="218_L3_mibsforIPCTLinetconf.html">mibs for IPCTL inetconfig</A>.
+........IPPROTO_ICMP
+............<A HREF="219_L3_mibsforICMPCTL.html">ICMPCTL_ECHOREPL</A> on page <A HREF="219_L3_mibsforICMPCTL.html">mibs for ICMPCTL</A>.
+............<A HREF="219_L3_mibsforICMPCTL.html">ICMPCTL_MASKREPL</A> on page <A HREF="219_L3_mibsforICMPCTL.html">mibs for ICMPCTL</A>.
+............<A HREF="219_L3_mibsforICMPCTL.html">ICMPCTL_STATS</A> on page <A HREF="219_L3_mibsforICMPCTL.html">mibs for ICMPCTL</A>.
+....PF_ROUTE
+........0 (wildcard)
+............0 (wildcard)
+................<A HREF="220_L3_mibsforROUTE.html">NET_RT_DUMP</A> on page <A HREF="220_L3_mibsforROUTE.html">mibs for ROUTE</A>.
+....................<A HREF="221_L3_mibsforROUTEwithFlag.html">NET_RT_LLINFO</A> on page <A HREF="221_L3_mibsforROUTEwithFlag.html">mibs for ROUTE with Flags</A>.
+................<A HREF="220_L3_mibsforROUTE.html">NET_RT_FLAGS</A> on page <A HREF="220_L3_mibsforROUTE.html">mibs for ROUTE</A>.
+................<A HREF="220_L3_mibsforROUTE.html">NET_RT_IFLIST</A> on page <A HREF="220_L3_mibsforROUTE.html">mibs for ROUTE</A>.
+[0] [1] [2] [3] [4] [5]
+       mib numbers
+
+</PRE>
+
+<P>
+<B>Return Values</B>
+<P>
+The requested values are returned in the<I> newp</I> parameter. The sysctl()
+call itself returns the number of bytes copied, if the call is successful.
+Otherwise, -1 is returned and the errno value is set appropriately.<!-- lm: 0x2 0 -->
+<P>
+<B>Error Code</B><!-- lm: 0x2 25 -->
+<UL><B>Description</B><!-- lm: 0x2 0 -->
+</UL>SOCENOPROTOOPT<!-- lm: 0x12 25 -->
+<UL>Theprotocolspecifiedinmib [
+1 ]isnotvalid .<!-- lm: 0x2 0 -->
+</UL>SOCENOTDIR<!-- lm: 0x12 25 -->
+<UL>Thelengthspecifiedin<I>namelen</I>isnotvalid
+.<!-- lm: 0x2 0 -->
+</UL>SOCEOPNOTSUPP<!-- lm: 0x12 25 -->
+<UL>Theoptionspecifiedinmib [ 3 ]isnotsupported
+.<!-- lm: 0x2 0 -->
+</UL>SOCEINVAL<!-- lm: 0x12 25 -->
+<UL>Insufficientmibparametersweresupplied
+.<!-- lm: 0x2 0 -->
+</UL>SOCENOMEM<!-- lm: 0x12 25 -->
+<UL>Memoryallocationfailed .ThiserrorvalueisreturnedbyHighPerformanceSend(
+HPS )sysctl( OS2 _ MEMMAPIO ) .<!-- lm: 0x2 0 -->
+</UL>SOCEPERM<!-- lm: 0x12 25 -->
+<UL>Thisparametercannotbeset ,itcanonlyberetrieved
+.Therefore ,<I>newp</I>mustbesettoNULL .<!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>Related Calls</B><!-- lm: 0x2 5 -->
+<UL>
+<P>
+<A HREF="187_L2_ioctl.html">ioctl()</A><!-- lm: 0x2 5 --> <A HREF="189_L2_os2_ioctl.html">os2_ioctl()
+</A><!-- lm: 0x2 0 -->
+</UL>
+
+<P><HR>
+
+<A HREF="207_L2_soclose.html">[Back: soclose()]</A> <BR>
+<A HREF="209_L3_mibsforINETVersionso.html">[Next: mibs for INET Version (sockets.sys)]</A> 
+</BODY>
+</HTML>

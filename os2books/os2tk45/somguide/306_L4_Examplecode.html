@@ -1,0 +1,80 @@
+<HTML>
+<HEAD>
+<TITLE>Example code</TITLE>
+</HEAD>
+<BODY>
+<H1>Example code</H1><!-- entering slot 349 -->
+<P>
+Following is an incomplete example showing how to use the DII to invoke
+a request having the method procedure prototype shown here:
+<PRE>
+string _testMethod( testObject              obj,
+                    Environment             *ev,
+                    long                    input_value,
+);
+</PRE>
+
+<PRE>main()
+{
+   ORBStatus rc;
+   Environment ev;
+   SOMDObject obj;
+   NVList arglist;
+   NamedValue result;
+   Context ctx;
+   Request reqObj;
+   OperationDef opdef;
+   Description desc;
+   OperationDescription opdesc;
+   static long input_value = 999;
+
+   SOM_InitEnvironment(&amp;ev);
+   SOMD_Init(&amp;ev);
+
+/* create the argument list */
+/* get the operation description from the interface repository */
+   opdef = _lookup_id(SOM_InterfaceRepository, *ev,
+                  "testObject::testMethod");
+   desc = _describe(opdef, &amp;ev);
+   opdesc = (OperationDescription *) desc.value._value;
+
+/* fill in the TypeCode field for the result */
+   result.argument._type = opdesc-&gt;result;
+
+/* Initialize the argument list */
+   rc = _create_operation_list(SOMD_ORBObject, &amp;ev, opdef,
+                               &amp;arglist);
+
+/* get default context */
+   rc = _get_default_context(SOMD_ORBObject, &amp;ev, &amp;ctx);
+
+/* put value and length into the NVList */
+   _get_item(arglist, &amp;ev, 0, &amp;name, &amp;tc, &amp;dummy, &amp;dummylen,
+             &amp;flags);
+
+   _set_item(arglist, &amp;ev, 0, name, tc, &amp;input_value,
+             sizeof(input_value),flags);
+    ...
+/* create the request - assume the object reference came from
+   somewhere -- from a file or returned by a previous request*/
+   rc = _create_request(obj, &amp;ev, ctx,
+                        "testMethod", arglist, &amp;result, &amp;reqObj,
+                        (Flags)0);
+</PRE>
+
+<PRE>/* invoke request */
+   rc = invoke(reqObj, &amp;ev, (Flags)0);
+
+/* print result */
+   printf("result: %s\n",*(string*)(result.argument._value));
+   return(0);
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="305_L4_InitiatingaRequest.html">[Back: Initiating a Request]</A> <BR>
+<A HREF="307_L3_Creatingusersupplied.html">[Next: Creating user-supplied proxies]</A> 
+</BODY>
+</HTML>

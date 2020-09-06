@@ -1,0 +1,219 @@
+<HTML>
+<HEAD>
+<TITLE>Specific header</TITLE>
+</HEAD>
+<BODY>
+<H1>Specific header</H1><!-- entering slot 83 -->
+<PRE>
+/*
+ * Miscellaneous
+ */
+
+#define VERSION   0x00000010
+
+#define _64K      (64 * 1024)
+
+#define BIOS_SEG             0xF000
+#define ALR_STRING_OFFSET   0xEC47
+
+#define P2_AVAILABLE         0x00008000
+
+
+/*
+ * PLMA structure
+ */
+
+typedef struct plma_s {
+   ulong_t procnum;       /* Current processor number (0-based) */
+   ulong_t controlport;   /* Control port for current processor */
+} PLMA;
+
+
+/*
+ * Generate delay between I/O instructions
+ */
+
+#define IODelay {int i; for(i = 0; i &lt; IODelayCount; i++); }
+
+
+/*
+ * IPI info
+ */
+
+#define IPI_IRQ     0x0d      /* IRQ level for IPI */
+#define IPI_VECTOR  0x75      /* Vector number for IPI */
+
+
+/*
+ * PIC Info
+ */
+
+#define NUM_IRQ_PER_PIC         0x08
+#define OCW2_NON_SPECIFIC_EOI   0x20
+#define PIC1_PORT0              0x20
+#define PIC1_PORT1              0x21
+#define PIC2_PORT0              0xA0
+#define PIC2_PORT1              0xA1
+
+
+/*
+ * The contents of the WHO_AM_I port (read-only) can be used
+ * by code to determine which processor we are currently on
+ */
+
+#define WHO_AM_I_PORT  0xC70
+#define P1             0x00
+#define P2             0xF0
+
+
+/*
+ * The processor control port contains the bits used to control
+ * various functions of the associated processor
+ */
+
+#define P1_PROCESSOR_CONTROL_PORT  0x0C6A
+#define P2_PROCESSOR_CONTROL_PORT  0xFC6A
+
+struct _b_control_s {
+   ulong_t _reset:1,      /* RESET - (Not implemented for P1) */
+                          /*  1 = Resets processor */
+
+           _387pres:1,    /* 387PRES - (Read only) */
+                          /*  0 = 80387 is not installed */
+                          /*  1 = 80387 is installed */
+
+           _cacheon:1,    /* CACHEON - (Not implemented for P1) */
+                          /*  0 = Disables cache */
+                          /*  1 = Enables cache */
+
+           _mbusaccess:1, /* M Bus Access (Not implemented for P1) */
+                          /*  0 = Allows the processor to gain */
+                          /*      control of the memory bus */
+                          /*  1 = Prohibits the processor from gaining */
+                          /*      access to the memory bus. The */
+                          /*      processor can execute instructions */
+                          /*      from its cache; however, cache read */
+                          /*      misses, I/O, and writes cause the */
+                          /*      processor to cease executing */
+                          /*      instructions until the bit becomes */
+                          /*      a "0" */
+
+           _flush:1,      /* FLUSH */
+                          /*  Writing a "1" to this bit followed by a "0" */
+                          /*  causes invalidation of all cache address */
+                          /*  information */
+
+           _387err:1,     /* 387ERR */
+                          /*  0 = No 80387 error */
+                          /*  0 = An 80387 error has occurred. This bit */
+                          /*      must be cleared by software */
+
+           _pint:1,       /* PINT */
+                          /*  A low-to-high transition of this bit causes */
+                          /*  an interrupt. This bit must be cleared by  */
+                          /*  software, preferably by the interrupt service */
+                          /*  routine. On P2, the value stored in FC68h */
+                          /*  contains the interrupt number. P1 is always */
+                          /*  interrupted with IRQ13 */
+
+           _intdis:1,     /* INTDIS */
+                          /*  When set to "1", this bit disables interrupts */
+                          /*  sent to the processor by way of the PINT bit. */
+                          /*  The PINT bit can still be changed when */
+                          /*  interrupts are disabled; however, the */
+                          /*  low-to-high transition is not seen by the */
+                          /*  processor until the INTDIS bit is made inactive */
+           _pad:24;
+};
+
+struct _l_control_s {     /* to treat control as an unsigned long */
+    unsigned long _long;
+};
+
+union _control_u {
+    struct _b_control_s b_control_s;
+    struct _l_control_s l_control_s;
+};
+
+struct control_s {
+    union _control_u control_u;
+};
+
+#define b_reset       control_u.b_control_s._reset
+#define b_387pres     control_u.b_control_s._387pres
+#define b_cacheon     control_u.b_control_s._cacheon
+#define b_mbusaccess  control_u.b_control_s._mbusaccess
+#define b_flush       control_u.b_control_s._flush
+#define b_387err      control_u.b_control_s._387err
+#define b_pint        control_u.b_control_s._pint
+#define b_intdis      control_u.b_control_s._intdis
+#define b_all         control_u.l_control_s._long
+
+
+/*
+ * The interrupt vector control port contains the 8-bit interrupt
+ * number that is <!-- entering slot 84 -->executed when the PINT bit transitions from "0"
+ * to "1". This vector is only used for P2. P1 is always interrupted
+ * with IRQ 13.
+ */
+
+#define P2_INTERRUPT_VECTOR_CONTROL_PORT 0xFC68
+
+
+/*
+ * The following ports contain the EISA identification of the
+ * system processor boards
+ */
+
+#define COMPAQ_ID1  0x0000000E
+#define COMPAQ_ID2  0x00000011
+
+#define P1_EISA_PRODUCT_ID_PORT1  0x0C80  /* Compressed COMPAQ ID - OEh */
+#define P1_EISA_PRODUCT_ID_PORT2  0x0C81  /*                        11h */
+#define P1_EISA_PRODUCT_ID_PORT3  0x0C82  /* Product code for the proc board */
+#define P1_EISA_PRODUCT_ID_PORT4  0x0C83  /* Revision number */
+
+#define P2_EISA_PRODUCT_ID_PORT1  0xFC80  /* Compressed COMPAQ ID - OEh */
+#define P2_EISA_PRODUCT_ID_PORT2  0xFC81  /*                        11h */
+#define P2_EISA_PRODUCT_ID_PORT3  0xFC82  /* Product code for the proc board */
+#define P2_EISA_PRODUCT_ID_PORT4  0xFC83  /* Revision number */
+
+/*
+ * Any write to The RAM Relocation Register (memory mapped)
+ * will flush the caches of both P1 and P2
+ */
+
+#define RAM_RELOCATION_REGISTER       0x80C00000
+
+
+/*
+ * The P1 Cache Control Register (memory mapped)
+ */
+
+#define P1_CACHE_CONTROL_REGISTER     0x80C00002
+
+struct p1cache_s {
+   ulong_t _reserved1:6,
+           _p1cc:1,       /* P1 Cache Control */
+                          /*  0 = Disables P1 cache */
+                          /*  1 = Enables P1 cache */
+           _reserved2:9;
+};
+
+
+/*
+ * Expanision board control ports
+ */
+
+#define P1_EISA_EXPANSION_BOARD_CONTROL  0x0C84
+#define P2_EISA_EXPANSION_BOARD_CONTROL  0xFC84
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="078_L2_PSDH.html">[Back: PSD.H]</A> <BR>
+<A HREF="080_L2_Makefile.html">[Next: Makefile]</A> 
+</BODY>
+</HTML>

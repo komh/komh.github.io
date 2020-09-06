@@ -1,0 +1,123 @@
+<HTML>
+<HEAD>
+<TITLE>Initialization and VDM Creation</TITLE>
+</HEAD>
+<BODY>
+<H1>Initialization and VDM Creation</H1><!-- entering slot 130 -->
+<P>
+Initialization of the DOS Emulation component is divided into two stages.
+ The first occurs during OS/2 system initialization. The second stage occurs
+during creation of each virtual DOS machine.
+<P>
+<B>OS/2 Initialization</B>
+<P>
+DOS Emulation is involved in OS/2 system initialization because it requires
+access to information contained in CONFIG.SYS. As the OS/2 initialization
+procedure processes the CONFIG.SYS file, it records parameters relevant
+to DOS Emulation. These parameters include those specified in the FCBS and
+RMSIZE statements, and any DEVICE statements which specify DOS device drivers.
+These parameters become the default DOS settings for all VDMs.
+<P>
+<B>Note:  </B> Virtual device drivers are not loaded or initialized at this
+stage. Initialization of DOS settings occurs prior to loading virtual device
+drivers, since these default settings may be required by the device drivers
+during VDM initialization (creation).
+<P>
+<B>VDM Creation Stage</B>
+<P>
+Upon creation of a VDM, the Virtual DOS Machine Manager calls the creation-time
+initialization routines for virtual device drivers and then passes control
+to the DOS Emulation kernel. At this point, the V86 memory organization
+appears as shown in <A HREF="021_L2_V86MemoryMapPriortoD.html">Figure "V86
+Memory Map Prior to DOS Emulation Initialization"</A>.
+<P>
+During VDM creation, DOS Emulation performs the following steps:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 --><I>Initialize VDM-Related Kernel Structures</I>
+<P>
+Certain structures in the OS/2 Version 2.0 kernel are initialized in preparation
+for processing VDM requests. The System File Table (SFT) structures, for
+example, which are used for FCB I/O, are allocated and initialized.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 --><I>Load DOS Emulation Kernel (DOSKRNL.COM)</I>
+<P>
+The portion of the DOS Emulation kernel which runs in V86 virtual memory
+is loaded at the high end of the VDM memory address space.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 --><I>Start Virtual Processor Mode</I>
+<P>
+The protected mode initialization routine returns control to the Virtual
+DOS Machine Manager, which then invokes the initialization code within the
+V86 mode DOS Emulation kernel. This represents the first transition to V86
+mode; at this point, memory is organized as in <A HREF="022_L2_V86MemoryMapatInitia.html">Figure
+"V86 Memory Map at Initial V86 Mode Entry"</A>.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 --><I>Open Standard Devices</I>
+<P>
+The initial five file handles (stdin, stdout, stderr, stdaux, and stdprn)
+are opened.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 --><I>Initialize Virtual Device Driver DOS Device
+Driver "stubs"</I>
+<P>
+Some virtual device drivers provide a DOS device driver "stub";  these stubs
+are inserted into the V86 address space prior to initialization of DOS Emulation.
+As such, this step involves calling the inserted initialization code and
+linking the devices into the device chain. Unlike real DOS device drivers,
+however, the return from the initialization does not allow reducing the
+size of the driver code. See <A HREF="143_L1_DeviceDrivers.html">Device
+Drivers</A> for further information.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 --><I>Initialize DOS Device Drivers</I>
+<P>
+Each DOS device driver specified in the CONFIG.SYS file is loaded into the
+VDM and initialized. Any VDM-specific DOS device drivers passed in the DosCreateProcess()
+function call, or configured via the DOS Settings option<I> DOS Device Drivers</I>,
+are then loaded and initialized. This is performed one device driver at
+a time to allow the device drivers to consume only the memory that they
+require or to de-install themselves entirely. As each device is initialized,
+it is added to the chain of devices in the VDM.
+<P>
+During initialization, device drivers may issue a limited set of INT 21h
+system calls (functions 01h through 0Ch, 25h, 30h, and 35h). This restores
+<!-- entering slot 131 -->functionality that had been removed from previous
+versions of OS/2.
+<P>
+<B>Note:  </B> The result is undefined when a DOS device driver issues an
+INT 21h system call other than those mentioned above. This is consistent
+and compatible with DOS. Issuing an unsupported INT 21h system call will
+crash the VDM.
+<P>
+After all device drivers have been initialized, the initialization code
+is discarded.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 --><I>Load and Execute DOS Shell</I>
+<P>
+The shell specified in the SHELL command in CONFIG.SYS is loaded, the initialization
+code in the V86 address space is discarded, and control is passed to the
+shell program. The SHELL specified in CONFIG.SYS can be overridden in the
+<B>DosCreateProcess()</B> function call. This is a useful feature if, for
+example, a software developer wishes to allow different versions of COMMAND.COM,
+for such reasons as alternative national language support.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+Upon invocation of the shell program, the VDM's memory map is organized
+as shown in <A HREF="023_L2_V86MemoryMapafterIni.html">Figure "V86 Memory
+Map after Initialization"</A>.
+<P>
+Before passing control, the<B> Program Descriptor Block</B> (PDB) of the
+shell is initialized with the command line parameters as specified in CONFIG.SYS.
+As an extension to the native DOS environment, an additional string is appended
+after these parameters, separated from the command line string by a NULL
+byte. This string specifies the drive and directory of the virtual DOS environment
+after the shell completes its initialization.  This extension provides a
+default working drive and directory for real mode applications, as is provided
+for protect mode applications using the Presentation Manager.
+
+<P><HR>
+
+<A HREF="122_L2_DOSEmulationImplemen.html">[Back: DOS Emulation Implementation]</A> <BR>
+<A HREF="124_L3_RequestingSystemServ.html">[Next: Requesting System Services]</A> 
+</BODY>
+</HTML>

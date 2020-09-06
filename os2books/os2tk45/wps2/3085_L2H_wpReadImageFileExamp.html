@@ -1,0 +1,99 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>wpReadImageFile - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>wpReadImageFile - Example Code</H1><!-- entering slot 3085 -->
+<P>
+This example shows a simplified version of the code in the<A><!-- external link: 1D 62 C3 82 --> WPBitmap
+</A>object class.  This example assumes that the image file only contains
+a single image and it is already in bitmap format.
+<PRE>SOM_Scope BOOL32 bmp_wpReadImageFile(WPBitmap *somSelf)
+{
+   WPBitmapData *somThis = WPBitmapGetData(somSelf);
+
+   CHAR        szFileName[CCHMAXPATH];
+   HFILE       hFile = NULLHANDLE;
+   ULONG       ulAction;
+   FILESTATUS3 FileStatus;
+   ULONG       ulFileSize;
+   PBYTE       pBitmapData = NULL;
+   APIRET      RC;
+   ULONG       ulBytesRead;
+   PBITMAPFILEHEADER pbfh;
+
+   /* If the data has already been read, just return    */
+   if(_pBitmapData)
+   {
+      return TRUE;
+   }
+
+   /* Find the bitmap data file
+    */
+   _wpQueryFilename(somSelf, szFileName, TRUE);
+
+   /* Open the file and find out how big it is   */
+   if (DosOpen(szFileName,
+               &amp;hFile,
+               &amp;ulAction,
+               0L,
+               FILE_NORMAL,
+               FILE_OPEN,
+               OPEN_ACCESS_READONLY | OPEN_SHARE_DENYNONE,
+               NULL))
+   {
+      return FALSE;
+   }
+
+   if (DosQueryFileInfo(hFile,
+                        FIL_STANDARD,
+                        &amp;FileStatus,
+                        sizeof(FileStatus)))
+   {
+      DosClose (hFile);
+      return FALSE;
+   }
+
+   /* Allocate space for a buffer large enough to contain the entire file */
+   ulFileSize = FileStatus.cbFile;
+   pBitmapData = _wpAllocMem(somSelf,ulFileSize,FALSE);
+   if (!pBitmapData)
+   {
+      DosClose (hFile);
+      return FALSE;
+   }
+
+   /* Read the file into the buffer    */
+   RC = DosRead (hFile, pBitmapData, ulFileSize, &amp;ulBytesRead);
+   DosClose(hFile);
+   hFile = NULLHANDLE;
+   if (RC || (ulBytesRead != ulFileSize))
+   {
+      _wpFreeMem (somSelf,pBitmapData);
+      return FALSE;
+   }
+
+   /* Make sure the bitmap header has a valid type code and the header
+    * fits within the file     */
+   pbfh = (PBITMAPFILEHEADER) pBitmapData;
+   if (pbfh-&gt;usType != BFT_BMAP ||
+       (PCH)pbfh + pbfh-&gt;cbSize &gt; pBitmapData + ulFileSize)
+   {
+      _wpFreeMem(somSelf,pBitmapData);
+      return FALSE;
+   }
+
+   /* Save the bitmap data and exit    */
+   _pBitmapData = pBitmapData;
+   _ulBitmapDataSize = ulFileSize;
+   return TRUE;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="3084_L2H_wpReadImageFileRelat.html">[Back: wpReadImageFile - Related Methods]</A> <BR>
+<A HREF="3086_L2H_wpReadImageFileTopic.html">[Next: wpReadImageFile - Topics]</A> 
+</BODY>
+</HTML>

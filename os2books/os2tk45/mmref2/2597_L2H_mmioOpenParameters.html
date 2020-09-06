@@ -1,0 +1,178 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>mmioOpen - Parameters</TITLE>
+</HEAD>
+<BODY>
+<H1>mmioOpen - Parameters</H1><!-- entering slot 2602 --><!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B>pszFileName</B> (<A><!-- external link: 1D 7B 29 A9 -->PSZ</A>) - input
+<!-- lm: 0x11 4 -->
+<UL>The name of the file to open.  If the<I> fccIOProc
+</I>field of<A><!-- external link: 1D 42 29 7B --> MMIOINFO</A> is NULL,
+mmioOpen looks at the<I> pszFileName</I> parameter to figure out what kind
+of file to open, as follows:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 9 -->If the<I> pszFileName</I> parameter does not contain
+a plus (+), the name is assumed to be that of a DOS file, which is opened
+using the file system file open process.<!-- lm: 0x2 6 -->
+<P>
+<LI><!-- lm: 0x2 9 -->If the file name is of the form ABC.EXT+ELEMENTNAME,
+the extension EXT is assumed to identify an installed I/O procedure that
+is called to perform I/O on the file (see <A HREF="2570_L2_mmioInstallIOProc.html">mmioInstallIOProc</A>).
+If the extension is BND, the system-provided BND I/O procedure processes
+the open.  Note also that ELEMENTNAME could be of the form ABC.EXT followed
+by a plus sign (+).  Parsing of the file name is done from right to left,
+so the first I/O procedure called belongs to the rightmost extension name
+that is followed by the +.  The I/O procedure must be already installed
+and be able to further parse the file name, if required.  The trailing separator
+character is stripped off by mmioOpen, and is not passed to the I/O procedure.
+<!-- lm: 0x2 6 -->
+<P>
+<LI><!-- lm: 0x2 9 -->If the<I> pszFileName</I> parameter is NULL, then
+the<I> aulInfo</I> field of<A><!-- external link: 1D 42 29 7B --> MMIOINFO
+</A>contains the DOS file handle, and I/O is performed on that file handle.
+ The MMIO offset is the same as the DOS offset when mmioOpen is called.
+<!-- lm: 0x2 6 -->
+<P>
+<LI><!-- lm: 0x2 9 -->The<I> pszFileName</I> parameter cannot be longer
+than 260 bytes, including the terminating NULL, for a fully-qualified path
+name, or 256 bytes for an individual component name, including the terminating
+NULL.<!-- lm: 0x2 4 --><!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+<B>pmmioinfo</B> (<A><!-- external link: 1D 42 29 A2 -->PMMIOINFO</A>) -
+input<!-- lm: 0x11 4 -->
+<UL> A pointer to a caller-provided<A><!-- external link: 1D 42 29 7B --> MMIOINFO
+</A>structure containing extra parameters used by mmioOpen. Only certain
+values of the<A><!-- external link: 1D 42 29 7B --> MMIOINFO</A> structure
+may be used as input to the mmioOpen function.  These fields are<I> fccIOProc</I>,
+<I>pIOProc</I>,<I> cchBuffer</I>,<I> pchBuffer</I>,<I> aulInfo</I>, and
+<I>ulTranslate</I>.<I> fccIOProc</I> and<I> pIOProc</I> are used if you
+wish to identify the I/O procedure to be used, rather than allowing MMIO
+to determine the appropriate I/O procedure. <I> cchBuffer</I> and<I> pchBuffer
+</I>are used for buffered access. <I> aulInfo</I> can contain a media type
+which restricts the open to I/O procedures of that type. <I> ulTranslate
+</I>is used to specify whether or not translation of header and data is
+performed.
+<P>
+The<I> pmmioinfo</I> parameter can be NULL if the default values of the
+fields of<A><!-- external link: 1D 42 29 7B --> MMIOINFO</A> are sufficient.
+ All unused fields must be set to 0, including reserved fields.  (The easiest
+way to do this is to fill the structure with NULL bytes before setting the
+desired fields.)  See the<A><!-- external link: 1D 42 29 7B --> MMIOINFO
+</A>data structure for more information.  mmioOpen will modify the<I> ulErrorRet
+</I>field of<A><!-- external link: 1D 42 29 7B --> MMIOINFO</A> if an error
+is encountered.<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+<B>ulOpenFlags</B> (<A><!-- external link: 1D 96 29 DB -->ULONG</A>) - input
+<!-- lm: 0x11 4 -->
+<UL>Contains one or more of the following flags:
+<P>
+<B>Note: </B> The MMIO_READ, MMIO_WRITE, and MMIO_READWRITE flags are mutually
+exclusive.<!-- lm: 0x2 4 --><!-- lm: 0x2 4 -->
+<P>
+MMIO_READ<!-- lm: 0x11 14 -->
+<UL> Opens the file for reading only.  This
+is the default behavior if MMIO_WRITE and MMIO_READWRITE are not specified.
+ However, the flag is not automatically set in the default case.<!-- lm: 0x2 4 -->
+</UL> MMIO_WRITE
+<!-- lm: 0x11 14 -->
+<UL>Opens the file for writing.  You should not read
+from a file opened in this way.<!-- lm: 0x2 4 -->
+</UL> MMIO_READWRITE<!-- lm: 0x11 14 -->
+<UL> Opens
+the file for both reading and writing.
+<P>
+<B>Note: </B> To save a wave file, you must open the file with the MMIO_READWRITE
+flag.  After the data is written, the I/O procedure will need to descend
+back into the wave chunk-a process that requires read support.<!-- lm: 0x2 14 --><!-- lm: 0x2 4 -->
+</UL> MMIO_BUFSHARED
+<!-- lm: 0x11 14 -->
+<UL>Requests that if MMIO services allocates the I/O
+buffer, it does so from shared memory.<!-- lm: 0x2 4 -->
+</UL> MMIO_VERTBAR
+<!-- lm: 0x11 14 -->
+<UL>Requests that the vertical bar symbol (|) rather
+than the plus sign (+) be used as a file separator.<!-- lm: 0x2 4 -->
+</UL> MMIO_EXCLUSIVE
+<!-- lm: 0x11 14 -->
+<UL>Opens the file with exclusive mode, denying other
+processes both read and write access to the file.  mmioOpen fails if the
+file has<!-- entering slot 2603 --> been opened in any other mode for read
+or write access, even by the current process.<!-- lm: 0x2 4 -->
+</UL> MMIO_DENYWRITE
+<!-- lm: 0x11 14 -->
+<UL>Opens the file and denies other processes write
+access.  mmioOpen fails if the file has been opened in compatibility or
+for write access by any other process.<!-- lm: 0x2 4 -->
+</UL> MMIO_DENYREAD
+<!-- lm: 0x11 14 -->
+<UL>Opens the file and denies other processes read
+access. mmioOpen fails if the file has been opened in compatibility or for
+read access by any other process.<!-- lm: 0x2 4 -->
+</UL> MMIO_DENYNONE
+<!-- lm: 0x11 14 -->
+<UL>Opens the file and denies other processes read
+access.  mmioOpen fails if the file has been opened in compatibility or
+for read access by any other process.  This is the default if no share mode
+flags are defined.<!-- lm: 0x2 4 -->
+</UL> MMIO_CREATE<!-- lm: 0x11 14 -->
+<UL> Directs
+mmioOpen to create a new file.  If the file already exists, it is truncated
+to 0 length.  For a memory file, MMIO_CREATE indicates the end of the file
+is initially at the start of the buffer.<!-- lm: 0x2 4 -->
+</UL> MMIO_DELETE
+<!-- lm: 0x11 14 -->
+<UL>Directs mmioOpen to delete the file.  The<I> pszFileName
+</I>parameter should not be NULL.  The return value will be TRUE (sent to
+<I>hmmio</I>) if the file was deleted successfully, FALSE otherwise.  Do
+not call <A HREF="2375_L2_mmioClose.html">mmioClose</A> if MMIO_DELETE has
+been specified.  All other flags are ignored if MMIO_DELETE is specified.
+<!-- lm: 0x2 4 -->
+</UL>MMIO_ALLOCBUF<!-- lm: 0x11 14 -->
+<UL> Directs mmioOpen
+to allocate an I/O buffer.  If the<I> cchBuffer</I> field of<A><!-- external link: 1D 42 29 79 --> MMIOINFO
+</A>is 0, then a default buffer size (specified by the constant MMIO_DEFAULTBUFFER)
+is used.  If the caller provides an I/O buffer, then MMIO_ALLOCBUF should
+not be specified.<!-- lm: 0x2 4 -->
+</UL> MMIO_APPEND<!-- lm: 0x11 14 -->
+<UL> Directs
+mmioOpen to allow appending to the end of the file.  This will cause the
+logical file pointer to be positioned at the end of file when the open process
+completes.  The open fails if both MMIO_CREATE and MMIO_APPEND are set.
+ In the case of a BND element, this flag allows the element to expand past
+its existing fixed boundary by deleting the existing element and rewriting
+it at the end of a compound-file resource group (CGRP).<!-- lm: 0x2 4 -->
+</UL> MMIO_NOIDENTIFY
+<!-- lm: 0x11 14 -->
+<UL>Directs mmioOpen to directly open the file without
+attempting to automatically identify the file.  An automatic identify is
+the default for this function.<!-- lm: 0x2 4 --><!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+<B>hmmio</B> (<A><!-- external link: 1D E0 28 63 -->HMMIO</A>) - returns
+<!-- lm: 0x11 4 -->
+<UL>A handle is returned to use with further calls to
+MMIO functions to perform I/O.  This handle is not a file system handle.
+ Do not use this with such operations as OS/2 file system read, or write.
+
+<P>
+NULL is returned if the file cannot be opened.  See the exception for the
+preceding<I> ulOpenFlags</I> parameter flag MMIO_DELETE.  If the<I> pmmioinfo
+</I>parameter is not NULL, the<I> ulErrorRet</I> field of its<A><!-- external link: 1D 42 29 79 --> MMIOINFO
+</A>structure will contain extended error information returned by the I/O
+procedure.  If delete fails,<I> ulErrorRet</I> contains MMIOERR_DELETE_FAILED.
+ The error return can also be queried by calling the <A HREF="2518_L2_mmioGetLastError.html">mmioGetLastError
+</A>function. See<A><!-- external link: 1D B7 29 9B --> Return Codes</A> for
+a description of MMIO Manager error codes.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="2596_L2H_mmioOpenReturnValueh.html">[Back: mmioOpen Return Value - hmmio]</A> <BR>
+<A HREF="2598_L2H_mmioOpenRemarks.html">[Next: mmioOpen - Remarks]</A> 
+</BODY>
+</HTML>

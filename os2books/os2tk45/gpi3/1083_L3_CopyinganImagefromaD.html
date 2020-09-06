@@ -1,0 +1,139 @@
+<HTML>
+<HEAD>
+<TITLE>Copying an Image from a Display Screen to a Bit Map</TITLE>
+</HEAD>
+<BODY>
+<H1>Copying an Image from a Display Screen to a Bit Map</H1><!-- entering slot 1104 -->
+<P>
+To copy an image from a display screen to a bit map:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Associate the memory device context with a presentation
+space.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Create a bit map.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Select the bit map into the memory device context
+by calling<A><!-- external link: 1D 23 C4 FC --> GpiSetBitmap</A>.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Determine the location (in device coordinates)
+of the image.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Call<A><!-- external link: 1D 62 C3 5E --> GpiBitBlt
+</A>and copy the image to the bit map.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following figure demonstrates these steps.
+<PRE>    HDC hdcMem;
+    PSZ pszData[4] = { "Display", NULL, NULL, NULL };
+    HPS hpsMem, hps;
+    HAB hab;
+    SIZEL sizlPage = {0, 0};
+    BITMAPINFOHEADER2 bmp;
+    PBITMAPINFO2 pbmi;
+    HBITMAP hbm;
+    SHORT sWidth = 128, sHeight = 128;
+    POINTL aptl[3];
+    LONG alData[2];
+
+    /*
+     * Create the memory device context and presentation space so they
+     * are compatible with the screen device context and presentation space.
+     */
+
+    hdcMem = DevOpenDC(hab, OD_MEMORY, "*", 4,
+        (PDEVOPENDATA) pszData, NULLHANDLE);
+
+    hpsMem = GpiCreatePS(hab, hdcMem, &amp;sizlPage,
+        PU_PELS | GPIA_ASSOC | GPIT_MICRO);
+
+    /* Determine the device's plane/bit-count format. */
+
+    GpiQueryDeviceBitmapFormats(hpsMem, 2, alData);
+
+    /*
+     * Load the BITMAPINFOHEADER2 and BITMAPINFO2 structures. The sWidth and
+     * sHeight fields specify the width and height of the destination
+     * rectangle.
+     */
+
+    bmp.cbFix = (ULONG) sizeof(BITMAPINFOHEADER2);
+    bmp.cx = sWidth;
+    bmp.cy = sHeight;
+    bmp.cPlanes = alData[0];
+    bmp.cBitCount = alData[1];
+    bmp.ulCompression = BCA_UNCOMP;
+    bmp.cbImage = (((sWidth *
+        (1 &lt;&lt; bmp.cPlanes) * (1 &lt;&lt; bmp.cBitCount)) + 31) / 32) * sHeight;
+    bmp.cxResolution = 70;
+    bmp.cyResolution = 70;
+    bmp.cclrUsed = 2;
+    bmp.cclrImportant = 0;
+    bmp.usUnits = BRU_METRIC;
+    bmp.usReserved = 0;
+    bmp.usRecording = BRA_BOTTOMUP;
+    bmp.usRendering = BRH_NOTHALFTONED;
+    bmp.cSize1 = 0;
+    bmp.cSize2 = 0;
+    bmp.ulColorEncoding = BCE_RGB;
+    bmp.ulIdentifier = 0;
+
+
+    DosAllocMem((PPVOID)&amp;pbmi, sizeof(BITMAPINFO2) +
+        (sizeof(RGB2) * (1 &lt;&lt; bmp.cPlanes) * (1 &lt;&lt; bmp.cBitCount)),
+        PAG_COMMIT | PAG_READ | PAG_WRITE);
+
+    pbmi-&gt;cbFix = bmp.cbFix;
+    pbmi-&gt;cx = bmp.cx;
+    pbmi-&gt;cy = bmp.cy;
+    pbmi-&gt;cPlanes = bmp.cPlanes;
+    pbmi-&gt;cBitCount = bmp.cBitCount;
+    pbmi-&gt;ulCompression = BCA_UNCOMP;
+    pbmi-&gt;cbImage = ((sWidth+31)/32) * sHeight;
+    pbmi-&gt;cxResolution = 70;
+    pbmi-&gt;cyResolution = 70;
+    pbmi-&gt;cclrUsed = 2;
+    pbmi-&gt;cclrImportant = 0;
+    pbmi-&gt;usUnits = BRU_METRIC;
+    pbmi-&gt;usReserved = 0;
+    pbmi-&gt;usRecording = BRA_BOTTOMUP;
+    pbmi-&gt;usRendering = BRH_NOTHALFTONED;
+    pbmi-&gt;cSize1 = 0;
+    pbmi-&gt;cSize2 = 0;
+    pbmi-&gt;ulColorEncoding = BCE_RGB;
+    pbmi-&gt;ulIdentifier = 0;
+
+    /* Create a bit map that is compatible with the display.            */
+
+    hbm = GpiCreateBitmap(hpsMem, &amp;bmp, FALSE, NULL, pbmi);
+
+    /* Associate the bit map and the memory presentation space.         */
+
+    GpiSetBitmap(hpsMem, hbm);
+
+    /* Copy the screen to the bit map.                                  */
+
+    aptl[0].x = 0;       /* Lower-left corner of destination rectangle  */
+    aptl[0].y = 0;       /* Lower-left corner of destination rectangle  */
+    aptl[1].x = sWidth;  /* Upper-right corner of destination rectangle */
+    aptl[1].y = sHeight; /* Upper-right corner of destination rectangle */
+    aptl[2].x = 0;       /* Lower-left corner of source rectangle       */
+    aptl[2].y = 0;       /* Lower-left corner of source rectangle       */
+
+    hps = WinGetScreenPS(HWND_DESKTOP);
+
+    GpiBitBlt(hpsMem, hps,
+        sizeof(aptl) / sizeof(POINTL), /* Number of points in aptl      */
+        aptl, ROP_SRCCOPY, BBO_IGNORE);
+
+    WinReleasePS(hps);
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1082_L2_UsingBitMaps.html">[Back: Using Bit Maps]</A> <BR>
+<A HREF="1084_L3_ScalingandDrawingaBi.html">[Next: Scaling and Drawing a Bit-Map Image]</A> 
+</BODY>
+</HTML>

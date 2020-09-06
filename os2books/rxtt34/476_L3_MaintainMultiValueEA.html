@@ -1,0 +1,430 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Maintain Multi-Value EAs in REXX</TITLE>
+</HEAD>
+<BODY>
+<H1>Maintain Multi-Value EAs in REXX</H1><!-- entering slot 494 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/*                                                                    */
+/* sample routine to maintain multi-Value EAs in REXX                 */
+/* The Demo program uses the EA ".HISTORY"                            */
+/*                                                                    */
+/* (see also <A HREF="334_L2_ExtendedAttributeDat.html">Extended Attribute Data Types</A> and <A HREF="333_L2_ExtendedAttributesus.html">EAs used by the WPS</A>)   */
+/*                                                                    */
+  say ""
+  say "Sample program to show the use of the routine FileHistory"
+  say ""
+
+/* -------------------------- */
+
+                    /* get the name of this file                      */
+  parse source . . thisFile
+
+                    /* load the REXXUTIL functions for the demo       */
+  call rxFuncAdd "SysLoadFuncs", "REXXUTIL", "SysLoadFuncs"
+  call SysLoadFuncs
+
+/* -------------------------- */
+
+  say "Now detecting the history of this file ..."
+  call ReadEA1
+
+/* -------------------------- */
+
+  say "Now initializing the history of this file with 1 value ..."
+
+  call FileHistory "ADD", thisFile,,
+                   "Jim Bacon    Created    01.01.1995", testStem
+  say "  Result of FileHistory is " || result
+
+  call ReadEA
+
+/* -------------------------- */
+
+  say "Now initializing the history of this file with 3 values ..."
+
+  MyStem1.0 = 3
+  MyStem1.0.codepage = 0
+  Mystem1.1 = "Jon Doe I     Created      20.01.1995"
+  MyStem1.2 = "Jon Doe II    Changed      22.01.1995"
+  MyStem1.3 = "Jon Doe III   Changed      23.01.1995"
+
+  call FileHistory "SET", thisFile, "MyStem1"
+  say "  Result of FileHistory is " || result
+
+  call ReadEA
+/* -------------------------- */
+
+  say "Now adding another entry to the history of this file ..."
+  call FileHistory "ADD", thisFile, "Jim Bean   Changed   24.01.1995"
+  say "  Result of FileHistory is " || result
+
+  call ReadEA
+
+/* -------------------------- */
+
+  say 'Now deleting the history of this file ...'
+  call FileHistory 'CLEAR', thisFile
+  say '  Result of FileHistory is ' || result
+
+  call ReadEA
+
+/* -------------------------- */
+
+exit
+
+/*                                                                    */
+/* demo subroutine to read the EA                                     */
+/*                                                                    */
+ReadEA:
+  say "Now reading the new history of this file ..."
+
+ReadEA1:
+  call FileHistory "GET", thisFile, "MyStem"
+  say "  Result of FileHistory is " || result
+
+  say "  The history list for this file contains " || ,
+      MyStem.0 || " entries."
+  say "  The codepage of the history list is " || MyStem.0.CodePage || "."
+
+  do i = 1 to MyStem.0
+    say "  History list entry no " || i  || " is  "
+    say "     &lt;" || myStem.i || "&gt;"
+  end /* do i = 1 to MyStem.0 */
+
+  say "Press O to open the Settings Notebook of this file " || ,
+      "or any other key to continue"
+  UserInput = translate( SysGetKey( "NOECHO" ) )
+  if userInput = "O" then
+  do
+    call SysOpenObject thisFile, 2 , 1
+    say "Close the Settings Notebook and press any key to continue"
+    UserInput = translate( SysGetKey( "NOECHO" ) )
+  end /* if userInput = "O" then */
+RETURN
+
+/* ------------------------------------------------------------------ */
+/* function: Get, Set or Clear the .HISTORY EA of a file              */
+/*                                                                    */
+/* call:     FileHistory GET, filename, NewHistoryStem                */
+/*           FileHistory ADD, filename, newHistoryEntry {,newStem}    */
+/*           FileHistory SET, filename, CurHistoryStem                */
+/*           FileHistory CLEAR, filename                              */
+/*                                                                    */
+/* where:    GET, ADD, SET, CLEAR                                     */
+/*             - action:                                              */
+/*                GET - get a list of the current entries             */
+/*                ADD - add an entry to the list                      */
+/*                SET - replace the EA with a new list                */
+/*              CLEAR - clear the whole list                          */
+/*           filename                                                 */
+/*             - name of the file                                     */
+/*           NewHistoryStem                                           */
+/*             - stem for the history list entries                    */
+/*           newStem                                                  */
+/*             - stem for the history list entries                    */
+/*           CurHistoryStem                                           */
+/*             - stem _with_ the history list entries                 */
+/*           newHistoryEntry                                          */
+/*             - new entry for the history list                       */
+/*               (ASCII string)                                       */
+/*                                                                    */
+/* returns:  0 - okay                                                 */
+/*           1 - file not found                                       */
+/*           2 - EA is invalid                                        */
+/*           3 - CurHistoryStem.0 is invalid                          */
+/*           4 - CurHistoryStem.0.codepage is invalid                 */
+/*          -1 - invalid parameter                                    */
+/*        else - unexpected error                                     */
+/*                                                                    */
+/* notes:                                                             */
+/*  Do not add the trailing dot to the stem name!                     */
+/*  Format of the stems:                                              */
+/*    history_stem.0 = number of entries                              */
+/*    history_stem.0.codepage = codepage of the EA                    */
+/*                              (def.: 0, use default codepage)       */
+/*    history_stem.n = entry n                                        */
+/*                                                                    */
+/*  The format of the .HISTORY EA is:                                 */
+/*                                                                    */
+/*     EA Type  Code                                                  */
+/*              page Count                                            */
+/*   +--------------------------------------------------+             */
+/*   | EAT_MVMT 0000 0002                               |             */
+/*   |          EAT_ASCII 0017  Joe    Created  2/10/88 |             */
+/*   |          EAT_ASCII 0017  Harry  Changed  2/11/88 |             */
+/*   +--------------------------------------------------+             */
+/*              EA Type  length contents (ASCII string)               */
+/*                                                                    */
+/*  All numeric values are WORDs in INTEL format.                     */
+/*                                                                    */
+/* (see also <A HREF="334_L2_ExtendedAttributeDat.html">Extended Attribute Data Types</A> and <A HREF="333_L2_ExtendedAttributesus.html">EAs used by the WPS</A>)   */
+/*                                                                    */
+/*  FileHistory uses the prefix 'FH.' for all local variables. The    */
+/*  local variables are dropped at the end of the routine!            */
+/*                                                                    */
+/* (c) 1996 <A HREF="002_L1_GeneralForeword.html">Bernd Schemmer</A>, Germany, EMail: Bernd.Schemmer@gmx.de     */
+/*                                                                    */
+FileHistory:
+
+                    /* name of the EA to use                          */
+                    /* note: change this variable to use the routine  */
+                    /*       for the EAs .COMMENTS or .KEYPHRASES.    */
+                    /*       In this case you must also <!-- entering slot 495 -->delete the    */
+                    /*       Codepage related code in this routine.   */
+  FH.__EAName = '.HISTORY'
+
+                    /* init the return code                           */
+  rc = 0
+
+/* -------------------------- */
+                    /* install local error handlers                   */
+  SIGNAL ON SYNTAX  NAME FileHistoryEnd
+  SIGNAL ON ERROR   NAME FileHistoryEnd
+  SIGNAL ON FAILURE NAME FileHistoryEnd
+/* -------------------------- */
+                    /* get the parameter                              */
+  parse upper arg FH.__action , FH.__file , FH.__variable , .
+
+                    /* get the parameter for the ADD action           */
+  parse arg  , , FH.__newValue , FH.__tempStem
+
+                    /* check the parameter                            */
+  select
+
+                    /* check the action parameter                     */
+    when wordPos( FH.__action, 'GET ADD SET CLEAR' ) = 0 then
+      rc = -1
+
+                    /* check the parameter for the stem variable      */
+    when wordPos( FH.__action, 'GET ADD SET' ) &lt;&gt; 0 &amp; ,
+         FH.__variable = '' then
+      rc = -1
+
+                    /* check the parameter for the filename           */
+    when FH.__file = '' then
+      rc = -1
+
+                    /* test, if the file exists                       */
+    when stream( FH.__file, 'c', 'QUERY EXISTS' ) = '' then
+      rc = 1
+
+                    /* check the number fields in the stem            */
+    when FH.__action = 'SET' then
+    do
+      select
+
+                    /* stem.0 must contain the number of entries      */
+        when datatype( value( FH.__variable || '.0' ) ) &lt;&gt; 'NUM' then
+          rc = 3
+                    /* use the default codepage if the entry          */
+                    /* stem.0.codepage is missing                     */
+        when symbol( FH.__variable || '.0.CodePage' ) &lt;&gt; 'VAR' then
+          call value FH.__variable || '.0.CodePage', 0
+
+                    /* stem.0.codepage must be a numeric value if     */
+                    /* it exist                                       */
+        when datatype( value( FH.__variable || '.0' ) ) &lt;&gt; 'NUM' then
+          rc = 4
+
+        otherwise
+          nop
+      end /* select */
+
+    end /* when */
+
+    when FH.__action = 'ADD' then
+    do
+                    /* use the fourth parameter as name of the stem   */
+                    /* if entered                                     */
+      if FH.__tempStem &lt;&gt; '' then
+        FH.__variable = FH.__tempStem
+      else
+        FH.__variable = 'FH.__tempStem'
+    end /* when */
+
+    otherwise
+      nop
+
+  end /* select */
+
+/* -------------------------- */
+
+  if rc = 0 then
+  do
+                    /* load the necessary REXXUTIL functions          */
+
+                    /* use special REXX names to avoid errors if      */
+                    /* another program drops the REXXUTIL functions   */
+    call rxFuncAdd 'FH_SysGetEA', 'REXXUTIL', 'SysGetEA'
+    call rxFuncAdd 'FH_SysPutEA', 'REXXUTIL', 'SysPutEA'
+
+/* -------------------------- */
+                    /* constants for the EA type specifier            */
+    FH.__EAT_BINARY       = SwapWord( 'FFFE'x )
+    FH.__EAT_ASCII        = SwapWord( 'FFFD'x )
+    FH.__EAT_BITMAP       = SwapWord( 'FFFB'x )
+    FH.__EAT_METAFILE     = SwapWord( 'FFFA'x )
+    FH.__EAT_ICON         = SwapWord( 'FFF9'x )
+    FH.__EAT_EA           = SwapWord( 'FFEE'x )
+    FH.__EAT_MVMT         = SwapWord( 'FFDF'x )
+    FH.__EAT_MVST         = SwapWord( 'FFDE'x )
+    FH.__EAT_ANS1         = SwapWord( 'FFDD'x )
+
+/* -------------------------- */
+
+    if FH.__action = 'CLEAR' then
+    do
+                    /* clear the history list                         */
+                                                             /* v2.80 */
+      call FH_SysPutEA FH.__file, FH.__EAName, ''
+
+    end /* if FH.__action = 'CLEAR' then */
+
+/* -------------------------- */
+
+    if wordPos( FH.__action, 'GET ADD' ) &lt;&gt; 0 then
+    do
+                    /* read the EA                                    */
+
+                    /* init the stem for the EA values                */
+      call value FH.__variable || '.', ''
+      call value FH.__variable || '.0' , 0
+      call value FH.__variable || '.0.codepage', 0
+
+                    /* read the EA                                    */
+      rc = FH_SysGetEA( FH.__file, FH.__EAName, FH.__historyEA )
+      if rc = 0 &amp; FH.__historyEA &lt;&gt; '' then
+      do
+                    /* split the EA into the header fields and the    */
+                    /* values                                         */
+        parse var FH.__historyEA FH.__historyEAType +2 ,
+                                 FH.__historyEACodePage +2,
+                                 FH.__historyEACount +2 ,
+                                 FH.__historyEAValues
+
+                    /* convert the count value to decimal             */
+        FH.__historyEACount = c2d( SwapWord( FH.__HistoryEACount ) )
+
+                    /* check the EA type                              */
+        if FH.__historyEAType = FH.__EAT_MVMT then
+        do
+                    /* save the codepage                              */
+          call value FH.__variable || '.0.codepage' ,,
+                     c2d( SwapWord( FH.__historyEACodePage ) )
+
+                    /* split the value into separate fields           */
+          do FH.__i = 1 to FH.__HistoryEACount while rc = 0
+
+            FH.__HistoryEACurType = substr( FH.__HistoryEAValues, 1, 2 )
+            if FH.__HistoryEACurType &lt;&gt; FH.__EAT_ASCII then
+              rc = 2    /* invalid EA type                            */
+            else
+            do
+                    /* get the length of this value                   */
+              FH.__HistoryEACurLen  = c2d( SwapWord( substr( FH.__HistoryEAValues, 3, 2 ) ) )
+
+              parse var FH.__historyEAValues 5 FH.__HistoryEACurVal,
+                                             +( FH.__HistoryEACurLen) ,
+                                             FH.__historyEAValues
+
+                    /* save the value into the stem                   */
+              call value FH.__variable || '.' || FH.__i ,,
+                         FH.__HistoryEACurVal
+
+            end /* else */
+          end /* do FH.__i = 1 to c2d( FH.__HistoryEACount ) while rc = 0 */
+
+                    /* save the number of entries in stem.0           */
+          if rc = 0 then
+            call value FH.__variable || '.0' , FH.__i-1
+
+        end /* if FH.__historyEAType = FH.__EAT_MVST then */
+        else
+          rc = 2    /* invalid EA type                                */
+
+      end /* if rc = 0 then */
+
+    end /* if wordPos( FH.__action, 'GET ADD' ) &lt;&gt; 0 then */
+
+/* -------------------------- */
+
+    if FH.__action = 'ADD' &amp; rc = 0 then
+    do
+                    /* add an entry                                   */
+
+      FH.__i = value( FH.__variable || '.0' ) +1
+      call value FH.__variable || '.' || FH.__i , FH.__newValue
+      call value FH.__variable || '.0' , FH.__i
+
+    end /* if FH.__action = 'ADD' &amp; rc = 0 then */
+
+/* -------------------------- */
+
+    if wordPos( FH.__action, 'SET ADD' ) &lt;&gt; 0 &amp; rc = 0 then
+    do
+                    /* write the EA                                   */
+
+      FH.__newEA = FH.__EAT_MVMT || ,
+         SwapWord( right( '00'x || d2c( value( FH.__variable || '.0.codepage' ) ), 2 ) ) || ,
+         SwapWord( right( '00'x || d2c( value( FH.__variable || '.0' ) ), 2 ) )
+
+      do FH.__i = 1 to value( FH.__variable || '.0' )
+        FH.__curEntry = value( FH.__variable || '.' || FH.__i )
+
+        FH.__newEA = FH.__newEA || ,
+                     FH.__EAT_ASCII || ,
+                     SwapWord( right( '00'x || d2c( length( FH.__curEntry ) ), 2 ) ) || ,
+                     FH.__curEntry
+      end /* do FH.__i = 1 to value( FH.__variable || '.0' ) */
+
+                                                             /* v2.80 */
+      call FH_SysPutEA FH.__file, FH.__EAName, FH.__newEA
+      rc = result
+
+    end /* if wordPos( FH.__action, 'SET ADD' ) &lt;&gt; 0 then */
+
+  end /* if rc = 0 then */
+
+                    /* label for the local error handler              */
+FileHistoryEnd:
+
+                    /* drop the REXXUTIL functions                    */
+                    /* (possible and necessary because we use unique  */
+                    /*  REXX names!)                                  */
+    call rxFuncDrop 'FH_SysGetEA'
+    call rxFuncDrop 'FH_SysPutEA'
+
+                    /* drop local variables                           */
+  drop FH.
+
+RETURN rc
+
+/* ------------------------------------------------------------------ */
+/* function: Convert a hexadecimal WORD from LSB format to MSB format */
+/*           and vice versa                                           */
+/*                                                                    */
+/* call:     SwapWord hexadecimal_word                                */
+/*                                                                    */
+/* where:    hexadecimal_word - input as hexadecimal word             */
+/*                                                                    */
+/* output:   value in MSB format as hexadecimal word                  */
+/*                                                                    */
+SwapWord: PROCEDURE
+  RETURN strip( translate( "12", arg(1), "21" ) )
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="475_L3_ExpandthefunctionFIL.html">[Back: Expand the function FILESPEC]</A> <BR>
+<A HREF="477_L3_UUDecodingfiles.html">[Next: UUDecoding files]</A> 
+</BODY>
+</HTML>

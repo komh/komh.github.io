@@ -1,0 +1,138 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Convert a decimal number into a system based n</TITLE>
+</HEAD>
+<BODY>
+<H1>Convert a decimal number into a system based n</H1><!-- entering slot 553 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* sample routine to convert a decimal number into any other system   */
+/* with a base between 2 and 36                                       */
+
+  numeric digits 27
+
+  do forever
+
+    say 'Enter the number to convert ("" to exit): '
+    curNumber = strip( lineIn() )
+    if curNumber = "" then
+      leave
+    if pos( ',', curNumber ) &lt;&gt; 0 then
+    do
+      parse var curNumber curNumber ',' curBase
+      curNumber = strip( curNumber )
+      curBase = strip( curBase )
+    end /* if */
+    else
+    do
+      say 'Enter the base of the target system ("" to exit): '
+      curBase = strip( lineIn() )
+      if curBase = "" then
+        leave
+    end /* else */
+
+    result1 = convertFromDecToN( curNumber, curBase )
+    if result1 = -1 then
+      say 'Invalid parameter entered!'
+    else
+    do
+      result2 = convertFromNToDec( result1, curBase )
+
+      say '--&gt; ConvertFromDecToN('curNumber','curBase') is: '
+      say '    ' result1
+
+      say '--&gt; ConvertFromNToDec('result1','curBase') is: '
+      say '    ' result2
+    end /* else */
+
+  end /* do forever */
+
+exit
+
+/* ------------------------------------------------------------------ */
+/* function: Convert a decimal number into a system based n           */
+/*           (where  2 &lt;= n &lt;= 36 )                                   */
+/*                                                                    */
+/* usage:    result = ConvertFromDecToN( number, base )               */
+/*                                                                    */
+/* where:    number - number to convert                               */
+/*           base - base of the new system                            */
+/*                                                                    */
+/* returns:  the converted number                                     */
+/*           or -1 in case of an error                                */
+/*                                                                    */
+ConvertFromDecToN: PROCEDURE
+  parse arg number,base
+
+  digitString = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  result = '-1'
+
+  numberOK = ( datatype( Number ) = 'NUM' )
+  baseOk = (datatype( base ) = 'NUM') &amp; (base &lt;= 36) &amp; (base &gt;= 2)
+
+  if NumberOK = 1 &amp; baseOk = 1 then
+  do
+    result = ''
+
+    do until number = 0
+      curRest = number // base
+      number = number % base
+      result = substr( digitString, curRest+1,1 ) || result
+    end /* do until number &lt; base */
+
+  end /* if NumberOK = 1 &amp; baseOk = 1 then */
+
+return result
+
+/* ------------------------------------------------------------------ */
+/* function: Convert a number in the system n into a decimal number   */
+/*           (where  2 &lt;= n &lt;= 36 )                                   */
+/*                                                                    */
+/* usage:    result = ConvertFromNToDec( number, base )               */
+/*                                                                    */
+/* where:    number - number to convert                               */
+/*           base - base of the system                                */
+/*                                                                    */
+/* returns:  the converted number                                     */
+/*           or -1 in case of an error                                */
+/*                                                                    */
+ConvertFromNToDec: PROCEDURE
+  parse arg number,base
+
+  result = '-1'
+  digitString = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+  numberOK = verify( number, substr( digitString,1,base+1 ), 'N' ) = 0
+  baseOk = (datatype( base ) = 'NUM') &amp; (base &lt;= 36) &amp; (base &gt;= 2)
+
+  if numberOK = 1  &amp; baseOK = 1 then
+  do
+    result = 0
+    curFactor = 1
+
+    number = reverse( number )
+
+    do i = 1 to length( number )
+      curDigitValue = pos( substr( number,i,1 ), digitString )-1
+
+      result = result + curDigitValue * curFactor
+      curFactor = curFactor * base
+    end /* do i = 1 to length( number ) */
+
+  end /* if NumberOK = 1 &amp; baseOk = 1 then */
+
+return result
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="528_L3_Mathfunctions.html">[Back: Math. functions]</A> <BR>
+<A HREF="530_L3_Generaterandomnumber.html">[Next: Generate random numbers avoiding duplicates]</A> 
+</BODY>
+</HTML>

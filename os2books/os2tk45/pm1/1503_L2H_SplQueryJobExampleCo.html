@@ -1,0 +1,126 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>SplQueryJob - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>SplQueryJob - Example Code</H1><!-- entering slot 1514 -->
+<P>
+The following sample code will print out the information contained in a
+PRJINFO3 structure that is returned from a SplQueryJob call. The parameters
+that are entered on the command line are the computer name, queue name,
+and the job id.
+<PRE>#define INCL_SPL
+#define INCL_SPLDOSPRINT
+#define INCL_SPLERRORS
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;    /* for printf call  */
+#include &lt;stdlib.h&gt;   /* for atoi call    */
+
+INT main (argc, argv)
+    INT argc;
+    CHAR *argv[];
+{
+    INT       splerr;
+    ULONG     cbBuf ;
+    ULONG     cbNeeded ;
+    ULONG     ulLevel ;
+    ULONG     ulJob ;
+    PSZ       pszComputerName ;
+    PSZ       pszQueueName ;
+    PVOID     pBuf;
+    PPRJINFO3 pprj3 ;
+
+    /* Input the parameters Computer Name, Queue Name,and Job ID. Check that  */
+    /* three parameters have been entered along with the program name.        */
+    if (argc != 4)
+    {
+       /* Print a message and exit if wrong number of parameters entered      */
+       printf("Syntax:  sjqry  ComputerName  QueueName  JobID    \n");
+       DosExit( EXIT_PROCESS , 0 ) ;
+    }
+    /* Set the parameters to the values entered on the command line.          */
+    pszComputerName = argv[1] ;
+    pszQueueName = argv[2] ;
+    ulJob = atoi (argv[3]);
+
+    /* Valid levels are 0,2,and 3. Level 3 returns a PRJINFO3 structure.      */
+    ulLevel = 3 ;
+
+    /* Call the function with cbBuf equal to zero in order to get the number  */
+    /* of bytes needed returned in cbNeeded.                                  */
+    splerr = SplQueryJob(pszComputerName,pszQueueName,ulJob,
+                            ulLevel, (PVOID)NULL, 0L, &amp;cbNeeded );
+
+    /* Only continue if the error return code is one of the two following.    */
+    if (splerr == NERR_BufTooSmall || splerr == ERROR_MORE_DATA )
+    {
+       /* Allocate memory for the buffer(pBuf). Only continue if memory is    */
+       /* successfully allocated.                                             */
+       if (DosAllocMem( &amp;pBuf, cbNeeded,
+                        PAG_READ|PAG_WRITE|PAG_COMMIT) )
+       {
+          /* Set the count of bytes needed for the buffer to the value        */
+          /* returned in cbNeeded from the first call.                        */
+          cbBuf = cbNeeded ;
+
+          /* Make the call again with all the correct values.                 */
+          SplQueryJob(pszComputerName,pszQueueName,ulJob,
+                               ulLevel, pBuf, cbBuf, &amp;cbNeeded) ;
+
+          /* Set a pointer to point to the beginning of the buffer that holds */
+          /* the returned structure.                                          */
+          pprj3=(PPRJINFO3)pBuf;
+
+          /* Print out the information for each element in the structure.     */
+          printf("Job ID      = %d\n", pprj3-&gt;uJobId);
+          printf("Job Priority= %d\n", pprj3-&gt;uPriority);
+          printf("User Name   = %s\n", pprj3-&gt;pszUserName);
+          printf("Position    = %d\n", pprj3-&gt;uPosition);
+          printf("Status      = %d\n", pprj3-&gt;fsStatus);
+          printf("Submitted   = %ld\n",pprj3-&gt;ulSubmitted);
+          printf("Size        = %ld\n",pprj3-&gt;ulSize);
+          printf("Comment     = %s\n", pprj3-&gt;pszComment);
+          printf("Document    = %s\n", pprj3-&gt;pszDocument);
+          printf("Notify Name = %s\n", pprj3-&gt;pszNotifyName);
+          printf("Data Type   = %s\n", pprj3-&gt;pszDataType);
+          printf("Parms       = %s\n", pprj3-&gt;pszParms);
+          printf("Status      = %s\n", pprj3-&gt;pszStatus);
+          printf("Queue       = %s\n", pprj3-&gt;pszQueue);
+          printf("QProc Name  = %s\n", pprj3-&gt;pszQProcName);
+          printf("QProc Parms = %s\n", pprj3-&gt;pszQProcParms);
+          printf("Driver Name = %s\n", pprj3-&gt;pszDriverName);
+          printf("Printer Name= %s\n", pprj3-&gt;pszPrinterName);
+
+          /* If pDriverData is NULL, then we can not access any data.         */
+          if (pprj3-&gt;pDriverData)
+          {
+             printf("  pDriverData-&gt;cb           - %ld\n",
+                                    (ULONG)pprj3-&gt;pDriverData-&gt;cb);
+             printf("  pDriverData-&gt;lVersion     - %ld\n",
+                                    (ULONG)pprj3-&gt;pDriverData-&gt;lVersion) ;
+             printf("  pDriverData-&gt;szDeviceName - %s\n",
+                                       pprj3-&gt;pDriverData-&gt;szDeviceName) ;
+          }
+          printf("/n");
+
+          /* Free memory that we allocated.                                   */
+          DosFreeMem(pBuf) ;
+       }
+    }
+    else
+    {
+       /* If we are here than we have an error code. Print it out.            */
+       printf("SplQueryJob Error=%ld,Bytes Needed=%ld\n",splerr, cbNeeded);
+    }
+    DosExit( EXIT_PROCESS , 0 ) ;
+    return(splerr);
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1502_L2H_SplQueryJobRelatedFu.html">[Back: SplQueryJob - Related Functions]</A> <BR>
+<A HREF="1504_L2H_SplQueryJobTopics.html">[Next: SplQueryJob - Topics]</A> 
+</BODY>
+</HTML>

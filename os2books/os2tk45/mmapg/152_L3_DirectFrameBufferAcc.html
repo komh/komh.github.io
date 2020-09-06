@@ -1,0 +1,117 @@
+<HTML>
+<HEAD>
+<TITLE>Direct Frame-Buffer Access</TITLE>
+</HEAD>
+<BODY>
+<H1>Direct Frame-Buffer Access</H1><!-- entering slot 164 -->
+<P>
+As mentioned earlier,<I> *ppFrameBuffer</I> returned by DiveOpen gives direct
+addressability to the frame buffer.  In order to write directly to the frame
+buffer, the DIVE application must perform its own clipping, color conversion,
+and bank switching. The following functions are provided for direct frame-buffer
+access:  DiveAcquireFrameBuffer, DiveDeacquireFrameBuffer, DiveSwitchBank,
+and DiveCalcFrameBufferAddress.
+<P>
+The DiveQueryCaps function returns whether the display subsystem is bank-switched.
+DIVE provides another function called DiveCalcFrameBufferAddress to get
+to a location in the frame buffer that corresponds to a rectangle in desktop
+coordinates:
+<PRE>PRECTL prectlDest;            /* Image rectangle in desktop coors  */
+PVOID pDestinationAddress;    /* Frame buffer address - output     */
+PULONG pulBankNumber;         /* Display h/w bank number - output  */
+PULONG pulRemlinesInBank;     /* Lines left in bank - output       */
+
+ulErrorCode = DiveCalcFrameBufferAddress(
+        hDiveInst, &amp;prectlDest, &amp;pDestinationAddress,
+        &amp;pulBankNumber, &amp;pulRemlinesInBank);
+</PRE>
+
+<P>
+To accomplish correct clipping,<I> prectlDest</I> must be in the application
+window's visible region.  If the display hardware is bank-switched, then
+the application must not write more than<I> pulRemlinesInBank</I> lines
+of output before switching banks.  The data written to<I> pDestinationAddress
+</I>must be in the color-encoding scheme of the screen (also provided by
+DiveQueryCaps).  (Of course, DIVE can be used to convert to the correct
+screen color-encoding prior to writing to the frame buffer by doing a DiveBlitImage
+to a destination buffer with the same color-encoding.)  Additionally, if
+the screen supports only 256 colors, the data must match the current physical
+palette.
+<P>
+All write access to the frame buffer must be bracketed by calls to DiveAcquireFrameBuffer
+and DiveDeacquireFrameBuffer.  Also, the application must not attempt to
+access the frame buffer between receipt of a WM_VRNDISABLED message and
+a WM_VRNENABLED message.
+<P>
+A typical application would do the following:
+<PRE>BOOL  fKeepBlitting = TRUE;
+BOOL  fFBAccessOK;
+RECTL rectlOutput;      /* Image rectangle in desktop coors  */
+RECTL rectlDest;        /* Portion to blit in this bank */
+ULONG ulMoreLines;      /* Lines in image left to blit  */
+LONG  lBlitTop;         /* Top of next blit     */
+PVOID pDestinationAddress;   /* Frame buffer address - output */
+ULONG ulBankNumber;          /* Display h/w bank number - output */
+ULONG ulRemlinesInAperature; /* Lines left in bank - output  */
+BOOL  fAcquired = FALSE;     /* Acquired frame buffer yet    */
+
+while (fKeepBlitting)
+  {
+  /* ... Call DiveSetupBlitter as before ...    */
+
+  /********************************************************/
+  /* Calculate total number of lines to blit.  Then blit  */
+  /* only those lines that will fit in the current bank.  */
+  /* Switch to successive banks until the entire image is */
+  /* blitted.                                             */
+  /********************************************************/
+  ulMoreLines = rectlDest.yTop - rectlDest.yBottom;
+  memcpy( &amp;rectlDest, &amp;rectlOutput, sizeof(RECTL));
+  while (ulMoreLines &amp;&amp; fFBAccessOK)
+    {
+    ulErrorCode = DiveCalcFrameBufferAddress(
+        hDive, rectlDest, &amp;pDestinationAddress,
+        &amp;ulBankNumber, &amp;ulRemlinesInAperture);
+    if (!fAcquired)
+      if (!DiveAcquireFrameBuffer( hDive, ulBankNumber))
+        fAcquired = TRUE;
+      else break;
+    DiveSwitchBank( hDive, ulBankNumber);
+      {
+      /* ... write data for (ulRemlinesInAperture) top lines of */
+      /* rectlDest to pDestinationAddress ...   */
+      if (ulRemlinesInAperture &lt; ulMoreLines)
+        {               /* if need next bank    */
+        rectlDest.yTop -= ulRemlinesInAperture;
+        ulMoreLines -= ulRemlinesInAperture;
+        }
+      else ulMoreLines = 0;
+      }
+    if (fAcquired)
+      DiveDeacquireFrameBuffer( hDive);
+    }           /* end: while more lines to blit */
+  }             /* end: blitter loop    */
+
+</PRE>
+
+<P>
+<B>Note: </B> This method works only on even bank breaks; indirect access
+through DiveBlitImage is recommended on displays with bank breaks that are
+not aligned on scan-line boundaries.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+In the previous example, the application spins off a separate thread to
+perform blitting.  The procedure for this thread contains a<!-- entering slot 165 --> nested
+loop that switches display banks for each image blitted as long as blitting
+is needed.  The flag fFBAccessOK is turned off whenever the application
+window received WM_VRNDISABLED and is turned on whenever WM_VRNENABLED is
+received.
+
+<P><HR>
+
+<A HREF="151_L3_TransparentBlitting.html">[Back: Transparent Blitting]</A> <BR>
+<A HREF="153_L1_Captioning.html">[Next: Captioning]</A> 
+</BODY>
+</HTML>

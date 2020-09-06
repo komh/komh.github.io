@@ -1,0 +1,114 @@
+<HTML>
+<HEAD>
+<TITLE>Swappable Heap Blocks</TITLE>
+</HEAD>
+<BODY>
+<H1>Swappable Heap Blocks</H1><!-- entering slot 185 -->
+<P>
+Kernel swappable heap blocks for allocated blocks have the following layout:
+
+<PRE>&lt;size&gt;&lt;owner&gt;&lt;selector&gt;&lt;data&gt;
+
+Field           Bits            Description
+
+size in bytes   63-32           Size of the block including the
+                                header in bytes ORed with signature
+                                0x52000000.
+
+owner           31-16           Owner of heap block.  This is
+                                either a system owner (value between
+                                0xff2d and 0xfff8, or a
+                                memory handle/pseudo handle such as
+                                an MTE pseudo-handle.
+
+selector        15-0            GDT selector mapping block's data
+                                else null.
+</PRE>
+
+<P>
+<U><I>Finding the owner of a Swappable Head Selector</I></U>
+<PRE># .m 8f0:0
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0021 %fef1f2e0 00001400 %fca5f000 121 0020 0022 0000 0020 0022 0000      =0000
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 0022  0021 0000  0225 ffef 0000  0000 00  04 00 00 vmkshrw
+
+# dl 8f0
+GDT
+08f0  Code    Bas=fca95000 Lim=00008ed3 DPL=0 P  RE    A
+
+
+# dd %fca95000-10
+%fca94ff0  00000000 00000000 52008ee0 08f0ff49
+%fca95000  08e8b81e 32b8d88e 16ca1f00 06c89000
+%fca95010  1e560000 8e08e8b8 a23e83d8 06740009
+%fca95020  eb63a5e8 c02b9003 0bfe4689 e90374c0
+%fca95030  468b017e 10568b0e 52000805 6aff6a50
+%fca95040  13969aff 5f3d1000 c4e77400 83260e5e
+%fca95050  74000e7f 0142e903 0c47ff26 261276c4
+%fca95060  2616448b 8918548b 5689fa46 0e468bfc
+
+# .mo ff49
+ff49 fsd2
+# .lml
+hmte=0982 pmte=%fe0e1a14 mflags=0408b186 e:\ibmlan\netlib\spl1a.dll
+hmte=097e pmte=%fe0e1a54 mflags=0408b186 e:\ibmlan\netlib\lrhm1.dll
+hmte=0979 pmte=%fe0e1bac mflags=0408b186 e:\ibmlan\netlib\lrns1.dll
+hmte=096b pmte=%fe0e1d60 mflags=0408b186 e:\ibmlan\netlib\netibm.dll
+hmte=0164 pmte=%fe02cc40 mflags=0498b1c8 e:\os2\dll\sysmono.fon
+.
+.
+.
+.
+hmte=0181 pmte=%fe02ccb0 mflags=4498b1d5 e:\os2\dll\pmatm.dll
+hmte=031b pmte=%fe02af18 mflags=0428a1c9 e:\ibmlan\netprog\netwksta.200
+hmte=0306 pmte=%fe059f90 mflags=0428a1c9 e:\netware\nwifs.ifs
+hmte=0160 pmte=%fe01ff4c mflags=0428a1c9 d:\dataex2\iwsfsd2.ifs
+hmte=0117 pmte=%fdf5df60 mflags=0428a1c9 e:\os2\cdfs.ifs
+hmte=00d2 pmte=%fdf53990 mflags=0428a1c9 e:\os2\hpfs.ifs
+
+# .lmo 117
+hmte=0117 pmte=%fdf5df60 mflags=0428a1c9 e:\os2\cdfs.ifs
+seg  sect psiz vsiz hob  sel  flags
+0001 0002 8ed3 8ed4 0000 08f0 8d60 code shr prel rel
+0002 004a 0964 0ad0 0000 <!-- entering slot 186 -->08e8 8c41 data prel
+#
+</PRE>
+
+<P>
+We use .M to find that the owner of 8f0:0 is<B> vmkshrw</B>.
+<P>
+So, we look at the descriptor for 8f0 to find it's base address. Note that
+the selectors assigned to kernel heap blocks address the data portion only.
+
+<P>
+We dump out 0x10 bytes before the selector base to show the block header
+to be 0x52008ee0 0x08f0ff49. This tells us the length of the block including
+header is 8ee0. (Data sizes are rounded up to the next quad-word). The user
+of the block is ff49.
+<P>
+<B>Note: </B>
+<P>
+The following short cut could have been used:
+<PRE>   dd %(8f0:0)-10
+</PRE>
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+<LI>MO ff49 shows<B> fsd2</B>. This is the second file system driver to
+initialise.
+<P>
+.LML will list DLLs, Fonts, and FSDs, newest first. Counting back from the
+end we see FSD1 is HPFS and FSD2 is CDFS.
+<P>
+.LMO 117 confirms that 8f0:0 does belong to CDFS.IFS.
+
+<P><HR>
+
+<A HREF="148_L5_KernelPublicHeaps.html">[Back: Kernel Public Heaps]</A> <BR>
+<A HREF="150_L6_ResidentHeapBlocks.html">[Next: Resident Heap Blocks]</A> 
+</BODY>
+</HTML>

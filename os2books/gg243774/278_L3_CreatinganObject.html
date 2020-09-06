@@ -1,0 +1,192 @@
+<HTML>
+<HEAD>
+<TITLE>Creating an Object</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating an Object</H1><!-- entering slot 303 -->
+<P>
+A new object class in the Workplace Shell is typically created by taking
+an existing object class and subclassing it, introducing new data and methods,
+and modifying existing behaviors where required.  The new object class is
+then registered with the Workplace Shell, and is available from that point
+on.
+<P>
+<B>Registration</B>
+<P>
+Once an object class has been defined, compiled and placed into a dynamic
+link library, it must be registered with Workplace Shell before it can be
+used.  This may be accomplished in either of two ways:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->The simplest method is to place the DLL for the object
+in a directory that is included in the LIBPATH statement in CONFIG.SYS.
+ Once this is done, opening the the<I> Templates</I> folder on the Workplace
+Shell desktop will automatically cause the DLL to be loaded and a template
+for the object class to appear in the<I> Templates</I> folder.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->An object class may also be registered with the Workplace
+Shell using the<B> WinRegisterObjectClass()</B> function. This function
+records the name of the object class, and the name of the DLL that contains
+the code to implement the class.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+An example of the<B> WinRegisterObjectClass()</B> function is given in <A HREF="052_L2_RegisteringaWorkplac.html">Figure
+"Registering a Workplace Shell Object Class"</A>.
+<P>
+<A HREF="052_L2_RegisteringaWorkplac.html">Figure "Registering a Workplace
+Shell Object Class"</A> provides a very simple example; a useful technique
+for registering object classes is to build a simple program that reads a
+set of strings from an ASCII data file and uses these strings as parameters
+to the<B> WinRegisterObjectClass()</B> function.  In this way, a generic
+object-registraion routine can be built and used for multiple object classes,
+without the need to modify and recompile source code.
+<P>
+Note that once an object class has been registered with the Workplace Shell,
+it is permanently available until it is explicitly deleted by deregistering
+it. See <A HREF="281_L3_DeregisteringanObjec.html">Deregistering an Object
+Class</A> for information on deregistering an object class.
+<P>
+<B>Class Data</B>
+<P>
+Class data is owned by the object class rather than by an instance of that
+class.  It is therefore available to all instances of the class, and must
+be initialized prior to instantiating any objects within the class.
+<P>
+For this reason, class data is initialized when the object classes are loaded
+from their DLLs, either during Workplace Shell initialization or dynamically
+during execution.  Class data initialization is performed by the<I> _wpclsInitData
+</I>class method, which is called by the system when the class is loaded.
+ If a new object class has class data that must be initialized, it should
+override the<I> _wpclsInitData</I> method and perform its class-specific
+processing.
+<P>
+An example of an overridden<I> _wpclsInitData</I> method from the password-protected
+folder example is shown in <A HREF="053_L2_InitializingClassDat.html">Figure
+"Initializing Class Data"</A>.
+<P>
+In the example shown in <A HREF="053_L2_InitializingClassDat.html">Figure
+"Initializing Class Data"</A>, a global variable<I> hModule</I> is used
+to contain the module handle for the DLL, which is required when loading
+Presentation Manager resources such as strings, pointers or dialogs.  Since
+a global variable is used rather than a class data variable, the first statement
+in the overridden method, which obtains a handle to the class data, is not
+required and is therefore commented out.
+<P>
+Any class data items obtained or initialized by an object class from within
+the<I> _wpclsInitData</I> method should also be freed by the object class,
+by overriding the<I> _wpclsUnInitData</I> method. This method is invoked
+by the system when an object class is deregistered (see <A HREF="281_L3_DeregisteringanObjec.html">Deregistering
+an Object Class</A>), or when the Workplace Shell process is terminated.
+ An example of the<I> _wpclsUnInitData</I> method is shown in <A HREF="054_L2_FreeingClassDataItem.html">Figure
+"Freeing Class Data Items"</A>.
+<P>
+The example shown in <A HREF="054_L2_FreeingClassDataItem.html">Figure "Freeing
+Class Data Items"</A> assumes that the module handle for the DLL has already
+been obtained and stored in the global variable<I> hModule</I>, as shown
+in <A HREF="053_L2_InitializingClassDat.html">Figure "Initializing Class
+Data"</A>.
+<P>
+<B>Instantiation</B>
+<P>
+Once an object class has been registered with the Workplace Shell, an instance
+of that class may be created; this is normally known as<B> instantiation</B>.
+ This may be done in one of two ways.  The simplest method is to open the
+<I>Templates</I> folder and drag the template for the object class to the
+required location.  Alternatively, an object may be created from within
+an application, using the<B> WinCreateObject()</B> function, an example
+of which is given in <A HREF="055_L2_CreatinganObject.html">Figure "Creating
+an Object"</A>.
+<P>
+Note that the<I> pszParams</I> parameter shown in <A HREF="055_L2_CreatinganObject.html">Figure
+"Creating an Object"</A> is used to contain a<I> setup string</I>, which
+can be used to pass one or more of a number of parameters to the object
+class.  In the example, it is used<!-- entering slot 304 --> only to set
+the icon for the object, but may also be used to specify other parameters
+for that instance of the class.  The keywords and values supported by the
+<I>WPObject</I> class are documented in the<I> IBM OS/2 Version 2.0 Presentation
+Manager Reference</I>; other object classes may add their own keywords and
+values.
+<P>
+The final parameter contains one or more flags which determine the behavior
+of the<B> WinCreateObject()</B> call if the object being created clashes
+with an object that already exists with the specified name and in the specified
+location.  Valid actions are for the call to fail, to update the existing
+object or to replace the existing object.  These flags are documented in
+the<I> IBM OS/2 Version 2.0 Presentation Manager Reference</I>.
+<P>
+The setup string is passed as a parameter to the<I> _wpSetup</I> method,
+which is invoked when the object is instantiated.  This method is defined
+by the<I> WPObject</I> class, and may be overridden by a new object class
+in order to check for its own keywords and take appropriate setup action.
+
+<P>
+The<I> _wpSetup</I> method accepts the setup string as a parameter, and
+may then parse the setup string, extract any class-specific data and perform
+appropriate processing on that data.  However, since many of the keywords
+that may be specified in the setup string are defined by the<I> WPObject
+</I>class and are handled by the default<I> _wpSetup</I> method, the default
+processing must be carried out.  In this particular case, the default processing
+may be carried out before or after the class-specific processing.
+<P>
+An example of an overridden<I> _wpSetup</I> method is shown in <A HREF="056_L2_ObjectSetup.html">Figure
+"Object Setup"</A>; this example shows the use of an additional parameter
+in the setup string (PASSWORD=) to set an initial password for a password-protected
+folder upon folder creation.
+<P>
+The setup string is parsed from within the object by calling the<I> _wpScanSetupString
+</I>method. Both of these methods, along with the keywords supported by
+the<I> WPObject</I> class, are described in the<I> IBM OS/2 Version 2.0
+Presentation Manager Reference</I>.
+<P>
+After performing the class-specific processing in the<I> _wpSetup</I> method,
+an object class should invoke its parent class's<I> _wpSetup</I> method
+to perform the default processing for any other keywords in the setup string
+that are defined by the parent class.
+<P>
+Before the<I> _wpSetup</I> method is invoked, the system invokes the object's
+<I>_wpInitData</I> method, which allows an object to allocate resources
+and initialize its instance data.  See Instance Data below for further details.
+
+<P>
+Note that unlike a Presentation Manager window, which exists only for the
+duration of an application's execution, an object remains in existence permanently
+unless explicitly deleted from the system.
+<P>
+<B>Instance Data</B>
+<P>
+When an object is created or awakened from a dormant state, the<I> _wpInitData
+</I>method is invoked by the system.  This method allows an object to initialize
+its instance data to a known state.  Operating system resources should be
+allocated at this stage, but Presentation Manager resources should not,
+since a view of the object is not yet being opened.  The allocation of Presentation
+Manager resources is typically done during processing of the<I> _wpOpen
+</I>method (see <A HREF="279_L3_UsinganObject.html">Using an Object (Opening
+an Object)</A>).
+<P>
+If an object has its own instance data, which must be initialized to a known
+state before processing may be carried out, the object should override the
+<I>_wpInitData</I> method in its class definition file, and include the
+initialization code.  However, for any object class other than a base storage
+class, the default initialization processing must be carried out in addition
+to the class-specific processing.  This allows the correct initialization
+of any instance data items defined by the parent class, and ensures that
+the new object class behaves in a manner consistent with its ancestors.
+
+<P>
+<A HREF="057_L2_InitializingInstance.html">Figure "Initializing Instance
+Data"</A> shows an overridden<I> _wpInitData</I> method, which initializes
+the password information for a password-protected folder.
+<P>
+Note that during processing of the<I> _wpInitData</I> method, the instance
+data of the object is not necessarily in a known state.  The programmer
+must therefore take great care when carrying out any processing during the
+execution of this method, in order to avoid using data that may not yet
+have been initialized correctly.  Failure to follow this guideline may cause
+unpredictable<!-- entering slot 305 --> results for the object.
+
+<P><HR>
+
+<A HREF="277_L2_ObjectBehavior.html">[Back: Object Behavior]</A> <BR>
+<A HREF="279_L3_UsinganObject.html">[Next: Using an Object]</A> 
+</BODY>
+</HTML>

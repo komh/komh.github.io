@@ -1,0 +1,72 @@
+<HTML>
+<HEAD>
+<TITLE>Subclassing a Window</TITLE>
+</HEAD>
+<BODY>
+<H1>Subclassing a Window</H1><!-- entering slot 485 -->
+<P>
+To subclass a window, an application calls the WinSubclassWindow function,
+specifying the handle of the window to subclass and a pointer to the new
+window procedure.  The WinSubclassWindow function returns a pointer to the
+original window procedure; the application can use this pointer to pass
+unprocessed messages to the original procedure. The following code fragment
+subclasses a push button control window.  The new window procedure generates
+a beep whenever the user clicks the push button.
+<PRE>    PFNWP pfnPushBtn;
+    CHAR szCancel[] = "Cancel";
+    HWND hwndClient;
+    HWND hwndPushBtn;
+        .
+        .
+        .
+
+    /* Create a push button control.                  */
+    hwndPushBtn = WinCreateWindow(
+        hwndClient,     /* Parent-window handle       */
+        WC_BUTTON,      /* Window class               */
+        szCancel,       /* Window text                */
+        WS_VISIBLE   |  /* Window style               */
+        WS_SYNCPAINT |  /* Window style               */
+        BS_PUSHBUTTON,  /* Button style               */
+        50, 50,         /* Physical position          */
+        70, 30,         /* Width and height           */
+        hwndClient,     /* Owner-window handle        */
+        HWND_TOP,       /* Z-order position           */
+        1,              /* Window identifier          */
+        NULL,           /* No control data            */
+        NULL);          /* No presentation parameters */
+
+    /* Subclass the push button control.              */
+    pfnPushBtn = WinSubclassWindow(hwndPushBtn,
+        SubclassPushBtnProc);
+        .
+        .
+        .
+}
+    /* This procedure subclasses the push button.     */
+    MRESULT EXPENTRY SubclassPushBtnProc(HWND hwnd,ULONG msg,MPARAM mp1, MPARAM mp2)
+    {
+        switch (msg) {
+
+    /* Beep when the user clicks the push button.     */
+            case WM_BUTTON1DOWN:
+                DosBeep(1000, 250);
+                break;
+
+            default:
+                break;
+        }
+
+    /* Pass all messages to the original window procedure. */
+        return (MRESULT) pfnPushBtn(hwnd, msg, mp1, mp2);
+    }
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="478_L3_AssociatingaWindowPr.html">[Back: Associating a Window Procedure with a Window Class]</A> <BR>
+<A HREF="480_L1_WindowTimers.html">[Next: Window Timers]</A> 
+</BODY>
+</HTML>

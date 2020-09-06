@@ -1,0 +1,249 @@
+<HTML>
+<HEAD>
+<TITLE>MMIOM_READ and MMIOM_WRITE</TITLE>
+</HEAD>
+<BODY>
+<H1>MMIOM_READ and MMIOM_WRITE</H1><!-- entering slot 136 -->
+<P>
+The MMIOM_READ message requests that bytes be read from an open file; MMIOM_WRITE
+message requests that bytes be written to an open file.  These messages
+should be handled differently for each IOProc, depending on the requirements
+imposed by the file's data.  Because a file might be using buffered I/O,
+mmioRead and mmioWrite maintain the<I> lBufOffset</I> and the<I> lDiskOffset
+</I>fields.  The IOProc should not modify these fields.  If these fields
+are needed by the IOProc, the IOProc can use the<I> aulInfo</I> array to
+maintain.  Additionally, the<I> pExtraInfoStruct</I> can be used for any
+user-defined structure that the IOProc requires.  The sample IOProc stores
+its header in this field to demonstrate this capability.  If the IOProc
+is a file format IOProc, it should use mmioRead or mmioWrite calls to the
+storage system IOProc, using the internal handle generated during the open
+processing.  A storage system IOProc might simply issue calls to DosRead
+or DosWrite.
+<P>
+To implement a file format IOProc for translation mode, and provide support
+for the MMIO_TRANSLATEDATA flag, additional code is required for the MMIOM_READ
+and MMIOM_WRITE message processing. During read processing, after data is
+read from the file to a private buffer in its native encoding format, the
+data must be translated from its native encoding scheme to the standard
+presentation format encoding scheme for its media type.  The translated
+data is then presented to the application in its read buffer.  Likewise,
+for write processing, data is received from the application in the standard
+presentation format, and must be translated to its native encoding scheme
+before being written to the file.
+<P>
+The following example shows an example of how the M-Motion IOProc supports
+the MMIOM_READ and MMIOM_WRITE messages.
+<PRE>case MMIOM_READ:
+     {
+     /************************************************************
+      * Declare Local Variables
+      ************************************************************/
+     PMMFILESTATUS   pVidInfo;
+     LONG            rc;
+     LONG            lBytesToRead;
+
+     /************************************************************
+      * Check for valid MMIOINFO block.
+      ************************************************************/
+     if (!pmmioinfo)
+         return (MMIO_ERROR);
+
+     /************************************************************
+      * Set up our working file status variable.
+      ************************************************************/
+     pVidInfo = (PMMFILESTATUS)pmmioinfo-&gt;pExtraInfoStruct;
+
+     /************************************************************
+      * Is Translate Data off?
+      ************************************************************/
+     if (!(pmmioinfo-&gt;ulTranslate &amp; MMIO_TRANSLATEDATA))
+         {
+         /********************************************************
+          * Since no translation, provide exact number of bytes req.
+          ********************************************************/
+         if (!lParam1)
+             return (MMIO_ERROR);
+
+         rc = mmioRead (pVidInfo-&gt;hmmioSS,
+                        (PVOID) lParam1,
+                        (ULONG) lParam2);
+
+         return (rc);
+         }
+
+     /************************************************************
+      * Otherwise, Translate Data is on...
+      ************************************************************/
+
+     /************************************************************
+      * Ensure we do NOT write more data out than is remaining
+      *    in the buffer.  The length of read was requested in
+      *    image bytes, so confirm that there are that many of
+      *    virtual bytes remaining.
+      ************************************************************/
+     if ((ULONG)(pVidInfo-&gt;lImgBytePos + lParam2) &gt;
+          pVidInfo-&gt;ulImgTotalBytes)
+        lBytesToRead =
+            pVidInfo-&gt;ulImgTotalBytes - pVidInfo-&gt;lImgBytePos;
+     else
+        lBytesToRead = (ULONG)lParam2;
+
+     /************************************************************
+      * Perform this block on ALL reads.  The image data should
+      * be in the RGB buffer at this point, and can be handed
+      * to the application.
+      *
+      * Conveniently, the virtual image position is the same
+      *    as the RGB buffer position, since both are 24 bit-RGB
+      ************************************************************/
+     memcpy ((PVOID)lParam1,
+             &amp;(pVidInfo-&gt;lpRGBBuf[pVidInfo-&gt;lImgBytePos]),
+             lBytesToRead);
+
+     /************************************************************
+      * Move RGB buffer pointer forward by number of bytes read.
+      * The Img buffer pos is identical since both are 24 bits.
+      ************************************************************/
+     pVidInfo-&gt;lImgBytePos += lBytesToRead;
+
+     return (lBytesToRead);
+     }   /* end case  of MMIOM_READ */
+
+ case MMIOM_WRITE:
+      {
+      /************************************************************
+<!-- entering slot 137 -->       * Declare Local Variables.
+       ************************************************************/
+      PMMFILESTATUS       pVidInfo;
+      USHORT              usBitCount;
+      LONG                lBytesWritten;
+      ULONG               ulImgBytesToWrite;
+
+      /************************************************************
+       * Check for valid MMIOINFO block.
+       ************************************************************/
+      if (!pmmioinfo)
+          return (MMIO_ERROR);
+
+      /************************************************************
+       * Set up our working variable MMFILESTATUS.
+       ************************************************************/
+      pVidInfo = (PMMFILESTATUS) pmmioinfo-&gt;pExtraInfoStruct;
+
+      /************************************************************
+       * See if a SetHeader has been done on this file.
+       ************************************************************/
+      if ((!pVidInfo) || (!pVidInfo-&gt;bSetHeader))
+          {
+          return (MMIO_ERROR);
+          }
+
+      if (!(pmmioinfo-&gt;ulTranslate &amp; MMIO_TRANSLATEDATA))
+          {
+          /********************************************************
+           * Translation is off, take amount of bytes sent and
+           * write to the file.
+           ********************************************************
+           * Ensure that there is a data buffer to write from.
+           ********************************************************/
+          if (!lParam1)
+              return (MMIO_ERROR);
+
+          lBytesWritten = mmioWrite (pVidInfo-&gt;hmmioSS,
+                                     (PVOID) lParam1,
+                                     (ULONG) lParam2);
+
+          return (lBytesWritten);
+          }
+
+      /************************************************************
+       * Translation is on.
+       ************************************************************
+       * Set up local variables.
+       ************************************************************/
+      usBitCount =
+         pVidInfo-&gt;mmImgHdr.mmXDIBHeader.BMPInfoHeader2.cBitCount;
+
+
+      /************************************************************
+       * Ensure we do not attempt to write past the end of the
+       *    buffer...
+       ************************************************************/
+      if ((ULONG)(pVidInfo-&gt;lImgBytePos + lParam2) &gt;
+         pVidInfo-&gt;ulImgTotalBytes)
+         ulImgBytesToWrite =
+             pVidInfo-&gt;ulImgTotalBytes - pVidInfo-&gt;lImgBytePos;
+      else
+         ulImgBytesToWrite = (ULONG)lParam2;
+
+      /************************************************************
+       * Write the data into the image buffer.  It will be converted to
+       *   RGB, then YUV  when the file is closed.  This allows the
+       *   application to seek to arbitrary  positions within the
+       *   image in terms of the bits/pel, etc they are writing.
+       ************************************************************/
+      memcpy (&amp;(pVidInfo-&gt;lpImgBuf[pVidInfo-&gt;lImgBytePos]),
+              (PVOID)lParam1,
+              ulImgBytesToWrite);
+
+      /* Update current position in the image buffer */
+      pVidInfo-&gt;lImgBytePos += ulImgBytesToWrite;
+
+      return (ulImgBytesToWrite);
+      }   /* end case of MMIOM_WRITE */
+
+  /*
+   * If the IOProc has a child IOProc, then pass the message
+   *  on to the Child, otherwise return Unsupported Message
+   */
+  default:
+      {
+       /*
+        * Declare Local Variables.
+        */
+       PMMFILESTATUS       pVidInfo;
+       LONG                lRC;
+
+       /************************************************************
+        * Check for valid MMIOINFO block.
+        ************************************************************/
+       if (!pmmioinfo)
+           return (MMIO_ERROR);
+
+       /************************************************************
+        * Set up our working variable MMFILESTATUS.
+        ************************************************************/
+       pVidInfo = (PMMFILESTATUS) pmmioinfo-&gt;pExtraInfoStruct;
+
+       if (pVidInfo != NULL &amp;&amp; pVidInfo-&gt;hmmioSS)
+          {
+           lRC = mmioSendMessage (pVidInfo-&gt;hmmioSS,
+                                  usMsg,
+                                  lParam1,
+                                  lParam2);
+           if (!lRC)
+              pmmioinfo-&gt;ulErrorRet = mmioGetLastError (pVidInfo-&gt;hmmioSS);
+           return (lRC);
+          }
+      else
+         {
+          if (pmmioinfo != NULL)
+             pmmioinfo-&gt;ulErrorRet = MMIOERR_UNSUPPORTED_MESSAGE;
+          return (MMIOERR_UNSUPPORTED_MESSAGE);
+         }
+
+      }   /* end case of Default */
+
+  } /* end SWITCH statement for MMIO messages */
+
+return (0);
+}      /* end of window procedure */
+</PRE>
+
+
+<P><HR>
+
+<A HREF="108_L3_MMIOM_OPEN.html">[Back: MMIOM_OPEN]</A> <BR>
+<A HREF="110_L3_MMIOM_SEEK.html">[Next: MMIOM_SEEK]</A> 
+</BODY>
+</HTML>

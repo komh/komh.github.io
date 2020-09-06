@@ -1,0 +1,67 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Start a Windows program synchronously</TITLE>
+</HEAD>
+<BODY>
+<H1>Start a Windows program synchronously</H1><!-- entering slot 171 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+To start a Windows program synchronously, you must use a DOS batch file.
+The batch file might look like (see also <A HREF="168_L3_StartanOS2programsyn.html">Start
+an OS/2 program synchronously</A> and <A HREF="682_L3_StartDOS.html">StartDOS</A>):
+
+<PRE> 
+REM *** DOS Batch
+REM     Usage: DOSSTART.BAT semFile windowsProgram {progParameters}
+REM
+SET semFile=%1
+SET programName=%2
+SET parameter=%3
+:pLoop
+SET parameter=%parameter% %3
+SHIFT
+IF NOT "%3" == "" GOTO pLoop
+
+%programName% %parameter% &gt;%semFile%
+exit
+</PRE>
+
+<P>
+The calling REXX program might look like
+<PRE> 
+/* sample code to start a Windows program synchronously               */
+
+                    /* load the necessary REXXUTIL function(s)        */
+  call rxFuncAdd "SysSleep", "REXXUTIL", "SysSleep"
+
+                    /* name of the "semaphore" file                   */
+                    /* Note: Use a routine like for example           */
+                    /*       <A HREF="468_L3_Getanameforatemporar.html">Get a name for a temporary file</A>          */
+                    /*       to get a unique name for the semaphore   */
+                    /*       file if you want to run this program     */
+                    /*       in separate sessions at the same time.   */
+  semFile = 'd:\sem'
+  winProg = 'd:\win\apps\excel4\excel'
+  'DOSSTART.BAT' semFile winProg
+   do forever
+      say 'Waiting for the Windows Session ... '
+      if stream( semFile, 'c', 'OPEN READ' ) = 'READY:' then
+        leave
+       call SysSleep 1
+   end
+
+                    /* close and delete the "semaphore" file          */
+   call stream semFile, 'c', 'CLOSE'
+   'del ' semFile '2&gt;NUL 1&gt;NUL'
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="168_L3_StartanOS2programsyn.html">[Back: Start an OS/2 program synchronously]</A> <BR>
+<A HREF="170_L3_Detachaprogram&captu.html">[Next: Detach a program & capture the PID]</A> 
+</BODY>
+</HTML>

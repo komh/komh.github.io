@@ -1,0 +1,159 @@
+<HTML>
+<HEAD>
+<TITLE>DosQFSAttach</TITLE>
+</HEAD>
+<BODY>
+<H1>DosQFSAttach</H1><!-- entering slot 140 -->Bindings:  <A HREF="288_L2H_DosQFSAttach.html">C</A>,
+<A HREF="463_L2H_DosQFSAttach.html">MASM</A>
+<BR>
+
+<P>
+Query information about an attached file system (local or remote), or about
+a character device or pseudo-character device attached to the file system.
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+DosQFSAttach<!-- lm: 0x2 18 -->
+<UL> (DeviceName, Ordinal, FSAInfoLevel,
+DataBuffer, DataBufferLen, Reserved)<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+<B>DeviceName</B> (PSZ) - input<!-- lm: 0x11 4 -->
+<UL> Address of a drive
+letter or the name of a character or pseudo-character device. If DeviceName
+is a drive, it is an ASCIIZ string having the form of drive letter followed
+by a colon. If DeviceName is a character or pseudo-character device name,
+its format is that of an ASCIIZ string in the format of an OS/2 file name
+in a subdirectory called \DEV\. This parameter is ignored if level 2 or
+3 is specified for FSAInfoLevel.<!-- lm: 0x2 1 -->
+</UL><B> Ordinal</B> (USHORT)
+- output<!-- lm: 0x11 4 -->
+<UL> Index into the list of character or pseudo-character
+devices, or the set of drives.  Ordinal always starts at 1.  The Ordinal
+position of an item in a list has no significance at all.  Ordinal is used
+strictly to step through the list.  The mapping from Ordinal to item is
+volatile and may change from one call to DosQFSAttach to the next. This
+parameter is ignored if level 1 is specified for FSAInfoLevel.<!-- lm: 0x2 1 -->
+</UL><B> FSAInfoLevel
+</B>(USHORT) - input<!-- lm: 0x11 4 -->
+<UL> Level of information returned
+in DataBuffer:<!-- lm: 0x2 4 -->
+<P>
+o<!-- lm: 0x2 6 -->
+<UL>Level 0001H returns data for the specific drive
+or device name referred to by DeviceName.  The Ordinal field is ignored.
+<!-- lm: 0x2 4 -->
+</UL>o<!-- lm: 0x2 6 -->
+<UL>Level 0002H returns data
+for the entry in the list of character or pseudo-character devices selected
+by Ordinal. The DeviceName field is ignored.<!-- lm: 0x2 4 -->
+</UL> o<!-- lm: 0x2 6 -->
+<UL>Level
+0003H returns data for the entry in the list of drives selected by Ordinal.
+The DeviceName field is ignored.<!-- lm: 0x2 1 -->
+</UL><B> DataBuffer</B> (PBYTE)
+- output<!-- lm: 0x11 4 -->
+<UL> Address of the return information buffer,
+has the following format:<!-- lm: 0x2 4 -->
+<P>
+<B>iType</B> (USHORT)<!-- lm: 0x11 7 -->
+<UL> Type of item.<!-- lm: 0x2 7 -->
+<P>
+Value<!-- lm: 0x2 17 -->
+<UL> Definition<!-- lm: 0x2 7 -->
+</UL>1<!-- lm: 0x2 17 -->
+<UL> Resident character device<!-- lm: 0x2 7 -->
+</UL>2<!-- lm: 0x2 17 -->
+<UL> Pseudo-character device<!-- lm: 0x2 7 -->
+</UL>3<!-- lm: 0x2 17 -->
+<UL> Local drive<!-- lm: 0x2 7 -->
+</UL>4<!-- lm: 0x2 17 -->
+<UL> Remote drive attached to FSD.<!-- lm: 0x2 4 -->
+</UL><B> cbName
+</B>(USHORT)<!-- lm: 0x11 7 -->
+<UL> Length of item name, not counting null.
+<!-- lm: 0x2 4 -->
+</UL><B>szName</B> (UCHAR)<!-- lm: 0x11 7 -->
+<UL> Item
+name, ASCIIZ string.<!-- lm: 0x2 4 -->
+</UL><B> cbFSDName</B> (USHORT)<!-- lm: 0x11 7 -->
+<UL> Length
+of FSD name, not counting null.<!-- lm: 0x2 4 -->
+</UL><B> szFSDName</B> (UCHAR)
+<!-- lm: 0x11 7 -->
+<UL>Name of FSD item is attached to, ASCIIZ string.
+<!-- lm: 0x2 4 -->
+</UL><B>cbFSAData</B> (USHORT)<!-- lm: 0x11 7 -->
+<UL> Length
+of FSD Attach data returned by FSD.<!-- lm: 0x2 4 -->
+</UL><B> rgFSAData
+</B>(UCHAR)<!-- lm: 0x11 7 -->
+<UL> FSD Attach data returned by FSD.<!-- lm: 0x2 1 -->
+</UL><B> Note:
+</B><!-- lm: 0x11 4 -->
+<UL>The szFSDName is the FSD name exported by the
+FSD, which is not necessarily the same as the FSD name in the boot sector.
+<!-- lm: 0x2 1 -->
+</UL> <!-- lm: 0x11 4 -->
+<UL> For local character devices
+(iType = 1), cbFSDName = 0 and szFSDName contains only a terminating NULL
+byte, and cbFSAData = 0.<!-- lm: 0x2 1 -->
+</UL>  <!-- lm: 0x11 4 -->
+<UL> For
+local drives (iType = 3), szFSDName contains the name of the FSD attached
+to the drive at the time of the call.  This information changes dynamically.
+ If the drive is attached to the kernel's resident file system, szFSDName
+contains FAT or unknown. Since the resident file system gets attached to
+any disk that other FSDs refuse to mount, it is possible to have a disk
+that does not contain a recognizable file system, but yet gets attached
+to the resident file system.  In this case, it is possible to detect the
+difference, and this information would help programs in not destroying data
+on a disk that was not properly recognized.<!-- lm: 0x2 1 -->
+</UL><B> DataBufferLen
+</B>(PUSHSHORT) - input/output<!-- lm: 0x11 4 -->
+<UL> Address of the byte
+length of the return buffer.  Upon return, it is the length of the data
+returned in DataBuffer by the FSD.  This field must be initialized.<!-- lm: 0x2 1 -->
+</UL><B> Reserved
+</B>(ULONG) - input<!-- lm: 0x11 4 -->
+<UL> Reserved, must be set to zero.
+<!-- lm: 0x2 1 -->
+</UL><B>rc</B> (USHORT) - return<!-- lm: 0x11 4 -->
+<UL> Return
+code descriptions are:<!-- lm: 0x2 4 -->
+<P>
+<LI><!-- lm: 0x2 14 -->NO_ERROR<!-- lm: 0x2 4 --> 15<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_DRIVE
+<!-- lm: 0x2 4 -->
+</UL>111<!-- lm: 0x2 14 -->
+<UL> ERROR_BUFFER_OVERFLOW<!-- lm: 0x2 4 -->
+</UL>124<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_LEVEL<!-- lm: 0x2 4 -->
+</UL>259<!-- lm: 0x2 14 -->
+<UL> ERROR_NO_MORE_ITEMS<!-- lm: 0x2 1 -->
+</UL><B>Remarks</B>
+<P>
+Information about all block devices and all character and pseudo-character
+devices is returned by this call.
+<P>
+The information returned by this call is highly volatile.  Calling programs
+should be aware that the returned information may have already changed by
+the time it's returned to them.
+<P>
+The information returned for disks that are attached to the kernel's resident
+file system can be used to determine if the kernel definitely recognized
+the disk as one with its file system on it, or if the kernel just attached
+its file  system to it because no other FSDs mounted the disk. This can
+be important information for a program that needs to know what<!-- entering slot 141 -->
+file system is attached to the drive.  It is quite easy to get into a situation
+where the FSD that recognizes a certain disk has not been installed into
+the system.  In such a case, there is a potential for the data on the disk
+to be destroyed since the wrong file system is attached to the disk by default.
+
+
+<P><HR>
+
+<A HREF="112_L2_DosQFileMode.html">[Back: DosQFileMode]</A> <BR>
+<A HREF="114_L2_DosQFSInfo.html">[Next: DosQFSInfo]</A> 
+</BODY>
+</HTML>

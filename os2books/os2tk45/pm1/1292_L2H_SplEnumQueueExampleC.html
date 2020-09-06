@@ -1,0 +1,149 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>SplEnumQueue - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>SplEnumQueue - Example Code</H1><!-- entering slot 1303 -->
+<P>
+This sample code enumerates all the queues and the jobs in them that are
+on the local workstation.
+<PRE>#define INCL_BASE
+#define INCL_SPL
+#define INCL_SPLDOSPRINT
+#define INCL_SPLERRORS
+
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+
+INT main ()
+{
+  SPLERR splerr;
+  USHORT jobCount;
+  ULONG  cbBuf;
+  ULONG  cTotal;
+  ULONG  cReturned;
+  ULONG  cbNeeded;
+  ULONG  ulLevel;
+  ULONG  i,j;
+  PSZ    pszComputerName;
+  PBYTE  pBuf;
+  PPRQINFO3 prq;
+  PPRJINFO2 prj2;
+
+  ulLevel = 4L;
+  pszComputerName = (PSZ)NULL;
+  splerr = SplEnumQueue(pszComputerName,
+                         ulLevel,
+                         pBuf, 0L,       /* cbBuf */
+                         &amp;cReturned,
+                         &amp;cTotal,
+                         &amp;cbNeeded,
+                         NULL)
+  if (splerr == ERROR_MORE_DATA ||
+      splerr == NERR_BufTooSmall)
+  {
+    if (!DosAllocMem(&amp;pBuf,
+                     cbNeeded,
+                     PAG_READ  |
+                     PAG_WRITE |
+                     PAG_COMMIT))
+    {
+      cbBuf = cbNeeded;
+      splerr = SplEnumQueue(pszComputerName,
+                            ulLevel,
+                            pBuf,
+                            cbBuf,
+                            &amp;cReturned,
+                            &amp;cTotal,
+                            &amp;cbNeeded, NULL)
+      if (splerr == NO_ERROR)
+      {
+        /* Set pointer to point to the beginning of the buffer */
+        prq = (PPRQINFO3)pBuf;
+
+        /* cReturned has the count of the number of PRQINFO3 structures */
+        for (i=0;i &lt; cReturned; i++)
+        {
+          printf("Queue info: name - %s\n", prq-&gt;pszName);
+             if (prq-&gt;fsType &amp; PRQ3_TYPE_APPDEFAULT)
+                printf("  This is the application default print queue\n");
+             printf("  priority - %d  starttime - %d  endtime - %d fsType - %X\n",
+                       prq-&gt;uPriority,
+                       prq-&gt;uStartTime,
+                       prq-&gt;uUntilTime,
+                       prq-&gt;fsType);
+             printf("  pszSepFile   - %s\n", prq-&gt;pszSepFile);
+             printf("  pszPrProc    - %s\n", prq-&gt;pszPrProc);
+             printf("  pszParms     - %s\n", prq-&gt;pszParms);
+             printf("  pszComment   - %s\n", prq-&gt;pszComment);
+             printf("  pszPrinters  - %s\n", prq-&gt;pszPrinters);
+             printf("  pszDriverName- %s\n", prq-&gt;pszDriverName);
+             if (prq-&gt;pDriverData)
+             {
+               printf("  pDriverData-&gt;cb          - %ld\n",
+                         (ULONG)prq-&gt;pDriverData-&gt;cb);
+               printf("  pDriverData-&gt;lVersion    - %ld\n",
+                         (ULONG)prq-&gt;pDriverData-&gt;lVersion);
+               printf("  pDriverData-&gt;szDeviceName- %s\n",
+                         prq-&gt;pDriverData-&gt;szDeviceName);
+             }
+             /* Save the count of jobs. There are this many PRJINFO2 */
+             /* structures following the PRQINFO3 structure          */
+             jobCount = prq-&gt;cJobs;
+             printf("Job count in this queue is %d\n\n",jobCount);
+
+             /* Increment the pointer past the PRQINFO3  structure */
+             prq++;
+
+             /* Set a pointer to point to the first PRJINFO2 structure */
+             prj2=(PPRJINFO2)prq;
+             for (j=0;j &lt; jobCount ; j++)
+             {
+               printf("Job ID       = %d\n", prj2-&gt;uJobId);
+               printf("Job Priority = %d\n", prj2-&gt;uPriority);
+               printf("User Name    = %s\n", prj2-&gt;pszUserName);
+               printf("Position     = %d\n", prj2-&gt;uPosition);
+               printf("Status       = %d\n", prj2-&gt;fsStatus);
+               printf("Submitted    = %ld\n",prj2-&gt;ulSubmitted);
+               printf("Size         = %ld\n",prj2-&gt;ulSize);
+               printf("Comment      = %s\n", prj2-&gt;pszComment);
+               printf("Document     = %s\n\n",prj2-&gt;pszDocument);
+
+               /* Increment the pointer to point to the next structure */
+               prj2++;
+             } /* endfor jobCount */
+
+             /* After doing all the job structures, prj2 points to the next */
+             /* queue structure. Set the pointer for a PRQINFO3 structure   */
+             prq = (PPRQINFO3)prj2;
+        }/*endfor cReturned */
+      }
+      DosFreeMem(pBuf);
+    }
+  } /* end if Q level given */
+  else
+  {
+    /* If we are here we had a bad error code. */
+    /* Print it and some other info.           */
+    printf("SplEnumQueue Error=%ld,
+            Total=%ld,
+            Returned=%ld,
+            Needed=%ld\n",
+            splerr,
+            cTotal,
+            cReturned,
+            cbNeeded);
+  }
+  DosExit(EXIT_PROCESS, 0);
+  return(splerr);
+}   /* end main */
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1291_L2H_SplEnumQueueRelatedF.html">[Back: SplEnumQueue - Related Functions]</A> <BR>
+<A HREF="1293_L2H_SplEnumQueueTopics.html">[Next: SplEnumQueue - Topics]</A> 
+</BODY>
+</HTML>

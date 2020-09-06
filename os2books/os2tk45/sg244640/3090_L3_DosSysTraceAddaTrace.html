@@ -1,0 +1,123 @@
+<HTML>
+<HEAD>
+<TITLE>DosSysTrace (Add a Trace Record to the System Trace Buffer)</TITLE>
+</HEAD>
+<BODY>
+<H1>DosSysTrace (Add a Trace Record to the System Trace Buffer)</H1><!-- entering slot 3325 -->
+<P>
+<B>DosSysTrace</B> allows a subsystem or system extension to add information
+to the system trace buffer.
+<P>
+<B>Note: </B><B> DosSysTrace</B> is a 16-bit API.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+<U><I>Coding Examples.</I></U>
+<PRE>          EXTRN  DosSysTrace:FAR
+
+          PUSH     WORD     MajorCode     ; major trace event code (240-255)
+          PUSH     WORD     Length        ; length of the variable length
+                                          ; area to be recorded (0-512)
+          PUSH     WORD     MinorCode     ; minor trace event code (0-255)
+          PUSH@    OTHER    Data          ; pointer to the area to be traced
+                                          ; (address parameter)
+          CALL     DOSSYSTRACE
+<!--0xfb-->16-bit MASM Example
+</PRE>
+
+<PRE>     APIRET16 APIENTRY16 DosSysTrace(USHORT MajorCode, USHORT Length,
+                                     USHORT MinorCode, PCHAR pData);
+<!--0xfb-->32-bit code Example using CSet/2
+</PRE>
+
+<P>
+<U><I>Parameters</I></U><!-- lm: 0x2 1 -->
+<P>
+MajorCode<!-- lm: 0x11 11 -->
+<UL> The major code to be placed in the trace
+buffer.  Only the low order byte is used.  The high order byte should be
+0 for future compatibility reasons, but no error checking of the high order
+byte is performed.<!-- lm: 0x2 1 -->
+</UL> Length<!-- lm: 0x11 11 -->
+<UL> The
+length of the area pointed to by the address parameter. If a length greater
+than 512 is specified, only 512 bytes will be recorded.  If a length of
+0 is specified, the address parameter will not be used; however, a dummy
+doubleword must be pushed on the stack so that all calls use the same stack
+space.<!-- lm: 0x2 1 -->
+</UL> MinorCode<!-- lm: 0x11 11 -->
+<UL> The minor
+code to be placed in the trace buffer.  This code identifies the specific
+trace event. Only the low order byte is used.  The high order byte should
+be 0 for future compatibility reasons, but no error checking of the high
+order byte is performed.<!-- lm: 0x2 1 -->
+</UL> pData<!-- lm: 0x11 11 -->
+<UL> The
+address of the variable length data area which contains additional information
+that the system trace function will add to the trace buffer.  If a length
+of 0 is specified, the address will not be used, but a value must still
+be added to the stack.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<U><I>Results.</I></U>
+<P>
+<B>DosSysTrace</B> returns the following vaules:<!-- lm: 0x2 1 -->
+<P>
+<LI><!-- lm: 0x11 11 -->NO_ERROR<!-- lm: 0x2 1 -->
+<P>
+150<!-- lm: 0x11 11 -->
+<UL>ERROR_SYSTEM_TRACE (Trace is disabled for that
+event)<!-- lm: 0x2 1 -->
+</UL>
+<PRE>         IF AX = 0               Data traced
+         ELSE
+            AX = Error_System_Trace
+               Data not traced
+</PRE>
+
+<P>
+<B>Note: </B> An example of when data would not be traced is if the major
+event code is not currently selected for tracing.<!-- lm: 0x2 1 -->
+<P>
+
+<P>
+<U><I>Remarks.</I></U>
+<P>
+All trace records consist of a header and optional data.  The header record
+is built by<B> DosSysTrace</B> and contains:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Major event code<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Minor event code<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Process ID of caller<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Time stamp when the time is different from the previous
+trace record<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Flag field<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Data field (optional)<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The optional data field contains the variable-length data as passed by the
+caller.
+<P>
+The trace facility maintains an array of 32 bytes (256 bits), in which each
+bit represents a major event code.  This array is updated each time the
+user enables or disables tracing of a major event.  The trace facility checks
+this array each time it is called to ensure that the major event specified
+is currently enabled for tracing.  The array is located in the <A HREF="3281_L0_.html">Global
+Information Segment.</A>
+<P>
+A prototype definition for<B> DosSysTrace</B> may be found under <A HREF="3111_L2_RASAPIPrototypes.html">RAS
+API Prototypes</A>.
+
+<P><HR>
+
+<A HREF="3089_L2_DosSysTraceStaticTra.html">[Back: DosSysTrace (Static Trace Event Recording)]</A> <BR>
+<A HREF="3091_L3_DevHlp_RASAddaTraceR.html">[Next: DevHlp_RAS (Add a Trace Record to the System Trace Buffer)]</A> 
+</BODY>
+</HTML>

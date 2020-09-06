@@ -1,0 +1,53 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>SHC_ENABLE_SYNC - Remarks</TITLE>
+</HEAD>
+<BODY>
+<H1>SHC_ENABLE_SYNC - Remarks</H1><!-- entering slot 777 -->
+<P>
+Commands a stream handler to be either a master stream handler (generates
+sync pulses) or a slave stream handler (receives sync pulses) in a synchronized-stream
+group. Only one stream handler from each stream can be a master or slave
+in a synchronized-stream group.  Only one stream handler will ever be the
+master.  All slave stream handlers must return a <A HREF="2131_L2_SYNC_EVCB.html">SYNC_EVCB
+</A>to be used for the sync-pulse notification. Optionally, the stream handler
+also can provide a system semaphore that is posted by the Sync/Stream Manager
+during a sync-pulse notification.  Otherwise, the stream handler must poll
+the EVCB_SYNCPOLLING bit in the <A HREF="2131_L2_SYNC_EVCB.html">SYNC_EVCB
+</A>to check for sync notification from the Sync/Stream Manager.  When a
+sync notification occurs, the<I> ulStatus</I> field of the <A HREF="2131_L2_SYNC_EVCB.html">SYNC_EVCB
+</A>contains the sync time.
+<P>
+Sync pulses are distributed by the Sync/Stream Manager, based on the stream
+group.  This distribution is effective for both DLL and device driver slave
+stream handlers.  Device driver stream handlers receive sync pulses through
+their <A HREF="2131_L2_SYNC_EVCB.html">SYNC_EVCB</A> Each slave stream handler
+must the sync pulse <A HREF="2131_L2_SYNC_EVCB.html">SYNC_EVCB</A> regularly
+with its calculated stream time.  The Sync/Stream Manager checks the slave-handler
+stream time against the master stream time and determines whether to send
+a sync pulse to this handler.
+<P>
+Device driver stream handlers check for sync pulses from the Sync/Stream
+Manager by polling a flag in the sync-pulse <A HREF="2131_L2_SYNC_EVCB.html">SYNC_EVCB</A>.
+The Sync/Stream Manager sets the flag to indicate a sync pulse and updates
+the current master-handler stream time. Typically, the device driver slave
+handler polls the flag once during interrupt processing and adjusts the
+stream consumption accordingly.
+<P>
+DLL stream handlers receive sync pulses in one of two ways: by registering
+a semaphore with the Sync/Stream Manager, or by the same method the Sync/Stream
+Manager uses for device driver stream handlers. DLL stream handlers then
+can process the sync pulse in the context of a time-critical thread (created
+by the stream handler at stream creation time).
+<P>
+The optional semaphore handle returned from the stream handler must be a
+16-bit system semaphore instead of 32-bit event or 32-bit mutex semaphore
+because of a limitation of the device driver model.  Currently, device drivers
+can use only 16-bit semaphores.
+
+<P><HR>
+
+<A HREF="775_L2H_SHC_ENABLE_SYNCDescr.html">[Back: SHC_ENABLE_SYNC - Description]</A> <BR>
+<A HREF="777_L2H_SHC_ENABLE_SYNCRelat.html">[Next: SHC_ENABLE_SYNC - Related Messages]</A> 
+</BODY>
+</HTML>

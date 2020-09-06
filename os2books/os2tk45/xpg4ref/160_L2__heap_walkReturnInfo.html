@@ -1,0 +1,211 @@
+<HTML>
+<HEAD>
+<TITLE>_heap_walk - Return Information about Default Heap</TITLE>
+</HEAD>
+<BODY>
+<H1>_heap_walk - Return Information about Default Heap</H1><!-- entering slot 166 -->_heap_walk - Return Information about Default
+Heap<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>#include &lt;malloc.h&gt;
+int _heap_walk(int (*<I>callback_fn</I>)(const void *<I>object</I>, size_t <I>size</I>,
+                                                               int <I>flag</I>, int <I>status</I>,
+                                                               const char* <I>file</I>, int <I>line</I>) );
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Description
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+<LI>heap_walk traverses the default heap, and for each allocated or freed
+object, it calls the<I> callback_fn</I> function that you provide. For each
+object, it passes your function:<!-- lm: 0x2 10 -->
+<P>
+<I>object</I><!-- lm: 0x12 20 -->
+<UL> A pointer to the object.<!-- lm: 0x2 10 -->
+</UL><I> size
+</I><!-- lm: 0x12 20 -->
+<UL>The size of the object.<!-- lm: 0x2 10 -->
+</UL><I> flag
+</I><!-- lm: 0x12 20 -->
+<UL>The value _USEDENTRY if the object is currently
+allocated, or _FREEENTRY if the object has been freed.  (Both values are
+defined in &lt;malloc.h&gt;.)<!-- lm: 0x2 10 -->
+</UL><I> status</I><!-- lm: 0x12 20 -->
+<UL> One
+of the following values, defined in &lt;malloc.h&gt;, depending on the status
+of the object:<!-- lm: 0x2 20 -->
+<P>
+<LI>HEAPBADBEGIN<!-- lm: 0x12 43 -->
+<UL> The heap specified is not valid;
+it may have been closed or destroyed.<!-- lm: 0x2 20 -->
+</UL> _HEAPBADNODE
+<!-- lm: 0x12 43 -->
+<UL>A memory node is corrupted, or the heap is damaged.
+<!-- lm: 0x2 20 -->
+</UL>_HEAPEMPTY<!-- lm: 0x12 43 -->
+<UL> The heap has
+not been initialized.<!-- lm: 0x2 20 -->
+</UL> _HEAPOK<!-- lm: 0x12 43 -->
+<UL> The
+heap appears to be consistent.<!-- lm: 0x2 20 --><!-- lm: 0x2 10 -->
+</UL><I> file
+</I><!-- lm: 0x12 20 -->
+<UL>The name of the file where the object was allocated.
+<!-- lm: 0x2 10 -->
+</UL><I>line</I><!-- lm: 0x12 20 -->
+<UL> The line where
+the object was allocated.<!-- lm: 0x2 10 -->
+</UL>
+<P>
+<LI>heap_walk provides information about all objects, regardless of which
+memory management functions were used to allocate them. However, the<I> file
+</I>and<I> line</I> information are only available if the object was allocated
+and freed using the debug versions of the memory management functions. Otherwise,
+<I>file</I> is NULL and<I> line</I> is 0.
+<P>
+_heap_walk calls<I> callback_fn</I> for each object until one of the following
+occurs:<!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 -->All objects have been traversed.<!-- lm: 0x2 12 --> <!-- lm: 0x2 15 -->
+<UL><I>callback_fn
+</I>returns a nonzero value to _heap_walk.<!-- lm: 0x2 12 -->
+</UL><!-- lm: 0x2 15 -->
+<UL>It cannot continue because of a problem with
+the heap.<!-- lm: 0x2 10 -->
+</UL>
+<P>
+You may want to code your<I> callback_fn</I> to return a nonzero value if
+the status of the object is not _HEAPOK. Even if<I> callback_fn</I> returns
+0 for an object that is corrupted, _heap_walk cannot continue because of
+the state of the heap and returns to its caller.
+<P>
+You can use<I> callback_fn</I> to process the information from _heap_walk
+in various ways. For example, you may want to print the information to a
+file or use it to generate your own error messages. You can use the information
+to look for memory leaks and objects incorrectly allocated or freed from
+the heap. It can be especially useful to call _heap_walk when _heapchk returns
+an error.
+<P>
+A heap-specific version of this function, _uheap_walk, is also available.
+
+<P>
+<B>Note: </B><!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 -->Using the _heapchk, _heapset, and _heap_walk functions
+(and their heap-specific equivalents) may add overhead to each object allocated
+from the heap.<!-- lm: 0x2 12 -->
+<P>
+<LI><!-- lm: 0x2 15 --><LI>heap_walk locks the heap while it traverses it,
+to ensure that no other operations use the heap until _heap_walk finishes.
+As a result, in your<I> callback_fn</I>, you cannot call any critical functions
+in the run-time library, either explicitly or by calling another function
+that calls a critical function. See the<I> VisualAge C++ Programming Guide
+</I>for a list of critical functions.<!-- lm: 0x2 10 -->
+</UL><!-- lm: 0x2 10 -->
+<P>
+<!-- lm: 0x2 1 -->
+</UL>Returns
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+<LI>heap_walk returns the last value of<I> status</I> to the caller.<!-- lm: 0x2 1 -->
+</UL> Example
+Code
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+This example allocates some memory, then uses _heap_walk to walk the heap
+and pass information about allocated objects to the callback function callback_function.
+callback_function then checks the information and keeps track of the number
+of allocated objects.
+<PRE>#include &lt;stdlib.h&gt;#include &lt;stdio.h&gt;
+#include &lt;malloc.h&gt;
+
+int callback_function(const void *pentry, size_t sz, int useflag, int status,
+                      const char *filename, size_t line)
+{
+   if (_HEAPOK != status) {
+      puts("status is not _HEAPOK.");
+      exit(status);
+   }
+   if (_USEDENTRY == useflag)
+      printf("allocated  %p     %u\n", pentry, sz);
+   else
+      printf("freed      %p     %u\n", pentry, sz);
+   return 0;
+}
+
+int main(void)
+{
+   char  *p1, *p2, *<!-- entering slot 167 -->p3;
+
+   if (NULL == (p1 = malloc(100)) ||
+       NULL == (p2 = malloc(200)) ||
+       NULL == (p3 = malloc(300))) {
+      puts("Could not allocate memory block.");
+      exit(EXIT_FAILURE);
+   }
+   free(p2);
+   puts("usage      address   size\n-----      -------   ----");
+
+   _heap_walk(callback_function);
+
+   free(p1);
+   free(p3);
+   return 0;
+
+   /****************************************************************************
+      The output should be similar to :
+
+      usage      address   size
+      -----      -------   ----
+      allocated  73A10     300
+      allocated  738B0     100
+       :
+       :
+      freed      73920     224
+   ****************************************************************************/
+}
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Related Information
+<P>
+<!-- lm: 0x2 10 -->
+<UL><!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 --><LI>Managing Memory" in the<I> VisualAge C++ Programming
+Guide</I><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><LI>Debugging Your Heaps" in the<I> VisualAge C++
+Programming Guide</I><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="157_L2__heapchkValidateDefa.html"><LI>heapchk
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="158_L2__heapminReleaseUnuse.html"><LI>heapmin
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="159_L2__heapsetValidateandS.html"><LI>heapset
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="309_L2__uheap_walkReturnInf.html"><LI>uheap_walk
+</A><!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="159_L2__heapsetValidateandS.html">[Back: _heapset - Validate and Set Default Heap]</A> <BR>
+<A HREF="161_L2_hypotCalculateHypote.html">[Next: hypot - Calculate Hypotenuse]</A> 
+</BODY>
+</HTML>

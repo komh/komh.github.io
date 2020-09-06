@@ -1,0 +1,276 @@
+<HTML>
+<HEAD>
+<TITLE>Making typical method calls</TITLE>
+</HEAD>
+<BODY>
+<H1>Making typical method calls</H1><!-- entering slot 44 -->
+<P>
+<U><I>For C programmers with usage bindings:</I></U> To invoke a method
+in C, use the macro:
+<P>
+_&lt;<I>methodName</I>&gt; (<I>receiver, args)</I>
+<P>
+(that is, an underscore followed by the method name). Arguments to the macro
+are the receiver of the method followed by all of the arguments to the method.
+For example:
+<PRE>   _foo(obj, somGetGlobalEnvironment(), x, y)
+</PRE>
+
+<P>
+This invokes method "foo" on "obj" (the remaining arguments are arguments
+to the method "foo"). This expression can be used anywhere that a standard
+function call can be used in C.
+<P>
+<B>Required arguments</B>
+<P>
+In C, calls to methods defined using IDL require at least two arguments-
+a pointer to the<I> receiving object</I> (the object responding to the method)
+and a value of type (<B>Environment *</B>). The<B> Environment</B> data
+structure is specified by CORBA, and is used to pass environmental information
+between a caller and a called method. For example, it is used to return
+exceptions. (For more information on how to supply and use the<B> Environment
+</B>structure, see the later section entitled "Exceptions and error handling.")
+
+<P>
+In the IDL definition of a method, by contrast, the receiver and the<B> Environment
+</B>pointer are<I> not</I> listed as parameters to the method. (Unlike the
+receiver, the<B> Environment</B> pointer is considered a method parameter,
+even though it is never explicitly specified in IDL. For this reason, it
+is called an<I> implicit</I> method parameter.) For example, if a method
+is defined in a .idl file with two parameters, as in:
+<PRE>   int foo (in char c, in float f);
+</PRE>
+
+<P>
+then, with the C usage bindings, the method would be invoked with four arguments,
+as in:
+<PRE>   intvar = _foo(obj, somGetGlobalEnvironment(), x, y);
+</PRE>
+
+<P>
+where "obj" is the object responding to the method and "x" and "y" are the
+arguments corresponding to "c" and "f", above.
+<P>
+If the IDL specification of the method includes a<I> context</I> specification,
+then the method has an additional (implicit)<B> context</B> parameter. Thus,
+when invoking the method, this argument must follow immediately after the
+<U><I>Environment</I></U> pointer argument.  (None of the SOM-supplied methods
+require<B> context</B> arguments.)  The<B> Environment</B>  and<B> context
+</B>method parameters are prescribed by the CORBA standard.
+<P>
+If the IDL specification of the class that introduces the method includes
+the<B> callstyle=oidl</B> modifier, then the (<B>Environment*</B>) and<B> context
+</B>arguments should not be supplied when invoking the method. That is,
+the receiver of the method call is followed immediately by the arguments
+to the method (if any). Some of the classes supplied in the SOMobjects Toolkit
+(including<B> SOMObject, SOMClass</B>, and<B> SOMClassMgr</B>) are defined
+in this way, to ensure compatibility with the previous release of SOM. The
+<I>System Object Model Programming Reference</I> specifies for each method
+whether these arguments are used.
+<P>
+If you use a C expression to compute the first argument to a method call
+(the receiver), you must use an expression without side effects, because
+the first argument is evaluated twice by the _&lt;<I>methodName</I>&gt;
+macro expansion. In particular, a<B> somNew</B> method call or a macro call
+of &lt;<I>className</I>&gt;<B>New</B> can<I> not</I> be used as the first
+argument to a C method call, because doing so would create two new class
+instances rather than one.
+<P>
+Following the initial, required arguments to a method (the receiving object,
+the<B> Environment,</B> if any, and the context, if any), you enter any
+additional arguments required by that method, as specified in IDL.  For
+a discussion of how IDL<B> in/out/inout</B> argument types may to C/C++
+data types, see the topic "Parameter list" in Chapter 4, "SOM IDL and the
+SOM Compiler."
+<P>
+<B>Short form vs long form</B>
+<P>
+If a client program uses the bindings for two different classes that introduce
+or inherit two different methods of the same name, then the _&lt;<I>methodName</I>&gt;
+macro described above (called the<I> short form</I>) will not be provided
+by the bindings, because the macro would be ambiguous in that circumstance.
+The following<I> long form</I> macro,<!-- entering slot 45 --> however,
+is always provided by the usage bindings for each class that supports the
+method:
+<P>
+&lt;<I>className</I>&gt;_&lt;<I>methodName</I>&gt; (<I>receiver, args</I>)
+
+<P>
+For example, method "foo" supported by class "Bar" can be invoked as:   Bar_foo(obj,
+somGetGlobalEnvironment(), x, y)   (in C)
+<BR>
+
+<P>
+where "obj"  has type "Bar" and "x" and "y" are the arguments to method
+"foo".
+<P>
+In most cases (where there is no ambiguity, and where the method is not
+a<B> va_list</B> method, as described in the subsequent subtopic "Using
+'va_list' methods"), a C programmer may use either the short or the long
+form of a method invocation macro interchangeably. However,<U> only</U> the
+long form complies with the CORBA standard for C usage bindings.  If you
+wish to write code that can be easily ported to other vendor platforms that
+support the CORBA standard, use the long form exclusively. The long form
+is always available for every method that a class supports. The short form
+is provided both as a programming convenience and for source code compatibility
+with release 1 of SOM.
+<P>
+In order to use the long form, a programmer will usually know what type
+an object is expected to have.  If this is not known, but the different
+methods have the same signature, the method can be invoked using name-lookup
+resolution, as described in a following subtopic of this section.
+<P>
+<U><I>For C++  programmers with usage bindings</I></U>:  To invoke a method,
+use the standard C++ form shown below:
+<P>
+obj-&gt;&lt;<I>methodName</I>&gt; (<I>args</I>)
+<P>
+where<I> args</I> are the arguments to the method. For instance, the following
+example invokes method "foo" on "obj":
+<PRE>   obj-&gt;foo(somGetGlobalEnvironment(), x, y)
+</PRE>
+<B>Required arguments</B>
+<P>
+All methods introduced by classes declared using IDL (except those having
+the SOM IDL<B> callstyle=oidl</B> modifier) have at least one parameter-a
+value of type (<B>Environment *</B>). The<B> Environment</B> data structure
+is used to pass environmental information between a caller and a called
+method. For example, it is used to return exceptions. For more information
+on how to supply and use the<B> Environment</B> structure, see the later
+section entitled "Exceptions and error handling."
+<P>
+The<B> Environment</B> pointer is an implicit parameter; in the IDL definition
+of a method, the<B> Environment</B> pointer is<I> not</I> explicitly listed
+as a parameter to the method. For example, if a method is defined in IDL
+with two explicit parameters, as in:
+<PRE>   int foo (in char c, in float f);
+</PRE>
+
+<P>
+then the method would be invoked from C++ bindings with three arguments,
+as in:
+<PRE>   intvar = obj-&gt;foo(somGetGlobalEnvironment(), x, y);
+</PRE>
+
+<P>
+where "obj" is the object responding to the method and "x" and "y" are the
+arguments corresponding to "c" and "f", above.
+<P>
+If the IDL specification of the method includes a<I> context</I> specification,
+then the method has a second implicit parameter, of type<B> context</B>,
+and the method must be invoked with an additional<B> context</B> argument.
+ This argument must follow immediately after the<U><I> Environment</I></U> pointer
+argument.  (No SOM-supplied methods require<B> context</B> arguments.)  The
+<B>Environment</B> and<B> context</B> method parameters are prescribed by
+the CORBA standard.
+<P>
+If the IDL specification of the class that introduces the method includes
+the<B> callstyle=oidl</B> modifier, then the (<B>Environment</B><B>  *</B>)
+and<B> context</B> arguments should not be supplied when the method is invoked.
+Some of the classes supplied in the SOMobjects Toolkit (including<B> SOMObject,
+SOMClass</B>, and<B> SOMClassMgr</B>) are defined in this way, to ensure
+compatibility with the previous release of SOM. The<I> System Object Model
+Programming Reference</I> specifies for each method whether these arguments
+are used.
+<P>
+Following the initial, required arguments to a method (the receiving object,
+the<B> Environment,</B> if any, and the<B> context,</B> if any), you<!-- entering slot 46 --> enter
+any additional arguments required by that method, as specified in IDL.  For
+a discussion of how IDL<B> in/out/inout</B> argument types map to C/C++
+data types, see the topic "Parameter list" in Chapter 4, "SOM IDL and the
+SOM Compiler."
+<P>
+<U><I>For non-C/C++ programmers</I></U>:  To invoke a<I> static method</I>
+(that is, a method declared when defining an OIDL or IDL object interface)
+without using the C or C++ usage bindings, a programmer can use the<B> somResolve
+</B>procedure. The<B> somResolve</B>  procedure takes as arguments a pointer
+to the object on which the method is to be invoked and a<I> method token
+</I>for the desired method. It returns a pointer to the method's procedure
+(or raises a fatal error if the object does not support the method). Depending
+on the language and system, it may be necessary to cast this procedure pointer
+to the appropriate type; the way this is done is language-specific.
+<P>
+The method is then invoked by calling the procedure returned by<B> somResolve
+</B>(the means for calling a procedure, given a pointer to it, is language-specific),
+passing the method's receiver, the<B> Environment</B> pointer (if necessary),
+the<B> context</B> argument (if necessary) and the remainder of the method's
+arguments, if any. (See the section above for C programmers; the arguments
+to a method procedure are the same as the arguments passed using the long
+form of the C-language method-invocation macro for that method.)
+<P>
+Using<B> somResolve</B> requires the programmer to know where to find the
+<I>method token</I> for the desired method. Method tokens are available
+from class objects that support the method (via the method<B> somGetMethodToken</B>),
+or from a global data structure, called the<I> ClassData structure,</I>
+corresponding to the class that introduces the method. In C and C++ programs
+with access to the definitions for ClassData structures provided by usage
+bindings, the method token for method<I> methodName</I> introduced by class
+<I>className</I> may be accessed by the following expression:
+<P>
+&lt;<I>className&gt;</I><B>ClassData.</B><I>&lt;methodName</I> &gt;
+<P>
+For example, the method token for method "sayHello"introduced by class "Hello"
+is stored at location HelloClassData.sayHello, for C and C++ programmers.
+ The way method tokens are accessed in other languages is language-specific.
+
+<P>
+As an  example of using offset resolution to invoke methods from a programming
+language other than C/C++, one would do the following to create an instance
+of a SOM Class<I> X</I> in Smalltalk:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Initialize the SOM run-time environment, if it
+has not previously been initialized, using the<B> somEnvironmentNew</B> function.
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->If the class object for class<I> X</I> has not
+yet been created, use<B> somResolve</B> with arguments<B> SOMClassMgrObject
+</B>(returned by<B> somEnvironmentNew</B> in step 1) and the method token
+for the<B> somFindClass</B> method<I>,</I>  to obtain a method procedure
+pointer for the<B> somFindClass</B> method. Use the method procedure for
+<B>somFindClass</B> to create the class object for class<I> X</I>:  Call
+the procedure with arguments<B> SOMClassMgrObject</B>, the result of calling
+the<B> somIdFromString</B> function with argument<I> "X",</I> and the major
+and minor version numbers for class<I> X</I> (or zero). The procedure returns
+the class object for class<I> X</I>.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Use<B> somResolve</B> with arguments representing
+the class object for<I> X</I> (returned by<B> somFindClass</B> in step 2)
+and the method token for the<B> somNew</B> method, to obtain a method procedure
+pointer for method<B> somNew</B>. (The<B> somNew</B> method is used to create
+instances of class<I> X</I>.)<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Call the method procedure for<B> somNew</B> (using
+the method procedure pointer obtained in step 3) with the class object for
+<I>X</I> (returned by<B> somFindClass</B> in step 3) as the argument. The
+procedure returns a new instance of class<I> X</I>.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+In addition to<B> somResolve</B>, SOM also supplies the<B> somClassResolve
+</B>procedure. Instead of an object, the<B> somClassResolve</B> procedure
+takes a class as its first argument, and then selects a method procedure
+from the instance method table of the passed class. (The<B> somResolve</B> procedure,
+by contrast, selects a method procedure from the instance method table of
+the class of which the passed object is an instance.) The<B> somClassResolve
+</B>procedure therefore supports<I> casted</I>  method resolution. See the
+<I>System Object Model Programming Reference</I> for more information on
+<B>somResolve</B>  and<B> somClassResolve</B>.
+<P>
+If the programmer does not know at compile time which class introduces the
+method to be invoked, or if the programmer cannot directly access method
+tokens, then the procedure<B> somResolveByName</B> can be used to obtain
+a method procedure using name-lookup resolution, as described in the next
+section.
+<P>
+If the signature of the method to be invoked is not known at compile time,
+but can be<!-- entering slot 47 --> discovered at run time, use<B> somResolve
+</B>or<B> somResolveByName</B>  to get a pointer to the<B> somDispatch</B> method
+procedure, then use it to invoke the specific method, as described below
+under "Method name or signature not known at compile time."
+
+<P><HR>
+
+<A HREF="033_L3_Invokingmethodsonobj.html">[Back: Invoking methods on objects]</A> <BR>
+<A HREF="035_L4_AccessingAttributes.html">[Next: Accessing Attributes]</A> 
+</BODY>
+</HTML>

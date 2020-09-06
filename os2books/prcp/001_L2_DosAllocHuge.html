@@ -1,0 +1,144 @@
+<HTML>
+<HEAD>
+<TITLE>DosAllocHuge</TITLE>
+</HEAD>
+<BODY>
+<H1>DosAllocHuge</H1><!-- entering slot 1 -->Bindings:  <A HREF="176_L2H_DosAllocHuge.html">C</A>,
+<A HREF="351_L2H_DosAllocHuge.html">MASM</A>
+<BR>
+
+<P>
+This call allocates multiple segments as a huge block of memory.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+DosAllocHuge<!-- lm: 0x2 17 -->
+<UL> (NumSeg, Size, Selector, MaxNumSeg,
+AllocFlags)<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+<B>NumSeg</B> (USHORT) - input<!-- lm: 0x11 4 -->
+<UL> Number of 65536-byte
+segments to be allocated.<!-- lm: 0x2 1 -->
+</UL><B> Size</B> (USHORT) -
+input<!-- lm: 0x11 4 -->
+<UL> Number of bytes to be allocated in the last
+(non-65536-byte) segment. A value of zero indicates none.<!-- lm: 0x2 1 -->
+</UL><B> Selector
+</B>(PSEL) - output<!-- lm: 0x11 4 -->
+<UL> Address where the selector of
+the first segment allocated is returned.<!-- lm: 0x2 1 -->
+</UL><B> MaxNumSeg
+</B>(USHORT) - input<!-- lm: 0x11 4 -->
+<UL> Maximum number of 65536-byte
+segments this object occupies as a result of any subsequent <A HREF="127_L2_DosReallocHuge.html">DosReallocHuge
+</A>(see <A HREF="127_L2_DosReallocHuge.html">DosReallocHuge</A>.) If MaxNumSeg
+is 0, OS/2 assumes this segment will never be increased by <A HREF="127_L2_DosReallocHuge.html">DosReallocHuge
+</A>beyond its original size, though it may be decreased. This value is
+ignored in the DOS mode.<!-- lm: 0x2 1 -->
+</UL><B> AllocFlags</B> (USHORT)
+- input<!-- lm: 0x11 4 -->
+<UL> Bit indicators describing the characteristics
+of the segment allocated. The bits that can be set and their meanings are:
+<!-- lm: 0x2 4 -->
+<P>
+Bit<!-- lm: 0x2 14 -->
+<UL> Description<!-- lm: 0x2 4 -->
+</UL>15-4<!-- lm: 0x2 14 -->
+<UL> Reserved and must be set to zero.<!-- lm: 0x2 4 -->
+</UL>3<!-- lm: 0x2 14 -->
+<UL> If segment is shared, it can be decreased
+in size by <A HREF="127_L2_DosReallocHuge.html">DosReallocHuge</A>.<!-- lm: 0x2 4 -->
+</UL>2<!-- lm: 0x2 14 -->
+<UL> Segment may be discarded by the system in
+low memory situations.<!-- lm: 0x2 4 -->
+</UL>1<!-- lm: 0x2 14 -->
+<UL> Segment is shareable through <A HREF="069_L2_DosGetSeg.html">DosGetSeg</A>.
+<!-- lm: 0x2 4 -->
+</UL>0<!-- lm: 0x2 14 -->
+<UL> Segment is shareable through <A HREF="072_L2_DosGiveSeg.html">DosGiveSeg</A>.
+<!-- lm: 0x2 1 -->
+</UL><B>rc</B> (USHORT) - return<!-- lm: 0x11 4 -->
+<UL> Return
+code descriptions are:<!-- lm: 0x2 4 -->
+<P>
+<LI><!-- lm: 0x2 14 -->NO_ERROR<!-- lm: 0x2 4 --> 8<!-- lm: 0x2 14 -->
+<UL> ERROR_NOT_ENOUGH_MEMORY
+<!-- lm: 0x2 4 -->
+</UL>87<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_PARAMETER<!-- lm: 0x2 4 -->
+</UL>212<!-- lm: 0x2 14 -->
+<UL> ERROR_LOCKED<!-- lm: 0x2 1 -->
+</UL><B>Remarks</B>
+<P>
+<A HREF="001_L2_DosAllocHuge.html">DosAllocHuge</A> allows a process to
+allocate a large amount of memory by telling the system how many 64KB segments
+it needs and whether it requires an additional partial segment.  The system
+allocates the memory, which is movable and swappable, and returns a selector
+to the first segment. When this selector is used with a call, the requested
+function is performed for the entire block of memory.
+<P>
+Each segment of a huge memory allocation has a unique selector. To determine
+the remaining selectors of a huge memory allocation, issue <A HREF="057_L2_DosGetHugeShift.html">DosGetHugeShift</A>,
+which returns a shift count. To compute the next sequential selector, take
+the value 1 and shift it left by the number of bits specified in shift count.
+Use the resulting value as an increment to add to the previous selector,
+using the selector returned by <A HREF="001_L2_DosAllocHuge.html">DosAllocHuge
+</A>as the first selector. For example:<!-- lm: 0x2 1 -->
+<P>
+o<!-- lm: 0x2 3 -->
+<UL>Assume <A HREF="001_L2_DosAllocHuge.html">DosAllocHuge
+</A>is issued with NumSeg equal to 3, and that the number 63 is returned
+for the selector of the first segment.<!-- lm: 0x2 1 -->
+</UL>o<!-- lm: 0x2 3 -->
+<UL>If <A HREF="057_L2_DosGetHugeShift.html">DosGetHugeShift
+</A>returns a shift count of 4, shifting the value "1" by this amount results
+in an increment of 16.<!-- lm: 0x2 1 -->
+</UL>o<!-- lm: 0x2 3 -->
+<UL>Adding this increment to selector number 63
+produces 79 for the second selector. Adding the same increment to selector
+number 79 yields 95 for the third selector.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Like single segment memory allocated with <A HREF="002_L2_DosAllocSeg.html">DosAllocSeg</A>,
+huge memory can be designated as shareable by other processes and discardable
+by the system when no longer needed.  Allocating a huge block of memory
+as discardable automatically locks the memory for use by the caller. When
+one segment of a huge allocation is discarded by the system, this forces
+the discard of all the other segments. See <A HREF="002_L2_DosAllocSeg.html">DosAllocSeg
+</A>for more information relating to discardable and shared segments.
+<P>
+Applications should be discretionary in claiming large memory when doing
+so can impair system performance.  To test system memory availability, issue
+<A HREF="080_L2_DosMemAvail.html">DosMemAvail</A>.  This call returns the
+size of the largest block of unallocated memory. Although this value can
+change at any time because of system activity<!-- entering slot 2 --> ,
+it can provide a good indication of the system memory state.
+<P>
+Memory allocated by <A HREF="001_L2_DosAllocHuge.html">DosAllocHuge</A> is
+freed by <A HREF="046_L2_DosFreeSeg.html">DosFreeSeg</A>.  One call to <A HREF="046_L2_DosFreeSeg.html">DosFreeSeg</A>,
+passing the selector returned from a  <A HREF="001_L2_DosAllocHuge.html">DosAllocHuge</A>,
+frees all of the memory allocated.
+<P>
+<B>Note: </B> This request may be issued from privilege level 2.  However,
+the segment is allocated as a privilege level 3 segment.<!-- lm: 0x2 1 -->
+<P>
+<B>Family API Considerations</B>
+<P>
+Some options operate differently in the DOS mode than in the OS/2 mode.
+ Therefore, the following considerations apply to <A HREF="001_L2_DosAllocHuge.html">DosAllocHuge
+</A>when coding for the DOS mode:<!-- lm: 0x2 1 -->
+<P>
+o<!-- lm: 0x2 3 -->
+<UL>Requested size value is rounded up to the next paragraph
+(16-byte)<!-- lm: 0x2 1 -->
+</UL>o<!-- lm: 0x2 3 -->
+<UL>Selector is the actual segment address allocated.
+<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="000_L1_ControlProgramFuncti.html">[Back: Control Program Function Calls]</A> <BR>
+<A HREF="002_L2_DosAllocSeg.html">[Next: DosAllocSeg]</A> 
+</BODY>
+</HTML>

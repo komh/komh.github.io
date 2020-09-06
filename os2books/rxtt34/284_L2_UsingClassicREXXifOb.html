@@ -1,0 +1,140 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Using Classic REXX if Object REXX is the default REXX</TITLE>
+</HEAD>
+<BODY>
+<H1>Using Classic REXX if Object REXX is the default REXX</H1><!-- entering slot 293 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+Sometimes it's necessary to test your REXX programs under Classic REXX and
+under Object REXX. Therefore it would be useful to use both interpreters
+without rebooting each time you change the REXX interpreter.
+<P>
+This is possible under OS/2 if you use the following approach:
+<P>
+- use Object REXX as your default REXX interpreter without the Workplace
+Shell support (i.e., do NOT use WPSINST)!!!
+<P>
+- create a WPS Object for the REXX program REXXTRY.CMD with:
+<P>
+
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Title                    ³Start Object REXX        ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Path and filename        ³*                        ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Parameters               ³/C REXXTRY.CMD           ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Working directory        ³\                        ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+- create a new directory
+<P>
+- extract the REXX program below from this INF file and save it in the new
+directory with the name<B> STARTCR.CMD</B>
+<P>
+- ensure that your LIBPATH contains the entry '.;'<B> before</B> the entry
+\OS2\DLL (You need to reboot once if you must change your LIBPATH)
+<P>
+- copy the REXX.DLL from Classic REXX into the new directory with STARTCR.CMD
+(This is the DLL named CREXX.DLL in \OS2\DLL if Object REXX is currently
+the default REXX interpreter)
+<P>
+- create a WPS Object for the REXX program STARTCR.CMD with the following
+setup
+<P>
+
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Title                    ³Start Classic REXX       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Path and filename        ³*                        ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Parameters               ³/K .\STARTCR.CMD         ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Working directory        ³the directory with       ³
+³                         ³STARTCR.CMD              ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+Now you can select the REXX interpreter to use:
+<BR>
+Start the WPS object "Start Classic REXX" if you need Classic REXX or start
+the WPS object "Start Object REXX" if you need Object REXX. All other programs
+started after one of these objects will use the REXX interpreter that is
+loaded.
+<P>
+Note that it is only possible to use<B> one</B> REXX interpreter at a time.
+To switch the REXX interpreter either from Classic REXX to Object REXX or
+vice versa you must first close all sessions using REXX, wait a bit and
+start the WPS object using the other REXX interpreter. Note also, that you
+must unload all DLLs using REXX (for example REXXUTIL.DLL) before switching
+the interpreter.
+<P>
+And last:
+<P>
+<B>Please be aware that this method does not work in all cases!</B> 
+<PRE> 
+/* STARTCR.CMD                                                      */
+/* sample REXX cmd to start a session using Classic REXX if OO REXX */
+/* is the default REXX interpreter                                  */
+/*                                                                  */
+/* To use this cmd you must                                         */
+/* - ensure that your LIBPATH contains the entry '.;' before the    */
+/*   entry \OS2\DLL                                                 */
+/* - copy the REXX.DLL from Classic REXX into the directory with    */
+/*   this CMD                                                       */
+/* - create an Object for this CMD with                             */
+/*   Path and filename = *                                          */
+/*   Parameters = /K .\STARTCR.CMD                                  */
+/*   Working directory: the directory with this program             */
+/* - ensure that no other session using REXX is running             */
+/*                                                                  */
+/* Usage: STARTCR [startDir]                                        */
+/*                                                                  */
+/* Where: startDir = working directory to use                       */
+/*                   Def.: use directory with STARTCR.CMD           */
+/*                                                                  */
+  parse arg StartDir
+
+  say
+  say
+  say 'Starting a CMD session using the Classic REXX interpreter ...'
+  say
+  parse version interpreterVersion rest
+  say 'The current REXX Interpreter version is ' || ,
+      interpreterVersion rest
+
+  if interpreterVersion &lt;&gt; 'REXXSAA' then
+  do
+    say '07'x
+    say 'Error: Cannot load the DLL with the Classic REXX interpeter!'
+    say
+    say 'Hint:  Close all sessions using REXX, wait a minute and try'
+    say '       again.'
+    say
+    '@pause'
+    'exit'
+  end /* if */
+  else
+  do
+    if StartDir &lt;&gt; '' then
+      call directory StartDir
+    say 'Current working directory is "' || directory() || '".'
+    say
+  end /* else */
+exit 0
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="283_L2_HintsforusingObjectR.html">[Back: Hints for using Object REXX]</A> <BR>
+<A HREF="285_L2_UsingObjectREXXandth.html">[Next: Using Object REXX and the WPS]</A> 
+</BODY>
+</HTML>

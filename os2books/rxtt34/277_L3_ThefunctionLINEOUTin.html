@@ -1,0 +1,153 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>The function LINEOUT() in Object REXX</TITLE>
+</HEAD>
+<BODY>
+<H1>The function LINEOUT() in Object REXX</H1><!-- entering slot 285 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+The function LINEOUT</A> seems to have a bug in Object REXX.
+<P>
+For example the REXX program below should write all three messages to the
+file<B><I> TEST001.LOG</B></I> in the current directory at program start.
+But in Object REXX, it writes only the first message to this file; the other
+two messages go into the files<B><I> C:\OS2\TEST001.LOG</B></I> and<B><I> C:\MPTN\TEST001.LOG</B></I>.
+
+<BR>
+[Tested with OBJREXX 6.00 12 Jul 1996]
+<BR>
+[Fixed in OBJREXX 6.00 26 Feb 1997 and newer versions (included in WARP
+4 Fixpack #6)]
+<PRE> 
+/*                                                                    */
+/* sample program to show a bug in the LineOut routine in Object REXX */
+/*                                                                    */
+
+                    /* set the name for the logfile                   */
+  logFileName = ILog( 'TEST001.LOG' )
+                    /* logFileName now contains the fully qualified   */
+                    /* name of the logfile                            */
+
+                    /* write the name of the logfile to the screen    */
+  say 'MAIN: logFileName is : "' || logFileName || '"'
+  say '      Current directory is : "' || directory() || '"'
+
+                    /* write something to the logfile                 */
+                    /* Note: This is written to the *correct* logfile */
+  call log 'Testing 1, currrent directory is ' || directory()
+
+                    /* write the name of the logfile to the screen    */
+  say 'MAIN: logFileName is : "' || logFileName || '"'
+  say '      Current directory is : "' || directory() || '"'
+
+                    /* now change the directory                       */
+  call directory 'C:\OS2'
+
+                    /* write the name of the logfile to the screen    */
+  say 'MAIN: logFileName is : "' || logFileName || '"'
+  say '      Current directory is : "' || directory() || '"'
+
+                    /* ... and write something to the logfile         */
+                    /* Note: This goes to the file C:\OS2\TEST001.LOG */
+                    /*       and not into the correct logfile!!!      */
+  call log 'Testing 2, currrent directory is ' || directory()
+
+                    /* now change the directory again                 */
+  call directory 'C:\MPTN'
+
+                    /* write the name of the logfile to the screen    */
+  say 'MAIN: logFileName is : "' || logFileName || '"'
+  say '      Current directory is : "' || directory() || '"'
+
+                    /* ... and write something to the logfile         */
+                    /* Note: This goes to the file C:\MPTN\TEST001.LOG*/
+                    /*       and not into the correct logfile!!!      */
+  call log 'Testing 3, currrent directory is ' || directory()
+
+                    /* write the name of the logfile to the screen    */
+  say 'MAIN: logFileName is : "' || logFileName || '"'
+  say '      Current directory is : "' || directory() || '"'
+
+exit
+
+/* ------------------------------------------------------------------ */
+/*-function: get the fully qualified name of the logfile              */
+/*                                                                    */
+/*-call:     ilog logfilename                                         */
+/*                                                                    */
+/*-where:    logfilename - name of the logfile                        */
+/*                                                                    */
+/*-returns:  fully qualified name of the logfile                      */
+/*                                                                    */
+/*                                                                    */
+ILOG: PROCEDURE
+  parse arg logFilename
+
+                        /* open or create the logfile                 */
+  logStatus = stream( logFileName, 'c', 'OPEN WRITE')
+  if logStatus &lt;&gt; 'READY:' then
+  do
+    say 'Error: Cannot create the logfile "' || logFileName || '"!'
+    exit 255
+  end /* if */
+
+                        /* close the logfile                          */
+  call stream logFileName, 'c', 'CLOSE'
+
+                        /* get the fully qualified name of the        */
+                        /* logfile                                    */
+  newLogFileName = translate( stream( logFileName, 'c', 'QUERY EXISTS' ) )
+
+                    /* write the name of the logfile to the screen    */
+  say 'ILOG: logFileName is : "' || newLogFileName || '"'
+  say '      Current directory is : "' || directory() || '"'
+
+RETURN newLogFileName
+
+/* ------------------------------------------------------------------ */
+/*-function: log a message and clear the rest of the line             */
+/*                                                                    */
+/*-call:     log message                                              */
+/*                                                                    */
+/*-where:    message - message to show                                */
+/*                                                                    */
+/*-returns:  ''                                                       */
+/*                                                                    */
+/*-Note:     You do not need the 'call' keyword to use this routine.  */
+/*           The name of the logfile is saved in the global variable  */
+/*           'logFileName'.                                           */
+/*                                                                    */
+Log: PROCEDURE expose logFileName
+  parse arg logmsg
+
+                    /* write the name of the logfile to the screen    */
+  say ' LOG: logFileName is : "' || logFileName || '"'
+  say '      Current directory is : "' || directory() || '"'
+
+                    /* error occurs also if the file is explicitly    */
+                    /* opened before writing to the file!             */
+/*
+  rc = stream( logFileName, 'c', 'OPEN WRITE')
+*/
+
+  call lineout logFileName, logmsg
+
+                    /* the error does *not* occur, if the logfile is  */
+                    /* *not* closed                                   */
+
+                    /* close the logfile                              */
+  rc = stream( logFileName, 'c', 'CLOSE')
+
+RETURN ''
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="276_L3_ThefunctionDIRECTORY.html">[Back: The function DIRECTORY() in Object REXX]</A> <BR>
+<A HREF="278_L3_ThefunctionLINESinOb.html">[Next: The function LINES() in Object REXX]</A> 
+</BODY>
+</HTML>

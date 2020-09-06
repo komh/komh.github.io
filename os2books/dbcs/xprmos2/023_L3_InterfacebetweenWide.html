@@ -1,0 +1,155 @@
+<HTML>
+<HEAD>
+<TITLE>Interface between Wide-based Part and Multibyte-based Subsystems</TITLE>
+</HEAD>
+<BODY>
+<H1>Interface between Wide-based Part and Multibyte-based Subsystems</H1><!-- entering slot 24 -->
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Basically, wide character based handling is used for an internal      ³
+³process. When the application communicates with the other systems or  ³
+³subsystems (e.g. DB2/2, PM, etc.), the communication is based on      ³
+³multibyte.                                                            ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+Most applications must communicate with the operating system, other subsystems
+or middle wares to input/output information.  Even the famous<I> "hello
+world!"</I> program uses<B> stdout</B> to output the message.
+<P>
+At present, the interface between an application and these subsystems are
+byte-based. Thus, the application must convert all outbound wide strings
+to multibyte strings, and vice versa.
+<P>
+<B>Note: </B> The exception is stream I/O for which the conversion is done
+within the stream I/O functions implicitly.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+The following conversion functions are provided by XPG4:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Function name  ³Description                                  ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³mbstowcs       ³Converts a multibyte string to a wide string.³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³mbtowc         ³Converts a multibyte character to a wide     ³
+³               ³character.                                   ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³wcstombs       ³Converts a wide string to a multibyte string ³
+³               ³<A HREF="057_L0_.html">(**)</A>.                                        ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³wctomb         ³Converts a wide character to a multibyte     ³
+³               ³character.                                   ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+When converting a multibyte string to a wide string, enough size of output
+buffer should be prepared.  Since the arguments of memory allocation functions
+such as<B> malloc()</B> represent the number of bytes, an application programmer
+must be careful when using these functions to prepare buffer for wide string
+at run time.
+<BR>
+initHelp() of XPRMMAIN.C
+<BR>
+
+<PRE>#include &lt;stdlib.h&gt;
+#include &lt;limits.h&gt;
+
+ ...
+static void initHelp( char* pszResFile, size_t szLen )
+{
+ ...
+wchar_t *wcsTemp, *wcp;
+
+    /* strchr() may misinterpret either byte of a DBCS as an SBCS, */
+    /* thus use wcschr() instead.                                  */
+<B>    wcsTemp = (wchar_t *)malloc( (strlen(pszResFile)+1)*sizeof(wchar_t) );
+</B>    mbstowcs( wcsTemp, pszResFile, strlen(pszResFile) );
+     ...
+}
+</PRE>
+
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³The memory allocation functions such as <B>malloc()</B> reserves a block of  ³
+³storage of specified <I>bytes</I>.  Therefore, when allocating buffer for    ³
+³converting a multibyte string to a wide string (or vice versa), make  ³
+³sure the size of the prepared buffer is sufficient.                   ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+When converting a wide string to a multibyte string, the<B> wcslen()</B> function
+can be used to determine the number of wide characters in a wide string.
+ Multiply macro<B> MB_CUR_MAX</B> to get the sufficient size of the destination
+buffer. (If you'd like to prepare the buffer as a<B> char</B> array at the
+compile time, you can use<B> MB_LEN_MAX</B> instead.) The following is a
+wide character version of the WinSetDlgItemText() which allocates storage
+for conversion dynamically.
+<BR>
+setDlgItemWcs() and queryDlgItemWcs() of XPRMMAIN.C
+<BR>
+
+<PRE>
+#include &lt;stdlib.h&gt;
+#include &lt;limits.h&gt;
+&amp;ellips.
+/**********************************************************************/
+/* setDlgItemWcs()                                                    */
+/*   Wide string version of setDlgItemText().                         */
+/**********************************************************************/
+void setDlgItemWcs( HWND hwnd, ULONG ulItemId, wchar_t* wcsText )
+{
+char *pszBuf;
+int  sz;
+
+<B>    sz = wcslen(wcsText)*MB_CUR_MAX;
+</B>    pszBuf = (char *)malloc(sz+1);
+    wcstombs( pszBuf, wcsText, sz+1 );
+    WinSetDlgItemText( hwnd, ulItemId, pszBuf );
+    free( pszBuf );
+}
+</PRE>
+
+<P>
+When converting a multibyte string to a wide string, the<B> mbstowcs</B> functions
+can be used to determine the number of elements required for the converted
+wide characters.  Multiply the returned value by<B> sizeof(wchar_t)</B> to
+get the sufficient destination buffer. The following is a wide character
+version of the WinQueryDlgItemText() which allocates storage for conversion
+dynamically.
+<BR>
+setDlgItemWcs() and queryDlgItemWcs() of XPRMMAIN.C
+<BR>
+
+<PRE>/**********************************************************************/
+/* queryDlgItemWcs()                                                  */
+/*   Wide string version of queryDlgItemText().                       */
+/**********************************************************************/
+size_t queryDlgItemWcs( HWND hwnd, ULONG ulItemId, wchar_t* wcsBuf, size_t szLen )
+{
+ char *pszBuf;
+ LONG lLength;
+ size_t szNumChar;
+
+    lLength = <!-- entering slot 25 -->WinQueryDlgItemTextLength( hwnd, ulItemId );
+    pszBuf = malloc( (size_t)lLength+1 );
+    WinQueryDlgItemText( hwnd, ulItemId, lLength+1, pszBuf );
+
+<B>    szNumChar = mbstowcs( NULL, pszBuf, 0 );
+</B>    szNumChar = (szNumChar &gt; szLen)? szLen : szNumChar;
+
+    szNumChar = mbstowcs( wcsBuf, pszBuf, szNumChar+1 );
+    free( pszBuf );
+    return( szNumChar );
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="022_L3_MultiBytevsWideChara.html">[Back: Multi Byte vs. Wide Character]</A> <BR>
+<A HREF="024_L3_StreamInputandOutput.html">[Next: Stream Input and Output]</A> 
+</BODY>
+</HTML>

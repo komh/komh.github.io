@@ -1,0 +1,137 @@
+<HTML>
+<HEAD>
+<TITLE>Mailslot Category</TITLE>
+</HEAD>
+<BODY>
+<H1>Mailslot Category</H1><!-- entering slot 269 -->
+<P>
+This category includes the following APIs:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+<A HREF="209_L2_DosDeleteMailslotorD.html">Mailslot - DosDeleteMailslot
+</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="210_L2_DosMailslotInfoorDos.html">Mailslot - DosMailslotInfo</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="211_L2_DosMakeMailslotorDos.html">Mailslot - DosMakeMailslot</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="212_L2_DosPeekMailslotorDos.html">Mailslot - DosPeekMailslot</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="213_L2_DosReadMailslotorDos.html">Mailslot - DosReadMailslot</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="214_L2_DosWriteMailslotorDo.html">Mailslot - DosWriteMailslot</A><!-- lm: 0x2 1 -->
+</UL>
+<P>
+Mailslot APIs provide one-way interprocess communication (IPC). They are
+used with the MAILSLOT.H and NETCONS.H header files.
+<P>
+Through LAN Server mailslots, data can be sent to either local or remote
+applications on the network. Calls to these APIs must, however, be issued
+locally. The Mailslot functions create and delete mailslots, retrieve information
+about a mailslot or a message in it, and write messages to mailslots.
+<P>
+Mailslots can be read or deleted only by the process that created them.
+Mailslots created by a process are deleted when that process ends.
+<P>
+An application creates a mailslot on a local computer by calling the DosMakeMailslot
+API and assigning the mailslot a name in the format:
+<P>
+   \mailslot\<I>name</I>
+<P>
+where<I> name</I> is a unique set of characters distinguishing the mailslot
+from other mailslots on the computer.
+<P>
+The DosMakeMailslot API returns a handle to the mailslot. This handle then
+can be used in the following ways:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->With DosPeekMailslot to read a message in a mailslot
+<!-- lm: 0x2 3 --><!-- lm: 0x2 6 -->
+<UL>With DosReadMailslot to read and
+remove a message<!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL>With DosMailslotInfo to return information
+about a mailslot<!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL>With DosDeleteMailslot to delete a mailslot
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Any application can write messages to any mailslot on any computer on the
+network by calling the DosWriteMailslot API. DosWriteMailslot accepts mailslot
+names both in a local and remote format, as follows: ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³FORMAT
+               ³TYPE                ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ \"mailslot"\name            ³ Local mailslot            ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ \\computername\"mailslot"\ name    ³ Remote mailslot            ³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+
+<P>
+To write data to a mailslot on a remote computer, the name of the mailslot
+must also include a computer name. This requirement enables multiple remote
+computers to use the same mailslot name locally, but to have different names
+on the network.  (The computer name must be unique.)
+<P>
+Two classes of messages,<I> first-class</I> and<I> second-class</I>, can
+be sent to mailslots.
+<P>
+First-class messages can be sent to servers and peers, but not to requesters.
+Delivery of first-class messages is guaranteed: a message is either delivered
+or the sender is notified if the message is not delivered. If a mailslot
+is full when a first-class message arrives, DosWriteMailslot waits until
+DosReadMailslot reads and removes a message from the mailslot or until the
+delivery timeout expires (controlled by the<I> timeout</I> parameter in
+the DosWriteMailslot API).
+<P>
+Second-class messages simply are sent; no return code informs the sender
+of an unsuccessful delivery.  This simpler delivery system tends to make
+second-class messages faster than first-class messages. Second-class messages
+sent to a destination on a local workstation are received on the workstation
+as first-class messages, with guaranteed delivery.
+<P>
+An application can write the same message to all computers on the network
+that have a mailslot of a particular name. Only second-class delivery is
+provided. By specifying an asterisk (*) for the computer name when calling
+DosWriteMailslot,
+<PRE>\\*\mailslot\<I>name</I>
+</PRE>
+sends the same message to the named mailslot on every computer in the sender's
+primary domain that has the locally created mailslot. There is one limitation:
+requesters can receive only second-class messages of up to 400 bytes in
+length. Servers can receive first-class or second-class messages of any
+size.
+<P>
+Messages are stored in the mailslot according to when they were received
+and the priority assigned them.  Each message is assigned a priority from
+0 (low) through 9 (high) by way of the<I> priority</I> parameter of the
+DosWriteMailslot API.  Generally, priorities dictate the order in which
+messages are stored in a mailslot. High-priority messages are placed ahead
+of previously stored messages with the same or lower priority.  However,
+since the OS<!-- entering slot 270 --> /2 program is a multitasking operating
+system, this scheme cannot be guaranteed.
+<P>
+Mailslot messages can be read only by the process that created the mailslot.
+
+<P>
+The DosReadMailslot API reads and then removes the most current (next available)
+message.  Since new messages might be placed in front of other messages
+because of priority, a process cannot guarantee that a message read by DosReadMailslot
+is the same message seen earlier by DosPeekMailslot.
+<P>
+For related information about interprocess communications (IPC) in this
+book, see <A HREF="232_L1_NamedPipeCategory.html">Named Pipe Category</A>.
+
+
+<P><HR>
+
+<A HREF="207_L2_NetDASDSetInfoorNet3.html">[Back: NetDASDSetInfo or Net32DASDSetInfo]</A> <BR>
+<A HREF="209_L2_DosDeleteMailslotorD.html">[Next: DosDeleteMailslot or Dos32DeleteMailslot]</A> 
+</BODY>
+</HTML>

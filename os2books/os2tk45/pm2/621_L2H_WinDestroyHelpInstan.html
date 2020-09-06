@@ -1,0 +1,85 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>WinDestroyHelpInstance - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>WinDestroyHelpInstance - Example Code</H1><!-- entering slot 621 -->
+<P>
+This example shows a typical main function for an application which uses
+help.  Following creation of the main application window the Help Manager
+is initialized and associated with the window.  The help table is defined
+in the application's resources. When the window is destroyed, terminating
+the application, the help instance is also destroyed.
+<PRE>#define INCL=_WIN
+#include &lt;os2.h&gt;
+
+#define IDHT_APPLICATION        100     /* id of HELP TABLE in resource file
+*/
+
+main( int argc, char *argv[], char *envp[] )
+{
+   HAB  hab = WinInitialize( 0 );
+   HMQ  hmq = WinCreateMsgQueue( hab, 0 );
+   HWND hwnd;
+   HWND hwndClient;
+   HWND hwndHelp;
+   QMSG qmsg;
+   ULONG flStyle;
+   HELPINIT helpinit;
+
+   /* Setup the help initialization structure */
+   helpinit.cb = sizeof( HELPINIT );
+   helpinit.ulReturnCode =  0L;
+   helpinit.pszTutorialName =  (PSZ)NULL;
+   /* Help table in application resource */
+   helpinit.phtHelpTable = (PHELPTABLE)MAKEULONG( IDHT_APPLICATION, 0xffff );
+   helpinit.hmodHelpTableModule = NULLHANDLE;
+   /* Default action bar and accelerators */
+   helpinit.hmodAccelActionBarModule = NULLHANDLE;
+   helpinit.idAccelTable = 0;
+   helpinit.idActionBar = 0;
+   helpinit.pszHelpWindowTitle = "APPNAME HELP";
+   helpinit.fShowPanelId = CMIC_SHOW_PANEL_ID;
+   helpinit.pszHelpLibraryName = "APPNAME.HLP";
+
+   /* Register the class */
+   if( WinRegisterClass( ... ) )
+   {
+      /* create the main window */
+      flStyle = FCF_STANDARD;
+      hwnd = WinCreateStdWindow( ... );
+
+      if( hwnd )
+      {
+         /* Create and associate the help instance */
+         hwndHelp = WinCreateHelpInstance( hab, &amp;helpinit );
+
+         if( hwndHelp &amp;&amp; WinAssociateHelpInstance( hwndHelp, hwnd ) )
+         {
+            /* Process messages */
+            while( WinGetMsg( hab, &amp;qmsg, NULLHANDLE, 0, 0 ) )
+            {
+               WinDispatchMsg( hab, &amp;qmsg );
+            } /* endwhile */
+         }
+
+         /* Remove help instance - note: add                    */
+         /*     WinAssociateHelpInstance( NULLHANDLE, hwnd );      */
+         /* to WM_DESTROY processing to remove the association. */
+         WinDestroyHelpInstance( hwndHelp );
+      }
+   }
+
+   /* finish the cleanup and exit */
+   WinDestroyMsgQueue( hmq );
+   WinTerminate( hab );
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="620_L2H_WinDestroyHelpInstan.html">[Back: WinDestroyHelpInstance - Related Functions]</A> <BR>
+<A HREF="622_L2H_WinDestroyHelpInstan.html">[Next: WinDestroyHelpInstance - Topics]</A> 
+</BODY>
+</HTML>

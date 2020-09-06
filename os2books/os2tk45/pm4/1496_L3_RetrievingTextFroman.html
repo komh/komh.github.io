@@ -1,0 +1,68 @@
+<HTML>
+<HEAD>
+<TITLE>Retrieving Text From an Entry Field</TITLE>
+</HEAD>
+<BODY>
+<H1>Retrieving Text From an Entry Field</H1><!-- entering slot 1529 -->
+<P>
+An application can use the WinQueryWindowTextLength and WinQueryWindowText
+functions to retrieve the text from an entry field.  WinQueryWindowTextLength
+returns the length of the text; WinQueryWindowText copies the window text
+to a buffer.
+<P>
+Typically, an application needs to retrieve the text from an entry field
+only if the user changes the text.  An entry field sends an EN_CHANGE notification
+code in the low word of the first message parameter of the WM_CONTROL message
+whenever the text changes.  The following code fragment sets a flag when
+it receives the EN_CHANGE code, checks the flag during the WM_COMMAND message
+and, if it is set, retrieves the text of the entry field:
+<PRE>    HWND hwnd;
+    ULONG msg;
+    MPARAM mp1;
+    CHAR chBuf[64];
+    HWND hwndEntryField;
+    LONG cbTextLen;
+    LONG cbTextRead;
+    static BOOL fFieldChanged = FALSE;
+
+    switch (msg) {
+        case WM_CONTROL:
+            switch (SHORT1FROMMP(mp1)) {
+                case IDD_ENTRYFIELD:
+
+                    /* Check if the user changed the entry-field text. */
+                    if ((USHORT) SHORT2FROMMP(mp1) == EN_CHANGE)
+                        fFieldChanged = TRUE;
+                    return 0;
+            }
+
+        case WM_COMMAND:
+            switch (SHORT1FROMMP(mp1)) {
+                case DID_OK:
+
+                    /* If the user changed the entry-field text,       */
+                    /* obtain the text and store it in a buffer.       */
+                    if (fFieldChanged) {
+                        hwndEntryField = WinWindowFromID(hwnd,
+                            IDD_ENTRYFIELD);
+                        cbTextLen = WinQueryWindowTextLength(hwndEntryField);
+                        cbTextRead = WinQueryWindowText(hwndEntryField,
+                            sizeof(chBuf), chBuf);
+                        .
+                        . /* Do something with the text.               */
+                        .
+                    }
+                    WinDismissDlg(hwnd, 1);
+                    return 0;
+            }
+    }
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1495_L3_ChangingtheDefaultSi.html">[Back: Changing the Default Size of an Entry Field]</A> <BR>
+<A HREF="1497_L1_FileDialogControls.html">[Next: File Dialog Controls]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,386 @@
+<HTML XPOS=RIGHT YPOS=BOTTOM WIDTH=70% HEIGHT=60%HIDDEN>
+<HEAD>
+<!-- extra bytes: 0B 00 44 02 00 08 00 11 46 00 3C 00 38 27 --><TITLE>Operation</TITLE>
+</HEAD>
+<BODY>
+<H1>Operation</H1><!-- entering slot 2371 -->IF PE = 0
+<BR>
+THEN GOTO REAL_ADDRESS_MODE:;
+<BR>
+ELSE GOTO PROTECTED_MODE;
+<BR>
+FI;
+<BR>
+
+<BR>
+REAL_ADDRESS_MODE;
+<BR>
+ IF OperandSize = 32 (* Instruction = IRETD *)
+<BR>
+ THEN EIP  Pop ();
+<BR>
+ ELSE (* Instruction = IRET *)
+<BR>
+ IP  Pop();
+<BR>
+ FI;
+<BR>
+ CS  Pop ();
+<BR>
+ IF OperandSize = 32 (* Instruction = IRETD *)
+<BR>
+ THEN Pop(); EFLAGS  Pop();
+<BR>
+ ELSE (* Instruction = IRET *)
+<BR>
+ FLAGS  Pop();
+<BR>
+ FI;
+<BR>
+ END;
+<BR>
+
+<BR>
+PROTECTED_MODE:
+<BR>
+ IF VM = 1 (* Virtual mode:PE=1, VM=1 *)
+<BR>
+ THEN GOTO STACK_RETURN_FROM_V86; (* PE=1, VM=1 *)
+<BR>
+ ELSE
+<BR>
+ IF NT=1
+<BR>
+ THEN GOTO TASK_RETURN; (* PE=1, VM=1, NT=1 *)
+<BR>
+ ELSE
+<BR>
+  IF VM=1 in flags image on stack
+<BR>
+   THEN GOTO STACK_RETURN_TO_V86; (* PE=1, VM=1 in flags
+<BR>
+           inage *)
+<BR>
+   ELSE GOTO STACK_RETURN; (* PE=1, VM=0 in flags image *)
+<BR>
+  FI;
+<BR>
+ FI;
+<BR>
+FI;
+<BR>
+
+<BR>
+STACK_RETURN_FROM_V86:
+<BR>
+ IF IOPL=3 (* Virtual mode: PE=1, VM=1, IOPL=3 *)
+<BR>
+ THEN
+<BR>
+  IF OperandSize = 16
+<BR>
+    IP  Pop();(* 16-bit pops *)
+<BR>
+    CS  Pop();
+<BR>
+    FLAGS Pop();
+<BR>
+  ELSE (* OperandSize = 32 *)
+<BR>
+    EIP  Pop(); (* 32-bit pops *)
+<BR>
+    CS  Pop();
+<BR>
+    EFLAGS Pop(); (*VM,IOPL,VIP,and VIF EFLAG bits are not modified by
+IRETD*)
+<BR>
+  FI;
+<BR>
+ ELSE #GP(0); (* trap to virtual-8086 monitor: PE=1, VM=1, IOPL&lt;3 *)
+<BR>
+ FI;
+<BR>
+END;
+<BR>
+
+<BR>
+STACK_RETURN_TO_V86: (* Interrupted procedure was in V86 mode:
+<BR>
+PE=1, VM=1 in flags image *)
+<BR>
+ IF top 36 bytes of stack not within limits
+<BR>
+ THEN #SS(0);
+<BR>
+ FI;
+<BR>
+ IF instruction pointer not within code segment limit  THEN #GP(0);
+<BR>
+ FI;
+<BR>
+ EFLAGS  SS:[ESP + 8]; (* Sets VM in interrupted routine *)
+<BR>
+ EIP  Pop();
+<BR>
+ CS  Pop(); (* CS behaves as in 8086, due to VM=1 *)
+<BR>
+ throwaway  Pop(); (* pop away EFLAGS already read *)
+<BR>
+ TempESP  Pop();
+<BR>
+ TempSS  Pop();
+<BR>
+ ES  Pop(); (* pop 2 words; throw away high-order word *)
+<BR>
+ DS  Pop(); (* pop 2 words; throw away high-order word *)
+<BR>
+ FS  Pop(); (* pop 2 words; throw away high-order word *)
+<BR>
+ GS  Pop(); (* pop 2 words; throw away high-order word *)
+<BR>
+  SS:ESP  TempSS:TempESP;
+<BR>
+ (* Resume processing in Virtual 8086 mode *)
+<BR>
+ END;
+<BR>
+
+<BR>
+TASK-RETURN: (* PE=1, VM=1, NT=1 *)
+<BR>
+ Examine Back Link Selector in TSS addressed by the current task
+<BR>
+  register:
+<BR>
+  Must specify global in the local/global bit, else #TS(new TSS selector);
+<BR>
+  Index must be within GDT limits, else #TS(new TSS selector);
+<BR>
+  AR byte must specify TSS, else #TS(new TSS selector);
+<BR>
+  New TSS must be busy, else #TS(new TSS selector);
+<BR>
+  TSS must be present, else #NP(new TSS selector);
+<BR>
+ SWITCH-TASKS without nesting to TSS specified by back link selector;
+<BR>
+ Mark the task just abandoned as NOT BUSY;
+<BR>
+ Instruction pointer must be within code segment limit ELSE #GP(0);
+<BR>
+ END;
+<BR>
+
+<BR>
+STACK-RETURN: (* PE=1, VM=0 in flags image *)
+<BR>
+ IF OperandSize=32
+<BR>
+ THEN Third word on stack must be within stack limits, else #SS(0);
+<BR>
+ ELSE Second word on stack must be within stack limits, else #SS(0);
+<BR>
+ FI;
+<BR>
+ Return CS selector RPL must be ò CPL, else #GP(Return selector);
+<BR>
+ IF return selector RPL = CPL
+<BR>
+ THEN GOTO RETURN-SAME-LEVEL;
+<BR>
+ ELSE GOTO RETURN-OTHER-LEVEL;
+<BR>
+ FI;
+<BR>
+
+<BR>
+RETURN-SAME-LEVEL: (* PE=1, VM=0 in flags image, RPL=CPL *)
+<BR>
+ IF OperandSize=32
+<BR>
+ THEN
+<BR>
+  Top 12 bytes on stack must be within limits, else #SS(0);
+<BR>
+  Return CS selector (at eSP+4) must be non-null, else #GP(0);
+<BR>
+ ELSE
+<BR>
+  Top 6 bytes on stack must be within limits, else #SS(0);
+<BR>
+  Return CS selector (at eSP+2) must be non-null, else #GP(0);
+<BR>
+ FI;
+<BR>
+ Selector index must be within its descriptor table limits, else #GP
+<BR>
+  (Return selector);
+<BR>
+ AR byte must indicate code segment, else #GP(Return selector);
+<BR>
+ IF non-conforming
+<BR>
+ THEN code segment DPL must = CPL;
+<BR>
+ ELSE #GP(Return selector); (* PE=1, VM=0 in flags image,
+<BR>
+ RPL=CPL,non-conforming,DPL&lt;&gt; CPL *)
+<BR>
+ FI;
+<BR>
+ IF conforming
+<BR>
+  THEN IF DPL&gt;CPL
+<BR>
+   #GP(Return selector); (* PE=1, VM=0 in flags image,
+<BR>
+   RPL=CPL,conforming,DPL&gt;CPL *)
+<BR>
+ Segment must be present, else #NP(Return selector);
+<BR>
+ Instruction pointer must be within code segment boundaries, else #GP(0);
+<BR>
+ FI;
+<BR>
+ IF OperandSize=32 put comments here
+<BR>
+ THEN
+<BR>
+  Load CS:EIP from stack;
+<BR>
+  Load CS-register with new code segment descriptor;
+<BR>
+  Load EFLAGS with third doubleword from stack;
+<BR>
+  Increment eSP by 12;
+<BR>
+ ELSE
+<BR>
+  Load CS-register with new code segment descriptor;
+<BR>
+  Load FLAGS with third word on stack;
+<BR>
+  Increment eSP by 6;
+<BR>
+ FI;
+<BR>
+ END;
+<BR>
+
+<BR>
+RETURN-OUTER-LEVEL:
+<BR>
+IF OperandSize=32
+<BR>
+THEN Top 20 bytes on stack must be within limits, else #SS(0);
+<BR>
+ELSE Top 10 bytes on stack must be within limits, else #SS(0);
+<BR>
+FI;
+<BR>
+Examine return CS selector and associated descriptor:
+<BR>
+ Selector must be non-null, ELSE #GP(0);
+<BR>
+ Selector index must be within its descriptor table limits;
+<BR>
+  ELSE #GP(Return selector);
+<BR>
+ AR byte must indicate code segment, else #GP(Return selector);
+<BR>
+IF non-conforming
+<BR>
+ THEN code segment DPL must = CS selector RPL;
+<BR>
+ ELSE #GP(Return selector);
+<BR>
+ FI;
+<BR>
+IF conforming
+<BR>
+ THEN code segment DPL must be &gt; CPL;
+<BR>
+ ELSE #GP(Return selector);
+<BR>
+ FI;
+<BR>
+ Segment must be present, else #NP(Return selector);
+<BR>
+Examine return SS selector and associated descriptor:
+<BR>
+ Selector must be non-null, else #GP(0);
+<BR>
+ Selector index must be within its descriptor table limits
+<BR>
+  ELSE #GP(SS selector);
+<BR>
+ Selector RPL must equal the RPL of the return CS selector
+<BR>
+  ELSE #GP(SS selector);
+<BR>
+ AR byte must indicate a writable data segment, else #GP(SS selector);
+<BR>
+ Stack segment DPL must equal the RPL of the return CS selector
+<BR>
+  ELSE #GP(SS selector);
+<BR>
+ SS must be present, else #NP(SS selector);
+<BR>
+Instruction pointer must be within code segment limit ELSE #GP(0);
+<BR>
+ IF OperandSize=32
+<BR>
+ THEN
+<BR>
+  Load CS:EIP from stack;
+<BR>
+  Load EFLAGS with values at (eSP+8);
+<BR>
+ ELSE
+<BR>
+  Load CS:IP from stack;
+<BR>
+  Load FLAGS with values at (eSP+4);
+<BR>
+ FI;
+<BR>
+ Load SS:eSP from stack;
+<BR>
+ Set CPL to the RPL of the return CS selector;
+<BR>
+ Load the CS register with the CS descriptor;
+<BR>
+ Load the SS register with the SS descriptor;
+<BR>
+ FOR each of ES, FS, GS, and DS
+<BR>
+ DO;
+<BR>
+  IF the current value of the register is not valid for the outer level;
+<BR>
+  THEN zero the register and clear the valid flag;
+<BR>
+  FI;
+<BR>
+  To be valid, the register setting must satisfy the following properties:
+<BR>
+   Selector index must be within descriptor table limits;
+<BR>
+   AR byte must indicate data or readable code segment;
+<BR>
+   IF segment is data or non-conforming code,
+<BR>
+   THEN DPL must be &gt; CPL, or DPL must be &lt; RPL;
+<BR>
+ OD;
+<BR>
+ END:
+<BR>
+
+
+<P><HR>
+
+<A HREF="2355_L3H_Description.html">[Back: Description]</A> <BR>
+<A HREF="2357_L3H_FlagsAffected.html">[Next: Flags Affected]</A> 
+</BODY>
+</HTML>

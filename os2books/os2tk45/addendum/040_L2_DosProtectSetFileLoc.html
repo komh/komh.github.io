@@ -1,0 +1,311 @@
+<HTML>
+<HEAD>
+<TITLE>DosProtectSetFileLocksL</TITLE>
+</HEAD>
+<BODY>
+<H1>DosProtectSetFileLocksL</H1><!-- entering slot 66 -->
+<P>
+<B>Purpose</B>
+<P>
+DosProtectSetFileLocksL locks and unlocks a range of an open file.
+<P>
+<B>Syntax</B>
+<PRE>#define INCL DOSFILEMGR
+#include  os2.h 
+
+</PRE>
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+APIRET DosProtectSetFileLocksL<!-- lm: 0x2 11 -->
+<UL><B> (HFILE hFile,
+PFILELOCKL pflUnlock, PFILELOCKL pflLock, ULONG timeout, ULONG flags, FHLOCK
+fhFileHandleLockID)</B><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Parameters</B><!-- lm: 0x2 1 -->
+<P>
+hFile  HFILE)  input<!-- lm: 0x11 11 -->
+<UL> File handle.<!-- lm: 0x2 1 -->
+</UL> pflUnlock
+ PFILELOCKL)  input<!-- lm: 0x11 11 -->
+<UL> Address of the structure containing
+the offset and length of a range to be unlocked.
+<P>
+The structure is shown in the following figure 
+<PRE>typedef struct  FILELOCKL    LONGLONG       lOffset 
+  LONGLONG       lRange 
+  FILELOCKL 
+
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>pflLock  PFILELOCKL)  input<!-- lm: 0x11 11 -->
+<UL> Address
+of the structure containing the offset and length of a range to be locked
+<!-- lm: 0x2 1 -->
+</UL>timeout  ULONG)  input<!-- lm: 0x11 11 -->
+<UL> The
+maximum time that the process is to wait for the requested locks.
+<P>
+The time is represented in milliseconds.<!-- lm: 0x2 1 -->
+</UL> flags  ULONG)
+ input<!-- lm: 0x11 11 -->
+<UL> Flags that describe the action to be taken.
+
+<P>
+Possible actions are <!-- lm: 0x2 11 -->
+<P>
+Bits<!-- lm: 0x2 26 -->
+<UL> Description<!-- lm: 0x2 11 -->
+</UL> 31 2<!-- lm: 0x2 26 -->
+<UL> Reserved
+flags<!-- lm: 0x2 11 -->
+</UL> 1<!-- lm: 0x2 26 -->
+<UL> Atomic
+<P>
+This bit defines a request for atomic locking. If this bit is set to 1 and
+the lock range is equal to the unlock range, an atomic lock occurs. If this
+bit is set to 1 and the lock range is not equal to the unlock range, an
+error is returned.
+<P>
+If this bit is set to 0, then the lock may or may not occur atomically with
+the unlock.<!-- lm: 0x2 11 -->
+</UL> 0<!-- lm: 0x2 26 -->
+<UL> Share
+<P>
+This bit defines the type of access that other processes may have to the
+file range that is being locked.
+<P>
+If this bit is set to 0 (the default), other processes have no access to
+the locked file range. The current process has exclusive access to the locked
+file range, which must not overlap any other locked file range.
+<P>
+If this bit is set to 1, the current process and other processes have shared
+read only access to the locked file range. A file range with shared access
+may overlap any other file range with shared access, but must not overlap
+any other file range with exclusive access.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL> fhFileHandleLockID
+ FHLOCK)  input<!-- lm: 0x11 11 -->
+<UL> The filehandle lockid returned
+by a previous DosProtectOpenL.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Returns</B><!-- lm: 0x2 1 -->
+<P>
+ulrc  APIRET)  returns<!-- lm: 0x11 11 -->
+<UL> Return Code.
+<P>
+DosProtectSetFileLocksL returns one of the following values <!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->NO_ERROR<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->ERROR_INVALID_HANDLE<!-- lm: 0x2 11 -->
+<P>
+33<!-- lm: 0x2 26 -->
+<UL> ERROR_LOCK_VIOLATION<!-- lm: 0x2 11 -->
+</UL> 36
+<!-- lm: 0x2 26 -->
+<UL>ERROR_SHARING_BUFFER_EXCEEDED<!-- lm: 0x2 11 -->
+</UL> 87
+<!-- lm: 0x2 26 -->
+<UL>ERROR_INVALID_PARAMETER<!-- lm: 0x2 11 -->
+</UL> 95
+<!-- lm: 0x2 26 -->
+<UL>ERROR_INTERRUPT<!-- lm: 0x2 11 -->
+</UL> 174<!-- lm: 0x2 26 -->
+<UL> ERROR_ATOMIC_LOCK_NOT_SUPPORTED
+<!-- lm: 0x2 11 -->
+</UL>175<!-- lm: 0x2 26 -->
+<UL> ERROR_READ_LOCKS_NOT_SUPPORTED
+<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Remarks</B>
+<P>
+DosProtectSetFileLocksL allows a process to lock and unlock a range in a
+file. The time during which a file range is locked should be short.
+<P>
+If the lock and unlock ranges are both zero, ERROR_LOCK_VIOLATION is returned
+to the caller.
+<P>
+If you only want to lock a file range, set the unlock file offset and the
+unlock range length to zero.
+<P>
+If you only want to unlock a file range, set the lock file offset and the
+lock range length to zero.
+<P>
+When the Atomic bit of<I> flags</I> is set to 0, and DosProtectSetFileLocksL
+specifies a lock operation and an unlock operation, the unlock operation
+occurs first, and then the lock operation is performed. If an error occurs
+during the unlock operation, an error code is returned and the lock operation
+is not performed. If an error occurs during the lock operation, an error
+code is returned and the unlock remains in effect if it was successful.
+
+<P>
+The lock operation is atomic when all of these conditions are met <!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->The Atomic bit is set to 1 in<I> flags</I><!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The unlock range is the same as the lock range<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The process has shared access to the file range, and
+has requested exclusive access to it; or the process has exclusive access
+to the file range, and has requested shared access to it.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Some file system drivers (FSDs) may not support atomic lock operations.
+Versions of the operating system prior to OS/2 Version 2.00 do not support
+atomic lock operations. If the application receives the error code ERROR_ATOMIC_LOCK_NOT_SUPPORTED,
+the application should unlock the file range and then lock it using a non-atomic
+operation (with the atomic bit set to 0 in<I> flags</I>). The application
+should also refresh its internal buffers before making any changes to the
+file.
+<P>
+If you issue DosProtectClose to close a file with locks still in effect,
+the locks are released in no defined sequence.
+<P>
+If you end a process with a file open, and you have locks in effect in that
+file, the file is closed and the locks are released in no defined sequence.
+
+<P>
+The locked range can be anywhere in the logical file. Locking beyond the
+end of the file is not an error. A file range to be locked exclusively must
+first be cleared of any locked file sub-ranges or overlapping locked file
+ranges.
+<P>
+If you repeat DosProtectSetFileLocksL for the same file handle and file
+range, then you duplicate access to the file range. Access to locked file
+ranges is not<!-- entering slot 67 --> duplicated across DosExecPgm. The
+proper method of using locks is to attempt to lock the file range, and to
+examine the return value.
+<P>
+The following table shows the level of access granted when the accessed
+file range is locked with an exclusive lock or a shared lock.  Owner  refers
+to a process that owns the lock.  Non-owner  refers to a process that does
+not own the lock.
+<PRE> Action       Exclusive Lock             Shared Lock
+
+ Owner read   Success                    Success
+
+ Non-owner    Wait for unlock. Return    Success
+ read         error code after time-out.
+
+ Owner write  Success                    Wait for unlock. Return
+                                         error code after time-out.
+
+ Non-owner    Wait for unlock. Return    Wait for unlock. Return
+ write        error code after time-out. error code after time-out.
+
+</PRE>
+
+<P>
+If only locking is specified, DosProtectSetFileLocksL locks the specified
+file range using<I> pflLock</I> If the lock operation cannot be accomplished,
+an error is returned, and the file range is not locked.
+<P>
+After the lock request is processed, a file range can be unlocked using
+the<I> pflUnlock</I> parameter of another DosProtectSetFileLocksL request.
+If unlocking cannot be accomplished, an error is returned.
+<P>
+Instead of denying read/write access to an entire file by specifying access
+and sharing modes with DosProtectOpenL requests, a process attempts to lock
+only the range needed for read/write access and examines the error code
+returned.
+<P>
+Once a specified file range is locked exclusively, read and write access
+by another process is denied until the file range is unlocked. If both unlocking
+and locking are specified by DosProtectSetFileLocksL, the unlocking operation
+is performed first, then locking is done.
+<P>
+<B>Related Functions</B><!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->DosCancelLockRequestL<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosDupHandle<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosExecPgm<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosProtectOpenL<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Example Code</B>
+<P>
+This example opens or creates and opens a file named  FLOCK.DAT  in protected
+mode, and updates it using file locks.
+<PRE>#define INCL_DOSFILEMGR       /* File Manager values */#define INCL_DOSERRORS        /* DOS Error values    */
+#include  os2.h 
+#include  stdio.h 
+#include  string.h 
+
+int main(VOID)  
+
+HFILE     FileHandle   = NULLHANDLE;  /* File handle */
+ULONG     Action       = 0,           /* Action taken by DosOpenL */
+Wrote        = 0,           /* Number of bytes written by DosWrite */
+i            = 0;           /* Loop index */
+CHAR      FileData 40  = "Forty bytes of demonstration text data\r\n";
+APIRET    rc           = NO_ERROR;    /* Return code */
+FHLOCK    FHLock       = 0;           /* File handle lock   */
+FILELOCKL  LockArea     =  0 ,         /* Area of file to lock */
+UnlockArea   =  0 ;         /* Area of file to unlock */
+
+rc = DosProtectOpenL("flock.dat",                   /* File to open */
+ FileHandle,                   /* File handle */
+ Action,                       /* Action taken */
+(LONGLONG)4000,                /* File primary allocation */
+FILE_ARCHIVED,                 /* File attributes */
+FILE_OPEN | FILE_CREATE,       /* Open function type */
+OPEN_ACCESS_READWRITE | OPEN_SHARE_DENYNONE,
+0L,                            /* No extended attributes */
+ FHLock);                      /* File handle lock */
+if (rc != NO_ERROR)                         /* If open failed */
+printf("DosProtectOpenL error  return code = %u\n", rc);
+return 1;
+ 
+
+LockArea.lOffset = 0;              /* Start locking at beginning of file */
+LockArea.lRange =  40;             /* Use a lock range of 40 bytes       */
+UnLockArea.lOffset = 0;              /* Start unlocking at beginning of file */
+UnLockArea.lRange =  0;              /* Use a unlock range of 0 bytes       */
+
+/* Write 8000 bytes to the file, 40 bytes at a time */
+
+for (i=0; i 200; ++i)  
+
+rc = DosProtectSetFileLocksL(FileHandle,        /* File handle   */
+ UnlockArea,       /* Unlock previous record (if any) */
+ LockArea,         /* Lock current record */
+2000L,             /* Lock time-out value of 2 <!-- entering slot 68 -->seconds */
+0L,                /* Exclusive lock, not atomic */
+FHLock);           /* File handle lock */
+if (rc != NO_ERROR)  
+printf("DosProtectSetFileLocksL error  return code = %u\n", rc);
+return 1;
+ 
+rc = DosProtectWrite(FileHandle, FileData, sizeof(FileData),  Wrote, FHLock);
+if (rc != NO_ERROR)  
+printf("DosProtectWrite error  return code = %u\n", rc);
+return 1;
+ 
+UnlockArea = LockArea;      /* Will unlock this record on next iteration */
+LockArea.lOffset += 40;     /* Prepare to lock next record               */
+
+  /* endfor - 8000 bytes written */
+
+rc = DosProtectClose(FileHandle,FHLock);    /* Close file, release any locks */
+/* Should check if (rc != NO_ERROR) here .... */
+
+return NO_ERROR;
+ 
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="039_L2_DosProtectSetFileInf.html">[Back: DosProtectSetFileInfo]</A> <BR>
+<A HREF="041_L2_DosProtectSetFilePtr.html">[Next: DosProtectSetFilePtrL]</A> 
+</BODY>
+</HTML>

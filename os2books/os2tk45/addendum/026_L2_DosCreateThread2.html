@@ -1,0 +1,330 @@
+<HTML>
+<HEAD>
+<TITLE>DosCreateThread2</TITLE>
+</HEAD>
+<BODY>
+<H1>DosCreateThread2</H1><!-- entering slot 33 -->
+<P>
+<B>Purpose</B>
+<P>
+DosCreateThread2 creates an asynchronous thread of execution under the current
+process using a pre-allocated stack.
+<P>
+<B>Syntax</B>
+<PRE>#define INCL_DOSPROCESS
+#include  os2.h&gt;
+
+</PRE>
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+APIRET DosCreateThread2<!-- lm: 0x2 11 -->
+<UL><B> (PTHREADCREATE ptc, ULONG
+cbSize, PTID pTid, PFNTHREAD pfnStart, ULONG lParam, ULONG lFlag, PBYTE
+pStack, ULONG cbStack)</B><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Parameters</B><!-- lm: 0x2 1 -->
+<P>
+ptc(PTHREADCREATE)  input/output<!-- lm: 0x11 11 -->
+<UL> Address of the
+thread create data structure 
+<PRE>typedef struct_THREADCREATE{   ULONG       cbSize;
+   PTID        pTid;
+   PFNTHREAD   pfnStart;
+   ULONG       lParam;
+   ULONG       lFlag;
+   PBYTE       pStack;
+   ULONG       cbStack;
+}  THREADCREATE;
+typedef THREADCREATE *PTHREADCREATE;
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>cbSize (ULONG)  input<!-- lm: 0x11 11 -->
+<UL> The
+size, in bytes, of the thread create structure.<!-- lm: 0x2 1 -->
+</UL> pTid
+(PTID)  output<!-- lm: 0x11 11 -->
+<UL> The thread identifier of the created
+thread is returned.<!-- lm: 0x2 1 -->
+</UL> pfnStart (PFNTHREAD)  input
+<!-- lm: 0x11 11 -->
+<UL>Address of the code to be executed when the thread
+begins execution.
+<P>
+This function is called using a 32 bit near-call, accepts a single parameter,
+lParam, and returns a doubleword exit status (see DosExit). Returning from
+the function without executing DosExit causes the thread to end. In this
+case, the exit status is the value in the EAX register when the thread ends.
+<!-- lm: 0x2 1 -->
+</UL>lParam (ULONG)  input<!-- lm: 0x11 11 -->
+<UL> An
+argument that is passed to the target thread routine as a parameter. It
+is usually a pointer to a parameter block.<!-- lm: 0x2 1 -->
+</UL> lFlag
+(ULONG)  input<!-- lm: 0x11 11 -->
+<UL> Thread flags.
+<P>
+Possible values are a combination of the following <!-- lm: 0x2 11 -->
+<P>
+CREATE_READY (0x00000000)<!-- lm: 0x2 26 -->
+<UL> The new thread starts
+immediately.<!-- lm: 0x2 11 -->
+</UL> CREATE_SUSPEND (0x00000001)<!-- lm: 0x2 26 -->
+<UL> The
+thread is created in the suspended state, and the creator of the thread
+must issue DosResumeThread to start the new thread's execution.<!-- lm: 0x2 11 -->
+</UL> STACK_SPARSE
+(0x00000000)<!-- lm: 0x2 26 -->
+<UL> The system uses the default method
+for initializing the thread's stack.<!-- lm: 0x2 11 -->
+</UL> STACK_COMMITTED
+(0x00000002)<!-- lm: 0x2 26 -->
+<UL> The system precommits all the pages
+in the stack. One page is 4KB<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL> pStack
+(PBYTE)  input<!-- lm: 0x11 11 -->
+<UL> Address of the top of the stack
+(not the bottom of the stack).<!-- lm: 0x2 1 -->
+</UL> cbStack (ULONG)  input
+<!-- lm: 0x11 11 -->
+<UL>The size, in bytes, of the new thread's stack.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Returns</B><!-- lm: 0x2 1 -->
+<P>
+ulrc (APIRET)  returns<!-- lm: 0x11 11 -->
+<UL> Return Code.
+<P>
+DosCreateThread2 returns one of the following values <!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->NO_ERROR<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->ERROR_NOT_ENOUGH_MEMORY<!-- lm: 0x2 11 -->
+<P>
+87<!-- lm: 0x2 26 -->
+<UL> ERROR_INVALID_PARAMETER<!-- lm: 0x2 11 -->
+</UL> 95
+<!-- lm: 0x2 26 -->
+<UL>ERROR_INTERRUPT<!-- lm: 0x2 11 -->
+</UL> 115<!-- lm: 0x2 26 -->
+<UL> ERROR_PROTECTION_VIOLATION
+<!-- lm: 0x2 11 -->
+</UL>164<!-- lm: 0x2 26 -->
+<UL> ERROR_MAX_THRDS_REACHED
+<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Remarks</B>
+<P>
+The difference between DosCreateThread and DosCreateThread2 is the use and
+management  of the thread's stack.
+<P>
+Using DosCreateThread, the application is not responsible for allocating
+the stack.  The application simply supplies the size of the stack, and the
+operating system will  manage the allocation and location of that storage
+on behalf of the application.  DosCreateThread also employs guard pages
+and exception handling for stack related situations, such as stack growth.
+ One of the problems with DosCreateThread is that for each thread, a minimum
+64K of virtual address space is reserved, but only 8K of  physical storage
+is actually committed.  Therefore, 56K of virtual address space is wasted
+initially.
+<P>
+Using DosCreateThread2, the application is responsible for allocating the
+stack before calling the API.  With DosCreateThread2, the operating system
+gives the application total control over stack size and location.  Therefore,
+more<!-- entering slot 34 --> efficient use of virtual address space within
+the system can be achieved.
+<P>
+The address of the stack,<B> pStack</B>, must be in the compatibility region,
+that is, the first 512MB (0x20000000). If DosCreateThread2 is called with
+a stack address higher than 512MB, ERROR_INVALID_PARAMETER will be returned.
+
+<P>
+<B>Related Functions</B><!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->DosCreateThread<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Example Code</B>
+<P>
+In this example, the main thread first allocates 64K worth of memory.  It
+then calls  DosCreateThread2 four times to create 4 child threads.  Each
+child thread has 16K of stack space.  Finally, the main thread sets the
+termination flag to allow all child threads to terminate.
+<P>
+Compile this example with MULTITHREAD LIBRARIES. If you are using CSet/2
+or VisualAge(R)  C/C++, use the /Gm+ switch.
+<PRE>#define INCL_DOSMEMMGR#define INCL_DOSPROCESS
+#define INCL_DOSERRORS
+
+#include  os2.h&gt;
+#include  stdio.h&gt;
+#include  stdlib.h&gt;
+
+#define _64K 64*1024
+#define _48K 48*1024
+#define _32K 32*1024
+#define _16K 16*1024
+
+void _System TestThread1(void);
+void _System TestThread2(void);
+void _System TestThread3(void);
+void _System TestThread4(void);
+
+BOOL flTerminate = FALSE;
+
+int main (VOID) {
+
+   APIRET rc;               /* Return code */
+   void *pStackBase;        /* Pointer to stack base */
+   THREADCREATE tc[4]={0};  /* Thread create structures */
+   int i;
+
+   /* Allocate 64K of memory */
+
+   rc = DosAllocMem( pStackBase, _64K, PAG_COMMIT | PAG_WRITE);
+
+   if (rc != NO_ERROR) {
+      printf("DosAllocMem failed, rc=%d\n", rc);
+      return(1);
+   }
+
+   /* Set up thread structures (4 threads). */
+
+   tc[0].cbSize   = sizeof(THREADCREATE);
+   tc[0].pfnStart = (PFNTHREAD) TestThread1
+   tc[0].pStack   = (PBYTE)pStackBase + _64K;    /* Top of stack (not bottom) */
+   tc[0].lFlag    = CREATE_READY | STACK_SPARSE;
+   tc[0].cbStack  = _16K;                        /* Each thread has 16K stack */
+
+   tc[1].cbSize   = sizeof(THREADCREATE);
+   tc[1].pfnStart = (PFNTHREAD) TestThread2
+   tc[1].pStack   = (PBYTE)pStackBase + _48K;    /* Top of stack (not bottom) */
+   tc[1].lFlag    = CREATE_READY | STACK_SPARSE;
+   tc[1].cbStack  = _16K;                        /* Each thread has 16K stack */
+
+   tc[2].cbSize   = sizeof(THREADCREATE);
+   tc[2].pfnStart = (PFNTHREAD) TestThread3
+   tc[2].pStack   = (PBYTE)pStackBase + _32K;    /* Top of stack (not bottom) */
+   tc[2].lFlag    = CREATE_READY | STACK_SPARSE;
+   tc[2].cbStack  = _16K;                        /* Each thread has 16K stack */
+
+   tc[3].cbSize   = sizeof(THREADCREATE);
+   tc[3].pfnStart = (PFNTHREAD) TestThread4
+   tc[3].pStack   = (PBYTE)pStackBase + _16K;    /* Top of stack (not bottom) */
+   tc[3].lFlag    = CREATE_READY | STACK_SPARSE;
+   tc[3].cbStack  = _16K;                        /* Each thread has 16K stack */
+
+   /* Create 4 child threads. */
+
+   for (i=0; i 4; i++) {
+      rc = DosCreateThread2( tc[i]);
+      if (rc != NO_ERROR) {
+        printf( "DosCreateThread2 failed, rc = %d\n", rc);
+        return(1);
+      } else
+           printf("DosCreateThread2 was successful, tid=%d\n", tc[i].pTid);
+   }
+
+   flTerminate = TRUE;
+
+   /* Wait for all child threads to terminate. */
+   for (i=0; i 4; i++) {
+      DosWaitThread( (tc[i].pTid), DCWW_WAIT);
+   }
+
+   DosFreeMem(pStackBase);
+   return(0);
+}
+
+void _System TestThread1(void)
+{
+   APIRET rc;
+   PTIB   ptib;
+   PPIB   ppib;
+
+   rc = DosGetInfoBlocks( ptib,  ppib);
+   if (rc != NO_ERROR) {
+      printf("TestThread1  DosGetInfoBlocks failed rc = %d\n", rc);
+      return;
+   }
+
+   printf("TestThread1  base of stack at 0x%08X, top of stack at 0x%08X\n",
+             ptib-&gt;tib_pstack, ptib-&gt;tib_pstacklimit);
+
+   while (flTerminate == FALSE) {
+      DosSleep(1000);
+   }
+}
+
+void _System TestThread2(void)
+{
+   APIRET rc;
+   PTIB   ptib;
+   PPIB   ppib;
+
+   rc = DosGetInfoBlocks( ptib,  ppib);
+   if (rc != NO_ERROR) {
+      printf("TestThread2  DosGetInfoBlocks failed rc = %d\n", rc);
+      return;
+   }
+
+   printf("TestThread2  base of stack at 0x%08X, top of stack at 0x%08X\n",
+             ptib-&gt;tib_pstack, ptib-&gt;tib_pstacklimit);
+
+   while (flTerminate == FALSE) {
+      DosSleep(1000);
+   }
+}
+
+void _System TestThread3(void)
+{
+   APIRET rc;
+   PTIB   ptib;
+   PPIB   ppib;
+
+   rc = DosGetInfoBlocks( ptib,  ppib);
+   if (rc != NO_ERROR) {
+      printf("TestThread3  DosGetInfoBlocks failed rc = %d\n", rc);
+      return;
+   }
+
+   printf("TestThread3  base of stack at 0x%08X, top of stack at 0x%08X\n",
+             ptib-&gt;tib_pstack, ptib-&gt;tib_pstacklimit);
+
+   while (flTerminate == FALSE) {
+      DosSleep(1000);
+   }
+}
+
+void _System TestThread4(void)
+{
+   APIRET rc;
+   PTIB   ptib;
+   PPIB   ppib;
+
+   rc = DosGetInfoBlocks( ptib,  ppib);
+   if (rc != NO_ERROR) {
+      printf("TestThread4  DosGetInfoBlocks failed rc = %d\n", rc);
+      return;
+   }
+
+   printf("TestThread4  base of stack at 0x%08X, top of stack at 0x%08X\n",
+             ptib-&gt;tib_pstack, ptib-&gt;tib_pstacklimit);
+
+   while (flTerminate == FALSE) {
+      DosSleep(1000);
+   }
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="025_L2_DosCreateEventSem.html">[Back: DosCreateEventSem]</A> <BR>
+<A HREF="027_L2_DosDumpProcess.html">[Next: DosDumpProcess]</A> 
+</BODY>
+</HTML>

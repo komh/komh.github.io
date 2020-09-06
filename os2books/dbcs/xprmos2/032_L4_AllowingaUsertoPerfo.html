@@ -1,0 +1,113 @@
+<HTML>
+<HEAD>
+<TITLE>Allowing a User to Perform On-the-spot Conversion</TITLE>
+</HEAD>
+<BODY>
+<H1>Allowing a User to Perform On-the-spot Conversion</H1><!-- entering slot 34 -->
+<PRE>旼컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴커
+쿛rocess the <B>WM_QUERYCONVERTPOS</B> message to create the conversion       �
+쿶nformation area at the spot where the cursor is located.             �
+읕컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴켸
+</PRE>
+
+<P>
+The<B> WM_QUERYCONVERTPOS</B> message is sent to the window when the end
+user tries to enter DBCS conversion mode. The message is sent to verify
+whether it is allowed to enter the conversion mode, and query the position
+of the conversion window. The parameters and return value of the message
+are as follows:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+param1<!-- lm: 0x11 11 -->
+<UL> pCursorPos (PRECTL)<!-- lm: 0x2 13 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 16 -->If the conversion is not allowed, do not modify the
+parameter.<!-- lm: 0x2 13 -->
+<P>
+<LI><!-- lm: 0x2 16 -->If the on-the-spot conversion is to be performed,
+update xLeft and yBottom of pCursorPos with the bottom-left corner of the
+text cursor position in window coordinate.<!-- lm: 0x2 13 -->
+<P>
+<LI><!-- lm: 0x2 16 -->If the fixed-position conversion is to be performed,
+update both xLeft and yBottom of pCursorPos with -1.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL> param2
+<!-- lm: 0x11 11 -->
+<UL>reserved.<!-- lm: 0x2 1 -->
+</UL> Returns<!-- lm: 0x11 11 -->
+<UL> usCode
+(USHORT)<!-- lm: 0x2 13 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 16 -->Return QCP_CONVERT if the conversion is allowed.
+<!-- lm: 0x2 13 -->
+<P>
+<LI><!-- lm: 0x2 16 -->Return QCP_NOCONVERT if the conversion is not allowed.
+<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+The default window procedure will assume the fixed-position conversion.
+The pre-defined window controls handle this message according to their characteristics.
+ For instance, the Frame Control window procedure returns QCP_NOCONVERT.
+ On the contrary, the Entry Field Control window procedure provides the
+on-the-spot conversion as default.  Refer to<I> Presentation Manager Programming
+Guide</I> for the detail of the behavior of each control.
+<P>
+Allowing on-the-spot conversion (MISC program of IBM OS/2 DBCS Application
+Primer for DBCS OS/2 V2.1(DTCO-0011-2)) is an example source code to show
+how the WM_QUERYCONVERTPOS message is to be treated <A HREF="060_L0_.html">(**)</A>.
+Allowingon - the - spotconversion( MISCprogramofIBMOS / 2DBCSApplicationPrimerforDBCSOS
+/ 2V2 . 1 ( DTCO - 0011 - 2 ) )
+<BR>
+
+<PRE>typedef struct CurPos
+{
+  USHORT usCharNum;     /* on which character...  */
+  USHORT usLineNum;     /* of which line ?        */
+  POINTL ptlCursor;     /* cursor position in pel */
+  LONG   cx;            /* cursor size            */
+  LONG   cy;
+} CURPOS;
+   .
+   .
+   .
+MRESULT EXPENTRY editorWinProc( HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2)
+{
+static BOOL flSpot = FALSE;     /* indicates if on-the-spot is performed */
+...
+   switch( msg )
+   {
+...
+      <B>case WM_QUERYCONVERTPOS:</B>
+      {
+       PRECTL pCurPos;
+
+          pCurPos = (PRECTL)PVOIDFROMMP(mp1);
+          if( flSpot == TRUE )
+          {
+             /* set on-the-spot conversion if the flag is on */
+             pCurPos-&gt;xLeft   = curpos.ptlCursor.x;
+             pCurPos-&gt;yBottom = curpos.ptlCursor.y;
+             pCurPos-&gt;xRight  =  0;
+             pCurPos-&gt;yTop    =  0;
+          }
+          else
+          {
+             /* set fixed-position conversion if the flag is off */
+             pCurPos-&gt;xLeft   = -1;
+             pCurPos-&gt;yBottom = -1;
+             pCurPos-&gt;xRight  =  0;
+             pCurPos-&gt;yTop    =  0;
+          }
+          return (MRESULT)QCP_CONVERT;  /* allow conversion */
+      }
+...
+</PRE>
+
+
+<P><HR>
+
+<A HREF="031_L4_AddingaStatusLinetoa.html">[Back: Adding a Status Line to a Window]</A> <BR>
+<A HREF="033_L3_PreparingaDeviceinde.html">[Next: Preparing a Device-independent Window]</A> 
+</BODY>
+</HTML>

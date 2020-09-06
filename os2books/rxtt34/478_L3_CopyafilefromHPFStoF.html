@@ -1,0 +1,243 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Copy a file from HPFS to FAT and vice versa</TITLE>
+</HEAD>
+<BODY>
+<H1>Copy a file from HPFS to FAT and vice versa</H1><!-- entering slot 497 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* Sample routines to copy a file with a long name from an HPFS       */
+/* formatted drive to a FAT formatted drive and vice versa            */
+/* preserving the long filename                                       */
+/*                                                                    */
+/*  Usage to copy from FAT to HPFS:                                   */
+/*    COPYLONG HPFS sourceFile destDir                                */
+/*                                                                    */
+/*  Usage to copy from HPFS to FAT:                                   */
+/*    COPYLONG FAT sourceFile destDir                                 */
+/*                                                                    */
+
+                    /* load REXXUTIL DLL                              */
+                    /* (only SysGetEA and SysPutEA are necessary)     */
+  call RxFuncAdd 'SysLoadFuncs', 'REXXUTIL', 'SysLoadFuncs'
+  call SysLoadFuncs
+
+                    /* get and check the parameter                    */
+  parse arg targetType '"'sourceFile'"' targetDir
+  targetType = translate( strip( targetType ) )
+  sourceFile = strip( sourceFile )
+  targetDir = strip( targetDir )
+
+  select
+
+    when targetType = '/?' | targetType = '-?' then
+    do
+      say 'Usage to copy from FAT to HPFS:'
+      say '  COPYLONG HPFS sourceFile destDir'
+      say ''
+      say 'Usage to copy from HPFS to FAT:'
+      say '  COPYLONG FAT sourceFile destDir'
+      say ''
+
+      exit 255
+    end /* when */
+
+    when sourceFile = '' | targetDir = '' then
+      say 'Error: Invalid call. Use /? for usage'
+
+                    /* copy from FAT to HPFS                          */
+    when targetType = 'HPFS' then
+      thisRC = copyFromFATToHPFS( sourceFile, targetDir )
+
+                    /* copy from HPFS to FAT                          */
+    when targetType = 'FAT' then
+      thisRC = copyFromHPFStoFAT( sourceFile, targetDir )
+
+    otherwise
+      say 'Error: Invalid call. Use /? for usage'
+      thisRC = 255
+
+  end /* select */
+
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: copy a file with a long name from an HPFS formatted      */
+/*           drive to a FAT formatted drive                           */
+/*                                                                    */
+/* usage:    thisRC = CopyFromHPFSToFAT( sourceFile destinationDir )  */
+/*                                                                    */
+/* where:    sourceFile - name of the sourceFile (with or without     */
+/*                        path)                                       */
+/*           destinationDir - destination directory                   */
+/*                                                                    */
+/* returns:  0 - okay                                                 */
+/*           else error                                               */
+/*                                                                    */
+/*                                                                    */
+CopyFromHPFSToFat: PROCEDURE
+  parse arg sourceFile, destDir
+
+  thisRC = -1
+
+  if sourceFile &lt;&gt; '' &amp; destDir &lt;&gt; '' then
+  do
+
+    if right( destDir,1 ) &lt;&gt; '\' then
+      destDir = destDir || '\'
+
+    thisRC = -2
+    if stream( sourceFile, 'c', 'QUERY EXISTS' ) &lt;&gt; '' then
+    do
+                    /* check if there is an existing EA '.LONGNAME'   */
+      longName = GetLongName( sourceFile )
+
+      if longName = '' then
+      do
+                    /* EA '.LONGNAME' not found or invalid            */
+
+                    /* create the value for the EA '.LONGNAME'        */
+        sourceFileName = fileSpec( 'N', sourceFile )
+        padString = copies( '00'x, 2 )
+        tString = right( padString || d2c( length( sourceFileName ) ),2 )
+        tString = translate( '12', tString, '21' )
+
+        newEA = 'FDFF'x || tstring || sourceFileName
+      end /* if longName = '' then */
+
+                    /* create the short name for the file             */
+      newName = ShortName( sourceFile )
+
+      '@copy ' sourceFile destDir || newName '1&gt;NUL 2&gt;NUL'
+      thisRC = rc
+
+      if thisRC = 0 &amp; longName = '' then
+      do
+                    /* save the original name in the EA '.LONGNAME'   */
+
+        call SysPutEA destDir || newName, '.LONGNAME', newEA
+        thisRC = result
+      end /* if thisRC = 0 then */
+
+    end /* if stream( sourceFile, 'c', 'QUERY EXISTS' ) &lt;&gt; '' then */
+  end /* if sourceFile &lt;&gt; '' &amp; destDir &lt;&gt; '' then */
+
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: copy a file with a long name from a FAT formatted        */
+/*           drive to an HPFS formatted drive                         */
+/*                                                                    */
+/* usage:    thisRC = CopyFromFATToHPFS( sourceFile destinationDir )  */
+/*                                                                    */
+/* where:    sourceFile - name of the sourceFile (with or without     */
+/*                        path)                                       */
+/*           destinationDir - destination directory                   */
+/*                                                                    */
+/* returns:  0 - okay                                                 */
+/*           else error                                               */
+/*                                                                    */
+/*                                                                    */
+CopyFromFATToHPFS: PROCEDURE
+  parse arg sourceFile, destDir
+
+  thisRC = -1
+
+  if sourceFile &lt;&gt; '' &amp; destDir &lt;&gt; '' then
+  do
+    if right( destDir,1 ) &lt;&gt; '\' then
+      destDir = destDir || '\'
+
+    thisRC = -2
+    if stream( sourceFile, 'c', 'QUERY EXISTS' ) &lt;&gt; '' then
+    do
+                    /* def. target name: Use the current name         */
+      newName = GetLongName( sourceFile )
+      if newName = '' then
+        newName = '*'
+
+      '@copy ' sourceFile destDir || newName '1&gt;NUL 2&gt;NUL'
+      thisRC = rc
+      if thisRC = 0 then
+      do
+                    /* delete the EA '.LONGNAME'                      */
+        call SysPutEA destDir || newName, '.LONGNAME', ''
+      end /* if thisRC = 0 then */
+
+    end /* if stream( sourceFile, 'c', 'QUERY EXISTS' ) &lt;&gt; '' then */
+  end /* if sourceFile &lt;&gt; '' &amp; destDir &lt;&gt; '' then */
+
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: get the value of the EA '.LONGNAME'                      */
+/*                                                                    */
+/* usage:    longName = GetLongName( sourceFile )                     */
+/*                                                                    */
+/* where:    sourceFile - name of the sourceFile (with or without     */
+/*                        path)                                       */
+/*                                                                    */
+/* returns:  the longname or '' if the EA is missing or invalid       */
+/*                                                                    */
+/*                                                                    */
+GetLongName: PROCEDURE
+  parse arg sourceFile
+
+                    /* init the return code with the default          */
+  longName = ''
+
+                    /* check the EA '.LONGNAME'                       */
+  tempRC = SysGetEA( sourceFile, '.LONGNAME', EAValue )
+  if EAValue &lt;&gt; '' then
+  do
+                    /* use the value of the EA '.LONGNAME' as new     */
+                    /* name                                           */
+    parse var EAValue EAType +2 EALength +2 EAValue1
+    if EAType = 'FDFF'x then
+      longName = strip( EAValue1, 'T', '00'x )
+
+  end /* if EAValue &lt;&gt; '' then */
+
+return longName
+
+/* ------------------------------------------------------------------ */
+/* function: dummy routine to create a unique file name               */
+/*                                                                    */
+/* usage:    newName = ShortName( sourceFile destinationDir )         */
+/*                                                                    */
+/* where:    sourceFile - name of the sourceFile (with or without     */
+/*                        path)                                       */
+/*           destinationDir - destination directory                   */
+/*                                                                    */
+/* returns:  the new name                                             */
+/*                                                                    */
+/*                                                                    */
+/* notes:    Replace this routine with a routine to get a unique name */
+/*           in a real program!!!                                     */
+/*           (for example <A HREF="468_L3_Getanameforatemporar.html">Get a name for a temporary file</A>)            */
+/*                                                                    */
+ShortName: PROCEDURE
+  parse arg sourceFile, destDir
+
+  say 'Enter the shortname for the file "' || sourceFile || '"'
+  say '(Destination directory is "' || destDir || '"):'
+
+  thisRC = strip( lineIN() )
+
+return thisRC
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="477_L3_UUDecodingfiles.html">[Back: UUDecoding files]</A> <BR>
+<A HREF="479_L3_Changingfileattribut.html">[Next: Changing file attributes]</A> 
+</BODY>
+</HTML>

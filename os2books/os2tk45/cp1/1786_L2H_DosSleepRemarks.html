@@ -1,0 +1,71 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosSleep - Remarks</TITLE>
+</HEAD>
+<BODY>
+<H1>DosSleep - Remarks</H1><!-- entering slot 1804 -->
+<P>
+DosSleep suspends the current thread for a specified time interval.
+<P>
+If a time interval of 0 is specified, the thread gives up the remainder
+of the current time slice, allowing any other ready threads of equal or
+higher priority to execute; the calling thread will execute again during
+its next scheduled time slice. If there is no other ready thread of equal
+or higher priority, DosSleep returns immediately; it does not give control
+to a thread of lower priority.
+<P>
+A time interval of 1 effectively causes the thread to give up the reminder
+of its current time slice and allow the next ready thread to execute, regardless
+of its priority.  This technique gives lower priority threads a chance to
+execute, at least for the remainder of the time slice.
+<P>
+Time intervals for DosSleep, <A HREF="087_L2_DosAsyncTimer.html">DosAsyncTimer</A>,
+and <A HREF="1801_L2_DosStartTimer.html">DosStartTimer</A> are specified
+in milliseconds; however, it is important to recognize that the actual duration
+of the specified time interval will be affected by two factors:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->First, the system clock keeps track of time in less
+precise units known as<I> clock ticks</I>. The duration of a clock tick
+depends on the frequency of the system-clock interrupt that is used by your
+computer. (To determine the duration of the clock tick on your computer,
+issue <A HREF="1372_L2_DosQuerySysInfo.html">DosQuerySysInfo</A> and examine
+the timer-interval field.)
+<P>
+Because clock ticks are less precise than millisecond values, any time interval
+that is specified in milliseconds will be rounded up to the next clock tick.
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Second, because the system is a priority-based, multitasking
+operating system, there is no guarantee that a thread will resume immediately
+after the timer interval expires. If a higher-priority process or thread
+is executing, the timed thread blocks. (To minimize the inaccuracy caused
+by preemptive scheduling, an application can dedicate a thread to managing
+time-critical tasks and then raise that thread to a higher priority.)<!-- lm: 0x2 1 -->
+</UL>
+<P>
+In addition, the time interval for DosSleep refers to execution time (accumulated
+scheduled time slices), not to elapsed real time.  Elapsed real time will
+be longer and will vary, depending on the hardware and on the number and
+priorities of other threads executing in the system. (Elapsed real time
+for the asynchronous timers, started by <A HREF="087_L2_DosAsyncTimer.html">DosAsyncTimer
+</A>and <A HREF="1801_L2_DosStartTimer.html">DosStartTimer</A>, will be
+much closer to their specified time intervals because these timers run independently
+of the calling thread's execution.)
+<P>
+Because the above factors usually cause the sleep interval to be longer
+than requested (though generally within a few clock ticks), DosSleep should
+not be used as a substitute for a real-time clock.
+<P>
+To ensure optimal performance, do not use DosSleep in a single-thread Presentation
+Manager application. (See WinStartTimer.)
+<P>
+If the calling thread is awakened before the time interval expires (by a
+system exception, for example), ERROR_TS_WAKEUP is returned.
+
+<P><HR>
+
+<A HREF="1785_L2H_DosSleepParameters.html">[Back: DosSleep - Parameters]</A> <BR>
+<A HREF="1787_L2H_DosSleepRelatedFunct.html">[Next: DosSleep - Related Functions]</A> 
+</BODY>
+</HTML>

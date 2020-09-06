@@ -1,0 +1,476 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Sample for persistent variables</TITLE>
+</HEAD>
+<BODY>
+<H1>Sample for persistent variables</H1><!-- entering slot 534 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* sample REXX routines to show how to use the Extended Attributes    */
+/* to save persistent variables                                       */
+/* The routines use Extended Attributes with the type Binary          */
+/* (see also <A HREF="334_L2_ExtendedAttributeDat.html">Extended Attribute Data Types</A> and <A HREF="333_L2_ExtendedAttributesus.html">EAs used by the WPS</A>)   */
+/*                                                                    */
+/* (c) 1998 <A HREF="002_L1_GeneralForeword.html">Bernd Schemmer</A>, Germany, EMail: Bernd.Schemmer@gmx.de     */
+
+                    /* load REXXUTIL                                  */
+  call rxFuncAdd 'SysLoadFuncs', 'REXXUTIL', 'SysLoadFuncs'
+  call SysLoadFuncs
+
+                    /* init the stem with the data for the EAs        */
+  configData.0 = 4
+
+  configData.1.__key   = 'key1'
+  configData.1.__value = 'value1'
+
+  configData.2.__key   = 'key2'
+  configData.2.__value = 'value2'
+
+  configData.3.__key   = 'key3'
+  configData.3.__value = 'value33'
+
+  configData.4.__key   = 'key4'
+  configData.4.__value = 'value44'
+
+
+/* ------------------------------------------------------------------ */
+/* in a real program, this code should be at the end of your program! */
+
+ProgramEnd:
+
+                    /* to write the data use:                         */
+  thisRC = WriteDataToEAs()
+  say 'The return code of WriteDataToEAs() is ' || thisRC
+
+/* ------------------------------------------------------------------ */
+/* in a real program, this code should be at the begin of your        */
+/* program!                                                           */
+
+ProgramStart:
+                    /* to read the data use:                          */
+  thisRC = ReadDataFromEAs()
+  say 'The return code of ReadDataFromEAs() is ' || thisRC
+
+exit
+
+/* ------------------------------------------------------------------ */
+/* function: Save the Data to the EAs                                 */
+/*                                                                    */
+/* call:     thisRC = writeDataToEAs( { fileName }, key1 {,..,key#} ) */
+/*           thisRC = writeDataToEAs( { fileName }, all )             */
+/*                                                                    */
+/* where:    fileName                                                 */
+/*             - name of the file for the EAs                         */
+/*               This parameter is optional, the default is the name  */
+/*               of this program.                                     */
+/*                                                                    */
+/*           key#                                                     */
+/*             - key to write                                         */
+/*               You can use as many keys as you like                 */
+/*               Note that undefined keys are ignored without warning */
+/*               if using one or more of this parameters!             */
+/*                                                                    */
+/*           all                                                      */
+/*             - write all keys                                       */
+/*                                                                    */
+/*           The default if the second parameter is missing is 'ALL'. */
+/*                                                                    */
+/* returns:   0 - okay                                                */
+/*            1 - routine ended with warnings                         */
+/*            3 - file not found                                      */
+/*           -1 - stem configData. not defined                        */
+/*                                                                    */
+/* Note:     WriteDataToEAs uses the data from the global stem        */
+/*                                                                    */
+/*              ConfigData.                                           */
+/*                                                                    */
+/*           The format of this stem must be:                         */
+/*                                                                    */
+/*              ConfigData.0 - number of elements                     */
+/*                                                                    */
+/*              ConfigData.#.__key    - name of the EA                */
+/*                                      The key is not case-sensitive */
+/*                                      blanks in keys are not        */
+/*                                      possible                      */
+/*              ConfigData.#.__value  - value for the EA              */
+/*                                                                    */
+/*                                                                    */
+/*                                                                    */
+/*           Routines needed:                                         */
+/*             CreateBinaryEA                                         */
+/*             GetProgramName (only if the first parameter is missing)*/
+/*                                                                    */
+/*           You must load REXXUTIL.DLL before calling this routine!  */
+/*                                                                    */
+WriteDataToEAS: PROCEDURE expose configData.
+  parse arg thisFileName, firstKey
+
+  thisRC = 0
+
+                    /* check if the stem configData. is defined       */
+  if datatype( configData.0 ) &lt;&gt; 'NUM' then
+    thisRC = -1
+
+  if thisRC = 0 then
+  do
+                    /* use the default for thisFileName if the        */
+                    /* parameter is missing                           */
+    if thisFileName = '' then
+      thisFileName = GetProgramName()
+
+                    /* check if the file exists                       */
+    thisFileName = stream( thisFileName, 'c', 'QUERY EXISTS' )
+    if thisFileName = '' then
+      thisRC = 3
+
+                    /* use the default for the second parameter if    */
+                    /* the parameter is missing                       */
+    if firstKey = '' then
+      firstKey = 'ALL'
+
+  end /* if thisRC = 0 then */
+
+  if thisRC = 0 then
+  do
+     if translate( firstKey ) = 'ALL' then
+     do
+                    /* process all keys defined in the stem           */
+                    /* configData.                                    */
+       processALLKeys = 1
+     end /* if translate( firstKey ) = 'ALL' then */
+     else
+     do
+                    /* only process the keys found in the parameters  */
+       processAllKeys = 0
+
+                    /* create a string with the keys to process       */
+       keysToProcess = ''
+       do i = 2 to arg()
+         curArg = translate( strip( arg(i) ) )
+
+         if pos( ' ', curArg ) &lt;&gt; 0 then
+         do
+                    /* blanks are not allowed in key names            */
+            say 'Warning: The keyname "' || curArg || '" is invalid!'
+            thisRC = 1
+            iterate
+         end /* if */
+
+         keysToProcess = keysToProcess curArg
+       end /* do i = 2 to arg() */
+     end /* else */
+
+     do i = 1 to configData.0
+
+                    /* get the current key                            */
+       curKey = translate( configData.i.__key )
+       if pos( ' ', curKey ) &lt;&gt; 0 then
+       do
+                    /* blanks are not allowed in key names            */
+          say 'Warning: The keyname "' || curKey || '" is invalid!'
+          thisRC = 1
+          iterate
+       end /* if */
+
+       if processAllkeys = 0 then
+       do
+         if wordPos( curKey, keysToProcess ) = 0 then
+           iterate
+       end /* if processAllkeys = 0 then */
+
+                    /* get the current value                          */
+       curVal = configData.i.__value
+
+                    /* convert the value to a binary EA if necessary  */
+                    /* (Note: Use an empty string to delete an EA)    */
+       if curVal &lt;&gt; '' then
+         curVal = CreateBinaryEA( curVal )
+
+                    /* write the EA                                   */
+       tRC = SysPutEA( thisFilename, curKey, curVal )
+       if tRC &lt;&gt; 0 then
+       do
+         say 'Warning: Error ' || tRC || ' writing the EA "' || ,
+             curKey || '"!'
+
+                    /* set the return code to "Warning"               */
+         thisRC = 1
+       end /* if tRC &lt;&gt; 0 then */
+     end /* do i = 1 to configData.0 */
+  end /* if thisRC = 0 then */
+
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: Read the data from the EAs                               */
+/*                                                                    */
+/* call:     thisRC = ReadDataFromEAs( { fileName }, key1 {,..,key#} )*/
+/*           thisRC = ReadDataFromEAs( { fileName }, all )            */
+/*                                                                    */
+/* where:    fileName                                                 */
+/*             - name of the file for the EAs                         */
+/*               This parameter is optional, the default is the name  */
+/*               of this program.                                     */
+/*                                                                    */
+/*           key#                                                     */
+/*             - key to write                                         */
+/*               You can use as many keys as you like                 */
+/*               Note that undefined keys are ignored without warning */
+/*               if using one or more of this parameters!             */
+/*                                                                    */
+/*           all                                                      */
+/*             - write all keys                                       */
+/*                                                                    */
+/*           The default if the second parameter is missing is 'ALL'. */
+/*                                                                    */
+/* returns:   0 - okay                                                */
+/*            1 - routine ended with warnings                         */
+/*            3 - file not found                                      */
+/*           -1 - stem configData. not defined                        */
+/*                                                                    */
+/* Note:     WriteDataToEAs uses the data from the global stem        */
+/*                                                                    */
+/*              ConfigData.                                           */
+/*                                                                    */
+/*           The format of this stem must be:                         */
+/*                                                                    */
+/*              ConfigData.0 - number of elements                     */
+/*                                                                    */
+/*              ConfigData.#.__key    - name of the EA                */
+/*                                      The key is not case-sensitive */
+/*                                      blanks in keys are not        */
+/*                                      possible                      */
+/*              ConfigData.#.__value  - value for the EA              */
+/*                                                                    */
+/*                                                                    */
+/*           Routines needed:                                         */
+/*             GetValueFromBinaryEA                                   */
+/*             GetProgramName (only if the first parameter is missing)*/
+/*                                                                    */
+/*           You must load REXXUTIL.DLL before calling this routine!  */
+/*                                                                    */
+ReadDataFromEAS: PROCEDURE expose configData.
+  parse arg thisFileName, firstKey
+
+  thisRC = 0
+                    /* check if the stem configData. is defined       */
+  if datatype( configData.0 ) &lt;&gt; 'NUM' then
+    thisRC = -1
+
+  if thisRC = 0 then
+  do
+                    /* use the default for thisFileName if the        */
+                    /* parameter is missing                           */
+    if thisFileName = '' then
+      thisFileName = GetProgramName()
+
+                    /* check if the file exists                       */
+    thisFileName = stream( thisFileName, 'c', 'QUERY EXISTS' )
+
+    if thisFileName = '' then
+      thisRC = 3
+
+                    /* use the default for the second parameter if    */
+                    /* the parameter is missing                       */
+    if firstKey = '' then
+      firstKey = 'ALL'
+  end /* if thisRC = 0 then */
+
+  if thisRC = 0 then
+  do
+     if translate( firstKey ) = 'ALL' then
+     do
+                    /* process all keys defined in the stem           */
+                    /* configData.                                    */
+       processALLKeys = 1
+     end /* if translate( firstKey ) = 'ALL' then */
+     else
+     do
+                    /* only process the keys found in the parameters  */
+       processAllKeys = 0
+
+                    /* create a string with the keys to process       */
+       keysToProcess = ''
+       do i = 2 to arg()
+         curArg = translate( strip( arg(i) ) )
+
+         if pos( ' ', curArg ) &lt;&gt; 0 then
+         do
+                    /* blanks are not allowed in key names            */
+            say 'Warning: The keyname "' || curArg || '" is invalid!'
+            thisRC = 1
+            iterate
+         end /* if */
+
+         keysToProcess = keysToProcess curArg
+       end /* do i = 2 to arg() */
+     end /* else */
+
+     do i = 1 to configData.0
+                    /* get the current key                            */
+       curKey = translate( configData.i.__key )
+       if pos( ' ', curKey ) &lt;&gt; 0 then
+       do
+                    /* blanks are not allowed in key names            */
+          say 'Warning: The keyname "' || curKey || '" is invalid!'
+          thisRC = 1
+          iterate
+       end /* if */
+
+       if processAllkeys = 0 then
+       do
+         if wordPos( curKey, keysToProcess ) = 0 then
+           iterate
+       end /* if processAllkeys = 0 then */
+
+                    /* read the EA                                    */
+       tRC = SysGetEA( thisFilename, curKey, 'curVal' )
+       if tRC &lt;&gt; 0 then
+       do
+         say 'Warning: Error ' || tRC || ' reading the EA "' || ,
+             curKey || '"!'
+                    /* set the return code to "Warning"               */
+         thisRC = 1
+
+         curVal = ''
+       end /* if tRC &lt;&gt; 0 then */
+       else
+       do
+         if curVal &lt;&gt; '' then
+           curVal = GetValueFromBinaryEA( curVal )
+       end /* else */
+
+                    /* save the new value                             */
+       configData.i.__value = curVal
+
+     end /* do i = 1 to configData.0 */
+  end /* if thisRC = 0 then */
+
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: Delete all EAs from a file                               */
+/*                                                                    */
+/* call:     thisRC = DeleteEAs( fileName )                           */
+/*                                                                    */
+/* where:    fileName                                                 */
+/*             - name of the file                                     */
+/*                                                                    */
+/* returns:  the return code of EAUTIL                                */
+/*           (0 = okay, else error)                                   */
+/*                                                                    */
+/*           External programs needed:                                */
+/*             EAUTIL.EXE                                             */
+/*                                                                    */
+/* <!-- entering slot 535 -->note:     Use this routine with caution!                           */
+/*                                                                    */
+DeleteEAs: PROCEDURE
+  parse arg FileName
+
+  thisRC = -1
+  if fileName &lt;&gt; '' then
+  do
+    '@EAUTIL ' fileName ' NUL' '/s ' '2&gt;NUL 1&gt;NUL'
+    thisRC = rc
+  end /* if */
+
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: Create a binary EA                                       */
+/*                                                                    */
+/* call:     binaryEA = CreateBinaryEA( eaValue )                     */
+/*                                                                    */
+/* where:    eaValue                                                  */
+/*             - value for the EA                                     */
+/*                                                                    */
+/* returns:  the EA in binary format                                  */
+/*                                                                    */
+/*           Routines needed:                                         */
+/*             SwapWord                                               */
+/*                                                                    */
+CreateBinaryEA: PROCEDURE
+  parse arg eaValue
+
+  EAT_BINARY = SwapWord( 'FFFE'x )
+  EAT_LENGTH = SwapWord( right( '00'x || '00'x  || d2c( length( eaValue ) ),2 ) )
+  newEA = EAT_BINARY || EAT_LENGTH || eaValue
+return newEA
+
+/* ------------------------------------------------------------------ */
+/* function: Get the value form a binary EA                           */
+/*                                                                    */
+/* call:     eaValue = GetValueFromBinaryEA( eaContents )             */
+/*                                                                    */
+/* where:    eaContents                                               */
+/*             - contents of the EA                                   */
+/*                                                                    */
+/* returns:  the value of the EA or '' if the type of the EA is not   */
+/*           binary                                                   */
+/*                                                                    */
+/*           Routines needed:                                         */
+/*             SwapWord                                               */
+/*                                                                    */
+/* note:     The length saved in the EA is ignored.                   */
+/*                                                                    */
+GetValueFromBinaryEA: PROCEDURE
+  parse arg eaContents
+
+                    /* key for a binary EA                            */
+  EAT_BINARY = SwapWord( 'FFFE'x )
+
+                    /* split the EA value into type, length and value */
+  parse var eaContents eaType +2 eaLength +2 eaValue
+
+                    /* check the type                                 */
+  if eaType &lt;&gt; EAT_BINARY then
+    eaValue = ''
+
+return eaValue
+
+/* ------------------------------------------------------------------ */
+/* function: Convert a hexadecimal WORD from LSB format to MSB format */
+/*           and vice versa                                           */
+/*                                                                    */
+/* call:     SwapWord hexadecimal_word                                */
+/*                                                                    */
+/* where:    hexadecimal_word                                         */
+/*             - input as hexadecimal word                            */
+/*                                                                    */
+/* output:   value in MSB format as hexadecimal word                  */
+/*                                                                    */
+SwapWord: PROCEDURE
+ RETURN strip( translate( "12", arg(1), "21" ) )
+
+/* ------------------------------------------------------------------ */
+/* function: Get the name of this program                             */
+/*                                                                    */
+/* call:     progName = GetProgramName()                              */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  the fully qualified name of this program                 */
+/*                                                                    */
+/* Note:     This routine returns '' for REXX programs in the         */
+/*           macro space                                              */
+/*                                                                    */
+GetProgramName: PROCEDURE
+   parse source . . progName
+
+   if pos( '\', progName ) = 0 then
+      progName = ''
+return progName
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="514_L3_CopytheQueueintoacom.html">[Back: Copy the Queue into a compound variable]</A> <BR>
+<A HREF="516_L3_UsingREXXqueuesforgl.html">[Next: Using REXX queues for global variables]</A> 
+</BODY>
+</HTML>

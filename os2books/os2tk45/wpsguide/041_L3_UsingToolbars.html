@@ -1,0 +1,67 @@
+<HTML>
+<HEAD>
+<TITLE>Using Toolbars</TITLE>
+</HEAD>
+<BODY>
+<H1>Using Toolbars</H1><!-- entering slot 41 -->
+<P>
+Action buttons are added to or removed from the Toolbar by overriding wpQueryActionButtons.
+You must declare an instance data variable in your subclass of type PACTIONS.
+When overriding wpQueryActionButtons, verify if pMyActions is NULL. If it
+is, allocate memory to hold the parent's actions and the ones you are adding.
+Copy the parent's actions to your array, add yours, and then return, as
+shown in the following sample code:
+<PRE>SOM_Scope PACTIONS SOMLINK mylnchpd_wpQueryActionButtons(
+                           WPLaunchPad *somSelf,
+                           PULONG pulNumActions)
+{
+  MyLaunchPadData *somThis = MyLaunchPadGetData(somSelf);
+  PACTIONS pParentActions;
+  ULONG ulParentActions;
+
+  MyLaunchPadMethodDebug("MyLaunchPad","mylnchpd_wpQueryActionButtons");
+
+  if (!_pMyActions)
+  {
+    pParentActions = parent_wpQueryActionButtons(somSelf,
+                                                 &amp;ulParentActions);
+    _ulMyActions   = ulParentActions + 1;
+    _pMyActions    = _wpAllocMem(somSelf,_ulMyActions*sizeof(ACTIONS), NULL);
+
+    if (!_pMyActions)
+    {
+      return parent_wpQueryActionButtons(somSelf, pulNumActions);
+    }
+    _pMyActions[ulParentActions].pszTitle = "My new action";
+    _pMyActions[ulParentActions].ulMenuId = MY_MENUID;
+    _pMyActions[ulParentActions].hIcon    = myActionIcon;
+
+    if (ulParentActions)
+    {
+      memcpy(_pMyActions, pParentActions,ulParentActions*sizeof(ACTIONS));
+    }
+  }
+
+  if (pulNumActions)
+  {
+    (*pulNumActions) = _ulMyActions;
+  }
+  return (PACTIONS) _pMyActions;
+}
+
+</PRE>
+
+<P>
+<B>Note: </B> When overriding wpQueryActionButtons you must also provide
+a subclass of WPDesktop, override wpMenuItemSelected, and handle the MY_MENUID
+action.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+
+<P><HR>
+
+<A HREF="040_L2_UsingWorkplaceShellO.html">[Back: Using Workplace Shell Objects]</A> <BR>
+<A HREF="042_L3_CreatingObjects.html">[Next: Creating Objects]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,180 @@
+<HTML>
+<HEAD>
+<TITLE>Virtual Printer Device Driver</TITLE>
+</HEAD>
+<BODY>
+<H1>Virtual Printer Device Driver</H1><!-- entering slot 168 -->
+<P>
+The virtual line printer device driver VLPT.SYS supports access to three
+virtual parallel port controller devices from DOS applications running in
+virtual DOS machines.
+<P>
+VLPT hooks INT 17h and processes requests for INT 17h services itself, rather
+than allowing these requests to be handled by CBIOS. INT 17h support includes
+support for function 02h (Read Status).
+<P>
+VLPT does not support virtual hardware interrupts.  If a DOS application
+attempts to enable interrupts (that is, it attempts to set control port
+bit 4, "IRQ EN"), that I/O operation is ignored, and the application will
+not receive interrupts from the parallel port hardware.
+<P>
+VLPT buffers the print data which is subsequently directed to the OS/2 spooler
+using file system services provided by the Virtual DOS Machine Manager.
+ The spooler may be configured for output on each printer device (LPTx)
+that will be accessed by DOS applications from a VDM. <A HREF="030_L2_VirtualPrinterDevice.html">Figure
+"Virtual Printer Device Driver Operation"</A> shows the various operations
+performed by the virtual printer device driver.
+<P>
+If VLPTDD.SYS is the only virtual printer device driver installed, no INT
+17 will be issued when printing is done on numbered I/O devices (for example,
+LPT1, LPT2, etc.). However, if an application such as a TSR program must
+catch all INT 17 interrupts, the LPTDD.SYS device driver must be installed
+as well. You can find LPTDD.SYS in the subdirectory \os2\mdos.
+<P>
+When LPTDD.SYS is available, a request from the DOS file system issuing
+INT 21 is converted by LPTDD.SYS into INT 17. INT 17 is then forwarded to
+VLPT.SYS and from this point on the print request proceeds as described
+above in <A HREF="030_L2_VirtualPrinterDevice.html">Figure "Virtual Printer
+Device Driver Operation"</A>. Note, however, that installing LPTDD.SYS in
+addition to VLPT.SYS will cause the printing from a VDM to slow down.
+<P>
+<B>Spooling</B>
+<P>
+In order to support spooled print output, the OS/2 spooler must be installed.
+ A new IOCTL interface is defined in order to allow the spooler to identify
+itself to the physical printer device driver.  The new IOCTL functions<I> Set
+Spooler Status</I> and<I> Get Spooler Status</I> are called by the spooler
+and the Virtual DOS Machine Manager.
+<P>
+The spooler invokes the<I> Set Spooler Status</I> function (Category 5,
+Function 4Ch) at spooler monitor registration time to inform the physical
+device driver that a particular port is actively configured as the output
+device for a particular spool queue.  It also invokes this interface whenever
+the user manipulates the spooler queue setup by invoking the Print Manager's
+<I>Setup Printers/Change Printers</I> dialog.
+<P>
+The Virtual DOS Machine Manager invokes the<I> Get Spooler Status</I> function
+(Category 5, Function 6Ch) during an implicit open of a print device whenever
+VLPT processes the first print output (INT 17h) from a VDM.  This allows
+the Virtual DOS Machine Manager to determine if the spooler is active so
+that it can return the spool queue file handle to VLPT to continue printing.
+
+<P>
+<B>Print Screen</B>
+<P>
+VLPT also supports the<I> Print Screen</I> function by hooking INT 05h so
+that it is notified before the CBIOS INT 05h handler.  The CBIOS INT O5h
+handler invokes INT 17h functions, and the VLPT INT 17h emulation in turn
+sends this data to a spool file, if the spooler is active.  When the CBIOS
+INT 05h handler returns, VLPT also receives control so that it may close
+the spool file.
+<P>
+<B>File Transfer</B>
+<P>
+To support DOS file transfer programs which use the parallel ports (such
+as the IBM Data<!-- entering slot 169 --> Migration Facility), and which
+typically program the parallel port controller directly, VLPT provides a
+mode known as<B> direct I/O access</B>. In this mode, the physical printer
+device driver grants temporary exclusive ownership of the parallel port
+hardware to the VDM in which the application is running.  This mode allows
+the application to have direct access to the parallel port's data, status
+and control registers.
+<P>
+If the port is not currently active (printing) under control of the physical
+printer device driver, the physical device driver will grant VLPT exclusive
+access to the port, and continue to service incoming file system I/O requests.
+ Any incoming monitor requests from the spooler are blocked until exclusive
+access is released (no error or status monitor packets are sent to the monitor
+chain).
+<P>
+If the physical printer device driver is actively processing a hardware
+I/O operation, when VLPT makes a request for exclusive access, the physical
+device driver will return an error code to VLPT.  VLPT will then display
+a pop-up message (via the<B> VDHPopUp()</B> helper service), allowing the
+user to select the most appropriate system action ("End program" or "Retry").
+
+<P>
+<B>Note:  </B> Due to the multitasking nature of OS/2 V2.0, data communications
+using this type of application have an increased probability of error when
+multiple processes are concurrently active and/or when the virtual DOS machine
+is switched to the background.<!-- lm: 0x2 0 -->
+<P>
+
+<P>
+<B>PS/2 Register Virtualization</B>
+<P>
+On PS/2 systems, the physical printer device driver ensures that all LPT
+ports which support extended mode (read/write 8-bit parallel I/O) will be
+enabled for extended mode at system initialization time.  On any PS/2 models
+which do not enable this mode by default, the physical printer device driver
+enables extended mode via the system's Programmable Option Select (POS)
+function.  This ensures that all PS/2 LPT ports will support manipulation
+of the control port<I> Direction Control</I> bit.
+<P>
+On all PS/2 models (but<I> not</I> on IBM PC/AT systems), VLPT will virtualize
+the adapter enable/setup register.  All bits of this register are virtualized
+for read operations, but<I> only bit 7 of the enable/setup register is virtualized
+for write operations</I>.  DOS applications may modify bit 7 of this register
+in order to gain access to the system board's POS Register 2, thereby enabling
+or disabling extended mode operation of the parallel ports.  When bit 7
+is set to 0 (the default state), the parallel port is configured as an 8-bit,
+parallel, bidirectional interface.  When bit 7 is set to 1, the parallel
+port bidirectional mode is disabled.  As described above, the physical printer
+device driver ensures that all PS/2 models have this bit set to 0 (extended
+mode enabled) during system initialization.
+<P>
+Note that only bit 7 is virtualized and may be manipulated; attempting to
+manipulate any other bits of this register will result in termination of
+the VDM.  As the behavior is virtualized, the true state of the hardware
+register is not affected by any operations of a DOS application running
+in a virtual DOS machine.
+<P>
+<B>Printer Close</B>
+<P>
+VLPT exports the<B> VDHPrintClose()</B> service. This interface may be called
+by another virtual device driver such as VKBD to force any open printers
+in a VDM to close.  This technique is used to handle a forced End-of-Job
+(Ctrl+Alt+PrintScreen) character, and is required because some DOS applications
+do not explicitly close or disable the printer when their print activity
+is completed.
+<P>
+VLPT may also close open print<!-- entering slot 170 --> files whenever
+a VDM is terminated.  VLPT registers an event hook with the Virtual DOS
+Machine Manager, and is therefore notified upon termination of a VDM.  All
+open print files in the terminating VDM are closed, after any buffered data
+has been sent to the spooler.
+<P>
+When operating in direct I/O access mode, VLPT can detect application termination
+in one of three ways:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->PDB is changed or destroyed (default)<!-- lm: 0x2 0 -->
+<BR>
+<LI><!-- lm: 0x2 2 -->VDM is terminated<!-- lm: 0x2 0 -->
+<BR>
+<LI><!-- lm: 0x2 2 -->User hot-key (Ctrl+Alt+PrintScreen).<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+When this termination event is detected, direct I/O access mode is cancelled
+and VLPT relinquishes the VDM's exclusive control of the parallel port hardware.
+ The physical printer device driver then reclaims ownership of the port
+and resumes normal I/O operations.
+<P>
+Note that VLPT will not always close an open print file when the DOS application
+terminates.  Depending on the DOS application's behavior, the VDM may remain
+active when the program ends, and the spooler print file may therefore remain
+open.  If so, the user can cause the open print file(s) to close by using
+the Ctrl-Alt-PrintScreen control key sequence. Alternatively, the user can
+leave it to the system by setting the<I> PRINT_TIMEOUT</I> value in the
+<I>DOS settings</I> to the time in seconds that the operating system should
+wait before forcing the print job to the printer. Consequently there is
+no need to exit these DOS programs to have the print job released from the
+print spooler. For more information on PRINT_TIMEOUT see <A HREF="284_L1_DOSSettings.html">DOS
+Settings</A>.
+
+<P><HR>
+
+<A HREF="158_L3_VirtualKeyboardDevic.html">[Back: Virtual Keyboard Device Driver]</A> <BR>
+<A HREF="160_L3_VirtualNumericCoproc.html">[Next: Virtual Numeric Coprocessor Device Driver]</A> 
+</BODY>
+</HTML>

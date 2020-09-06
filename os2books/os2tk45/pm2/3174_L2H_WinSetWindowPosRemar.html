@@ -1,0 +1,100 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>WinSetWindowPos - Remarks</TITLE>
+</HEAD>
+<BODY>
+<H1>WinSetWindowPos - Remarks</H1><!-- entering slot 3187 -->
+<P>
+If a window created with the CS_SAVEBITS style is reduced, the screen image
+saved is used to redraw the area uncovered when the window size changes,
+if those bits are still valid.
+<P>
+If the CS_SIZEREDRAW style is present, the entire window area is assumed
+invalid if sized. Otherwise,<A><!-- external link: 1D 64 C7 FC --> WM_CALCVALIDRECTS
+</A>is sent to the window to inform the window manager which bits it may
+be possible to preserve.
+<P>
+Messages sent from WinSetWindowPos and <A HREF="2967_L2_WinSetMultWindowPos.html">WinSetMultWindowPos
+</A>have specific orderings within the window-positioning process.  The
+process begins with redundancy checks and precalculations on every window
+for each requested operation. For example, if SWP_SHOW is present but the
+window is already visible, SWP_SHOW is turned off. If SWP_SIZE is present,
+and the new size is equal to the old size, SWP_SIZE is turned off.
+<P>
+If the operations create new results, the information is calculated and
+stored (for instance, when sizing or moving, the new window rectangle is
+stored for later use).  It is at this point that the<A><!-- external link: 1D 4E C7 FC --> WM_ADJUSTWINDOWPOS
+</A>message is sent to any window that is sizing or moving.  It is also
+at this point that the<A><!-- external link: 1D 64 C7 FC --> WM_CALCVALIDRECTS
+</A>message is sent to any window that is sizing and does not have the CS_SIZEREDRAW
+window style.
+<P>
+When all the new window states are calculated, the window-management process
+begins.  Window areas that can be preserved are moved from the old to the
+new positions, window areas that are invalidated by these operations are
+calculated and distributed as update regions. When this is finished, and
+before any synchronous-paint windows are repainted, the<A><!-- external link: 1D A5 C7 FC --> WM_SIZE
+</A>message is sent to any windows that have changed size. Next, all the
+synchronous-paint windows that can be are repainted, and the process is
+complete.
+<P>
+If a synchronous-paint parent window has a size-sensitive area displayed
+that includes synchronous-paint child windows, the parent needs to reposition
+those windows when it receives the<A><!-- external link: 1D A5 C7 FC --> WM_SIZE
+</A>message. Their invalid regions are added to the parent's invalid region,
+resulting in one update after the parent's<A><!-- external link: 1D A5 C7 FC --> WM_SIZE
+</A>message, rather than many independent (and later, duplicated) updates.
+
+<P>
+<B>Note: </B> Some windows will not be positioned precisely to the parameters
+of this function, but according to the behavior of their window procedure.
+ For example, frame windows without a style creation flag of FCF_NOBYTEALIGN
+will not position to any specific screen coordinate. Similarly, frame windows
+with zero size and position are created by the <A HREF="396_L2_WinCreateStdWindow.html">WinCreateStdWindow
+</A>function and therefore these values are treated as a special case by
+the frame window procedure.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Messages sent by this function are:<!-- lm: 0x2 1 -->
+<P>
+<A><!-- external link: 1D 4C C7 FC -->WM_ACTIVATE</A><!-- lm: 0x2 25 -->
+<UL> Sent
+if a different window becomes the active window. See also <A HREF="2728_L2_WinSetActiveWindow.html">WinSetActiveWindow</A>.
+<!-- lm: 0x2 1 -->
+</UL><A><!-- external link: 1D 4E C7 FC -->WM_ADJUSTWINDOWPOS
+</A><!-- lm: 0x2 25 -->
+<UL>Not sent if SWP_NOADJUST is specified.  The
+message contains an SWP structure that has been filled in by this function
+with the proposed move/size data. The window can adjust this new position
+by changing the contents of the<A><!-- external link: 1D 7E C8 CA --> SWP
+</A>structure. If<I> hwnd</I> specifies a frame window, this function recalculates
+the sizes and positions of the frame controls. If the new window rectangle
+for any frame control is empty, instead of resizing or repositioning that
+control, it is hidden if SWP_HIDE is specified. This eliminates needless
+processing of windows that are not visible. The window rectangle of the
+control in question is left in its original state.  For example, if WinSetWindowPos
+is issued to change the size of a standard-frame window to an empty rectangle,
+and <A HREF="2428_L2_WinQueryWindowRect.html">WinQueryWindowRect</A> is
+issued against the client window, the rectangle returned is not an empty
+rectangle, but the original client rectangle before WinSetWindowPos was
+issued.<!-- lm: 0x2 1 -->
+</UL><A><!-- external link: 1D 64 C7 FC --> WM_CALCVALIDRECTS
+</A><!-- lm: 0x2 25 -->
+<UL>Sent to determine the area of a window that
+may be possible to preserve as the window is sized.<!-- lm: 0x2 1 -->
+</UL><A><!-- external link: 1D A5 C7 FC --> WM_SIZE
+</A><!-- lm: 0x2 25 -->
+<UL>Sent if the size of the window has changed,
+after the change has been made.<!-- lm: 0x2 1 -->
+</UL><A><!-- external link: 1D 83 C7 FC --> WM_MOVE
+</A><!-- lm: 0x2 25 -->
+<UL>Sent when a window with CS_MOVENOTIFY<!-- entering slot 3188 --> class
+style moves its absolute position.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="3173_L2H_WinSetWindowPosParam.html">[Back: WinSetWindowPos - Parameters]</A> <BR>
+<A HREF="3175_L2H_WinSetWindowPosError.html">[Next: WinSetWindowPos - Errors]</A> 
+</BODY>
+</HTML>

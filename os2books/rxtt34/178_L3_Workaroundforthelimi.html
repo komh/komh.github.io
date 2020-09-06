@@ -1,0 +1,87 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Workaround for the // limitation</TITLE>
+</HEAD>
+<BODY>
+<H1>Workaround for the // limitation</H1><!-- entering slot 179 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+You may use the following workaround to pass parameters containing<B> //
+</B>to a REXX program. (see <A HREF="177_L3_Parameterseatenbythe.html">Parameters
+eaten by the REXX interpreter</A>). I found the base idea of this workaround
+(using an OS/2 batch to call the REXX program) in a public message in one
+of the CompuServe forums. In contrast to this version, the version published
+in the CompuServe message used REXX queues to pass the parameter. But I
+think that's a lot of overhead for this purpose.
+<P>
+
+<P>
+<B>Note: </B> You can also use the method described in the section <A HREF="495_L3_Gettheparametersasse.html">Get
+the parameters as seen by CMD.EXE</A> or <A HREF="496_L3_Gettheparametersasse.html">Get
+the parameters as seen by CMD.EXE - 2 -</A> to get around this limitation.
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+First, create an OS/2 batch file to launch your REXX program:
+<PRE> 
+  @ECHO OFF
+  REM *** OS/2 Batch program to launch a REXX program with
+  REM     normally inpossible parameters for REXX programs
+  REM
+
+  REM *** init the environment variable for the parameters
+  SET REXXParms=
+
+  REM *** copy the parameters to the environment variable
+  REM     (use a loop to handle more than 9 parameters)
+  REM
+:PLOOP
+  IF '%1' == '' GOTO CALLREXX
+    SET REXXParms=%REXXPARMS% %1
+    SHIFT
+  GOTO PLOOP
+
+:CALLREXX
+  REM *** now call the REXX program
+  REM *** This line was buggy in RXT&amp;T versions prior to 3.20!
+  REM     The parameter for the REXX program is the name of the
+  REM     environment variable containing the parameters!
+  myRexxProg REXXParms
+
+</PRE>
+
+<P>
+Second, use the following prolog to get the parameters in your REXX program:
+
+<PRE> 
+/* sample REXX program prolog to get the parameters from an           */
+/* environment variable                                               */
+
+                    /* get the name of the environment variable with  */
+                    /* the parameters                                 */
+  parse arg parmVar .
+
+                    /* get the parameters from the environment        */
+                    /* variable                                       */
+  thisParms = value( parmVar , , "OS2ENVIRONMENT" )
+
+                    /* if necessary, delete surrounding "             */
+  thisParms = strip( strip( thisParms ), 'B', '"' )
+  say "The parameters for this program are:" thisParms
+</PRE>
+
+<P>
+And third: Use only the OS/2 batch program to launch your REXX program.
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="177_L3_Parameterseatenbythe.html">[Back: Parameters eaten by the REXX Interpreter]</A> <BR>
+<A HREF="179_L3_PassingparameterstoR.html">[Next: Passing parameters to Rexx Dialog programs]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,210 @@
+<HTML>
+<HEAD>
+<TITLE>Example 5-Using Multiple Inheritance</TITLE>
+</HEAD>
+<BODY>
+<H1>Example 5-Using Multiple Inheritance</H1><!-- entering slot 32 -->
+<P>
+The "Hello" class is useful for writing messages to the screen.  So that
+clients can also write messages to printers and disk files, this example
+references two additional classes: "Printer" and "Disk."  The "Printer"
+class will manage messages to a printer, and the "Disk" class will manage
+messages sent to files. These classes can be defined as follows:
+<PRE>   #include &lt;somobj.idl&gt;
+
+   <B>interface Printer : SOMObject</B>
+   {
+       <B>void stringToPrinter(in string s) ;</B>
+        // This method writes a string to a printer.
+   };
+
+   #include &lt;somobj.idl&gt;
+
+   <B>interface Disk : SOMObject</B>
+   {
+        <B>void stringToDisk(in string s) ;</B>
+        // This method writes a string to disk.
+   };
+</PRE>
+
+<P>
+This example assumes the "Printer" and "Disk" classes are defined separately
+(in "print.idl" and "disk.idl," for example), are implemented in separate
+files, and are linked with the other example code.  Given the implementations
+of the "Printer" and "Disk" interfaces, the "Hello" class can use them by
+inheriting from them, as illustrated next.<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Modify the interface declaration in "hello.idl".
+
+<PRE>   <B>#include &lt;disk.idl&gt;
+   #include &lt;printer.idl&gt;</B>
+
+   interface Hello : Disk, Printer
+   {
+       void sayHello();
+
+       attribute string msg;
+
+       <B>enum outputTypes {screen, printer, disk};</B>
+       // Declare an enumeration for the different forms of output
+
+       <B>attribute outputTypes output;</B>
+       // The current form of output
+
+   #ifdef __SOMIDL__
+
+     implementation {<B>
+     somDefaultInit: override, init; </B>
+     };
+   #endif //#  __SOMIDL__
+   };
+</PRE>
+
+<P>
+Notice that<B> SOMObject</B> is not listed as a parent of "Hello" above,
+because<B> SOMObject</B> is a parent of "Disk" (and of "Printer").
+<P>
+The IDL specification above declares an enumeration "outputTypes" for the
+different forms of output, and an attribute "output" whose value will depend
+on where the client wants the output of the "sayHello" method to go.
+<P>
+Note: SOM IDL allows the use of structures, unions (though with a syntax
+different from C or C++), enumerations, constants, and typedefs, both inside
+and outside the body of an interface statement. Declarations that appear
+inside an interface body will be emitted in the header file (that is, in
+"hello.h" or "hello.xh").  Declarations that appear outside of an interface
+body do not appear in the header file (unless required by a special #pragma
+directive; see the SOM Compiler options in Chapter 4).
+<P>
+SOM IDL also supports all of the C and C++ preprocessor directives, including
+conditional compilation, macro processing, and file inclusion.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Re-run the SOM Compiler on the updated idl file..
+
+<P>
+Unfortunately, when this is done, the implementation for<B> somDefaultInit
+</B>is not correctly updated to reflect the addition of two new parents
+to "Hello."  This is because the implementation file emitter never changes
+the bodies of existing method procedures.  As a result, method procedures
+for initializer methods are not given new parent calls when the parents
+of a class are changed.  One way to deal with this (when the parents of
+a class are changed) is to temporarily rename the method procedure for initializer
+methods, and then run the implementation emitter. Once this is done, the
+code in the renamed methods can be merged into the new templates, which
+will include all the appropriate parent method calls.  When this is done
+here, the new implementation for<B> somDefaultInit</B> would appear as:
+
+<PRE>      SOM_Scope void SOMLINK
+                     somDefaultInit(Hello somSelf, somInitCtrl *ctrl)
+ {
+   HelloData *somThis; /* set by BeginInitializer */
+   somInitCtrl globalCtrl;
+   somBooleanVector myMask;
+   HelloMethodDebug("Hello", "somDefaultInit");
+   Hello_BeginInitializer_somDefaultINit;
+
+   <B> Hello_Init_Disk_somDefaultInit</B>(somSelf, ctrl);
+   <B> Hello_Init_Printer_somDefaultInit</B>(somSelf, ctrl);
+   /*
+    * local Hello initialization code <!-- entering slot 33 -->added by programmer
+   /*
+   <B>__set_msg(somSelf, "Initial Message");</B>
+}
+</PRE>
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Continue to customize the implementation file,
+hello.c, as follows. Notice that the "sayHello" method (last discussed in
+Example 2) is now modified to allow alternate ways of outputing a "msg".
+
+<PRE>SOM_Scope void  SOMLINK sayHello(Hello somSelf, Environment *ev)
+{
+    /* HelloData *somThis = HelloGetData(somSelf) ; */
+    HelloMethodDebug("Hello","sayHello") ;
+<B>    switch (__get_output(somSelf, ev) ) {</B>
+            /*  for C++, use:  somSelf-&gt;_get_output(ev) */<B>
+    case Hello_screen:
+        printf("%s\n", __get_msg(somSelf, ev) );</B>
+            /*  for C++, use:  somSelf-&gt;_get_msg(ev) */
+<B>        break;
+    case Hello_printer:
+        _stringToPrinter(somSelf, ev, __get_msg(somSelf, ev) );</B>
+            /* for C++, use:
+             * somSelf-&gt;stringToPrinter(ev, somSelf-&gt;_get_msg(ev) );
+             */<B>
+        break;
+    case Hello_disk:
+        _stringToDisk(somSelf, ev, __get_msg(somSelf, ev) );</B>
+            /*  for C++, use:
+             *   somSelf-&gt;stringToDisk(ev, somSelf-&gt;_get_msg(ev) );
+             */
+<B>   break;</B>
+    }
+}
+</PRE>
+
+<P>
+The "switch" statement invokes the appropriate method depending on the value
+of the "output" attribute.  Notice how the "case" statements utilize the
+enumeration values of "outputTypes" declared in "hello.idl" by prefacing
+the enumeration names with the class name (Hello_screen, Hello_printer,
+and Hello_disk).<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Update the client program, as illustrated next:
+
+<PRE>   #include &lt;hello.h&gt;
+           /* for C++, use "hello.xh" and &lt;stdio.h&gt; */
+
+   int main(int argc, char *argv[])
+   {
+       Hello a = HelloNew();
+       Environment *ev = somGetGlobalEnvironment();
+
+       /*Invoke "sayHello" on an object and use each output */
+      <B> _sayHello(a, ev) ;</B> /* for <B>c++,</B> use:<B>a-&gt;sayHello(ev);*/</B>
+      <B>  __set_output(a, ev, Hello_printer); </B>
+                                 /* C++: <B>a-&gt;_set_output(ev,Hello_printer);</B>*/
+       _sayHello(a, ev);
+       __set_output(a, ev, Hello_disk);
+                  /* C++:<B>a-&gt;_set_output(ev,Hello-disk);       */
+       _sayHello(a, ev) ; </B>
+
+       _somFree(a0 ;  /* for C++, use: a-&gt;somFree(); */
+        return (0);
+   }
+</PRE>
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Compile and link the client program as before,
+except also include the implementation files for the "Printer" and "Disk"
+classes in the compilation.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Execute the client program.  Observe that the
+message that prints is the "msg" defined in Example 4 as part of the<B> somDefaultInit
+</B>initialization of the "Hello" object.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>     Initial Message
+     Initial Message               - goes to a Printer
+
+     Initial Message               - goes to Disk
+</PRE>
+
+<P>
+This tutorial has described features of SOM IDL that will be useful to C
+and C++ programmers.  SOM IDL also provides features such as full type checking,
+constructs for declaring private methods, and constructs for defining methods
+that receive and return pointers to structures.  Chapter 4, "SOM IDL and
+the SOM Compiler" gives complete description of the SOM IDL syntax and also
+describes how to use the SOM Compiler.  In addition, Chapter 5, "Implementing
+Classes in SOM," provides helpful information for completing the implementation
+template, for using initializer (<B>somDefaultInit</B> or user-defined initialization
+methods), for defining SOM class libraries, and for customizing various
+aspects of SOMobjects execution.
+
+<P><HR>
+
+<A HREF="023_L3_Example4Initializing.html">[Back: Example 4 - Initializing a SOM Object]</A> <BR>
+<A HREF="025_L1_UsingSOMClassesinCli.html">[Next: Using SOM Classes in Client Programs]</A> 
+</BODY>
+</HTML>

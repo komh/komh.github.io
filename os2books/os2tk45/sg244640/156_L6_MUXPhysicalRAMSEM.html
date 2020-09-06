@@ -1,0 +1,86 @@
+<HTML>
+<HEAD>
+<TITLE>MUX Physical RAMSEM</TITLE>
+</HEAD>
+<BODY>
+<H1>MUX Physical RAMSEM</H1><!-- entering slot 201 -->
+<P>
+In this example the MUX wait entry is for a physical address of a RAMSEM.
+A physical address would be used where the RAMSEM is in instance data -
+that makes it unique among RAMSEMs providing the RAMSEM is not swappable.
+
+<P>
+In this example the waiting slot is 1b
+<PRE>&gt;&gt; Mux table entry for slot 1b, type=3 (physical RAMSEM)
+&gt;&gt; The physical address of the RAMSEM is %%00f1a6da
+&gt;&gt; We need to determine the owner of this address.
+
+# db muxtable+(9*e) l9
+0400:0000493c be 48 1b 00 03 da a6 f1-00                      &gt;H...Z&amp;q.
+
+&gt;&gt; Display the page frame structure for frame 00f1a:
+# .mp f1a
+ffe24538 InUse: pVP=ff4076ce RefCnt=0003 Flg=0 ll=01 sl=00 Blk=0006a Frame=00f1a
+
+&gt;&gt; Now display the virtual page structure to see who has backed this
+&gt;&gt; frame:
+# .mv %ff4076ce
+VPI=057b pVP=ff4076ce SOW Frame=0f1a Flg=9d0 HobPg=0000 Hob=03df Ref=011
+
+&gt;&gt; Now we have the hob and page offset into the hob. Display the
+&gt;&gt; linear address of the Hob using .MOC, add the page offset and
+&gt;&gt; the byte index from the physical address to obtain the
+&gt;&gt; virtual address of the RAMSEM
+
+# .moc 3df
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0382 %fef23d36 00000010 %1a260000 379 0381 0383 0000 0000 03df 0000  hco=00f37
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 03df  0382 0000  082c 03da 03da  0000 00  01 00 00 shared    e:pmwin.dll
+ hco=0f37 pco=ffe78c2e  hconext=00e8b hptda=0873 f=16  pid=00e0 e:cmd.exe
+
+&gt;&gt; RAMSEM is at %1a260000+00000000+6da
+&gt;&gt; RAMSEM is owned by pmwin.dll
+
+# ln %1a2606da
+No Symbols Found
+
+&gt;&gt; LN doesn't work so thunk to a selector:offset and try again
+&gt;&gt; cheat by looking up the selector assigned to pmwin in its
+&gt;&gt; segment table:
+# .lmo 3da
+hmte=03da pmte=%fdf21c14 mflags=0498b194 e:\os2\dll\pmwin.dll
+obj   vsize    vbase    flags   ipagemap cpagemap hob  sel
+0001 0000f6f8 1a1b0000 80005025 00000001 00000010 03e9 d0df r-x shr alias conf
+0002 0000c24e 1a1c0000 80005025 00000011 0000000d 03e8 d0e7 r-x shr alias conf
+0003 00008c84 <!-- entering slot 202 -->1a1d0000 80005025 0000001e 00000009 03e7 d0ef r-x shr alias conf
+0004 0000b6e2 1a1e0000 80005025 00000027 0000000c 03e6 d0f7 r-x shr alias conf
+0005 0000eb10 1a1f0000 80005025 00000033 0000000f 03e5 d0ff r-x shr alias conf
+0006 00006292 1a200000 8000d025 00000042 00000007 03e4 d106 r-x shr alias conf iopl
+0007 00003738 1a210000 8000d025 00000049 00000004 03e3 d10e r-x shr alias conf iopl
+0008 000010c5 1a220000 80009025 0000004d 00000002 03e2 d116 r-x shr alias iopl
+0009 000124d4 1a230000 80003025 0000004f 00000013 03e1 d11f r-x shr alias big
+000a 000070ca 1a250000 80001025 00000062 00000008 03e0 d12f r-x shr alias
+000b 00000ada 1a260000 80001063 0000006a 00000001 03df d137 rw- shr prel alias
+000c 00001478 1a270000 80003063 0000006b 00000002 03de d13f rw- shr prel alias big
+000d 000023f8 1a280000 80001063 0000006d 00000003 03dd d147 rw- shr prel alias
+000e 00006444 1a290000 80001063 00000070 00000002 03dc d14f rw- shr prel alias
+000f 00000142 1a2a0000 80001063 00000072 00000001 03db d157 rw- shr prel alias
+0010 00000018 1a2b0000 80002063 00000073 00000001 03d9 d15f rw- shr prel big
+0011 000003b8 16100000 80002079 00000074 00000001 051e b087 r-- rsrc disc shr prel big
+0012 00000dcc 161c0000 80002069 00000075 00000001 0509 b0e7 r-- rsrc shr prel big
+0013 0000ffbc 16210000 80002029 00000076 00000010 0504 b10f r-- rsrc shr big
+0014 000002f0 00000000 00002039 00000086 00000001 0000 0000 r-- rsrc disc shr big
+0015 00003524 16120000 80002029 00000087 00000004 051b b097 r-- rsrc shr big
+
+# ln d137:6dad137:000006da PMWIN MSGQUEUESEM1
+</PRE>
+ 
+
+<P><HR>
+
+<A HREF="155_L6_TheMUXRAMSEM.html">[Back: The MUX RAMSEM]</A> <BR>
+<A HREF="157_L5_StructuredSemaphores.html">[Next: Structured Semaphores]</A> 
+</BODY>
+</HTML>

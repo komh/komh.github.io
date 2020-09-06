@@ -1,0 +1,95 @@
+<HTML>
+<HEAD>
+<TITLE>Hardware Interrupt Simulation</TITLE>
+</HEAD>
+<BODY>
+<H1>Hardware Interrupt Simulation</H1><!-- entering slot 158 -->
+<P>
+A virtual device driver typically establishes communications with a physical
+device driver and receives events at hardware interrupt time. Based on the
+event received from the physical device driver and the VDM's current state,
+the virtual device driver may need to send a hardware interrupt to the VDM.
+ However, the virtual device driver cannot simply call the VDM's interrupt
+handler, since the interrupt handler may currently be paged out, and page
+faults cannot be taken on the VDM's interrupt handler code at hardware interrupt
+time.
+<P>
+The solution is to "simulate" the hardware interrupt to the VDM by delaying
+it until the VDM process becomes active.  This is done in three steps:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The VDM's interrupt request flag for the particular
+interrupt level (IRQ) is set, and a global context hook is set to pass control
+to the virtual device driver as soon as<I> any</I> VDM becomes active.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->A VDM context hook is set, which increases the
+priority of the target VDM, based on the priority of the interrupt, thereby
+enabling fast interrupt processing by the VDM.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->When the VDM is scheduled and the interrupt request
+flag is noted, the VDM's interrupt handler code is invoked.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+The VDM's interrupt handler typically issues a request for the interrupt
+data or an EOI instruction.  When the virtual device driver receives either
+of these, it calls the<B> VDHClearVIRR()</B> helper service to clear the
+interrupt request flag. If the interrupt request flag is not cleared before
+the VDM issues an EOI instruction, the virtual device driver immediately
+simulates another interrupt to the VDM.  For example, the virtual timer
+device driver may leave the interrupt request flag set when it receives
+the EOI from a previously simulated interrupt, if it has another hardware
+timer interrupt pending for that VDM.
+<P>
+<B>Clearing Interrupts</B>
+<P>
+Note that a virtual device driver must call the<B> VDHClearVIRR()</B> helper
+service when the VDM issues an EOI instruction.  Otherwise, the application
+may receive spurious interrupts because the interrupt request flag is not
+cleared.  For this reason, unknown device interrupts are not supported for
+VDMs, since there is typically no virtual device driver to clear the interrupt
+request flag.
+<P>
+Interrupts must be simulated to VDMs as quickly as possible.  It is not
+advisable for a virtual device driver to have too many interrupts pending
+since the physical device driver's buffers may overflow.
+<P>
+A virtual device must also be very careful when it simulates an interrupt
+to a VDM because too many nested interrupts may cause the application's
+stack to overflow.  A virtual device driver should wait until the IRET instruction
+has been executed in the VDM's interrupt handler before it simulates the
+next interrupt; the virtual device driver may gain control immediately upon
+IRET being issued, via an IRET handler registered using the<B> VDHOpenVIRQ()
+</B>helper service.
+<P>
+<B>Shared Interrupts</B>
+<P>
+Personal System/2 machines equipped with the IBM Micro Channel* bus architecture
+support multiple hardware devices on the same IRQ level. Hence, support
+may also be required for virtual device drivers to share interrupts.  This
+support is provided through the<B> VDHOpenVIRQ()</B> helper function, which
+accepts a flag indicating that a virtual device driver is willing to share
+its IRQ.  Note that<I> all</I> virtual device drivers using the same IRQ
+must pass the sharing flag; otherwise, an error is returned.
+<P>
+Each virtual device driver receives an IRQ handle, which points to an IRQ
+data block specific to that device driver.  Data not specific to the virtual
+device driver is contained in a shared IRQ data structure.
+<P>
+When an interrupt is received for a VDM, the virtual interrupt request flag
+is set and a device request mask is updated.  This device request mask is
+specific to each VDM, and contains a bit for every virtual device driver
+which has requested a virtual interrupt for the IRQ.  When the interrupt
+is cleared, the device mask bit for the virtual device driver is cleared.
+ However, the virtual interrupt request flag is not cleared until all virtual
+device drivers have cleared the interrupt.
+<P>
+Note that EOI and IRET handler routines are called when the device mask
+bit is cleared, allowing virtual device drivers to perform correct interrupt
+termination handling.
+
+<P><HR>
+
+<A HREF="149_L3_ROMBIOSCompatibility.html">[Back: ROM BIOS Compatibility]</A> <BR>
+<A HREF="151_L3_Protection.html">[Next: Protection]</A> 
+</BODY>
+</HTML>

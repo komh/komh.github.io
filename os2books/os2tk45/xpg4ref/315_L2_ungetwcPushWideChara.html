@@ -1,0 +1,154 @@
+<HTML>
+<HEAD>
+<TITLE>ungetwc - Push Wide Character onto Input Stream</TITLE>
+</HEAD>
+<BODY>
+<H1>ungetwc - Push Wide Character onto Input Stream</H1><!-- entering slot 343 -->ungetwc - Push Wide Character onto Input Stream
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>#include &lt;stdio.h&gt;
+#include &lt;wchar.h&gt;
+wint_t ungetwc(wint_t <I>wc</I>, FILE *<I>stream</I>);
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Description
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+ungetwc pushes the wide character by<I> wc</I> back onto the input<I> stream</I>.
+The pushed-back wide characters will be returned by subsequent reads on
+that stream in the reverse order of their pushing. A successful intervening
+call (on the<I> stream</I>) to a file positioning function (fseek, fsetpos,
+or rewind) discards any pushed-back wide characters for the stream.
+<P>
+The external storage corresponding to the stream is unchanged. There is
+always at least one wide character of push-back.
+<P>
+If the value of<I> wc</I> is WEOF, the operation fails and the input stream
+is unchanged.
+<P>
+A successful call to the ungetwc function clears the EOF indicator for the
+stream. The value of the file position indicator for the stream after reading
+or discarding all pushed-back wide characters is the same as it was before
+the wide characters were pushed back.
+<P>
+For a text stream, the file position indicator is backed up by one wide
+character. This affects ftell, fflush, fseek (with SEEK_CUR), and fgetpos.
+
+<P>
+For a binary stream, the position indicator is unspecified until all characters
+are read or discarded, unless the last character is pushed back, in which
+case the file position indicator is backed up by one wide character. This
+affects ftell, fseek (with SEEK_CUR), fgetpos, and fflush.
+<P>
+After calling ungetwc, flush the buffer or reposition the stream pointer
+before calling a read function for the stream, unless EOF has been reached.
+After a read operation on the stream, flush the buffer or reposition the
+stream pointer before calling ungetwc.
+<P>
+<B>Note: </B><!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 -->Only 1 wide character may be pushed back.<!-- lm: 0x2 12 -->
+<P>
+<LI><!-- lm: 0x2 15 -->The position on the stream after a successful call
+to ungetwc is one wide character prior to the current position.<!-- lm: 0x2 10 -->
+</UL><!-- lm: 0x2 10 -->
+<P>
+<!-- lm: 0x2 1 -->
+</UL>Returns
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+ungetwc returns the wide character pushed back after conversion, or WEOF
+if the operation fails.<!-- lm: 0x2 1 -->
+</UL> Example Code
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+This example reads in wide characters from stream, and then calls ungetwc
+to push the characters back to the stream.
+<PRE>#include &lt;wchar.h&gt;#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+
+int main(void)
+{
+   FILE         *stream;
+   wint_t       wc;
+   wint_t       wc2;
+   unsigned int result = 0;
+
+   if (NULL == (stream = fopen("ungetwc.dat", "r+"))) {
+      printf("Unable to open file.\n");
+      exit(EXIT_FAILURE);
+   }
+
+   while (WEOF != (wc = fgetwc(stream)) &amp;&amp; iswdigit(wc))
+      result = result * 10 + wc - L'0';
+
+   if (WEOF != wc)
+      ungetwc(wc, stream);    /* Push the nondigit wide character back */
+
+   /* get the pushed back character */
+   if (WEOF != (wc2 = fgetwc(stream))) {
+      if (wc != wc2) {
+         printf("Subsequent fgetwc does not get the pushed back character.\n");
+         exit(EXIT_FAILURE);
+      }
+      printf("The digits read are '%i'\n"
+             "The character being pushed back is '%lc'", result, wc2);
+   }
+   return 0;
+
+   /****************************************************************************
+      Assuming the file ungetwc.dat contains:
+
+      12345ABCDE67890XYZ
+
+      The output should be similar to :
+
+      The digits read are '12345'
+      The character being pushed back is 'A'
+   ****************************************************************************/
+}
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Related Information
+<P>
+<!-- lm: 0x2 10 -->
+<UL><!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 --><A HREF="115_L2_fflushWriteBuffertoF.html">fflush
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="137_L2_fseekRepositionFileP.html">fseek
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="138_L2_fsetposSetFilePositi.html">fsetpos
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="154_L2_getwcReadWideCharact.html">getwc
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="213_L2_putwcWriteWideCharac.html">putwc
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="313_L2_ungetcPushByteontoIn.html">ungetc
+</A><!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="314_L2__ungetchPushCharacte.html">[Back: _ungetch - Push Character Back to Keyboard]</A> <BR>
+<A HREF="316_L2_unlinkDeleteFile.html">[Next: unlink - Delete File]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,150 @@
+<HTMLHIDDEN>
+<HEAD>
+<TITLE>DosExecPgm</TITLE>
+</HEAD>
+<BODY>
+<H1>DosExecPgm</H1><!-- entering slot 250 -->
+<PRE>typedef struct _RESULTCODES {  /* resc */
+ 
+  USHORT codeTerminate;        /* Termination Code -or- Process ID */
+  USHORT codeResult;           /* Exit Code */
+ 
+} RESULTCODES;
+
+#define INCL_DOSPROCESS
+
+USHORT  rc = DosExecPgm(ObjNameBuf, ObjNameBufL, ExecFlags, ArgPointer,
+                             EnvPointer, ReturnCodes, PgmPointer);
+
+PCHAR            ObjNameBuf;    /* Address of object name buffer
+                                    (returned) */
+SHORT            ObjNameBufL;   /* Length of object name buffer */
+USHORT           ExecFlags;     /* Execute asynchronously/trace */
+PSZ              ArgPointer;    /* Address of argument string */
+PSZ              EnvPointer;    /* Address of environment string */
+PRESULTCODES     ReturnCodes;   /* Address of termination codes
+                                    (returned) */
+PSZ              PgmPointer;    /* Address of program file name */
+
+USHORT           rc;            /* return code */
+</PRE>
+
+<P>
+<B>Example</B>
+<P>
+This example starts up the program simple.exe and then waits for it to finish.
+ Then the termination and return codes are printed.
+<PRE>#define INCL_DOSPROCESS
+
+#define START_PROGRAM "simple.exe"
+
+CHAR        LoadError[100];
+PSZ         Args;
+PSZ         Envs;
+RESULTCODES ReturnCodes;
+USHORT      rc;
+
+   if(!DosExecPgm(LoadError,           /* Object name buffer */
+                  sizeof(LoadError),   /* Length of object name buffer */
+                  EXEC_SYNC,           /* Asynchronous/Trace flags */
+                  Args,                /* Argument string */
+                  Envs,                /* Environment string */
+                  &amp;ReturnCodes,        /* Termination codes */
+                  START_PROGRAM))      /* Program file name */
+      printf("Termination Code %d  Return Code %d \n",
+             ReturnCodes.codeTerminate,
+             ReturnCodes.codeResult);
+
+
+----------------simple.exe------------------
+
+#define INCL_DOSPROCESS
+
+#define RETURN_CODE 0
+
+main( )
+   {
+   printf("Hello!\n");
+   DosExit(EXIT_PROCESS,          /* End thread/process */
+           RETURN_CODE);          /* Result code */
+   }
+</PRE>
+
+<P>
+The following example demonstrates how to create a process, obtain process
+ID information, and kill a process.  Process1 invokes process2 to run asynchronously.
+ It obtains and prints some PID information, and then kills process2.
+<PRE>/* ---- process1.c ---- */
+
+#define INCL_DOSPROCESS
+
+#include &lt;os2.h&gt;
+
+#define START_PROGRAM "process2.exe"   /* Program pointer */
+
+main()
+{
+
+  CHAR          ObjFail [50];       /* Object name buffer */
+  RESULTCODES   ReturnCodes;        /*
+  PIDINFO       PidInfo;
+  PID           ParentID;           /*
+  USHORT        rc;
+
+  printf("Process1 now running. \n");
+
+  /** Start a child process. **/
+  if(!(DosExecPgm(ObjFail,            /* Object name buffer */
+                  sizeof(ObjFail),    /* Length of obj. name
+                                         buffer */
+                  EXEC_ASYNC,         /* Execution flag - asynchronous */
+                  NULL,               /* No args. to pass to process2*/
+                  NULL,               /* Process2 inherits process1's
+                                         environment */
+                  &amp;ReturnCodes,       /* Ptr. to resultcodes struct. */
+                  START_PROGRAM)))    /* Name of program file */
+    printf("Process2 started. \n");
+
+  /** Obtain Process ID information and print it **/
+  if(!(rc=DosGetPID(&amp;PidInfo)))       /* Process ID's (returned) */
+    printf("DosGetPID: current process ID is %d; thread ID is %d; parent process ID is %d.\n",
+            PidInfo.pid, PidInfo.tid, PidInfo.pidParent);
+  if(!(rc=DosGetPPID(
+           ReturnCodes.codeTerminate, /* Process whose parent is wanted */
+           &amp;ParentID)))               /* Address to put parent's PID */
+    printf("Child process ID is %d; Parent process ID is %d.\n",
+            ReturnCodes.codeTerminate, ParentID);
+
+  /** Terminate process2 **/
+  if(!(rc=DosKillProcess(DKP_PROCESSTREE,      /* Action code - kill process and descendants */
+                ReturnCodes.codeTerminate)))   /* PID of root of process tree */
+    printf("Process2 terminated by process1.\n");
+}
+
+/* ---- process2.c ---- */
+
+#define INCL_DOSPROCESS
+
+#include &lt;os2.h&gt;
+
+#define SLEEPTIME   500L
+#define RETURN_CODE 0
+
+main()
+{
+  printf("Process2 now running.\n");
+
+  /* Sleep to allow process1 to kill it */
+  DosSleep(SLEEPTIME);                /* Sleep interval */
+  DosExit(EXIT_PROCESS,               /* Action Code */
+          RETURN_CODE);               /* Result Code */
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="207_L2H_DosError.html">[Back: DosError]</A> <BR>
+<A HREF="209_L2H_DosExit.html">[Next: DosExit]</A> 
+</BODY>
+</HTML>

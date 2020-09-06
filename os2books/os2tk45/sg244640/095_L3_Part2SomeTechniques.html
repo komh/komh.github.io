@@ -1,0 +1,172 @@
+<HTML>
+<HEAD>
+<TITLE>Part 2: Some Techniques</TITLE>
+</HEAD>
+<BODY>
+<H1>Part 2: Some Techniques</H1><!-- entering slot 117 -->
+<P>
+Procedures to get control at a point other than a trap:
+<P>
+One approach is to use clever breakpoints within OS/2. Stopping at the first
+executable instruction of a program<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->We will make use of a couple of breakpoint commands
+<!-- lm: 0x2 1 -->
+</UL>This command tells the debug kernel that we want
+control on the debug terminal at some specific point.  The problem is that
+the place where we would like to get control is not loaded into memory until
+we run the program, and it is difficult at best to type Control-C at just
+the right time.<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->The initial breakpoint uses the fact that almost
+all programs use the DOSCALL1 DLL, which appears to have instance initialization.
+<!-- lm: 0x2 1 -->
+</UL>Enter the command   BP   DosLibIDisp,'.p*'
+<P>
+The content of the quoted string is the command to execute when we arrive
+at the breakpoint.  This will assure us that we are in the correct context,
+because the output of '.p' includes the module name.
+<P>
+Let the MUT run, and execute OSPREY once again.
+<P>
+You will probably get control in the context of OSPREY. If not, issue  'g'
+again a time or two until you are.<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->At this point, OSPREY has been loaded, so we
+can set a breakpoint.<!-- lm: 0x2 1 -->
+</UL> If you simply try the command
+ BP 0F:1BBE, you will discover that the page is not yet loaded. There are
+two ways around this problem.<!-- lm: 0x2 7 -->
+<UL>
+<P>
+ a.<!-- lm: 0x2 11 -->
+<UL>Use a register breakpoint,  BR   E,0F:1BBE<!-- lm: 0x2 7 -->
+</UL>
+b.<!-- lm: 0x2 11 -->
+<UL>Cause OS/2 to bring the page in with   .I  0F:1BBE
+<!-- lm: 0x2 1 -->
+</UL>Then reenter the BP command from above.<!-- lm: 0x2 6 -->
+<UL><!-- lm: 0x2 2 -->
+</UL>
+4.<!-- lm: 0x2 6 -->
+<UL>However, this is 'cheating' because we already
+knew where to stop.<!-- lm: 0x2 1 -->
+</UL> To find the address of the first
+instruction at this point, enter the command  .M  0F:0   Find the MTE handle,
+hmte.
+<P>
+Issue the  .LMO  command with the HMTE as the parameter.
+<P>
+Alternatively,  try  .LMO 'OSPREY', which works sometimes.
+<P>
+The output of the .LMO command includes the linear address of the MTE.
+<P>
+Display the MTE as doublewords, and get the address of the SMTE from the
+output; it is in the second doubleword.
+<P>
+Display the SMTE as doublewords, and you can find the entry point in the
+second and third words displayed.
+<P>
+Now you can set a breakpoint at the entry to any module.<!-- lm: 0x2 1 -->
+<BR>
+The PATCH program<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->On the MUT, execute the EXEHDR utility against
+OSPREY.EXE.<!-- lm: 0x2 1 -->
+</UL> EXEHDR is distributed with the developers'
+toolkit.
+<P>
+The output will provide you information you need to patch a program successfully.
+The last part of the output should look like
+<PRE>Module:                   OSPREY
+Description:              OSPREY.EXE
+Data:                     NONSHARED
+Initial CS:IP:            seg   1 offset 0088
+Initial SS:SP:            seg   3 offset 0000
+Extra stack allocation:   0a00 bytes
+DGROUP:                   seg   3
+
+no. type address  file  mem   flags
+  1 CODE 00000200 0247d 0247e
+  2 DATA 00000000 00000 00200
+  3 DATA 00002800 <!-- entering slot 118 -->007cb 00960
+</PRE>
+
+<P>
+There are two things we will need in this listing.<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->The entry point, or initial CS:IP is _________:________
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->The location in the file where that segment begins
+_________<!-- lm: 0x2 1 -->
+</UL> The columns labelled 'file' and 'mem'
+are the sizes of the segment in the file, and in memory.  The difference
+is due to uninitialized data, which is not stored, saving space and reducing
+program load time.
+<P>
+To find the location of an instruction in the file, add the offset to the
+file address.<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->To get control, we will replace a byte with the
+hex value 'CC', which is a special one-byte instruction, Int 3, or BreakPoint.
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->We will patch the call instruction at 1BBE.<!-- lm: 0x2 1 -->
+</UL> Add
+the offset, 1BBE to the file address 0200  _________
+<P>
+If you cannot add hex, get the debug kernel's attention, and then type in
+ ? 1BBE+0200.   ? is a general purpose evaluation command.<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->We now know where we want to patch the program.
+Let's do it.<!-- lm: 0x2 1 -->
+</UL> On the MUT,  enter the command PATCH
+ OSPREY.EXE
+<P>
+The patch address was calculated above; enter it.
+<P>
+The byte you are about to replace is hex ______
+<P>
+Type   CC    then press enter, and complete the confirmations.
+<P>
+We have now patched the program.<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Execute the program on the MUT; you get control
+at the INT 3.<!-- lm: 0x2 1 -->
+</UL> We need to put back the hex data which
+was originally there, so as not to introduce another problem. We will use
+the enter command.
+<P>
+Type the command  E  CS:IP
+<P>
+You will see the 'CC', type the original data value and press enter.
+<P>
+Type the command   .R   and you should see the original far call.<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->This is one way to get control.<!-- lm: 0x2 1 -->
+</UL> It
+has problems if the MUT is not where you can touch it.
+<P>
+Type the commands   G    then     GT  to let OSPREY finish.<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Patch OSPREY back to its original content if
+you wish.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="094_L3_Part1Introductiontot.html">[Back: Part 1: Introduction to the Debug Kernel]</A> <BR>
+<A HREF="096_L3_Part3FindingtheTSS.html">[Next: Part 3: Finding the TSS]</A> 
+</BODY>
+</HTML>

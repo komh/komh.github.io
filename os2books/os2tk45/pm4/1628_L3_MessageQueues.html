@@ -1,0 +1,97 @@
+<HTML>
+<HEAD>
+<TITLE>Message Queues</TITLE>
+</HEAD>
+<BODY>
+<H1>Message Queues</H1><!-- entering slot 1665 -->
+<P>
+Every PM application must have a<I> message queue</I>. A message queue is
+the only means an application has to receive input from the keyboard or
+mouse. <I> Only applications that create message queues can create windows</I>.
+
+<P>
+An application creates a message queue by using the WinCreateMsgQueue function.
+ This function returns a handle that the application can use to access the
+message queue.  After an application creates a message queue, the system
+posts messages intended for windows in the application to that queue.  The
+application can retrieve queue messages by specifying the message-queue
+handle in the WinGetMsg function. It also can examine messages, without
+retrieving them, by using the WinPeekMsg function. When an application no
+longer needs the message queue, it can destroy the queue by using the WinDestroyMsgQueue
+function.
+<P>
+One message queue serves all the windows in a thread. This means a queue
+can hold messages for several windows. A message specifies the handle of
+the window to which it belongs so the application can forward a message
+easily to the appropriate window. The message loop recognizes a NULL window
+handle and the message is processed within the message loop rather than
+passed to WinDispatchMessage. See the following figure for an example of
+an input-message processing loop.
+<P>
+An application that has more than one thread can create more than one message
+queue.  The system allows one message queue for each thread.  A message
+queue created by a thread belongs to that thread and has no connection to
+other queues in the application.  When an application creates a window in
+a given thread, the system associates the window with the message queue
+in that thread.  The system then posts all subsequent messages intended
+for that window to that queue.
+<P>
+<B>Note: </B> The recommended way to structure PM applications is to have
+at least two threads and two message queues.  The first thread and message
+queue control all the user-interface windows, and the second thread and
+message queue control all the object windows.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Several windows can use one message queue; it is important that the message
+queue be large enough to hold all messages that possibly can be posted to
+it.  An application can set the size of the message queue when it creates
+the queue by specifying the maximum number of messages the queue can hold.
+ The default maximum number of messages is 10.
+<P>
+To minimize queue size, several types of posted messages are not actually
+stored in a message queue.  Instead, the operating system keeps a record
+in the queue of the message being posted and combines any information contained
+in the message with information from previous messages.  Timer, semaphore,
+and paint messages are handled this way.  For example, if more than one
+WM_PAINT message is posted, the operating system combines the<I> update
+regions</I> for each into a single update region.  Although there is no
+actual WM_PAINT message in the queue, the operating system constructs one
+WM_PAINT message with the single update region when an application uses
+the WinGetMsg function.
+<P>
+The operating system handles mouse and keyboard input messages differently
+from the way it handles other types of messages.  The operating system receives
+all keyboard and mouse events, such as keystrokes and mouse movements, into
+the system message queue.  The operating system converts these events into
+messages and posts them, one at a time, to the appropriate application message
+queue.  The application retrieves the messages from its queue and dispatches
+them to the appropriate window, which processes the messages.
+<P>
+The operating system message queue usually is large enough to hold all input
+messages, even if the user types or moves the mouse very quickly.  If the
+operating system message queue does run out of space, the system<I> ignores
+</I>the most recent keyboard input (usually by beeping to indicate the input
+is ignored) and collects mouse motions into a WM_MOUSEMOVE message.
+<P>
+Every message queue has a corresponding MQINFO data structure that specifies
+the identifiers of the process and thread that own the message queue and
+gives a count of the maximum number of messages the queue can receive.  An
+application can retrieve the structure by using the WinQueryQueueInfo function.
+
+<P>
+A message queue also has a current status that indicates the types of messages
+currently in the queue.  An application can retrieve the queue status by
+using the WinQueryQueueStatus function.  An application also can use the
+WinPeekMsg function to examine the contents of a message queue.  WinPeekMsg
+checks for a specific message or range of messages in the queue and gives
+the application the option of removing messages from the queue.  An application
+<I>can</I> call the WinQueryQueueStatus function to determine the contents
+of the queue before calling the WinPeekMsg or WinGetMsg function to remove
+a message from the queue.
+
+<P><HR>
+
+<A HREF="1627_L3_Messages.html">[Back: Messages]</A> <BR>
+<A HREF="1629_L3_MessageHandling.html">[Next: Message Handling]</A> 
+</BODY>
+</HTML>

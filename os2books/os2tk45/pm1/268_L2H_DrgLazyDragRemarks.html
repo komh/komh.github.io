@@ -1,0 +1,118 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DrgLazyDrag - Remarks</TITLE>
+</HEAD>
+<BODY>
+<H1>DrgLazyDrag - Remarks</H1><!-- entering slot 275 -->
+<P>
+Before initiating a lazy drag operation by calling DrgLazyDrag, the application
+must allocate the<A><!-- external link: 1D E7 C7 52 --> DRAGINFO</A> structure
+using <A HREF="150_L2_DrgAllocDraginfo.html">DrgAllocDraginfo</A>.
+<P>
+DrgLazyDrag is called when the direct-manipulation button is pressed while
+holding down the lazy drag augmentation key, currently the ALT key. As the
+pointer moves over a potential target, a<A><!-- external link: 1D C6 C5 FC --> DM_DRAGOVER
+</A>message is sent to the target window. When the pointer moves from one
+target window to another, a<A><!-- external link: 1D C5 C5 FC --> DM_DRAGLEAVE
+</A>message is sent to the former target.
+<P>
+If the pointer is over a valid window target when the direct-manipulation
+button is pressed and the lazy drag "end drag" augmentation key (Ctrl+Shift
+to link, Ctrl to copy and Shift to move) is pressed, a<A><!-- external link: 1D C8 C5 FC --> DM_DROP
+</A>message is sent to the target window. The source window posts a<A><!-- external link: 1D CA C5 FC --> DM_DROPNOTIFY
+</A>message, informing the target window that a drop has occurred.
+<P>
+<I>param2</I> parameter of<A><!-- external link: 1D CA C5 FC --> DM_DROPNOTIFY
+</A>message contains the handle of the target window that the drag set was
+dropped on. If<I> param2</I> is zero, the drag set was not dropped; in other
+words, the drag operation was canceled. The source window must check<I> pDraginfo
+</I>to see if the target window is different from the source. If the source
+and target are different, the source window must free<A><!-- external link: 1D E7 C7 52 --> DRAGINFO
+</A>upon receipt of the<A><!-- external link: 1D CA C5 FC --> DM_DROPNOTIFY
+</A>message. If the source and target window handles are the same, the target
+must free the<A><!-- external link: 1D E7 C7 52 --> DRAGINFO</A> after completing
+the post-drop conversation.
+<P>
+The caller can define a default operation for the objects represented by
+the<A><!-- external link: 1D E7 C7 52 --> DRAGINFO</A> structure by modifying
+its<I> usOperate</I> field. If<I> usOperate</I> is modified, the new value
+is sent to the target as the operation when a NO_DEFAULT operation would
+normally be sent. The caller must not modify any other part of the<A><!-- external link: 1D E7 C7 52 --> DRAGINFO
+</A>structure. The<A><!-- external link: 1D E8 C7 53 --> DRAGITEM</A> structures
+associated with the<A><!-- external link: 1D E7 C7 52 --> DRAGINFO</A> structure
+must only be altered with <A HREF="477_L2_DrgSetDragitem.html">DrgSetDragitem
+</A>or by using a pointer obtained from <A HREF="350_L2_DrgQueryDragitemPtr.html">DrgQueryDragitemPtr</A>.
+
+<P>
+A window receives a<A><!-- external link: 1D AF C5 FC --> WM_PICKUP</A> message
+when the direct-manipulation button is pressed holding down the lazy drag
+augmentation key. In response to this message, an application is responsible
+for:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Obtaining a<A><!-- external link: 1D E7 C7 52 --> DRAGINFO
+</A>structure using <A HREF="150_L2_DrgAllocDraginfo.html">DrgAllocDraginfo
+</A><!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Initializing the<A><!-- external link: 1D E8 C7 53 --> DRAGITEM
+</A>structures using <A HREF="477_L2_DrgSetDragitem.html">DrgSetDragitem</A>.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Objects are added to the drag set whenever a<A><!-- external link: 1D AF C5 FC --> WM_PICKUP
+</A>message is received. The first time that message is received, the application
+must call DrgLazyDrag to begin the lazy drag operation. Each subsequent
+<A><!-- external link: 1D AF C5 FC -->WM_PICKUP</A> message that is received
+during the course of a lazy drag operation indicates that objects are to
+be added to the drag set. If objects are currently being dragged, the application
+must reallocate the<A><!-- external link: 1D E7 C7 52 --> DRAGINFO</A> structure
+using <A HREF="432_L2_DrgReallocDragInfo.html">DrgReallocDragInfo</A>. <A HREF="432_L2_DrgReallocDragInfo.html">DrgReallocDragInfo
+</A>frees the current<A><!-- external link: 1D E7 C7 52 --> DRAGINFO</A> and
+allocates a new one. The lazy drag operation can then continue by making
+another call to DrgLazyDrag.
+<P>
+Objects can also be removed from the drag set during the course of a lazy
+drag operation. It is the application's responsibility to define what action
+initiates such a "putback" operation; for example, if a "pickup" operation
+executed while the pointer is not over a valid object. It is the application's
+responsibility to decide if a putback operation may apply to individual
+objects within the drag set or the drag set as a whole. If the putback operation
+is applied to the drag set as a whole, the result is the same as canceling
+the drag. If the put-back operation is applied to individual objects within
+the drag set, the application must free the<A><!-- external link: 1D E7 C7 52 --> DRAGINFO
+</A>and reallocate it to represent the new state of the drag set. If the
+drag operation is to continue, the application must make another call to
+DrgLazyDrag.
+<P>
+DrgLazyDrag returns as soon as it completes initialization for the drag.
+The pointing device remains active during a lazy drag and can be used in
+the same manner as if no drag operation were in progress. As soon as DrgLazyDrag
+returns, the application can free its<A><!-- external link: 1D E6 C7 51 --> DRAGIMAGE
+</A>array.
+<P>
+<B>Note: </B> Because the lazy drag operation is nonmodal, the mouse pointer
+may by used as if no drag operation were in progress.<!-- lm: 0x2 1 -->
+<P>
+Once a standard drag operation is commenced by calling <A HREF="197_L2_DrgDrag.html">DrgDrag</A>,
+the objects that comprise the drag set cannot be modified without canceling
+the drag and restarting. The drag set can be modified during the course
+of the drag operation. When the drag set is modified, the application must
+reallocate the<A><!-- external link: 1D E7 C7 52 --> DRAGINFO</A> structure
+and make another call to DrgLazyDrag.
+<P>
+<B>Note: </B> The mouse changes to an arrow with an attache case attached
+to the lower right-hand corner when the lazy drag is in progress, rather
+than a stack of<!-- entering slot 276 --> images shown during a standard
+drag.
+<P>
+The<I> pdimg</I> and<I> cdimg</I> parameters were added for compatibility
+with <A HREF="197_L2_DrgDrag.html">DrgDrag</A> only.<!-- lm: 0x2 1 -->
+<P>
+
+
+<P><HR>
+
+<A HREF="267_L2H_DrgLazyDragParameter.html">[Back: DrgLazyDrag - Parameters]</A> <BR>
+<A HREF="269_L2H_DrgLazyDragRelatedFu.html">[Next: DrgLazyDrag - Related Functions]</A> 
+</BODY>
+</HTML>

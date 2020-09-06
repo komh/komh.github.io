@@ -1,0 +1,105 @@
+<HTML>
+<HEAD>
+<TITLE>Implementation constraints</TITLE>
+</HEAD>
+<BODY>
+<H1>Implementation constraints</H1><!-- entering slot 299 -->
+<P>
+The generic server program<B> (somdsvr)</B>, the<B> SOMOA</B>, and the<B> SOMDServer
+</B>make it easy to use SOM classes with DSOM. However, if there are any
+parts of the class implementation that were written expecting a single-process
+environment, the class may have to be modified to behave properly in a client/server
+environment. Some common implementation practices to<I> avoid</I> are listed
+below<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 --><B>Printing to standard output</B>. Any text printed
+by a method will appear at the server, as opposed to the client. In fact,
+the server may not be attached to a text display device or window, so the
+text may be lost completely. It is preferred that any textual output generated
+by a method be returned as an output string.
+<P>
+<B>Note: </B> Passing textual output between the client program and the
+called method via an "inout string" parameter is<I> strongly</I> discouraged.
+As discussed in the CORBA 1.1 specification (page 94), the size of the output
+string is constrained by the size of the input string. If there was no input
+string value, the size of the output string would be constrained to 0 bytes.
+Instead, it is preferred that textual data be returned either as an output
+string (DSOM provides the storage), or by passing a character array buffer
+(client provides the storage).<!-- lm: 0x2 6 -->
+<UL><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL><B>Creating
+and deleting objects.</B> Methods that create or delete objects may have
+to be modified if the created objects are intended to be remote. The calls
+to create local objects are different than the calls to create remote objects.
+<!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL><B>Using pointers to client-allocated
+memory in instance variables.</B> Consider the following example: A class
+has a method that accepts a pointer to a data value created by the client
+(e.g., a string or a struct), and simply stores the pointer in an instance
+variable or attribute. However, in DSOM, the called method is passed a pointer
+to a copy of the value (in the request message body), but the copy is freed
+at the end of the request. If the data value is meant to persist between
+requests, the object is responsible for making its own copy of it. (The
+implementation of the "_set_printerName" method in the topic "Wrapping a
+printer API" later in this section is an example of a method performing
+such a copy.)<!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL><B>Using "procedure"
+methods.</B> Methods having the<B> procedure</B> SOM IDL modifier cannot
+be invoked remotely using DSOM.  This is because these "methods" are called
+directly, rather than by the normal method resolution mechanisms on which
+DSOM relies.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+In addition to those coding practices which simply do not "port" to a distributed
+environment, there are a few other restrictions that are imposed by DSOM's
+(current) implementation.<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 --><B>Using parameter types not supported by DSOM.</B> DSOM
+can make remote invocations only of methods whose parameter types are among
+the following IDL types:  basic types<B> short, long, unsigned short, unsigned
+long,float, double, char, boolean, octet), enum struct, union, sequence,
+string, array, any,</B> and<B> object</B> (an interface name, designating
+a pointer to an object that supports that interface).  The members of a
+<B>struct, union, sequence,</B> or<B> array,</B> and the value of any<B> any,
+</B>must<!-- entering slot 300 --> also be from the above list of supported
+DSOM types.
+<P>
+In addition to the above types, DSOM also supports method parameters of
+type<B> pointer</B> to one of the above types (for example,<B>  long*</B>).
+ Pointers to pointers are not supported, however, and pointers embedded
+within one of the above types (for example, a pointer within a struct) are
+not supported.  The<B> "void*"</B> type is also not supported.  Currently,
+DSOM has the limitation that NULL pointer values cannot be returned as<B> inout
+</B>or<B> out</B> method arguments, although it is expected that this limitation
+will be addressed in the future release.
+<P>
+Types declared as SOMFOREIGN types are not currently supported by DSOM.
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><B>Packing of structures used as method arguments.
+</B>If a compiler option is used to pack or optimize storage of<B> structs
+</B>(including reordering of struct members) or<B> unions</B>, it is important
+to indicate the exact alignment of the structures using<I> alignment modifiers
+</I>expressed in the implementation section of the IDL file. This information
+must then be updated in the Interface Repository.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Some applications may need to associate specific identification information
+with an object, to support application-specific object location or activation.
+In that case, an application server should create object references explicitly,
+using the<B> create</B> or<B> create_constant</B> method in<B> SOMOA</B>.
+A logical place to put these calls is in a subclass of<B> SOMDServer,</B> as
+it is the server object that is responsible for producing/activating objects
+from object references.
+
+<P><HR>
+
+<A HREF="260_L4_RoleofSOMDServer.html">[Back: Role of SOMDServer]</A> <BR>
+<A HREF="262_L3_Usingotherobjectimpl.html">[Next: Using other object implementations]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,163 @@
+<HTML>
+<HEAD>
+<TITLE>Using TypeCode pseudo-objects</TITLE>
+</HEAD>
+<BODY>
+<H1>Using TypeCode pseudo-objects</H1><!-- entering slot 375 -->
+<P>
+Much of the detailed information contained in Interface Repository objects
+is represented in the form of<B> TypeCode</B>s.<B> TypeCode</B>s are complex
+data structures whose actual representation is hidden. A<B> TypeCode</B> is
+an architected way of describing in complete detail everything that is known
+about a particular data type in the IDL language, regardless of whether
+it is a (built-in)<I> basic</I> type or a  (user-defined)<I> aggregate</I>
+type.
+<P>
+Conceptually, every<B> TypeCode</B> contains a "kind" field (which classifies
+it), and one or more parameters that carry descriptive information appropriate
+for that particular category of<B> TypeCode</B>. For example, if the data
+type is<B> long</B>, its<B> TypeCode</B> would contain a "kind" field with
+the value<B> tk_long</B>. No additional parameters are needed to completely
+describe this particular data type, since<B> long</B> is a basic type in
+the IDL language.
+<P>
+By contrast, if the<B> TypeCode</B> describes an IDL<B> struct</B>, its
+"kind" field would contain the value<B> tk_struct</B>, and it would possess
+the following parameters: a string giving the name of the struct, and two
+additional parameters for each member of the struct: a string giving the
+member name and another (inner)<B> TypeCode</B> representing the member's
+type. This example illustrates the fact that<B> TypeCode</B>s can be nested
+and arbitrarily complex, as appropriate to express the type of data they
+describe. Thus, a structure that has N members will have a<B> TypeCode</B> of
+<B>tk_struct</B> with 2N+1 parameters (a name and<B> TypeCode</B> parameter
+for each member, plus a name for the struct itself).
+<P>
+A<B> tk_union TypeCode</B> representing a union with N members has 3N+2
+parameters: the type name of the union, the<B> switch TypeCode</B>, and
+a label value, member name and associated<B> TypeCode</B> for each member.
+(The label values all have the same type as the switch, except that the
+default member, if present, has a label value of zero<B> octet.)</B>
+<P>
+A<B> tk_enum TypeCode</B>  (which represents an enum) has  N+1 parameters:
+the name of the enum followed by a string for each enumeration identifier.
+A<B> tk_string TypeCode</B> has a single parameter: the maximum string length,
+as an integer. (A maximum length of zero signifies an unbounded string.)
+
+<P>
+A<B> tk_sequence TypeCode</B> has two parameters: a<B> TypeCode</B> for
+the sequence elements, and the maximum size, as an integer.  (Again, zero
+signifies unbounded.)
+<P>
+A<B> tk_array TypeCode</B> has two parameters: a<B> TypeCode</B> for the
+array elements, and the array length, as an integer. (Arrays must be bounded.)
+
+<P>
+The<B> tk_objref TypeCode</B> represents an object reference; its parameter
+is a repository ID that identifies its interface.
+<P>
+A complete table showing the parameters of all possible<B> TypeCodes</B> is
+given in the SOMobjects Base Toolkit Programmers Reference Manual; see the
+<B>TypeCode_kind</B> function of the Interface Repository Framework.
+<P>
+<B>TypeCode</B>s are not actually "objects" in the formal sense.<B> TypeCode</B>s
+are referred to in the CORBA standard as<I> pseudo-objects</I> and described
+as "opaque". This means that, in reality,<B> TypeCode</B>s are special data
+structures whose precise definition is not fully exposed. Their implementation
+can vary from one platform to another, but all implementations must exhibit
+a minimal set of architected behavior. SOM<B> TypeCode</B>s support the
+architected behavior and have additional capability as well (for example,
+they can be copied and freed).
+<P>
+Although<B> TypeCode</B>s are not objects, the programming interfaces that
+support them adhere to the same conventions used for IDL method invocations
+in SOM. That is, the first argument is always a<B> TypeCode</B> pseudo-object,
+and the second argument is a pointer to an<B> Environment</B> structure.
+Similarly, the names of the<B> TypeCode</B> functions are constructed like
+SOM's C-language method-invocation macros (all functions that operate<!-- entering slot 376 --> on
+<B>TypeCode</B>s are named<B> TypeCode</B>_&lt;<I>function-name</I>&gt;).
+Because of this ostensible similarity to an IDL class, the<B> TypeCode</B> programming
+interfaces can be conveniently defined in IDL as shown below.
+<P>
+A complete table showing the parameters of all possible<B>  TypeCodes</B> is
+given in the<I> SOMobjects Developer Toolkit Programmers Reference Manual;
+</I>see the<B> TypeCode_kind</B> function of the Interface Repository Framework.
+
+<PRE>interface TypeCode {
+
+enum TCKind {
+    tk_null, tk_void,
+    tk_short, tk_long, tk_ushort, tk_ulong,
+    tk_float, tk_double, tk_boolean, tk_char,
+    tk_octet, tk_any, tk_TypeCode, tk_Principal, tk_objref,
+    tk_struct, tk_union, tk_enum, tk_string,
+    tk_sequence, tk_array,
+
+    // The remaining enumerators are SOM-unique extensions
+    // to the CORBA standard.
+    //
+    tk_pointer, tk_self, tk_foreign
+};
+
+exception Bounds {};
+// This exception is returned if an attempt is made
+// by the parameter() operation (described below) to
+// access more parameters than exist in the receiving
+// TypeCode.
+
+boolean equal (in TypeCode tc);
+// Compares the argument with the receiver and returns TRUE
+// if both TypeCodes are equivalent.  This is NOT a test for
+// identity.
+
+TCKind kind ();
+// Returns the type of the receiver as a TCKind.
+
+long param_count ();
+// Returns the number of parameters that make up the
+// receiving TypeCode.
+
+any parameter (in long index) raises (Bounds);
+// Returns the indexed parameter from the receiving TypeCode.
+// Parameters are indexed from 0 to param_count()-1.
+//
+//  The remaining operations are SOM-unique extensions.
+//
+
+short alignment ();
+// This operation returns the alignment required for an instance
+// of the type described by the receiving TypeCode.
+
+TypeCode copy (in TypeCode tc);
+// This operation returns a copy of the receiving TypeCode.
+
+void free (in TypeCode tc);
+// This operation frees the memory associated with the
+// receiving TypeCode. Subsequently, no further use can be
+// made of the receiver, which, in effect, ceases to exist.
+
+void print (in TypeCode tc);
+// This operation writes a readable representation of the
+// receiving TypeCode to stdout.  Useful for examining
+// TypeCodes when debugging.
+
+void setAlignment (in short align);
+// This operation overrides the required alignment for an
+// instance of the type described by the receiving TypeCode.
+
+long size (in TypeCode tc);
+// This operation returns the size of an instance of the
+// type represented by the receiving TypeCode.
+};
+</PRE>
+
+<P>
+A detailed description of the programming interfaces for<B> TypeCode</B>s
+is given in the<I> SOMobjects Developer Toolkit: Programmers Reference Manual</I>.
+
+
+<P><HR>
+
+<A HREF="326_L3_Awordaboutmemorymana.html">[Back: A word about memory management]</A> <BR>
+<A HREF="328_L4_Providingalignmentin.html">[Next: Providing 'alignment' information]</A> 
+</BODY>
+</HTML>

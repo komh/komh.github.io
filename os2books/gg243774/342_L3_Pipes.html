@@ -1,0 +1,148 @@
+<HTML>
+<HEAD>
+<TITLE>Pipes</TITLE>
+</HEAD>
+<BODY>
+<H1>Pipes</H1><!-- entering slot 376 -->
+<P>
+While a queue may only be read by its owner, a pipe may be used for either
+read access, write access or both.  Pipes  function in a similar way to
+files, and once created, are accessed  using the OS/2 file system programming
+functions such as the <B> DosRead()</B> and<B> DosWrite()</B> functions.
+This means that pipes can be accessed by other applications in the  system
+that support file system operations, including applications  executing in
+virtual DOS machines.  In this way, interprocess communication can be  supported
+between an OS/2 application and a DOS or Windows application.
+<P>
+Pipes may be either named or anonymous.  Communication via an  anonymous
+pipe requires that the read and write handles for the pipe  are known to
+both processes involved in the communication.  Since these  handles are
+not shared by default, another means of passing the  handles, such as Presentation
+Manager messages or shared memory, must be used.  For  this reason, anonymous
+pipes are typically less useful than named pipes  for interprocess communication,
+and are therefore used mainly for  "streaming" communication between threads
+in the same process.
+<P>
+Named pipes are even more similar to files than anonymous pipes,  since
+they are initially accessed using predefined names rather than  requiring
+handles.  Hence a process may easily obtain access to a named  pipe, provided
+it knows the name of the pipe.  Once the pipe has been  created or opened,
+the process uses a pipe handle, which is similar to  a file handle, to access
+the pipe via<B> DosRead()</B> and<B> DosWrite()</B> function calls.
+<P>
+OS/2 V2.0 introduces a number of new functions for accessing named  pipes,
+which simplify programming in the client-server environment.  These are
+the<B> DosCallNPipe()</B> function and the<B> DosTransactNPipe()</B> function,
+both of which are explained in the following text.
+<P>
+Note that while queues allow many processes to access and write to  the
+queue, a named pipe is typically a one-to-one connection; the  creator of
+the pipe may interact with only one other process at a time,  and that process
+must relinquish access to the pipe before another  process may gain access.
+ For this reason, pipes have some limitations  when used in a client-server
+environment with many requesters being  serviced by a single server, as
+will become evident from the following  examples.
+<P>
+A named pipe is normally created by the server process, using the<B> DosCreateNPipe()
+</B>function. During creation of the pipe, the server specifies the type
+of access  that is allowed for the pipe.  The following types of access
+are valid:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Inbound access (client to server)<!-- lm: 0x2 0 -->
+<BR>
+<LI><!-- lm: 0x2 2 -->Outbound access (server to client)<!-- lm: 0x2 0 -->
+<BR>
+<LI><!-- lm: 0x2 2 -->Duplex (both).<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+Since only one client process may have access to a named pipe at any  given
+time, the requester must wait for the named pipe to become  available, using
+the<B> DosWaitNPipe()</B> function.
+<P>
+<A HREF="097_L2_InterprocessCommunic.html">Figure "Interprocess Communication
+Using Named Pipes (Part 1)"</A> shows a secondary thread routine in a requester
+ process, which is dispatched to make a request to a server process.
+<P>
+In the example shown in <A HREF="097_L2_InterprocessCommunic.html">Figure
+"Interprocess Communication Using Named Pipes (Part 1)"</A>, the requester
+dispatches  a secondary thread that waits synchronously for the named pipe
+to  become available.  This thread accepts a pointer to a data structure
+ that contains the request and reply buffers along with the window handle
+of the window that initiated the thread. This window handle is included
+so that a notification message can be posted to the window when the request
+is complete.  Since a separate thread is dispatched for each request, the
+thread terminates when the reply is returned by the server.  Hence no object
+window is necessary.
+<P>
+When the pipe becomes available, the requester opens the pipe, writes the
+request, reads the reply and then<!-- entering slot 377 --> closes the pipe.
+ These functions are all performed by a single call to the <B> DosCallNPipe()
+</B>function. This function actually opens the pipe using a<B> DosOpen()
+</B>function call, and writes the request to the pipe using the<B> DosWrite()
+</B>function. The reply is read using the<B> DosRead()</B> function and
+the pipe is closed using the<B> DosClose()</B> function. Use of the<B> DosCallNPipe()
+</B>function simplifies the  application code by allowing the programmer
+to combine these operations into a single function call.
+<P>
+Once the reply is received from the server and the <B> DosCallNPipe()</B> function
+returns, the requester thread notifies the window from which the request
+was made, by posting a Presentation Manager message to it.  The pointer
+to the transaction data structure initially passed to the thread is returned
+with the message, enabling the window procedure to easily differentiate
+this request from any others that may currently be active.
+<P>
+The server process creates the named pipe, as shown in <A HREF="098_L2_InterprocessCommunic.html">Figure
+"Interprocess Communication Using Named Pipes (Part 2)"</A>, using the<B> DosCreateNPipe()
+</B>function.
+<P>
+Once the pipe is created, the server process makes the pipe available  to
+a requester process by issuing a<B> DosConnectNPipe()</B> function call.
+ This enables any requester processes currently waiting for the pipe to
+contend for ownership.  The requester that claims ownership returns from
+its<B> DosWaitNPipe()</B> call, while other requesters continue to wait.
+
+<P>
+The server then uses the<B> DosRead()</B> function to retrieve a request
+from the pipe.  Since blocking mode is selected in the<B> DosCreateNPipe()
+</B>call by specifying the NP_WAIT flag, the<B> DosRead()</B> call does
+not return until a request becomes available.
+<P>
+Once the read operation completes, the server process services the  request
+and writes the returned data back to the pipe using the <B> DosWrite()</B> function.
+ It then informs the requester that the  request has completed, using a
+Presentation Manager message, and obtaining the window  handle of the requester
+from the<I> Request</I> structure.
+<P>
+Note that the server process cannot make the pipe available to other requesters
+by issuing a<B> DosDisconnectNPipe()</B> call, until the current requester
+has completed retrieval of the information from the pipe.  If this call
+is issued before the requester retrieves  its returned data, the requester's
+<B>DosRead()</B> call will  fail.  The server ensures that correct synchronization
+is maintained by  passing the completion message<I> synchronously</I> using
+the <B> WinSendMsg()</B> function.  For this reason, and in order to  ensure
+that user responsiveness is maintained, it is recommended that  requesters
+interacting with named pipes should do so from within object windows created
+in secondary threads under the control of the  application's primary process.
+
+<P>
+Once the pipe is made available once more, this cycle of operations continues
+for each request issued to the server.  The server process is suspended
+within the<B> DosConnectNPipe()</B> call until a request is issued by a
+requester process.
+<P>
+Note that where a one-to-one relationship exists between the server and
+requester processes, the requester need not relinquish access to the named
+pipe between requests.  In such situations, the named pipe would be opened
+by the requester using the<B> DosOpen()</B> function directly, and accessed
+using the<B> DosTransactNPipe()</B> function. This function combines the
+<B>DosWrite()</B> and<B> DosRead()</B> functions.  When the secondary thread
+is terminated, it can relinquish access to the pipe using the <B> DosClose()
+</B>function.
+
+<P><HR>
+
+<A HREF="341_L3_Queuescontinued.html">[Back: Queues (continued)]</A> <BR>
+<A HREF="343_L2_MaintainingSynchroni.html">[Next: Maintaining Synchronization]</A> 
+</BODY>
+</HTML>

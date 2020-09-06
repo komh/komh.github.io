@@ -1,0 +1,308 @@
+<HTML>
+<HEAD>
+<TITLE>NetAccessGetUserPerms or Net32AccessGetUserPerms</TITLE>
+</HEAD>
+<BODY>
+<H1>NetAccessGetUserPerms or Net32AccessGetUserPerms</H1><!-- entering slot 78 -->NetAccessGetUserPerms or Net32AccessGetUserPerms
+
+<P>
+The NetAccessGetUserPerms API supplies a specified user's or group's permission
+to a resource.  The resource can be a file, directory, drive, or logical
+resource and can be specified remotely by a universal naming convention
+(UNC) path as well as by a server name.
+<P>
+The permissions returned are based on the user's entry and the entry for
+any groups to which the user belongs. Priority always is given to the user's
+entry, if one exists.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Restrictions
+<P>
+<!-- lm: 0x2 10 -->
+<UL><B>LAN Server and OS/2 Warp Server Only</B>
+<P>
+This API can be called from DLS and OS/2 workstations, but DLS workstations
+can only issue this call to a remote LAN Server workstation.  OS/2 workstations
+can issue this call locally only if the Peer service is started.
+<P>
+The NetAccessGetUserPerms API requires administrator authority, with the
+exception that users always are allowed to request their own permissions
+to any resource. In addition, a user with ACCESS_PERM permission (see the
+pPermission parameter description) to the resource can get the permissions
+for any user or group.
+<P>
+<B>Directory and Security Server Only</B>
+<P>
+The rules for checking differ if the user ID being checked is not the callers
+or the caller is not a member of the group being checked.
+<P>
+This API is supported with the following restrictions:<!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 -->Group name checked returns access permissions based
+on the group and group_obj ACL entries.<!-- lm: 0x2 12 -->
+<P>
+<LI><!-- lm: 0x2 15 -->If the user name being checked is not the same as
+the caller, the API returns access based on user, other_obj, and any-other
+ACL  entries.
+<BR>
+<!-- lm: 0x2 12 -->
+<P>
+<LI><!-- lm: 0x2 15 -->Caller must have `t' permission on the resource unless
+the caller is a member of the group being checked or the user ID is the
+caller's.<!-- lm: 0x2 12 -->
+<P>
+<LI><!-- lm: 0x2 15 -->Local calls get ERROR_ACCESS_DENIED returned if the
+caller is not logged on.<!-- lm: 0x2 10 -->
+</UL><!-- lm: 0x2 1 -->
+</UL>Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>#include &lt;netcons.h&gt;#include &lt;access.h&gt;
+ 
+NetAccessGetUserPerms(<I>pszServername</I>, <I>pszUserOrGroupID</I>,
+                      <I>pszResource</I>, <I>pPermission</I>);     /* 16 bit */
+ 
+Net32AccessGetUserPerms(<I>pszServername</I>, <I>pszUserOrGroupID</I>,
+                      <I>pszResource</I>, <I>pPermission</I>);     /* 32 bit */
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Parameters
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+See <A HREF="021_L2_CommonParameterDefin.html">Common Parameter Definitions
+</A>for descriptions of parameters not defined here.<!-- lm: 0x2 10 -->
+<P>
+<I>pPermission</I><!-- lm: 0x12 20 -->
+<UL> (16-bit unsigned short LSFAR
+* or 32-bit unsigned long LSFAR *) points to a bit mask specifying the access
+permission level granted to the user or group ID to which<I> pszUserOrGroupID
+</I>points.
+<P>
+The ACCESS.H header file defines the following possible  values for the
+
+<BR>
+bit mask: ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+<BR>
+³ SYMBOLIC CONSTANT    ³ VALUE ³ MEANING                   ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ACCESS_NONE       ³ 0   ³ No permission to access the resource.    ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ACCESS_READ       ³ 0x01  ³ Permission to read data from a resource   ³
+<BR>
+³             ³    ³ and, by default, run the resource.     ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ACCESS_WRITE       ³ 0x02  ³ Permission to write data to the resource.
+ ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ACCESS_CREATE      ³ 0x04  ³ Permission to create an instance of the 
+³
+<BR>
+³             ³    ³ resource (such as a file); data can be   ³
+<BR>
+³             ³    ³ written to the resource when the resource  ³
+<BR>
+³             ³    ³ is being created.              ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ACCESS_EXEC       ³ 0x08  ³ Permission to run the resource.       ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ACCESS_DELETE      ³ 0x10  ³ Permission to delete the resource.     ³
+
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ACCESS_ATRIB       ³ 0x20  ³ Permission to change the attributes of a
+ ³
+<BR>
+³             ³    ³ resource (such as the date and time a file ³
+<BR>
+³             ³    ³ was last changed).             ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ACCESS_PERM       ³ 0x40  ³ Permission to change the permissions    ³
+
+<BR>
+³             ³    ³ (read, write, create, execute, and delete) ³
+<BR>
+³             ³    ³ assigned to a resource for a user or    ³
+<BR>
+³             ³    ³ application.                ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ACCESS_ALL        ³ 0x7F  ³ Permission to read, write, create,     ³
+<BR>
+³             ³    ³ execute, or delete a resource, or to    ³
+<BR>
+³             ³    ³ change attributes or permissions.      ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ACCESS_GROUP       ³ 0x8000³ Permission for a particular group; if    ³
+<BR>
+³             ³    ³ returned, indicates that the entry is for  ³
+<BR>
+³             ³    ³ a group.                  ³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ<!-- entering slot 79 -->Ù
+<BR>
+<!-- lm: 0x2 10 -->
+</UL><!-- lm: 0x2 1 -->
+</UL>Return Codes
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+The following table lists the return codes most significant to this API.
+ (See <A HREF="462_L1_APIReturnCodes.html">API Return Codes</A> for a complete
+list of return codes.) ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³SYMBOLICCONSTANT
+    ³VALUE³MEANING                ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_Success         ³ 0   ³ No errors were encountered.       ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_ACCESS_DENIED     ³ 5   ³ Administrator privilege is required.  ³
+
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_NOT_SUPPORTED     ³ 50   ³ This request is not supported by the
+ ³
+<BR>
+³               ³    ³ network.                ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_BAD_NETPATH      ³ 53   ³ The network path cannot be found.    ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_NETWORK_ACCESS_DENIED ³ 65   ³ Network access is denied.        ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_INVALID_PARAMETER   ³ 87   ³ At least one parameter value is not
+  ³
+<BR>
+³               ³    ³ valid.                 ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_INVALID_LEVEL     ³ 124  ³ The sLevel parameter is not valid.   ³
+
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_NetNotStarted      ³ 2102  ³ The redirector NETWKSTA.200 has not
+  ³
+<BR>
+³               ³    ³ been started.              ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_RemoteOnly       ³ 2106  ³ This operation is not supported on   ³
+
+<BR>
+³               ³    ³ workstations.              ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_InternalError      ³ 2140  ³ An internal error has occurred.     ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_BadTransactConfig    ³ 2141  ³ The server is not configured for 
+ ³
+<BR>
+³               ³    ³ transactions.              ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_InvalidAPI       ³ 2142  ³ The requested API is not supported on
+ ³
+<BR>
+³               ³    ³ the remote server.           ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_ACFNotFound       ³ 2219  ³ The NET.ACC file is missing.      ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_UserNotFound      ³ 2221  ³ The user name cannot be found.     ³
+
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_ResourceNotFound    ³ 2222  ³ The netname cannot be found.      ³
+
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_ACFNotLoaded      ³ 2227  ³ The UAS database has not been started.
+³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_ACFFileIOFail      ³ 2229  ³ An error was encountered in accessing
+ ³
+<BR>
+³               ³    ³ the accounts database.         ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_InvalidDatabase     ³ 2247  ³ The UAS database file is damaged. 
+ ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_InvalidComputer     ³ 2351  ³ The specified computer name is not
+  ³
+<BR>
+³               ³    ³ valid.                 ³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+
+<P>
+Other codes could be returned from the following functions:<!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 -->DosAllocSeg<!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 -->DosChgFilePtr<!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 -->DosFsCtl<!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 -->DosGetShrSeg<!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 -->DosOpen<!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 -->DosRead<!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="064_L2_NetAccessGetInfoorNe.html">[Back: NetAccessGetInfo or Net32AccessGetInfo]</A> <BR>
+<A HREF="066_L2_NetAccessSetInfoorNe.html">[Next: NetAccessSetInfo or Net32AccessSetInfo]</A> 
+</BODY>
+</HTML>

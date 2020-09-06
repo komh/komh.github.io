@@ -1,0 +1,65 @@
+<HTML>
+<HEAD>
+<TITLE>Implementing a Private Rendering Mechanism</TITLE>
+</HEAD>
+<BODY>
+<H1>Implementing a Private Rendering Mechanism</H1><!-- entering slot 337 -->
+<P>
+The<I> OS/2 2.0 Programming Guide Volume II</I> gives some advice on use
+of the various messages available to implement a private rendering mechanism,
+and also some guidelines on how such a rendering mechanism should be documented.
+ This section illustrates the implementation of a simple rendering mechanism,
+by explaining the definition of the DRM_SHAREMEM rendering mechanism used
+by the examples earlier in this chapter.
+<P>
+A rendering mechanism is necessary to pass the customer record data used
+in the examples, since the CUSTOMER structure that contains this data is
+too large to be contained within the DRAGITEM structure. It is therefore
+necessary, after a drop has occurred, for the source program to make the
+relevant data available to the target, in a format which is understood by
+and accessible to both the source and the target.  In the examples, a named
+shared memory object is used to transfer the data; hence the name DRM_SHAREMEM
+used for the rendering mechanism.
+<P>
+The DRM_SHAREMEM rendering mechanism operates as follows:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->The source window stores a pointer to the customer
+record being dragged in the<I> ulItemID</I> field of the DRAGITEM structure.
+ This field is defined as ULONG, but it can be used in any way that is meaningful
+to the source window to identify the item being dragged.  A pointer to the
+customer record is a convenient way to do this.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->The target window, on receiving a DM_DROP message,
+allocates a named shared memory object with a name of its choice.  It then
+sends a DM_RENDER message to the source window, passing the name of the
+memory object in the<I> hstrRenderToName</I> field of the DRAGTRANSFER structure,
+and indicating whether it requires a copy (DO_COPY) or a move (DO_MOVE)
+to take place, using the usOperation field of the DRAGTRANSFER structure.
+<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->When the source window receives the DM_RENDER message,
+it obtains access to the shared memory object and places the customer record
+in that object.  The source window knows which customer record to copy,
+since the DRAGITEM structure, which includes a pointer to the customer record,
+is passed along with the DRAGTRANSFER structure.
+<P>
+Finally, if a move operation was requested by the target, the source window
+deletes the customer record from its own data.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->On receiving a TRUE return code from the DM_RENDER
+message, indicating that the data was successfully rendered, the target
+window copies the data out of the shared memory object, and uses it in whatever
+way it chooses.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+It should be stressed that this is a very simple rendering mechanism. However,
+it illustrates the general structure of such mechanisms, and their impact
+on the contents of fields in the DRAGITEM and DRAGTRANSFER structures.
+
+<P><HR>
+
+<A HREF="304_L3_StandardRenderingMec.html">[Back: Standard Rendering Mechanisms]</A> <BR>
+<A HREF="306_L2_Summary.html">[Next: Summary]</A> 
+</BODY>
+</HTML>

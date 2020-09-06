@@ -1,0 +1,100 @@
+<HTML>
+<HEAD>
+<TITLE>Using the CD-XA Device</TITLE>
+</HEAD>
+<BODY>
+<H1>Using the CD-XA Device</H1><!-- entering slot 115 -->
+<P>
+When an MCI_OPEN or MCI_LOAD request is made, it is recommended that a drive
+letter not be included as part of the element name. If a drive letter is
+specified, it must match the drive letter of the open device; otherwise,
+the error MCI_FILE_NOT_FOUND is returned.
+<P>
+<B>Setting Up the Primary Stream</B>
+<P>
+The first stream is set up by calling MCI_SET with one of the four target
+specifications:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+MCI_CDXA_AUDIO_DEVICE<!-- lm: 0x2 6 -->
+<BR>
+MCI_CDXA_AUDIO_BUFFER<!-- lm: 0x2 6 -->
+<BR>
+MCI_CDXA_VIDEO_BUFFER<!-- lm: 0x2 6 -->
+<BR>
+MCI_CDXA_DATA_BUFFER<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The first stream to be set up is called the<I> primary</I> stream, because
+it controls much of the operation of the CD-XA device. When stream control
+operations are done on the CD-XA media device, they are done to the primary
+stream.  For example, when an MCI_SEEK is done, only the primary stream
+is seeked. This makes sense because the media is the same for all streams,
+and seeking one of the streams affects the disc position for all the other
+streams.
+<P>
+Because the primary stream is the control focus for the entire device, if
+an MCI_SET is done while the MCI_SET_OFF flag is in effect for the primary
+stream, the device is stopped. If the MCI_SET is done on a secondary stream,
+only that secondary stream is stopped.
+<P>
+If an MCI_SET with MCI_SET_ON is not done before an MCI_PLAY, MCI_CUE, or
+MCI_SEEK is sent, the first audio channel found on the CD-XA file is used
+as the default and is set up as the primary stream using the MCI_CDXA_AUDIO_DEVICE.
+It is recommended that an MCI_SET be sent for the primary stream before
+an MCI_PLAY, MCI_CUE or MCI_SEEK. It is also recommended that MCI_CDXA_AUDIO_DEVICE
+be used as the primary stream, because seeking and playing with FROM and
+TO positions specified can only be done on a stream to an audio device.
+The video, data and audio buffers do not have seek or time capability.  When
+CD-XA data types are streamed to memory playlists, this operation is done
+as a data transport and does not have a real timing aspect associated with
+it.  For example, if an MCI_SET with an MCI_CDXA_DATA_BUFFER stream was
+set as the primary stream, a seek or a status position to an MMTIME unit
+or millisecond does not make sense, because there is no correlation of time
+to the data volumes.
+<P>
+When an MCI_SET with MCI_CDXA_AUDIO_DEVICE is done, the audio quality level
+is set by the media device, based on the quality level found in the first
+sector.  The audio quality level must be constant within a channel within
+a single file when streamed to an audio device. The current CD-XA software
+does not detect any deviations that occur. If the quality level changes
+in a channel, the output audio may be garbled and the stream time will be
+inaccurate.
+<P>
+If the channel associated with the primary stream is set off and a PLAY
+command is received, the error MCIERR_CHANNEL_OFF will be returned.
+<P>
+The valid range for audio channels is 0-15.  The valid range for video and
+data channels is 0-31.  These ranges are defined by CD-XA specifications.
+ MCIERR_OUTOFRANGE is returned if the channel specified on the MCI_SET is
+outside the range.
+<P>
+The channel assigned to a secondary target specification (MCI_CDXA_AUDIO_DEVICE,
+MCI_CDXA_AUDIO_BUFFER, MCI_CDXA_VIDEO_BUFFER, or MCI_CDXA_DATA_BUFFER) can
+be changed without closing the CD-XA media device.  To do this, your application
+calls MCI_SET with the MCI_SET_OFF flag for that channel and then calls
+MCI_SET with the MCI_SET_ON flag and the new channel number.  If MCI_SET
+with the MCI_SET_ON flag is called for a target specification already in
+use, MCIERR_RESOURCE_NOT_AVAILABLE is returned if the system or underlying
+hardware cannot support the additional resource demands.
+<P>
+The channel assigned to the primary target specification can be changed
+just like a secondary one can. For example, a series of MCI_SET commands
+could be made, specifying the following parameter sequences:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+MCI_CDXA_AUDIO_DEVICE channel 0 MCI_SET_ON<!-- lm: 0x2 6 --> MCI_CDXA_AUDIO_DEVICE
+channel 0 MCI_SET_OFF<!-- lm: 0x2 6 -->
+<BR>
+MCI_CDXA_AUDIO_DEVICE channel 1 MCI_SET_ON<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The MCI_SET commands would change the channel of the MCI_CDXA_AUDIO_DEVICE
+from 0 to 1.
+
+<P><HR>
+
+<A HREF="103_L2_CDXADataTypes.html">[Back: CD-XA Data Types]</A> <BR>
+<A HREF="105_L3_XAStreamConnector.html">[Next: XA Stream Connector]</A> 
+</BODY>
+</HTML>

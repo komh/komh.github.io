@@ -1,0 +1,141 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>WinTrackRect - Remarks</TITLE>
+</HEAD>
+<BODY>
+<H1>WinTrackRect - Remarks</H1><!-- entering slot 3442 -->
+<P>
+The WinTrackRect call provides general-purpose pointing-device tracking.
+It draws a rectangle and enables the user to position the entire rectangle,
+or size a specific side or corner, as required. The resulting rectangle
+is then returned to the application, which can use this new information
+for size and position data. The window manager interface for moving and
+sizing windows by means of the wide sizing borders uses this function, for
+example.
+<P>
+This function enables the caller to control such limiting values as:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->A maximum and minimum tracking size<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Absolute tracking-position limits<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->The tracking rectangle side widths<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->A restriction of tracking rectangle movements to a
+predefined positional grid.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+It automatically calls <A HREF="1509_L2_WinLockWindowUpdate.html">WinLockWindowUpdate
+</A>to prevent output in the window<I> hwnd</I> and its descendants while
+tracking. When tracking has been completed, output is enabled before this
+function returns. It also determines which button of the pointing device
+is depressed at the start of the operation, and only completes the tracking
+operation when the same button is released.
+<P>
+If the parameter of the<A><!-- external link: 1D 80 C8 D2 --> TRACKINFO
+</A>structure specified by the value is included, the pointing device pointer
+is positioned at the center of the tracking rectangle. Otherwise, the pointing
+device pointer is not moved from its current position and<I> delta</I> is
+established between the pointing device position and the part of the tracking
+rectangle that it moves (the<I> delta</I> is kept constant).
+<P>
+While moving or sizing with the keyboard interface, the pointing device
+pointer is repositioned with the tracking rectangle's new size or position.
+
+<P>
+While tracking, these keys are active:<!-- lm: 0x2 1 -->
+<P>
+Enter<!-- lm: 0x2 16 -->
+<UL> Accepts the new position or size.<!-- lm: 0x2 1 -->
+</UL> Left
+cursor<!-- lm: 0x2 16 -->
+<UL> Moves the pointing device pointer and tracking
+rectangle left.
+<P>
+If the pointing device pointer is on the upper or lower edge of the tracking
+rectangle, the pointer is moved to the top-left or bottom-left corner respectively.
+<!-- lm: 0x2 1 -->
+</UL>Up cursor<!-- lm: 0x2 16 -->
+<UL> Moves the pointing
+device pointer and tracking rectangle up.
+<P>
+If the pointing device pointer is on the left or right edge of the tracking
+rectangle, the pointer is moved to the top-left or top-right corner respectively.
+<!-- lm: 0x2 1 -->
+</UL>Right cursor<!-- lm: 0x2 16 -->
+<UL> Moves the pointing
+device pointer and tracking rectangle right.
+<P>
+If the pointing device pointer is on the upper or lower edge of the tracking
+rectangle, the pointer is moved to the top-right or bottom-right corner
+respectively.<!-- lm: 0x2 1 -->
+</UL> Down cursor<!-- lm: 0x2 16 -->
+<UL> Moves
+the pointing device pointer and tracking rectangle down.
+<P>
+If the pointing device pointer is on the left or right edge of the tracking
+rectangle, the pointer is moved to the bottom-left or bottom-right corner
+respectively.<!-- lm: 0x2 1 -->
+</UL> Esc<!-- lm: 0x2 16 -->
+<UL> Cancels
+the current tracking operation. The value of the tracking rectangle is undefined
+on exit.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The pointing device and the keyboard interface can be intermixed. The caller
+need not include the value to use the keyboard interface, as this value
+simply initializes the position of the pointing device pointer.
+<P>
+If is specified in the<A><!-- external link: 1D 80 C8 D2 --> TRACKINFO</A> structure,
+the interior of the tracking rectangle is restricted to multiples of the
+values of the parameters. The default values for these are the system font
+character width and half the system font character height, respectively.
+
+<P>
+Tracking movements using the keyboard arrow keys depend on whether or not
+is specified in the<A><!-- external link: 1D 80 C8 D2 --> TRACKINFO</A> structure,
+If not specified, the increments are the values of the keyboard arrow keys
+do not cause tracking.
+<P>
+The tracking rectangle is usually logically "on top" of objects it tracks,
+so that the user can see the old size and position while tracking the new.
+Thus, it is possible for a window "below" the tracking rectangle to be updated
+while part of the tracking rectangle is "above" it.
+<P>
+Because the tracking rectangle is drawn in exclusive-OR mode, no window
+can draw below the tracking rectangle (and thereby obliterate it) without
+first notifying the tracking code, because unwanted areas of the tracking
+rectangle can be left behind. If the window doing the drawing is clipped
+out from the window in which the tracking is occurring, this problem does
+not arise.
+<P>
+To prevent a window that is currently processing a<A><!-- external link: 1D 8A C7 FC --> WM_PAINT
+</A>message drawing over the tracking rectangle, the tracking rectangle
+is considered as a system-wide resource, only one of which can be in use
+at any time. If there is a risk of the currently-updating window drawing
+on the tracking rectangle, the tracking rectangle is removed while that
+window and its child windows<!-- entering slot 3443 --> update, and it is
+then replaced. This is done during the <A HREF="054_L2_WinBeginPaint.html">WinBeginPaint
+</A>and <A HREF="838_L2_WinEndPaint.html">WinEndPaint</A> functions. If
+the tracking rectangle overlaps, it is removed in the <A HREF="054_L2_WinBeginPaint.html">WinBeginPaint
+</A>function. In the <A HREF="838_L2_WinEndPaint.html">WinEndPaint</A> function,
+all the child windows are updated by means of the <A HREF="3470_L2_WinUpdateWindow.html">WinUpdateWindow
+</A>function before the tracking rectangle is redrawn.
+<P>
+WinTrackRect has a modal loop within it. The loop has a HK_MSGFILTER hook
+and a MSGF_TRACK hook code.
+<P>
+<B>Note: </B> The rectangle tracked by this function stays within the specified
+tracking bounds and dimensions. If the rectangle passed is out of these
+bounds, or it is too large or too small, it is modified to a rectangle that
+meets these limits.<!-- lm: 0x2 1 -->
+<P>
+
+
+<P><HR>
+
+<A HREF="3427_L2H_WinTrackRectParamete.html">[Back: WinTrackRect - Parameters]</A> <BR>
+<A HREF="3429_L2H_WinTrackRectErrors.html">[Next: WinTrackRect - Errors]</A> 
+</BODY>
+</HTML>

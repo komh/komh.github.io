@@ -1,0 +1,109 @@
+<HTML>
+<HEAD>
+<TITLE>Opening Named Pipes</TITLE>
+</HEAD>
+<BODY>
+<H1>Opening Named Pipes</H1><!-- entering slot 72 -->
+<P>
+A client process can open the client end of a named pipe by using<A><!-- external link: 1D 9F C3 FC --> DosOpen</A>.
+<A><!-- external link: 1D 9F C3 5D -->DosOpen</A> opens the client end of
+a pipe by name and returns a handle. The application must use the appropriate
+pipe name and access modes to open the pipe for reading, writing, or both.
+(To open a pipe on a remote computer, the client process must also specify
+the name of the computer system as part of the pipe name, as follows:
+<PRE>    \\ComputerName\PIPE\PipeName.)
+</PRE>
+
+<P>
+If a pipe name includes a remote LAN server name,<A><!-- external link: 1D 9F C3 5D --> DosOpen
+</A>attempts to open the pipe on a remote computer. The server process can
+then read input from the client process through the pipe.
+<P>
+
+<P>
+The following code fragment opens a remote pipe, reads from the standard
+input (usually the keyboard), and sends the information to the server process
+through the pipe:
+<PRE>    #define INCL_DOSQUEUES   /* Queue values          */
+    #include &lt;os2.h&gt;
+
+    #define PIPESIZE 256
+    #define SERVER_PIPE_NAME "\\\\myserver\\pipe\\mypipe"
+    #define HF_STDIN 0       /* Standard input handle */
+
+    HPIPE   hp;
+    BYTE    abBuf[PIPESIZE];
+    ULONG   ulAction, ulRead, ulWritten;
+    APIRET  ulrc;
+
+    ulrc = DosOpen(SERVER_PIPE_NAME,
+                   &amp;hp,
+                   &amp;ulAction,
+                   0,
+                   FILE_NORMAL,
+                   FILE_OPEN,
+                   OPEN_ACCESS_READWRITE |
+                   OPEN_SHARE_DENYNONE,
+                   (PEAOP) NULL);
+
+    if (ulrc)
+        DosExit(EXIT_PROCESS,
+                0);                    /* Open pipe failed      */
+
+    do {                               /* Open pipe succeeded   */
+        DosRead(HF_STDIN,
+                abBuf,
+                sizeof(abBuf),
+                &amp;ulRead);
+
+        DosWrite(hp,
+                 abBuf,
+                 ulRead,
+                 &amp;ulWritten);     /* Writes to the pipe    */
+    } while (ulRead &gt; 2);         /* Stop on a blank line  */
+
+    DosClose(hp);
+
+</PRE>
+
+<P>
+The client process checks the return value from<A><!-- external link: 1D 9F C3 5D --> DosOpen
+</A>to verify that the pipe was actually opened. If the server process has
+not yet created the pipe,<A><!-- external link: 1D 9F C3 5D --> DosOpen
+</A>returns an error. When the client process finishes using the pipe, it
+closes the pipe by using<A><!-- external link: 1D 65 C3 FC --> DosClose</A>.
+
+<P>
+When a named pipe is opened, its initial state is set by the system to block
+read and write operations (blocking mode), and to read data as a byte stream
+(byte-read mode). However, the client can change these modes by calling
+<A><!-- external link: 1D F0 C3 FC -->DosSetNPHState</A>. A call to<A><!-- external link: 1D 9F C3 5D --> DosOpen
+</A>fails if all instances of the named pipe are already open.
+<P>
+The open also fails if the pipe has been closed by a client, but the server
+has not called<A><!-- external link: 1D 7B C3 5A --> DosDisConnectNPipe
+</A>(to acknowledge the client's close), followed by<A><!-- external link: 1D 6B C3 59 --> DosConnectNPipe
+</A>(to prepare the pipe for the next client). In both of these situations,
+ERROR_PIPE_BUSY is returned.
+<P>
+If all instances of a named pipe are busy, a client process can call<A><!-- external link: 1D 0D C4 61 --> DosWaitNPipe
+</A>to wait for an instance to become available before it calls<A><!-- external link: 1D 9F C3 5D --> DosOpen
+</A>again.
+<P>
+After a pipe instance has been opened by a client, that same instance cannot
+be opened by another client at the same time.  However, the opening process
+can duplicate the handle as many times as desired by calling<A><!-- external link: 1D 7C C3 FC --> DosDupHandle</A>.
+This enables child processes to share access to a pipe instance with a parent
+process.
+<P>
+The access-mode and sharing-mode fields that are specified for<A><!-- external link: 1D 9F C3 5D --> DosOpen
+</A>must be the same as those that were specified by the server<!-- entering slot 73 --> when
+it created the pipe with<A><!-- external link: 1D 71 C3 FC --> DosCreateNPipe</A>.
+
+
+<P><HR>
+
+<A HREF="068_L3_CreatingNamedPipes.html">[Back: Creating Named Pipes]</A> <BR>
+<A HREF="070_L3_ReadingfromNamedPipe.html">[Next: Reading from Named Pipes]</A> 
+</BODY>
+</HTML>

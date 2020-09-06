@@ -1,0 +1,61 @@
+<HTML>
+<HEAD>
+<TITLE>General DCE Performance Suggestions</TITLE>
+</HEAD>
+<BODY>
+<H1>General DCE Performance Suggestions</H1><!-- entering slot 45 -->
+<P>
+If your server does a lot of lookups from the backing store routines, you
+might speed it up by loading the whole database into memory at startup time,
+trading off space for time.  This of course assumes that the database fits
+into memory and you have memory to spare.
+<P>
+A functional problem can sometimes appear to be a performance problem.  If
+you have replicated servers and one of the servers goes down, clients may
+timeout trying to talk to the dead server before trying the functioning
+server.  This gives the appearance that the system is working slowly.
+<P>
+While RPCs continue to work at low speeds, large amounts of data still take
+a while to get across the link.  If you expect your application to be operating
+in a low-speed environment, it is very important to follow the suggestions
+given above for reducing marshalling time.  Only exchange the minimum amount
+of data necessary to get the job done.
+<P>
+Remember to free memory returned by DCE APIs.  Over time, a small memory
+leak in a server can build up to a large amount of wasted swapper space,
+and cause performance degradation of the system as a whole, as more time
+is spent swapping memory in and out from disk, and less time spent doing
+useful work.
+<P>
+Many of the data structures that APIs return have their own free routines
+(for example,<B> rpc_string_free</B>) while others are just freed by the
+generic<B> dce_free</B>.  Also be aware of when you should be using<B> rpc_ss_mem_free</B>.
+
+<P>
+Also, the sizing of the application servers depends on the types of transactions.
+ For example, compare the TPC-A benchmark, where speeds are expressed in
+transactions per second, to the TPC-C benchmark, where speeds are expressed
+in transactions per minute.  A server can support several more TPC-A clients
+than TPC-C clients.
+<P>
+Dynamic sizing takes several steps.  First you need to determine your application's
+load on the security and CDS servers, then decide the server resources required.
+Because CDS keeps its directory in memory, it should be CPU-bound and scale
+about the same as standard benchmarks.  The security server tends to have
+a lot less interaction with applications.
+<P>
+Second, you need to measure your application server, to find out what throughput
+it can sustain.  This depends on the application itself.  If you can do
+a comparison of its requirements to the TPC benchmarks, you might be able
+to come up with a scaling factor to use, for example, for TPC-A numbers
+that you could use to estimate the capacity of different machines based
+on their published TPC-A numbers.  Keep in mind that the TPC benchmark numbers
+are probably much higher than the typical application, because vendors put
+much effort into ensuring that their systems can get high TPC numbers.
+
+<P><HR>
+
+<A HREF="037_L2_DSSIssues.html">[Back: DSS Issues]</A> <BR>
+<A HREF="039_L3_UsingThreads.html">[Next: Using Threads]</A> 
+</BODY>
+</HTML>

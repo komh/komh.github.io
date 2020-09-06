@@ -1,0 +1,136 @@
+<HTML>
+<HEAD>
+<TITLE>How do I save and restore my window size and position?</TITLE>
+</HEAD>
+<BODY>
+<H1>How do I save and restore my window size and position?</H1><!-- entering slot 76 -->
+<P>
+Here is code I use to restore a saved window position, which includes checks
+to make sure the user hasn't saved a window position at one screen resolution
+and then restored it at a different screen resolution (which might cause
+the window's frame controls to be completely off the display -- we've all
+seen that, right???):
+<PRE> BOOL SetWindowPosition (const HAB hab, const HWND hwndFrame,
+                         const SWP swpConfig)
+ {
+     SWP swp ;
+     APIRET ulRC ;
+
+     // Initialize the window positioning flags.
+     swp.fl = SWP_ACTIVATE | SWP_MOVE | SWP_SIZE | SWP_SHOW ;
+
+     /* Check for saved user preferences for screen width/height in
+      * config file.  Did user want to start maximized?
+      */
+     if (swpConfig.fl &amp; SWP_MAXIMIZE)
+     {
+         // Get maximized frame window position and size.
+         ulRC = WinGetMaxPosition (hwndFrame, &amp;swp) ;
+         if (!ulRC)
+         {
+             // Report error, and then ...
+             return TRUE ;
+         }
+         swp.fl |= SWP_MAXIMIZE ;
+     }
+
+     // Did user want to start minimized?
+     else if (swpConfig.fl &amp; SWP_MINIMIZE)
+     {
+         // Get minimized frame window position and size.
+         ulRC = WinGetMinPosition (hwndFrame, &amp;swp, (PPOINTL) NULL) ;
+         if (!ulRC)
+         {
+             // Report error, and then ...
+             return TRUE ;
+         }
+         swp.fl |= SWP_MINIMIZE ;
+     }
+
+     // Did user have a saved starting position and size?
+     else if (swpConfig.cy || swpConfig.cx || swpConfig.x || swpConfig.y)
+     {
+         LONG cxClientMax ;
+         LONG cyClientMax ;
+         LONG cyTitleBar ;
+         LONG cxSizeBorder ;
+         LONG cySizeBorder ;
+
+         // Get maximum client window size.
+         cxClientMax = WinQuerySysValue (HWND_DESKTOP, SV_CXFULLSCREEN) ;
+         cyClientMax = WinQuerySysValue (HWND_DESKTOP, SV_CYFULLSCREEN) ;
+         cyTitleBar = WinQuerySysValue (HWND_DESKTOP, SV_CYTITLEBAR) ;
+         cxSizeBorder = WinQuerySysValue (HWND_DESKTOP, SV_CXSIZEBORDER) ;
+         cySizeBorder = WinQuerySysValue (HWND_DESKTOP, SV_CYSIZEBORDER) ;
+
+         // Maximum client window size excludes title bar.
+         cyClientMax += cyTitleBar ;
+
+         // Make sure x origin is within display boundaries.
+         swp.x = swpConfig.x ;
+         if (swp.x &lt; -cxSizeBorder)
+             swp.x = 0 ;
+
+         // Make sure window isn't too wide, or negative value.
+         swp.cx = swpConfig.cx ;
+         if (swp.cx &gt;= cxClientMax || swp.cx &lt; 0)
+         {
+             swp.cx = cxClientMax ;
+             swp.x = 0 ;
+         }
+
+          if ((swp.x + swp.cx) &gt; (cxClientMax + cxSizeBorder))
+             swp.x = cxClientMax + cxSizeBorder - swp.cx ;
+
+         // Make sure y origin is within display boundaries.
+         swp.y = swpConfig.y ;
+         if (swp.y &lt; -cySizeBorder)
+             swp.y = 0 ;
+
+         // Make sure window isn't too high, or negative value.
+         swp.cy = swpConfig.cy ;
+         if (swp.cy &gt; cyClientMax || swp.cy &lt; 0)
+         {
+             swp.cy = cyClientMax ;
+             swp.y = 0 ;
+         }
+
+         if ((swp.y + swp.cy) &gt; (cyClientMax + cySizeBorder))
+             swp.y = cyClientMax + cySizeBorder - swp.cy ;
+     }
+
+     // No saved position -- move window to FCF_SHELLPOSITION location.
+     else
+     {
+         // Get default window size and position.
+         ulRC = WinQueryTaskSizePos (hab, 0, &amp;swp) ;
+         if (ulRC)
+         {
+             // Report error, and then ...
+             return TRUE ;
+         }
+         swp.fl = SWP_ACTIVATE | SWP_MOVE | SWP_SIZE | SWP_SHOW ;
+     }
+
+     // Position and size this frame window.
+     ulRC = WinSetWindowPos (hwndFrame, HWND_TOP,
+       swp.x, swp.y, swp.cx, swp.cy, swp.fl) ;
+     if (!ulRC)
+     {
+         // Report error, and then ...
+         return TRUE ;
+     }
+
+     return FALSE ;
+ }
+</PRE>
+
+<P>
+Credit:  Wayne Kovsky 
+
+<P><HR>
+
+<A HREF="063_L2_IhaveaSOMDLLHowdoIre.html">[Back: I have a SOM DLL. How do I register it?]</A> <BR>
+<A HREF="065_L2_Howdoyoumakeawindowf.html">[Next: How do you make a window float above all others?]</A> 
+</BODY>
+</HTML>

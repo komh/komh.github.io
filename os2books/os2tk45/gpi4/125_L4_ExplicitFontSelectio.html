@@ -1,0 +1,268 @@
+<HTML>
+<HEAD>
+<TITLE>Explicit Font Selection</TITLE>
+</HEAD>
+<BODY>
+<H1>Explicit Font Selection</H1><!-- entering slot 128 -->
+<P>
+An application can select either a public or a private font with<A><!-- external link: 1D 75 C3 FC --> GpiCreateLogFont</A>.
+A public font is available to all applications. A private font is loaded
+by an application for its exclusive use.
+<P>
+Use the Presentation Manager Control Panel to load a public font. Four DLLs
+contain the Times Roman, Helvetica, Courier, and System Monospaced image
+fonts. The names of these libraries are:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->TIMES.FON<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->HELV.FON<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->COURIER.FON<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->SYSMONO.FON<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Unlike most DLLs, font libraries typically use the file name extension .FON.
+If the user loads all four libraries, a total of 76 public fonts are available.
+An application can use both outline and image formats of these fonts. Characters
+in the image format are available in sizes ranging from 8 to 24 points.
+Characters in the outline format can be any size.
+<P>
+Call<A><!-- external link: 1D 9B C3 75 --> GpiLoadFonts</A> to load a private
+font. Pass the function the path and name of the DLL that contains the font.
+After the application loads the DLL of fonts, it can determine the characteristics
+of the fonts in that library by calling<A><!-- external link: 1D E4 C3 FC --> GpiQueryFonts</A>.
+
+<P>
+To select a public font from all of the available public fonts, do the following:
+<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Call<A><!-- external link: 1D E4 C3 FC --> GpiQueryFonts</A>.
+passing the QF_PUBLIC flag, a NULL pointer to the font's face name, and
+a count of 0 to determine the number of available public fonts, as shown
+in the following figure.
+<PRE>#define INCL_GPILCIDS#include &lt;os2.h&gt;
+void fncFONT06(void){
+
+    FONTMETRICS fm, afm[80];
+    LONG cFonts = 0, cPublicFonts;
+    HPS hps;
+
+    cPublicFonts = GpiQueryFonts(hps,      /* Queries all public fonts */
+    QF_PUBLIC,
+    (PSZ) NULL,
+    &amp;cFonts,
+    sizeof(fm),
+    (PFONTMETRICS) NULL);
+} /* fncFONT06 */
+</PRE>
+
+<P>
+<B>Note: </B> To load and use a private font, follow the same procedure,
+but specify QF_PRIVATE, instead of QF_PUBLIC, in the calls to<A><!-- external link: 1D E4 C3 FC --> GpiQueryFonts</A>.
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Copy the value returned by<A><!-- external link: 1D E4 C3 76 --> GpiQueryFonts
+</A>into a LONG integer variable.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Allocate memory for the<A><!-- external link: 1D 7B C4 69 --> FONTMETRICS
+</A>data structures.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Call<A><!-- external link: 1D E4 C3 76 --> GpiQueryFonts
+</A>again, passing the QF_PUBLIC flag, a NULL pointer to the font's face
+name, the count returned by the previous call, and the address of an array
+of FONTMETRICS structures.
+<P>
+<A><!-- external link: 1D E4 C3 76 -->GpiQueryFonts</A> the font metrics
+of every font available the array of<A><!-- external link: 1D 7B C4 69 --> FONTMETRICS
+</A>structures. The font metrics define in detail the physical characteristics
+of a font.
+<P>
+Because the font metrics are so detailed, the amount of information returned
+to you from<A><!-- external link: 1D E4 C3 76 --> GpiQueryFonts</A> can
+be extensive. You can restrict the amount of information returned by this
+function by:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->Specifying an absolute number of fonts about which
+you require information.<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->Asking for information about fonts of a specific
+face name only.<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->Limiting the length of the font-metrics buffer.<!-- lm: 0x2 6 -->
+</UL> If
+you request information for more fonts than are available on the system,
+<A><!-- external link: 1D E4 C3 76 -->GpiQueryFonts</A> returns all the
+information about the available fonts and a value indicating how many fonts
+it has returned.
+<P>
+If you request information for fewer fonts than are available on the system
+(that match the specified face name, and so forth),<A><!-- external link: 1D E4 C3 76 --> GpiQueryFonts
+</A>returns a value indicating the number of fonts that it was unable to
+return.
+<P>
+The following figure is an example of this technique of selecting a font.
+
+<PRE>#define INCL_GPILCIDS
+#include &lt;os2.h&gt;
+
+PFONTMETRICS fncFONT07 (HPS hps, PLONG pcPublicFonts) {
+   PFONTMETRICS afm = NULL;
+   LONG         fonts = 1000;
+
+   *pcPublicFonts = GpiQueryFonts(hps,
+                                  QF_PUBLIC,
+                                  (PSZ) NULL,
+                                  &amp;fonts,
+                                  sizeof(*afm),
+                                  (PFONTMETRICS) NULL);
+
+   if (!DosAllocMem(&amp;afm,
+                    sizeof(*afm)*(*pcPublicFonts),
+                    PAG_COMMIT | <!-- entering slot 129 -->PAGWRITE )) {
+       GpiQueryFonts(hps,
+                    QF_PUBLIC,
+                    (PSZ) NULL,
+                    pcPublicFonts,
+                    sizeof(*afm),
+                    afm);
+   } /* endif */
+   return afm;
+}
+</PRE>
+<!-- lm: 0x2 2 -->
+</UL> 5.<!-- lm: 0x2 6 -->
+<UL>Examine the array of FONTMETRICS
+structures.<!-- lm: 0x2 7 -->
+<UL>
+<P>
+ a.<!-- lm: 0x2 11 -->
+<UL>For an outline font, examine the face name and
+other attributes of the font your application requires.<!-- lm: 0x2 7 -->
+</UL>
+b.<!-- lm: 0x2 11 -->
+<UL>For an image font, examine the device resolution
+fields. These fields are the ones that determine if a particular font and
+its metrics match the device with which you wish to use it.<!-- lm: 0x2 6 -->
+</UL><B> Note:
+ </B>If your application is interactive, organize the face names and other
+information relevant to those fonts (such as point sizes) in a menu. When
+the operator has selected a font, supply the relevant information from the
+font metrics of that font in the<A><!-- external link: 1D 76 C4 59 --> FATTRS
+</A>structure of<A><!-- external link: 1D 75 C3 FC --> GpiCreateLogFont</A>.
+<!-- lm: 0x2 2 -->
+</UL> 6.<!-- lm: 0x2 6 -->
+<UL>After determining which
+font to use, your application must fill in the fields of the<A><!-- external link: 1D 76 C4 59 --> FATTRS
+</A>structure. Some of the data for these fields will be copied (explicitly)
+from the<A><!-- external link: 1D 7B C4 62 --> FONTMETRICS</A> structure.
+Then call<A><!-- external link: 1D 75 C3 FC --> GpiCreateLogFont</A>.
+<P>
+If you do not supply a face name, the default font is used.  If you supply
+a face name, and the presentation driver cannot find a matching font, a
+default font is selected.
+<P>
+The FATTRS structure describes a<I> logical font</I>. An application can
+have up to 254 logical fonts defined at any one time in a single presentation
+space. A logical font is a list of font attributes, whereas a<I> physical
+font</I> is the bit-map or vector information that the system uses to draw
+characters.<!-- lm: 0x2 2 -->
+</UL>  7.<!-- lm: 0x2 6 -->
+<UL>The fonts
+supplied by the PM programming interface, the fonts you load using the Control
+Panel, and any fonts you load with<A><!-- external link: 1D 9B C3 6B --> GpiLoadFonts
+</A>are all<I> physical fonts</I>.
+<P>
+Copying the entries in the<A><!-- external link: 1D 76 C4 59 --> FATTRS
+</A>structure ensures that, if a particular font is unavailable, an attempt
+is made to find the most suitable substitute. Without the<A><!-- external link: 1D 76 C4 59 --> FATTRS
+</A>information, PM is less likely to locate a suitable font.<!-- lm: 0x2 2 -->
+</UL>
+8.<!-- lm: 0x2 6 -->
+<UL>Initialize a local identifier (lcid) for the new
+font.<!-- lm: 0x2 2 -->
+</UL>  9.<!-- lm: 0x2 6 -->
+<UL>Call<A><!-- external link: 1D 75 C3 69 --> GpiCreateLogFont
+</A>and pass as input parameters:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->The lcid for the font<!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 11 -->The address of an 8-character array containing the
+name you want to give to the logical font, (or, if you do not want to specify
+a name, the value NULL)<!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 11 -->The address of the<A><!-- external link: 1D 76 C4 59 --> FATTRS
+</A>structure<!-- lm: 0x2 6 --><!-- lm: 0x2 2 -->
+</UL> 10.<!-- lm: 0x2 6 -->
+<UL>Examine
+the return value from<A><!-- external link: 1D 75 C3 FC --> GpiCreateLogFont</A>.
+The value will be<B> 2</B> if the function is successful;<B> 1</B>, if the
+default font was used.<!-- lm: 0x2 2 -->
+</UL> 11.<!-- lm: 0x2 6 -->
+<UL>Pass
+the lcid to<A><!-- external link: 1D 2D C4 FC --> GpiSetCharSet</A>, assigning
+the font to your application's presentation space. Then the application
+can use it for text output. (This step identifies a logical font as the
+current font.)<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following figure shows how to select an image font at least 14 device
+coordinate units high.
+<PRE>#define INCL_GPILCIDS#include &lt;os2.h&gt;
+
+LONG fncFONT08(HPS hps, LONG lcid, LONG xres, LONG yres) {
+   FATTRS       fat;
+   PFONTMETRICS afm;
+   LONG         cFonts;
+   LONG         i;
+   LONG         rc = 0;
+
+   afm = fncFONT07(hps, &amp;cfonts);
+   if (amf) {
+<!-- entering slot 130 -->      for (i=0; 1&lt;cfonts; i++) {
+         if (!(afm[i].fsDefn &amp; FM_DEFN_OUTLINE)
+            afm[i].sXDeviceRes == xres &amp;&amp;
+            afm[i].sYDeviceRes == yres &amp;&amp;
+            afm[i].lMaxBaselineExt &gt;= 14)  {
+           fat.usRecordLength = sizeof(fat);
+           fat.fsSelection = 0;
+           fat.lMatch = 0;
+           strcpy(fat.szFacename, afm[i].szFacename);
+           fat.idRegistry = afm[i].idRegistry;
+           fat.usCodePage = 0;
+           fat.lMaxBaselineExt = afm[i].lMaxBaselineExt;
+           fat.lAveCharWidth = afm[i].lAveCharWidth;
+           fat.fsType = 0;
+           fat.fsFontUse = 0;
+
+           rc = GpiCreateLogFont(hps, (PSTR8) NULL, lcid, &amp;fat);
+           if (rc) {
+              GpiSetCharSet(hps, lcid);
+           } /* endif */
+        } /* endfor */
+
+     } /* endif */
+
+     return rc;
+}
+</PRE>
+
+<P>
+<A><!-- external link: 1D E4 C3 32 -->GpiQueryFonts</A> returns device coordinates
+for image fonts. For outline fonts, it returns<I> notional coordinates</I>.
+Notional coordinates are the coordinate in which the font was defined. Usually
+outline fonts are defined over a 1000-by-1000 matrix, with the unit of the
+matrix a 1/1000 of the em height.
+<P>
+
+
+<P><HR>
+
+<A HREF="124_L3_SelectingaFont.html">[Back: Selecting a Font]</A> <BR>
+<A HREF="126_L4_ReassociatingthePres.html">[Next: Reassociating the Presentation Space]</A> 
+</BODY>
+</HTML>

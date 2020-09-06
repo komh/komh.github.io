@@ -1,0 +1,158 @@
+<HTML>
+<HEAD>
+<TITLE>Using somFindClass or somFindClsInFile</TITLE>
+</HEAD>
+<BODY>
+<H1>Using somFindClass or somFindClsInFile</H1><!-- entering slot 65 -->
+<P>
+To create a class object when <U> not</U> using the C/C++  language bindings
+for the class, or when the class name is<U> not</U> known at compile time:
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->First, initialize the SOM run-time environment by
+calling the<B> somEnvironmentNew</B> function (unless it is known that the
+SOM run-time environment has already been initialized).<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Then, use the<B> somFindClass</B> or<B> somFindClsInFile
+</B>method to create the class object. (The class must already be defined
+in a dynamically linked library, or DLL.)<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The<B> somEnvironmentNew</B> function initializes the SOM run-time environment.
+That is, it creates the four primitive SOM objects (<B>SOMClass, SOMObject,
+SOMClassMgr,</B> and the<B> SOMClassMgrObject</B>), and it initializes SOM
+global variables. The function takes no arguments and returns a pointer
+to the<B> SOMClassMgrObject</B>.
+<P>
+
+<P>
+<B>Note: </B> Although<B> somEnvironmentNew</B> must be called before using
+other SOM functions and methods, explicitly calling<B> somEnvironmentNew
+</B>is usually not necessary when using the C/C++ bindings,  because the
+macros for &lt;<I>className</I>&gt;<B>NewClass</B>,  &lt;<I>className</I>&gt;<B>New
+</B>, and &lt;<I>className</I>&gt;<B>Renew</B> call it automatically, as
+does the<B> new</B> operator for C++. Calling<B> somEnvironmentNew</B> repeatedly
+does no harm.<!-- lm: 0x2 1 -->
+<P>
+
+<P>
+After the SOM run-time environment has been initialized, the methods<B> somFindClass
+</B>and<B> somFindClsInFile</B> can be used to create a class object. These
+methods must be invoked on the class manager, which is pointed to by the
+global variable<B> SOMClassMgrObject.</B>  (It is also returned as the result
+of<B> somEnvironmentNew</B>.)
+<P>
+The<B> somFindClass</B> method takes the following arguments:<!-- lm: 0x2 1 -->
+<P>
+<I>classId</I><!-- lm: 0x2 26 -->
+<UL> A<B> somId</B> identifying the name
+of the class to be created. The<B> somIdFromString</B> function returns
+a<I> classId</I>  given the name of the class.<!-- lm: 0x2 1 -->
+</UL><I> major
+version number</I><!-- lm: 0x2 26 -->
+<UL> The expected major version number
+of the class.<!-- lm: 0x2 1 -->
+</UL><I> minor version number</I><!-- lm: 0x2 26 -->
+<UL> The
+expected minor version number of the class.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The version numbers are checked against the version numbers built into the
+class library to determine if the class is compatible with the client's
+expectations.
+<P>
+The<B> somFindClass</B>  method dynamically loads the DLL containing the
+class's implementation, if needed, creates the class object (unless it already
+exists) by invoking its &lt;<I>className</I>&gt;<B>NewClass</B> procedure,
+and returns a pointer to it. If the class could not be created,<B> somFindClass
+</B>returns NULL. For example, the following C code fragment creates the
+class "Hello" and stores a pointer to it in "myClass":
+<PRE>   SOMClassMgr cm = somEnvironmentNew();   somId classId = somIdFromString("Hello");
+   SOMClass myClass =<B> _somFindClass</B>(SOMClassMgrObject, classId
+                          Hello_MajorVersion, Hello_MinorVersion);
+   ...
+   SOMFree(classId);
+</PRE>
+
+<P>
+The<B> somFindClass</B> method uses<B> somLocateClassFile</B> to get the
+name of the library file containing the class. If the class was defined
+with a "dllname" class modifier, then<B> somLocateClassFile</B> returns
+that file name; otherwise, it assumes that the class name is the name of
+the library file. The<B> somFindClsInFile</B> method is similar to<B> somFindClass,
+</B>except that it takes an additional (final) argument-the name of the
+library file containing the class.  The<B> somFindClsInFile</B> method is
+useful when a class is packaged in a DLL along with other classes and the
+"dllname" class modifier has not been given in the class's IDL specification.
+
+<P>
+<B>Warning:</B>  On AIX, the<B> somFindClass</B> and<B> somFindClsInFile
+</B>methods should<I> not</I>  be used to create a class whose implementation
+is statically linked with the client program. Instead, the class object
+should be created using the &lt;<I>className</I>&gt;<B>NewClass</B> procedure
+provided by the class's .h/.xh header file. Static linkage is not created
+by including usage bindings in a program, but by use of the offset-resolution
+method-invocation macros.
+<P>
+<B>Invoking methods without corresponding class usage bindings</B>
+<P>
+This topic builds on the preceding discussion, and illustrates how a client
+program can apply dynamic SOM mechanisms to utilize classes and objects
+for which specific usage bindings are not available. This process can be
+applied when a class implementor did not ship the C/C++ language bindings.
+Furthermore, the process allows more programming flexibility, because it
+is not necessary to<!-- entering slot 66 --> know the class and method names
+at compile time in order to access them at run time. (At run time, however,
+you must be able to provide the method arguments, either explicitly or via
+a<B> va_list</B>, and provide a generalized way to handle return values.)
+As an example application, a programmer might create an online class viewer
+that can access many classes without requiring usage bindings for all those
+classes, and the person using the viewer can select class names at run time.
+
+<P>
+As another aspect of flexibility, a code sequence similar to the following
+C++ example could be re-used to access any class or method. After getting
+the<B> somId</B> for a class name, the example uses the<B> somFindClass
+</B>method to create the class object. The<B> somNew</B> method is then
+invoked to create an instance of the specified class, and the<B> somDispatch
+</B>method is used to invoke a method on the object.
+<PRE>#include &lt;stdio.h&gt;
+#include &lt;somcls.xh&gt;
+
+int main()
+{
+        SOMClass *classobj;
+        somId tempId;
+        somId methId;
+        SOMObject *s2;
+        Environment * main_ev = somGetGlobalEnvironment();
+
+        tempId = SOM_IdFromString("myClassName");
+        classobj = SOMClassMgrObject-&gt;<B>somFindClass</B>(tempId,0,0);
+        SOMFree(tempId);
+
+        if (NULL==classobj)
+        {
+                printf("somFindClass could not find the selected class\n");
+        }
+        else
+        {
+                s2 = (SOMObject *) (classobj-&gt;<B>somNew</B>());
+                methId = somIdFromString("sayHello");
+                if (s2-&gt;<B>somDispatch</B>((somToken *) 0, methId, s2, ev))
+
+                        printf("Method successfully called.\n");
+        }
+
+        return 0;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="048_L5_UsingclassNameNewCla.html">[Back: Using <className>NewClass]</A> <BR>
+<A HREF="050_L4_Referringtoclassobje.html">[Next: Referring to class objects]</A> 
+</BODY>
+</HTML>

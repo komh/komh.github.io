@@ -1,0 +1,64 @@
+<HTML>
+<HEAD>
+<TITLE>Resetting an Event Semaphore</TITLE>
+</HEAD>
+<BODY>
+<H1>Resetting an Event Semaphore</H1><!-- entering slot 158 -->
+<P>
+<A><!-- external link: 1D DD C3 3E -->DosResetEventSem</A> resets an event
+semaphore if it is not already reset, and returns the number of times the
+semaphore was posted since it was last reset. All threads that subsequently
+call<A><!-- external link: 1D 0B C4 40 --> DosWaitEventSem</A> for this
+semaphore will be blocked.
+<P>
+Any thread belonging to the process that created the event semaphore can
+change the state of the semaphore to reset by calling<A><!-- external link: 1D DD C3 FC --> DosResetEventSem</A>.
+Threads in other processes can also call<A><!-- external link: 1D DD C3 FC --> DosResetEventSem</A>,
+but they must first gain access to the semaphore by calling<A><!-- external link: 1D A0 C3 FC --> DosOpenEventSem</A>.
+
+<P>
+When an event semaphore is in the reset state, any thread that calls<A><!-- external link: 1D 0B C4 40 --> DosWaitEventSem
+</A>to wait for the semaphore will be blocked. When the event semaphore
+is posted, all of the threads that are waiting for the semaphore are released
+to continue execution.
+<P>
+The following code fragment resets an event semaphore. Assume that the handle
+of the semaphore has been placed into<I><A><!-- external link: 1D 97 C4 4F --> HEV
+</A></I>already.
+<PRE>    #define INCL_DOSSEMAPHORES   /* Semaphore values */
+    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+
+    HEV     hev;        /* Event semaphore handle                        */
+    ULONG   ulPostCt;   /* Post count for the event semaphore (returned) */
+    APIRET  ulrc;       /* Return code                                   */
+
+    ulrc = DosResetEventSem(hev, &amp;ulPostCt);
+
+    if (ulrc != 0) {
+        printf("DosResetEventSem error: return code = %ld",
+               ulrc);
+        return;
+    }
+
+</PRE>
+
+<P>
+<A><!-- external link: 1D DD C3 3E -->DosResetEventSem</A> returns the post
+count of the event semaphore and resets the post count to 0. The post count
+is the number of times the semaphore has been posted (using<A><!-- external link: 1D A9 C3 FC --> DosPostEventSem</A>)
+since the last time the semaphore was in the reset state. (An event semaphore
+can be reset when it is created, as well as by calling<A><!-- external link: 1D DD C3 FC --> DosResetEventSem</A>.)
+The post count can also be obtained by calling<A><!-- external link: 1D BF C3 FC --> DosQueryEventSem</A>.
+
+<P>
+If the event semaphore is already reset when<A><!-- external link: 1D DD C3 3E --> DosResetEventSem
+</A>is called, ERROR_ALREADY_RESET is returned, along with a post count
+of 0. The semaphore is not reset a second time.
+
+<P><HR>
+
+<A HREF="149_L3_ClosinganEventSemaph.html">[Back: Closing an Event Semaphore]</A> <BR>
+<A HREF="151_L3_PostinganEventSemaph.html">[Next: Posting an Event Semaphore]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,604 @@
+<HTML>
+<HEAD>
+<TITLE>Ring 0 Loop Dump Analysis Example</TITLE>
+</HEAD>
+<BODY>
+<H1>Ring 0 Loop Dump Analysis Example</H1><!-- entering slot 311 -->
+<P>
+This example finds a loop in a file system driver from a system dump. For
+reference, we note the format of the interrupt stack frame as pointed to
+by<B> fpoldstack</B> as follows:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<LI>0x0<!-- lm: 0x2 11 -->
+<UL> Current interrupt level when prior to interrupt.
+<!-- lm: 0x2 1 -->
+</UL>+0x4<!-- lm: 0x2 11 -->
+<UL> GS<!-- lm: 0x2 1 -->
+</UL> +0x8
+<!-- lm: 0x2 11 -->
+<UL>FS<!-- lm: 0x2 1 -->
+</UL> +0xc<!-- lm: 0x2 11 -->
+<UL> ES
+<!-- lm: 0x2 1 -->
+</UL>+0x10<!-- lm: 0x2 11 -->
+<UL> DS<!-- lm: 0x2 1 -->
+</UL> +0x14
+<!-- lm: 0x2 11 -->
+<UL>EDI<!-- lm: 0x2 1 -->
+</UL> +0x18<!-- lm: 0x2 11 -->
+<UL> ESI
+<!-- lm: 0x2 1 -->
+</UL>+0x1c<!-- lm: 0x2 11 -->
+<UL> EBP<!-- lm: 0x2 1 -->
+</UL> +0x20
+<!-- lm: 0x2 11 -->
+<UL>padesp<!-- lm: 0x2 1 -->
+</UL> +0x24<!-- lm: 0x2 11 -->
+<UL> EBX
+<!-- lm: 0x2 1 -->
+</UL>+0x28<!-- lm: 0x2 11 -->
+<UL> EDX<!-- lm: 0x2 1 -->
+</UL> +0x2c
+<!-- lm: 0x2 11 -->
+<UL>ECX<!-- lm: 0x2 1 -->
+</UL> +0x30<!-- lm: 0x2 11 -->
+<UL> EAX
+<!-- lm: 0x2 1 -->
+</UL>+0x34<!-- lm: 0x2 11 -->
+<UL> pad<!-- lm: 0x2 1 -->
+</UL> +0x3c
+<!-- lm: 0x2 11 -->
+<UL>EIP<!-- lm: 0x2 1 -->
+</UL> +0x40<!-- lm: 0x2 11 -->
+<UL> CS
+<!-- lm: 0x2 1 -->
+</UL>+0x44<!-- lm: 0x2 11 -->
+<UL> EFLAG<!-- lm: 0x2 1 -->
+</UL> +0x48
+<!-- lm: 0x2 11 -->
+<UL>ESP<!-- lm: 0x2 1 -->
+</UL> +0x4c<!-- lm: 0x2 11 -->
+<UL> SS
+<!-- lm: 0x2 1 -->
+</UL>+0x4c<!-- lm: 0x2 11 -->
+<UL> SS<!-- lm: 0x2 1 -->
+</UL>
+<PRE>&gt;&gt;Who's the current thread?# .p*
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+*00a3# 006c 000a 006c 0001 run 0200 7b720000 7bb025c0 7ba8f9e0 0894 25 FRNOLBMG
+
+&gt;&gt;Probably a loop of some kind, could be a hot I/O or even dispatcher
+bug (unlikely).
+
+&gt;&gt; Where are we?
+# .r
+eax=001fe624 ebx=00002022 ecx=00000029 edx=00000007 esi=00000000 edi=0003e77c
+eip=00000179 esp=0003e624 ebp=0003e68c iopl=2 -- -- -- nv up ei pl nz na po nc
+cs=d02f ss=001f ds=0053 es=0053 fs=150b gs=0000  cr2=00000000  cr3=001bb000
+d02f:00000179 66ea4102021a5b00 jmp     005b:1a020241
+# .m
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 00b1 %fee13f40 00000010 %1a050000 3d9 00b0 00b2 0000 0000 00bd 0000  hco=02c2c
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 00bd  00b1 0000  0838 00bb 00bb  0000 00  00 00 00 shared    c:doscall1.dll
+ hco=2c2c pco=ffe71cf7  hconext=02c20 hptda=18c9 f=1c  pid=00bc c:cmd.exe
+
+&gt;&gt; We are in DOSCALL1. Let's see what function was called.
+
+
+# dw ss:bp
+001f:0000e68c  e6bc <!-- entering slot 312 -->0003 ae60 1a02 e77c 0003 e728 0003
+001f:0000e69c  e70c 0003 0000 0000 0000 0000 0010 0000
+001f:0000e6ac  2022 0000 0000 0000 28a4 111b e697 0003
+001f:0000e6bc  e740 0003 4a6d 1113 e77c 0003 e728 0003
+001f:0000e6cc  e70c 0003 0000 0000 0000 0000 0010 0000
+001f:0000e6dc  2022 0000 0000 0000 0010 0000 ab18 1111
+001f:0000e6ec  e77c 0003 0002 0000 0000 0000 0000 0000
+001f:0000e6fc  0001 0000 0007 0000 0000 0000 0180 0000
+
+
+# ln %11134a6d
+No Symbols Found
+
+# .m  %11134a6d
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0e82 %fee26f36 00000030 %11110000 3d9 09af 09f1 0000 0000 15b1 0000  hco=02c17
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 15b1  0e82 0000  0838 08fe 08fe  0000 00  00 00 00 shared    c:frnococl.dll
+ hco=2c17 pco=ffe71c8e  hconext=02de0 hptda=1938 f=1c  pid=00bb c:frnosa.exe
+
+
+# .lmo 8fe
+hmte=08fe pmte=%fdef0c68 mflags=4498b186 c:\frnv1r0\dll\frnococl.dll
+obj   vsize    vbase    flags   ipagemap cpagemap hob  sel
+0001 00026ee8 11110000 80002025 00000001 00000027 15b1 888f r-x shr big
+0002 0000001f 11180000 80001025 00000028 00000001 0caf 88c7 r-x shr alias
+0003 00000030 11190000 80002025 00000029 00000001 15a4 88cf r-x shr big
+0004 00000008 111a0000 80001003 0000002a 00000000 0000 88d7 rw- alias
+0005 00004e74 111b0000 80002003 0000002a 00000005 0000 88df rw- big
+
+
+# u  %11134a6d-10%11134a5d 085657             or      byte ptr [esi+57],dl
+%11134a60 6a00               push    +00
+%11134a62 51                 push    ecx
+%11134a63 8b4dac             mov     ecx,dword ptr [ebp-54]
+%11134a66 52                 push    edx
+%11134a67 51                 push    ecx
+%11134a68 e8af63ef08         call    %1a02ae1c
+%11134a6d 8bc8               mov     ecx,eax
+%11134a6f 8b45ac             mov     eax,dword ptr [ebp-54]
+%11134a72 83c420             add     esp,+20          ;' '
+%11134a75 894ddc             mov     dword ptr [ebp-24],ecx
+%11134a78 83f904             cmp     ecx,+04
+
+# ln %1a02ae1c
+%1a02ae1c DOSCALL1 DOS32OPEN
+
+&gt;&gt; So we're in DOSOPEN
+
+&gt;&gt; We've almost certainly call-gated into the kernel.
+&gt;&gt; Check this out ...
+
+# u cs:eip -10
+d02f:00000169 268805         mov     byte ptr es:[di],al
+d02f:0000016c 8bc3           mov     ax,bx
+d02f:0000016e 8cc2           mov     dx,es
+d02f:00000170 5f             pop     di
+d02f:00000171 c9             leave
+d02f:00000172 c3             <!-- entering slot 313 -->ret
+d02f:00000173 90             nop
+d02f:00000174 9a00000a1b     call    1b0a:0000
+d02f:00000179 66ea4102021a5b00 jmp     005b:1a020241
+d02f:00000181 9a00001a1b     call    1b1a:0000
+d02f:00000186 66ea3b05021a5b00 jmp     005b:1a02053b
+d02f:0000018e 9a0000631b     call    1b63:0000
+# dg 1b0a
+1b0a  CallG32 Sel:Off=0148:0000529f     DPL=3 P  DWC=8
+# ln 148:529f
+0148:0000529f OS2KRNL DOSOPEN2
+#
+
+&gt;&gt; Yes, that's where we are.
+&gt;&gt; Now let's see if we can find out where in R0 DOSOPEN has got...
+
+# dw interruptlevel l1
+0400:00006382  0000
+# dd currintlevel l1
+0148:0000529f OS2KRNL DOSOPEN2
+#
+&gt;&gt; So, no nested interrupts, but we are handling one
+&gt;&gt; (interruptlevel=0000).
+&gt;&gt; The current interrupt came from IRQ 1 (currintlevel=1)
+&gt;&gt; So a keyboard interrupt, not surprising because the customer was
+&gt;&gt; asked to take a dump using ctrl-alt-numlock-numlock, furthermore
+&gt;&gt; he obeyed!
+
+&gt;&gt; Lets look at the interrupt stack saved by the interrupt router
+&gt;&gt; (prior to switching stacks).
+
+# dd fpoldstack l2
+%fff27310  00004b0c 00000030
+
+&gt;&gt; So, the Interrupt Stack Frame maps the frame at 30:4b0c
+
+# dw 30:4b0c
+0030:00004b0c  ffff ffff 0000 0000 03b8 0000 2410 0000
+0030:00004b1c  23f8 0000 4c66 7b61 0000 7b61 4b5e 0003
+0030:00004b2c  4b40 0000 0000 0000 24d0 0000 ffff 0000
+0030:00004b3c  0000 0000 0000 0000 0000 0000 be93 0000
+0030:00004b4c  23d0 0000 2292 0000 23f8 0000 006c 0000
+0030:00004b5c  00a3 4b8c b541 23d0 23f8 0000 4c66 0000
+0030:00004b6c  4baa 0029 2b00 0000 0004 0001 2101 2d76
+0030:00004b7c  0001 0094 0022 003f 0000 0000 20d4 4be8
+
+&gt;&gt; bp is at +1c, sp at +20,  cs at +40, eip at +3c
+&gt;&gt; We took the dump at when cs:eip=23d0:be93
+&gt;&gt; who is this?
+
+# .m 23d0:0
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0021 %fee132e0 00001400 %fc953000 121 0020 0022 0000 0020 0022 0000      =0000
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 0022  0021 0000  0225 ffef 0000  0000 00  04 00 00 vmkshrw
+
+&gt;&gt; 23d0 is allocated out of the Kernel Swappable Read/Write heap.
+&gt;&gt; Lets see who owns this heap block. Need to look at the VMKSHB
+&gt;&gt; shared heap block header...
+
+# dg 23d0
+23d0  Code    Bas=fca15000 Lim=<!-- entering slot 314 -->0000ff5f DPL=0 P  RE    A
+# dw %face15000-10
+%fca14ff0  0000 0000 0000 0000 ff68 5200 ff4d 23d0
+%fca15000
+Invalid linear address: %fca15000
+
+&gt;&gt; VMKSHB is an 8 byte prefix of the form:
+&gt;&gt; ulong size || 0x520000
+&gt;&gt; ushort hob
+&gt;&gt; ushort sel
+
+&gt;&gt; check the owner hob
+
+# .mo ff4d
+ff4d fsd6
+#
+
+&gt;&gt; This was allocated by/for the 6th loaded FSD.
+&gt;&gt; N.B fsd8 is used for the 8th and subsequent FSDs
+&gt;&gt; in the same way dd16 is used for the 16th and subsequent
+&gt;&gt; device driver. From Fix Pack 35 of Warp 3 and GA Warp 4
+&gt;&gt; the dd1-dd16 and fsd-fsd8 system object ids are not used, but
+&gt;&gt; instead the hmte for the driver is used. This avoids the problem of
+&gt;&gt; the non-uniqueness of dd16 and fsd8. It also directly identifies
+&gt;&gt; the driver module.
+
+&gt;&gt; Who is fsd6?
+&gt;&gt; There are two ways to home in on this.
+
+&gt;&gt; First method.
+&gt;&gt; List all library modules (includes DLLs IFSs FONs etc)
+
+# .lml
+hmte=18e2 pmte=%fe1a1000 mflags=0498b188 c:\frnv1r0\dll\frnolgar.dll
+hmte=193e pmte=%fe1a13ac mflags=0498b188 c:\frnv1r0\dll\frnosars.dll
+hmte=18fd pmte=%fe1a18d4 mflags=4498b186 c:\frnv1r0\dll\frnofo2.dll
+hmte=1933 pmte=%fe1a194c mflags=4498b186 c:\frnv1r0\dll\frnofios.dll
+hmte=18f2 pmte=%fdebd1c4 mflags=4498b186 c:\frnv1r0\dll\frnoutil.dll
+hmte=0fc7 pmte=%fdedf550 mflags=4498b1c6 c:\frnv1r0\dll\frnollmn.dll
+.
+.
+&gt;&gt; 200 hundred lines later
+.
+.
+hmte=0b0a pmte=%fe0bb6f8 mflags=0408b1c8 c:\cmlib\dll\acshpres.dll
+hmte=0af9 pmte=%fe0bb864 mflags=0408b1c8 c:\cmlib\redj.pml
+hmte=0af6 pmte=%fe0bb8f0 mflags=0408b1c8 c:\cmlib\redj.pdl
+hmte=08f7 pmte=%fe0bcf8c mflags=0408b1c8 c:\cmlib\redj2.pml
+hmte=094d pmte=%fe11dc44 mflags=0408b1c8 c:\cmlib\redj2.pdl
+hmte=0a8a pmte=%fe098ea4 mflags=0408b1c8 c:\cmlib\cm20sys.pml
+hmte=0a87 pmte=%fe098f5c mflags=0408b1c8 c:\cmlib\cm20sys.pdl
+hmte=04c7 pmte=%fde5ff60 mflags=0498b1c8 c:\os2\dll\times.fon
+hmte=04c5 pmte=%fde5fa7c mflags=0498b1c8 c:\os2\dll\helv.fon
+hmte=04c3 pmte=%fde5fb44 mflags=0498b1c8 c:\os2\dll\courier.fon
+hmte=04c1 pmte=%fde5fbb4 mflags=0498b1c8 c:\os2\dll\sysmono.fon
+hmte=04b9 pmte=%fde5fc8c mflags=4498b1c5 c:\os2\dll\pmatm.dll
+hmte=0324 pmte=%fe134f54 mflags=0428a1c9 d:\ibm3995\demoifs.ifs
+hmte=02ff pmte=%fe0fff90 mflags=0428a1c9 c:\netw\nwifs.ifs
+hmte=01b9 pmte=%fe0dbcb4 mflags=0428a1c9 c:\showcase\sdcfs.ifs
+hmte=0109 pmte=%fe0befa0 mflags=0428a1c9 c:\os2\cdfs.ifs
+hmte=00e0 pmte=%fde46d3c mflags=0428a1c9 c:\os2\hpfs.ifs
+hmte=0076 pmte=%fde14f68 mflags=0428a1c9 a:\mini_fsd.fsd
+
+&gt;&gt; FSDs were installed in order, 76, e0, 109, 1b9, 2ff and 324.
+
+&gt;&gt; fsd6 is therefore hmte=324. Lets check for certain:
+
+# .lmo 324
+hmte=0324 pmte=%fe134f54 mflags=0428a1c9 d:\ibm3995\demoifs.ifs
+seg  sect psiz vsiz hob  sel  flags
+0001 0003 d7ba d7ba 0000 2398 8d60 <!-- entering slot 315 -->code shr prel rel
+0002 0070 2325 2325 0000 23a0 8d60 code shr prel rel
+0003 0083 ec66 ec66 0000 23a8 8d60 code shr prel rel
+0004 00fa f7a6 f7a6 0000 23b0 8d60 code shr prel rel
+0005 0176 b1e4 b1e4 0000 23b8 8d60 code shr prel rel
+0006 01d0 f3e6 f3e6 0000 23c0 8d60 code shr prel rel
+0007 024b eeda eeda 0000 23c8 8d60 code shr prel rel
+0008 02c3 ff60 ff60 0000 23d0 8d60 code shr prel rel
+0009 0343 fe82 fe82 0000 23d8 8d60 code shr prel rel
+000a 03c3 4b4e 4b4e 0000 23e0 8d60 code shr prel rel
+000b 03e9 002a 002a 0000 23e8 8c60 code shr prel
+000c 03ea 4298 4298 0000 23f0 8d60 code shr prel rel
+000d 040c 9dfd 9dfe 0000 23f8 8d41 data prel rel
+000e 0000 0000 1964 0000 2400 8c41 data prel
+000f 0000 0000 fe88 0000 2408 8c41 data prel
+0010 0000 0000 d75e 0000 2410 8c41 data prel
+
+&gt;&gt; and yes we find selector 23d0 in object 8 of demoifs.ifs
+
+&gt;&gt; Second method
+&gt;&gt; We could approach this from the FSC control block, which is similar
+&gt;&gt; in purpose to the DD header chain.
+&gt;&gt; The FSC is a table of FSD entry point tables. We might spot the
+&gt;&gt; selector in question being referenced in the FSC. If not, we can
+&gt;&gt; unwind the R0 stack until we do find a reference.
+
+&gt;&gt; First the FSC. Dump the SAS for the FSC selector
+
+# .a
+--- SAS Base Section ---
+                      SAS signature: SAS
+           offset to tables section: 0016
+      FLAT selector for kernel data: 0158
+    offset to configuration section: 001E
+    offset to device driver section: 0020
+   offset to Virtual Memory section: 002C
+          offset to Tasking section: 005C
+              offset to RAS section: 006E
+      offset to File System section: 0074
+          offset to infoseg section: 0080
+--- SAS Protected Modes Tables Section ---
+                   selector for GDT: 0008
+                   selector for LDT: 0000
+                   selector for IDT: 0018
+               selector for GDTPOOL: 0100
+--- SAS Device Driver Section ---
+    offset for the first bimodal dd: 0CB9
+  offset for the first real mode dd: 0000
+      sel for Drive Parameter Block: 0520
+       sel for ABIOS prot. mode CDA: 0468
+        seg for ABIOS real mode CDA: 6800
+                   selector for FSC: 00C8
+--- SAS Task Section ---
+          selector for current PTDA: 0030
+  FLAT offset for process tree head: FFF29714
+ FLAT address for TCB address array: FFF26BDA
+      offset for current TCB number: FFE23A0E
+             offset for ThreadCount: FFE23A12
+--- SAS File System Section ---
+                handle to MFT PTree: FDE55FB4
+     selector for System File Table: 00C0
+     sel. for Volume Parameter Bloc: 0678
+   sel. for Current Directory Struc: 06A8
+        selector for buffer segment: 00A8
+--- SAS Information Segment Section ---
+       selector for global info seg: 0428
+   address of curtask local infoseg: 03B80000
+      address of DOS task's infoseg: FFFFFFFF
+         selector for Codepage Data: 06BB
+--- SAS RAS Section ---
+selector for System Trace Data Area: 0508
+ segment for System Trace Data Area: 0508
+        offset for <!-- entering slot 316 -->trace event mask: 09D6
+--- SAS Configuration Section ---
+    offset for Device Config. Table: 0D40
+--- SAS Virtual Memory Mgt. Section ---
+       Flat offset of arena records: FFF2C314
+      Flat offset of object records: FFF2C32C
+     Flat offset of context records: FFF2C31C
+  Flat offset of kernel mte records: FFF27E68
+     Flat offset of linked mte list: FFF273B8
+    Flat offset of page frame table: FFF2A768
+    Flat offset of page range table: FFF29CC0
+    Flat offset of swap frame array: FFF260B0
+           Flat offset of Idle Head: FFF294D4
+           Flat offset of Free Head: FFF294C4
+          Flat offset of Heap Array: FFF2A770
+     Flat offset of all mte records: FFF2BE24
+#
+
+&gt;&gt; FSC selector is c8. Now dump the FCS segment.
+
+# dw c8:0
+00c8:00000000  03c8 0000 0000 fde1 0b68 0738 0b6c 0738
+00c8:00000010  0000 0720 01fc 0720 0010 0720 05b4 0718
+00c8:00000020  0570 0720 0580 0720 0634 0720 0640 0720
+00c8:00000030  0e3c 0720 1120 0720 0834 0720 090c 0720
+00c8:00000040  09f8 0718 1130 0720 1f24 0720 1f6e 0720
+00c8:00000050  2122 0720 16e4 0720 1b10 0720 1b38 0720
+00c8:00000060  1bec 0720 1dc8 0720 0c60 0718 0d70 0718
+00c8:00000070  1f14 0720 215c 0720 22a0 0720 2294 0720
+# d
+00c8:00000080  111c 0718 25fc 0720 26b0 0720 117c 0718
+00c8:00000090  0fdc 0718 0000 0718 0000 0000 0000 0000
+00c8:000000a0  0000 0000 03b0 0720 062c 0718 137c 0720
+00c8:000000b0  0bb4 0718 26bc 0720 0000 0000 0000 0000
+00c8:000000c0  0000 0000 0000 0000 0000 0a58 0004 0a58
+00c8:000000d0  0000 0a50 01b6 0a50 000e 0a50 04c4 0a50
+00c8:000000e0  060e 0a50 061c 0a50 065c 0a50 0666 0a50
+00c8:000000f0  1198 0a50 1224 0a50 086e 0a50 0e0e 0a50
+# d
+00c8:00000100  09e6 0a50 125a 0a50 299a 0a50 29a8 0a50
+00c8:00000110  29b6 0a50 263e 0a50 278c 0a50 27aa 0a50
+00c8:00000120  2842 0a50 288a 0a50 28fc 0a50 298c 0a50
+00c8:00000130  297e 0a50 29c4 0a50 2cf6 0a50 2cb8 0a50
+00c8:00000140  2f0c 0a50 34b2 0a50 34f2 0a50 350c 0a50
+00c8:00000150  5029 1000 9cab 0140 1232 0a50 1240 0a50
+00c8:00000160  0000 0000 0602 0a50 9d8c 0140 1568 0a50
+00c8:00000170  124e 0a50 3500 0a50 0000 0000 0000 0000
+# d
+00c8:00000180  0000 0000 0000 0000 0090 1028 008a 1028
+00c8:00000190  00be 1018 03e6 1018 05da 1018 0766 1018
+00c8:000001a0  09ee 1018 0c38 1018 0db6 1018 0dc2 1018
+00c8:000001b0  0fa4 1018 1488 1018 1496 1018 158a 1018
+00c8:000001c0  1998 1018 1cae 1018 1f92 1018 1fa0 1018
+00c8:000001d0  1fae 1018 2998 1018 2bf0 1018 2c9c 1018
+00c8:000001e0  2caa 1018 2f90 1018 2f9e 1018 31c4 1018
+00c8:000001f0  332c 1018 333a 1018 3950 1018 3e9c 1018
+# d
+00c8:00000200  3fa2 1018 419a 1018 4318 1018 4332 1018
+00c8:00000210  5029 1000 9cab 0140 0000 0000 0000 0000
+00c8:00000220  0000 0000 08aa 1018 9d8c 0140 2114 1018
+00c8:00000230  1fbc 1018 4326 1018 0000 0000 0000 0000
+00c8:00000240  0000 0000 0000 0000 0098 22a8 0090 22a8
+00c8:00000250  <!-- entering slot 317 -->01b0 22b0 1500 22b0 7470 22b0 1650 22b0
+00c8:00000260  18e0 22b0 51b0 22b0 25d0 22b0 344d 22b0
+00c8:00000270  3ca7 22b0 469a 22b0 28ac 22b0 279b 22b0
+# d
+00c8:00000280  4316 22b0 28c5 22b0 4343 22b0 4347 22b0
+00c8:00000290  434d 22b0 3b30 22b0 43c0 22b0 4353 22b0
+00c8:000002a0  195d 22b0 4310 22b0 6e50 22b0 4c10 22b0
+00c8:000002b0  4d20 22b0 4ec6 22b0 5bc2 22b0 4359 22b0
+00c8:000002c0  6d27 22b0 1aab 22b0 43a1 22b0 8740 22b0
+00c8:000002d0  5029 1000 9cab 0140 4a70 22b0 4a7f 22b0
+00c8:000002e0  84c0 22b0 17bb 22b0 9d8c 0140 37f0 22b0
+00c8:000002f0  25f0 22b0 7570 22b0 0000 0000 0000 0000
+# d
+00c8:00000300  0000 0000 0000 0000 0c96 23f8 8880 23f8
+00c8:00000310  00de 23a0 0152 23a0 01bd 23a0 0228 23a0
+00c8:00000320  02f2 23a0 0369 23a0 03d1 23a0 042d 23a0
+00c8:00000330  049e 23a0 050f 23a0 0580 23a0 05df 23a0
+00c8:00000340  066b 23a0 06eb 23a0 075f 23a0 07b5 23a0
+00c8:00000350  083e 23a0 0982 23a0 09e7 23a0 0a4c 23a0
+00c8:00000360  0acf 23a0 0b40 23a0 0bab 23a0 0c1f 23a0
+00c8:00000370  0c87 23a0 0cfb 23a0 0d8d 23a0 0e04 23a0
+# d
+00c8:00000380  0e5d 23a0 0ecb 23a0 0f33 23a0 0f92 23a0
+00c8:00000390  5029 1000 9cab 0140 0000 0000 0000 0000
+00c8:000003a0  0000 0000 028d 23a0 9d8c 0140 0905 23a0
+00c8:000003b0  08ac 23a0 1000 23a0 0000 0000 0000 0000
+00c8:000003c0  0000 0000 0000 0000
+Past end of segment: 00c8:000003c8
+#
+&gt;&gt; The FSC starts with an 8 byte header. Word 1 is the length.
+&gt;&gt; Each entry is for each FSD starting with fsd2 (fsd1 is OS2BOOT
+&gt;&gt; and not used once the kernel is loaded). Each FSD entry comprises
+&gt;&gt; a table of far16 pointers. The first two are a) pointer to FSD
+&gt;&gt; attributes and b) FSD name. The remaining are the function entry
+&gt;&gt; points (See IFS OEM reference). There are 46 of these. In other
+&gt;&gt; words the first fsd entry is at c8:8 and ever subsequent entry is
+&gt;&gt; every 12 lines of display. fsd 6 entry starts at c3:308
+
+&gt;&gt; what's fsd6 called?
+
+# db 23f8:8880 l8
+23f8:00008880 4f 50 54 4c 49 42 00 00                         OPTLIB..
+
+&gt;&gt; The evidently is the optical library fsd.
+&gt;&gt; We didn't find the current cs:eip in the fsd function table so
+&gt;&gt; we unwind the r0 stack ....
+
+
+# dw 30:4b8c l8
+0030:00004b8c  4be8 7426 23a8 4bb2 0030 4bb0 0030 4bd8
+# dw 30:4be8 l8
+0030:00004be8  4c0a 738a 23a8 0000 1004 0000 2f48 4c2c
+# dw 30:4c0a l8
+0030:00004c0a  4c3a bb28 23a8 d7ce <!-- entering slot 318 -->0001 4c2c 0030 0000
+# dw 30:4c3a l8
+0030:00004c3a  4c6c 1b8f 23b0 0000 0000 0000 d7ce 0001
+# dw 30:4c6c l8
+0030:00004c6c  4c7e 1e87 23b0 0300 24f8 4ca8 0030 23f8
+# dw 30:4c7e l8
+0030:00004c7e  4cca 08ed 23b0 0300 24f8 4ca8 0030 4cb0
+# dw 30:4cca l8
+0030:00004cca  4cf6 011e 23b0 0100 24f0 0073 2520 0000
+# dw 30:4cf6 l8
+0030:00004cf6  4d36 7314 23b0 04d3 2408 0073 2520 0000
+# dw 30:4d36 l8
+0030:00004d36  4d70 5be8 23b0 006a 2520 0000 04d3 2408
+# dw 30:4d70 l8
+0030:00004d70  4dbc 04e3 23a8 0000 04d3 2408 0020 2022
+# dw 30:4dbc l8
+0030:00004dbc  4e46 2b1f 2398 4eb6 0030 0000 0003 0020
+# dw 30:4e4d l8
+0030:00004e4d  304e 0000 0300 2000 bc00 304e 1000 2200
+# dw 30:304e l8
+Invalid linear address: 0030:0000304e
+
+&gt;&gt; The problem here is that the kernel is not using ebp
+&gt;&gt; before calling the fsd. So dump the R0 stack from
+&gt;&gt; the last recognisable fsd selector. Look for the
+&gt;&gt; first selector that matches one used in fsd6's
+&gt;&gt; function table.
+
+dw 30:4dbc
+0030:00004dbc  4e46 2b1f 2398 4eb6 0030 0000 0003 0020
+0030:00004dcc  4ebc 0030 0010 2022 0000 41a5 2cf0 4df2
+0030:00004ddc  0030 ffff 04d0 2408 4edb 0030 0000 2f40
+0030:00004dec  23f8 8bfc 0308 2022 0000 1004 8ce8 1c63
+0030:00004dfc  8ce8 1c63 8ce8 1c63 0000 0000 0000 0000
+0030:00004e0c  0000 006c 0000 0274 0000 0000 0000 2100
+0030:00004e1c  0001 4e3e 0006 0004 0000 2f40 039c 2408
+0030:00004e2c  0345 0098 006c 0003 0001 0000 04d0 2408
+# d
+0030:00004e3c  02f4 0305 0098 2f40 1004 4e84 0d6e 23a0
+0030:00004e4c  4eb6 0030 0000 0003 0020 4ebc 0030 0010
+0030:00004e5c  2022 0000 41a5 2cf0 41d7 2cf0 ffff 4fee
+0030:00004e6c  0030 4edb 0030 4ee3 0030 0308 8bfc 510d
+0030:00004e7c  0000 9410 00c8 0030 4ec0 9a09 0140 4eb6
+0030:00004e8c  0030 0000 0003 0020 4ebc 0030 0010 2022
+0030:00004e9c  0000 41a5 2cf0 41d7 2cf0 ffff 4fee 0030
+0030:00004eac  4edb 0030 4ee3 0030 0000 0000 04d0 0007
+
+&gt;&gt; at 30:4e48 we have 23a0:d6e. Looking at the function
+&gt;&gt; table we see entry point 26 at 23a0:cfb is the closest.
+&gt;&gt; fsd entry point 26 is FS_OPENCREATE. This seems to be
+&gt;&gt; consistent with what ring 3 was doing.
+&gt;&gt; Finally for future reference the FSD entry structure is
+&gt;&gt; as follows:
+
+&gt;&gt;+0   FS_ATTRIBUTE;  /* -&gt; FSD attribute. (in FSD memory) */
+&gt;&gt;+4   FS_NAME;       /* -&gt; FSD name.      (in FSD memory) */
+&gt;&gt;+8   FS_ATTACH;    /* DosQFsAttach, DosFsAttach */
+&gt;&gt;+c   FS_CHDIR;  /* DosChdir */
+&gt;&gt;+10  FS_CHGFILEPTR; /* DosChgFilePtr */
+&gt;&gt;+14  FS_CLOSE;  /* DosClose */
+&gt;&gt;+18  FS_COPY;  /* DosCopy */
+&gt;&gt;+1c  FS_DELETE;  /* DosDelete */
+&gt;&gt;+20  FS_EXIT;  /* DosExit */
+&gt;&gt;+24  FS_FILEATTRIBUTE; /* DosFileInfo, DosSetFileMode */
+&gt;&gt;+28  FS_FILEINFO;  /* DosQFileInfo, DosSetFileInfo */
+&gt;&gt;+2c  FS_FILEIO;  /* DosFileIO */
+&gt;&gt;+30  FS_FINDCLOSE;  /* DosFindClose */
+&gt;&gt;+34  FS_FINDFIRST;  /* <!-- entering slot 319 -->DosFindFirst */
+&gt;&gt;+38  FS_FINDFROMNAME; /* DosFindFromName-Private to server */
+&gt;&gt;+3c  FS_FINDNEXT;  /* DosFindNext */
+&gt;&gt;+40  FS_FINDNOTIFYCLOSE; /* DosFindNotifyClose */
+&gt;&gt;+44  FS_FINDNOTIFYFIRST; /* DosFindNotifyFirst */
+&gt;&gt;+48  FS_FINDNOTIFYNEXT; /* DosFindNotifyNext */
+&gt;&gt;+4c  FS_FSINFO;  /* DosQFsInfo, DosSetFsInfo */
+&gt;&gt;+50  FS_INIT;  /* -- No corresponding API */
+&gt;&gt;+54  FS_IOCTL;  /* DosDevIoctl */
+&gt;&gt;+58  FS_MKDIR;  /* DosMkdir */
+&gt;&gt;+5c  FS_MOUNT;  /* -- No corresponding API */
+&gt;&gt;+60  FS_MOVE;  /* DosMove */
+&gt;&gt;+64  FS_NEWSIZE;  /* DosNewsize */
+&gt;&gt;+68  FS_NMPIPE;  /* All named pipe related API's */
+&gt;&gt;+6c  FS_OPENCREATE; /* DosOpen */
+&gt;&gt;+70  FS_PATHINFO;  /* DosQPathInfo, DosSetPathInfo */
+&gt;&gt;+74  FS_PROCESSNAME; /* -- No corresponding API */
+&gt;&gt;+78  FS_READ;  /* DosRead, DosReadAsync */
+&gt;&gt;+7c  FS_RMDIR;  /* DosRmdir */
+&gt;&gt;+80  FS_SETSWAP;  /* -- No correcponding API */
+&gt;&gt;+84  FS_WRITE;  /* DosWrite, DosWriteAsync */
+&gt;&gt;+88  FS_OPENPAGEFILE; /* init time only */
+&gt;&gt;+8c  FS_ALLOCATEPAGESPACE; /* size swap file */
+&gt;&gt;+90  FS_CANCELLOCKREQUEST; /* DosCancelLockRequest */
+&gt;&gt;+94  FS_FILELOCKS;  /* DosSetFileLocks */
+&gt;&gt;+98  FS_VERIFYUNCNAME; /* Used to save function addresses */
+&gt;&gt;+9c  FS_COMMIT;  /* DosBufReset, DosClose */
+&gt;&gt;+a0  FS_DOPAGEIO;  /* perform paging */
+&gt;&gt;+a4  FS_FSCTL;  /* DosFsCtl */
+&gt;&gt;+a8  FS_FLUSHBUF;  /* DosBufReset */
+&gt;&gt;+ac  FS_SHUTDOWN;  /* DosShutdown */
+&gt;&gt;+b0  FS_SDCHGFILEPTR; /* Used to save function addresses */
+&gt;&gt;+b4  FS_SDFSINFO;  /* at shutdown time.  These functions */
+&gt;&gt;+b8  FS_SDREAD;  /* will only be called by shutdown */
+&gt;&gt;+bc  FS_SDWRITE;  /* filters. */
+&gt;&gt;
+&gt;&gt; * Bit masks for FS_ATTRIBUTE (remember FS_ATTRIBUTE points to the
+&gt;&gt;attribute
+&gt;&gt; * word rather than containing it directly.)
+&gt;&gt;
+&gt;&gt; FS_ATTR_REMOTE  0x0001 /* 0 = local FSD, 1 = remote FSD     */
+&gt;&gt; FS_ATTR_UNC  0x0002 /* 0 = normal, 1 = this is UNC FSD   */
+&gt;&gt; FS_ATTR_LOCKINFO 0x0004 /* 0 = no notice, 1=notify filelocks */
+&gt;&gt; FS_ATTR_LVL7  0x0008 /* 0 = no level 7 requests, 1 = yes  */
+&gt;&gt; FS_ATTR_PIPESVR  0x0010 /* 0 = don't FSD on PIPE req,1 = yes */
+&gt;&gt;
+&gt;&gt; /* bit masks for FS_ATTRIBUTE (High Word) */
+&gt;&gt; FS_ATTR_VERNO  0x7000 /* bits 28-30 version no */
+&gt;&gt; FS_ATTR_EA  0x8000 /* bit 31 -&gt; 1 = extended attribute */
+&gt;&gt;
+&gt;&gt; /* equates for commit type */
+&gt;&gt; FS_COMMIT_ALL  2 /* all handles commit */
+&gt;&gt; FS_COMMIT_ONE  1 /* one handle commit */
+&gt;&gt;
+&gt;&gt; /* equates for close type */
+&gt;&gt; FS_CL_ORDINARY  0 /* ordinary close */
+&gt;&gt; FS_CL_FORPROC  1 /* final close for process */
+&gt;&gt; FS_CL_FORSYS  2 /* final close for system */
+----------------------------------------------------------------------
+</PRE>
+
+
+<P><HR>
+
+<A HREF="212_L3_DumpAnalysisofLoopsi.html">[Back: Dump Analysis of Loops in Ring 0 Code]</A> <BR>
+<A HREF="214_L1_KernelDebuggerUserGu.html">[Next: Kernel Debugger User Guide]</A> 
+</BODY>
+</HTML>

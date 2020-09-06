@@ -1,0 +1,195 @@
+<HTML>
+<HEAD>
+<TITLE>DosFindNext</TITLE>
+</HEAD>
+<BODY>
+<H1>DosFindNext</H1><!-- entering slot 40 -->
+<P>
+<B>Purpose</B>
+<P>
+DosFindNext finds the next set of file objects whose names match the specification
+in a previous call to DosFindFirst or DosFindNext.
+<P>
+<B>Syntax</B>
+<PRE>#define INCL DOSFILEMGR
+#include  os2.h 
+
+</PRE>
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+APIRET DosFindNext<!-- lm: 0x2 11 -->
+<UL><B> (HDIR hDir, PVOID pfindbuf,
+ULONG cbfindbuf, PULONG pcFilenames)</B><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Parameters</B><!-- lm: 0x2 1 -->
+<P>
+hDir  HDIR)  input<!-- lm: 0x11 11 -->
+<UL> The handle of the directory.
+<!-- lm: 0x2 1 -->
+</UL>pfindbuf  PVOID)  in/out<!-- lm: 0x11 11 -->
+<UL> The
+address of the directory search information structure.
+<P>
+The information returned reflects the most recent call to DosClose or DosResetBuffer.
+
+<P>
+For the continuation of a Level 3 (FIL_QUERYEASFROMLIST) File Information
+search, this buffer should contain input in the same format as a Level 3
+File Information search by DosFindFirst.
+<P>
+See the description of the<I> pfindbuf</I> parameter in DosFindFirst for
+information about the output data that the file system driver places into
+this buffer.<!-- lm: 0x2 1 -->
+</UL> cbfindbuf  ULONG)  input<!-- lm: 0x11 11 -->
+<UL> The
+length, in bytes, of<I> pfindbuf</I>.<!-- lm: 0x2 1 -->
+</UL> pcFilenames
+ PULONG)  in/out<!-- lm: 0x11 11 -->
+<UL> Pointer to the number of entries.
+<!-- lm: 0x2 11 -->
+<P>
+Input<!-- lm: 0x2 24 -->
+<UL> The address of the number of matching entries
+requested in<I> pfindbuf</I>.<!-- lm: 0x2 11 -->
+</UL> Output<!-- lm: 0x2 24 -->
+<UL> The
+number of entries placed into<I> pfindbuf</I>.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Returns</B><!-- lm: 0x2 1 -->
+<P>
+ulrc  APIRET)  returns<!-- lm: 0x11 11 -->
+<UL> Return Code.
+<P>
+DosFindNext returns one of the following values <!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->NO_ERROR<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->ERROR_INVALID_HANDLE<!-- lm: 0x2 11 -->
+<P>
+18<!-- lm: 0x2 26 -->
+<UL> ERROR_NO_MORE_FILES<!-- lm: 0x2 11 -->
+</UL> 26
+<!-- lm: 0x2 26 -->
+<UL>ERROR_NOT_DOS_DISK<!-- lm: 0x2 11 -->
+</UL> 87<!-- lm: 0x2 26 -->
+<UL> ERROR_INVALID_PARAMETER
+<!-- lm: 0x2 11 -->
+</UL>111<!-- lm: 0x2 26 -->
+<UL> ERROR_BUFFER_OVERFLOW
+<!-- lm: 0x2 11 -->
+</UL>275<!-- lm: 0x2 26 -->
+<UL> ERROR_EAS_DIDNT_FIT
+<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Remarks</B>
+<P>
+If ERROR_BUFFER_OVERFLOW is returned, further calls to DosFindNext start
+the search from the same entry.
+<P>
+If ERROR_EAS_DIDNT_FIT is returned, the buffer is too small to hold the
+extended attributes (EAs) for the first matching entry being returned. A
+subsequent call to DosFindNext gets the next matching entry. This enables
+the search to continue if the extended attributes being returned are too
+large for the buffer. You can use DosQueryPathInfo to retrieve the extended
+attributes for the matching entry by using the same EA arguments used for
+the call to DosFindFirst, and the name that was returned by DosFindFirst,
+
+<P>
+In the case of ERROR_EAS_DIDNT_FIT, only information for the first matching
+entry is returned. This is the entry whose extended attributes did not fit
+in the buffer. The information returned is in the format of Level 2 or Level
+12 (FIL_QUERYEASIZE) File Information (FILEFINDBUF4 or FILEFINDBUF4L). No
+further entries are returned in the buffer, even if they could fit in the
+remaining space.
+<P>
+<B>Related Functions</B><!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->DosClose<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosFindClose<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosFindFirst<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosQueryFileInfo<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosQueryPathInfo<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosQuerySysInfo<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosResetBuffer<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosSearchPath<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosSetFileInfo<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosSetPathInfo<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Example Code</B>
+<P>
+This example lists all the normal files that are in the directory from where
+the example is invoked.
+<PRE>#define INCL_DOSFILEMGR   /* File Manager values */#define INCL_DOSERRORS    /* DOS error values */
+#include  os2.h 
+#include  stdio.h 
+
+int main (VOID)  
+HDIR          hdirFindHandle = HDIR_CREATE;
+FILEFINDBUF3L  FindBuffer     =  0 ;      /* Returned from FindFirst/Next */
+ULONG         ulResultBufLen = sizeof(FILEFINDBUF3L);
+ULONG         ulFindCount    = 1;        /* Look for 1 file at a time    */
+APIRET        rc             = NO_ERROR; /* Return code                  */
+
+rc = DosFindFirst( "*.*",                /* File pattern - all files     */
+ hdirFindHandle,      /* Directory search handle      */
+FILE_NORMAL,          /* Search attribute             */
+ FindBuffer,          /* Result buffer                */
+ulResultBufLen,       /* Result buffer length         */
+ ulFindCount,         /* Number of entries to find    */
+FIL_<!-- entering slot 41 -->STANDARDL);       /* Return level 1 file info     */
+
+if (rc != NO_ERROR)  
+printf("DosFindFirst error  return code = %u\n",rc);
+return 1;
+  else  
+printf ("%s\n", FindBuffer.achName);   /* Print file name             */
+  /* endif */
+
+/* Keep finding the next file until there are no more files */
+while (rc != ERROR_NO_MORE_FILES)  
+ulFindCount = 1;                      /* Reset find count.            */
+
+rc = DosFindNext(hdirFindHandle,      /* Directory handle             */
+ FindBuffer,         /* Result buffer                */
+ulResultBufLen,      /* Result buffer length         */
+ ulFindCount);       /* Number of entries to find    */
+
+if (rc != NO_ERROR    rc != ERROR_NO_MORE_FILES)  
+printf("DosFindNext error  return code = %u\n",rc);
+return 1;
+  else  
+printf ("%s\n", FindBuffer.achName);    /* Print file name */
+ 
+  /* endwhile */
+
+rc = DosFindClose(hdirFindHandle);    /* Close our directory handle */
+if (rc != NO_ERROR)  
+printf("DosFindClose error  return code = %u\n",rc);
+return 1;
+ 
+return NO_ERROR;
+ 
+</PRE>
+
+
+<P><HR>
+
+<A HREF="028_L2_DosFindFirst.html">[Back: DosFindFirst]</A> <BR>
+<A HREF="030_L2_DosForceSystemDump.html">[Next: DosForceSystemDump]</A> 
+</BODY>
+</HTML>

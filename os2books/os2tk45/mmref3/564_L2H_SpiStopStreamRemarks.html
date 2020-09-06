@@ -1,0 +1,88 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>SpiStopStream - Remarks</TITLE>
+</HEAD>
+<BODY>
+<H1>SpiStopStream - Remarks</H1><!-- entering slot 564 -->
+<P>
+Three possible types of stops can be issued:  pause, discard, and flush.
+ The pause stop immediately pauses the stream by sending an <A HREF="833_L2_SHC_STOP.html">SHC_STOP
+</A>call to both the source and target stream handlers.  Both stream handlers
+must become idle and not request any more buffers from the Sync/Stream Manager.
+ The Sync/Stream Manager will fail any "get buffer" requests, so that a
+stream handler cannot continue to stream.  All stream data remains valid.
+The stream can be restarted by issuing <A HREF="547_L2_SpiStartStream.html">SpiStartStream</A>.
+
+<P>
+The discard stop immediately stops the stream by sending an <A HREF="833_L2_SHC_STOP.html">SHC_STOP
+</A>call to both the source and target stream handlers.  Both stream handlers
+must return all buffers to the Sync/Stream Manager.  The Sync/Stream Manager
+fails any "get buffer" requests, so that a stream handler cannot continue
+to stream.  Any data currently in the stream buffers is discarded.  The
+stream can be restarted after a discard stop. The stream time is adjusted
+to the time at the point the stream was stopped.
+<P>
+The flush stop sends an <A HREF="833_L2_SHC_STOP.html">SHC_STOP</A> call
+to both the source and target stream handlers.  The stream does not stop,
+however.  The source stream handler must not request any more buffers from
+the Sync/Stream Manager.  It must return all buffers to the Sync/Stream
+Manager. The Sync/Stream Manager fails any "get buffer" requests from the
+source stream handler, so that it cannot continue to fill buffers.  The
+target stream handler continue to stream data until all buffers are emptied.
+The stream can be restarted, with no loss of data.
+<P>
+For discard and flush stops, the Sync/Stream Manager detects when the stream
+handlers have stopped and returned all buffers.  At this point, the Sync/Stream
+Manager notifies the application with an EVENT_STREAM_STOPPED event message.
+ In the case of a sync group, there will be one EVENT_STREAM_STOPPED event
+for each stream that is stopped.  Any stream in the sync group that was
+previously stopped, either by an explicit <A HREF="547_L2_SpiStartStream.html">SpiStartStream
+</A>or by reaching the end of the stream, does not trigger an EVENT_STREAM_STOPPED
+event.
+<P>
+If a stream is paused and the application issues a discard stop, the stream
+buffers are discarded and the stream is put in a stopped state.  If a stream
+is paused and a flush stop is issued, the remaining stream buffer data is
+transferred to the target stream handler. In other words, the stream begins
+<I>playing</I> again.
+<P>
+This function returns an error if a flush stop is issued for a prerolled
+stream that has not been started.  A flush or pause stop is not valid while
+a stream is being prerolled.  If a pause stop is issued to a prerolled stream,
+the stream is still considered to be prerolled and not paused.
+<P>
+Slave streams can be stopped independently of the master stream.  When the
+slave stream stops, the sync relationship is not broken, but the slave becomes
+idle.  The master stream and any other slave streams continue running. If
+the stopped slave is restarted, a new master-to-slave time offset is established,
+which the slave stream maintains until it is either stopped again, or the
+master stream is stopped.  As a result, slave streams can regain synchronization
+at any asynchronous point in time, as in response to another stream event
+from the master stream, for example.
+<P>
+Slave-stream time and master-stream time are not always identical. Once
+a slave stream is stopped, the master stream time can continue to increment.
+ When the slave stream is restarted, its stream time increments at the same
+rate as the master stream.  Any slave stream in a synchronization relationship
+can be started arbitrarily or stopped without affecting the activity of
+the master stream or any of the slave streams.  When the SPI_STOP_SLAVES
+flag is set, the master stream, as well as the slave streams, stops.
+<P>
+Typically, data streaming continues until the end of the stream. When this
+happens, the Sync/Stream Manager sends an EVENT_EOS event message to the
+application's event routine.  In the case of a sync group, there is one
+EVENT_EOS message per stream.
+<P>
+<B>Note: </B> This function should not be used during exit-list processing
+because it is asynchronous and the event for completion of the function
+will never be sent.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+
+<P><HR>
+
+<A HREF="563_L2H_SpiStopStreamParamet.html">[Back: SpiStopStream - Parameters]</A> <BR>
+<A HREF="565_L2H_SpiStopStreamRelated.html">[Next: SpiStopStream - Related Functions]</A> 
+</BODY>
+</HTML>

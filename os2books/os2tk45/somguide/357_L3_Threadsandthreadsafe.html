@@ -1,0 +1,39 @@
+<HTML>
+<HEAD>
+<TITLE>Threads and thread safety</TITLE>
+</HEAD>
+<BODY>
+<H1>Threads and thread safety</H1><!-- entering slot 406 -->
+<P>
+As indicated earlier, on OS/2, interactive programs call<B> someProcessEvents
+</B>in one thread and process keyboard input in a separate thread. (This
+recommended usage is illustrated in the sample program). The event manager
+object (EMan) is thread safe in the sense that concurrent method invocations
+on EMan are serialized. Even when<B> someProcessEvents</B> is invoked in
+a thread and other methods of EMan are invoked from other threads, EMan
+still preserves its data integrity. However, when Eman dispatches an event,
+a callback can call methods on the same data objects as the other interactive
+thread(s). The user must protect such data objects using appropriate concurrency
+control techniques (for example by using semaphores).
+<P>
+One must also be aware of some deadlock possibilities. Consider the following
+situation. EMan code holds some SOMobjects Toolkit semaphores while it is
+running (for example, while in<B> someProcessEvents</B>). A user-defined
+object protects its data by requiring its methods to acquire and release
+a sempahore on the object. If a separate thread running in this object were
+to call an operation that requires a SOMobjects Toolkit semaphore (which
+is currently held by EMan) and if concurrently EMan dispatches an event
+whose callback invokes a method of this object, a deadlock occurs. Two possibilities
+exist to cope with such a situation: One is to acquire all needed semaphores
+ahead of time, and the other is to abort the operation when you fail to
+obtain a semaphore. To achieve mutual exclusion with EMan, you can call
+the methods<B> someGetEManSem</B> and<B> someReleaseEmanSem</B>. These methods
+acquire and release the SOMobject Developer Toolkit semaphores that EMan
+uses.
+
+<P><HR>
+
+<A HREF="356_L2_EventManagerAdvanced.html">[Back: Event Manager Advanced Topics]</A> <BR>
+<A HREF="358_L3_WritinganXorMOTIFapp.html">[Next: Writing an X or MOTIF application]</A> 
+</BODY>
+</HTML>

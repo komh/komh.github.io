@@ -1,0 +1,108 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Check if a program is running (using PSTAT)</TITLE>
+</HEAD>
+<BODY>
+<H1>Check if a program is running (using PSTAT)</H1><!-- entering slot 516 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* function: isrun.cmd checks if a specific program is running        */
+/*                                                                    */
+/* Usage:    isrun exe_name                                           */
+/*                                                                    */
+/* where:    exe_name                                                 */
+/*             - name of the EXE (with or without path)               */
+/*                                                                    */
+/* returns:  0 - program is not running                               */
+/*           1 - program is running                                   */
+/*           2 - usage error                                          */
+/*                                                                    */
+/*                                                                    */
+/* Notes:    This program needs the program PSTAT to be in a          */
+/*           directory in the PATH                                    */
+/*                                                                    */
+/*           You cannot check if a .CMD file is running with this     */
+/*           routine!                                                 */
+/*                                                                    */
+/* see also <A HREF="498_L3_Checkifaprogramisrun.html">Check if a program is running (using RXU.DLL)</A>             */
+/*                                                                    */
+                    /* init the return code                           */
+  thisRC = 0
+
+                    /* get the parameter                              */
+  parse upper arg progname
+  if progName = '' | pos( '?', progName ) &lt;&gt; 0 then
+  do
+                    /* show the usage help                            */
+    say 'Usage: isrun exeName'
+    thisRC = 2
+  end /* if progName = '' | pos( '?', progName ) &lt;&gt; 0 then */
+
+  if thisRC = 0 then
+  do
+                    /* flush the REXX queue                           */
+    do while queued() &lt;&gt; 0; parse pull; end;
+
+                    /* add the default extension to the program name  */
+                    /* if necessary                                   */
+    i = lastPos( '.', progName )
+    j = lastPos( '\', progName )
+    if ( i = 0 ) | ( i &lt; j ) then
+      progName = progName || '.EXE'
+
+                    /* call PSTAT to get the process information      */
+    '@pstat /c | rxqueue'
+
+                    /* init the stem with the names of the running    */
+                    /* programs                                       */
+    processList.0 = 0
+
+                    /* extract the process information from the PSTAT */
+                    /* output                                         */
+    do while queued() &lt;&gt; 0
+      curLine = lineIn( 'QUEUE:' )
+
+      parse upper var curLine ,
+        1 ProcessID 11 ParentProcessID 21 SessionID 31 exeName .
+
+                    /* check if this is a valid entry                 */
+      if pos( '\', exeName ) &lt;&gt; 0 then
+      do
+                    /* entry is valid -&gt; add it to the stem           */
+        i = processList.0+1
+        processList.i = strip( exeName )
+        processList.0 = i
+      end /* if datatype( exeName ) &lt;&gt; 'NUM' then */
+
+    end /* do while queued() &lt;&gt; 0 */
+
+                    /* compare the name of the searched program with  */
+                    /* all members of the stem with the running       */
+                    /* processes                                      */
+    do i = 1 to processList.0 while thisRC = 0
+      if pos( '\', progName )= 0 then
+        thisRC = (progname = translate( filespec( 'n', processList.i ) ) )
+      else
+        thisRC = ( progName = processList.i )
+    end /* do i = 1 to processList.0 */
+  end /* if thisRC = 0 then */
+
+RETURN thisRC
+
+/* ------------------------------------------------------------------ */
+
+</PRE>
+
+<P>
+
+
+<P><HR>
+
+<A HREF="497_L3_Checkifaprogramisrun.html">[Back: Check if a program is running (using RXU.DLL)]</A> <BR>
+<A HREF="499_L2_IPCandprocesssynchro.html">[Next: IPC and process synchronisation]</A> 
+</BODY>
+</HTML>

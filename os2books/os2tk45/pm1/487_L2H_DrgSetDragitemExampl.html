@@ -1,0 +1,155 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DrgSetDragitem - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DrgSetDragitem - Example Code</H1><!-- entering slot 495 -->
+<P>
+This example shows a direct manipulation operation between two windows.
+The actual operation, copying the CONFIG.SYS file to C:\OS2\CONFIG.SYS,
+is visually represented by a drag and drop of an icon.
+<PRE>#define INCL_GPIBITMAPS  /* GPI Bit Map Functions                */
+#define INCL_WINSTDDRAG  /* Direct Manipulation (Drag) Functions */
+#define INCL_DOSFILEMGR  /* File Management Functions            */
+#define INCL_WININPUT    /* Window Input Functions               */
+#include &lt;os2.h&gt;
+#include &lt;string.h&gt;
+#define ID_WINDOW 255
+#define ID_ITEM 256
+#define ID_BITMAP 257    /* .rc file: "bitmap 257 drgimage.bmp"  */
+HPS       hps;           /* Presentation space handle            */
+BOOL      flResult;
+HAB       hab;
+PDRAGINFO pdinfo;
+DRAGITEM  ditem;
+DRAGIMAGE dimg;
+PDRAGITEM pditem;
+HBITMAP   hbm;           /* Bit-map handle                       */
+HPOINTER  hptr;          /* Pointer bit-map handle               */
+HWND      hwndDrop;
+HWND      hwnd;
+MPARAM    mp1;
+char szBuffer[32];       /* Buffer where intersection string     */
+                         /* is returned                          */
+char szSource[32];
+char szTarget[32];
+
+/*****************************************************************/
+/* Inside  ClientWindowProc of Source Window                     */
+/*****************************************************************/
+
+case WM_BEGINDRAG:
+
+/*****************************************************************/
+/* Initialize the DRAGITEM structure                             */
+/*****************************************************************/
+
+    ditem.hwndItem = hwnd;      /* Conversation partner          */
+    ditem.ulItemID = ID_ITEM;   /* Identifies item being dragged */
+    ditem.hstrType = DrgAddStrHandle(DRT_TEXT);     /* Text item */
+    ditem.hstrRMF = DrgAddStrHandle("&lt;DRM_OS2FILE,DRF_TEXT&gt;");
+    ditem.hstrContainerName = DrgAddStrHandle("C:\\");
+    ditem.hstrSourceName = DrgAddStrHandle("C:\\CONFIG.SYS");
+    ditem.hstrTargetName = DrgAddStrHandle("C:\\OS2\\CONFIG.SYS");
+    ditem.cxOffset = 0; ditem.cyOffset = 0;
+    ditem.fsControl = 0; ditem.fsSupportedOps = 0;
+
+/*****************************************************************/
+/* Create the DRAGINFO structure                                 */
+/*****************************************************************/
+
+    pdinfo = DrgAllocDraginfo(1);
+
+/*****************************************************************/
+/* Initialize the DRAGIMAGE structure                            */
+/*****************************************************************/
+
+    dimg.cb = sizeof(DRAGIMAGE); /* Size control block           */
+    dimg.cptl        = 0;
+    dimg.hImage = hbm;           /* Image handle passed to       */
+                                 /* DrgDrag                      */
+    dimg.sizlStretch.cx = 20L;   /* Size to stretch ico or       */
+    dimg.sizlStretch.cy = 20L;   /* bmp to                       */
+    dimg.fl = DRG_BITMAP |
+              DRG_STRETCH;       /* Stretch to size specified    */
+    dimg.cxOffset = 0;           /* Offset of the origin of the  */
+    dimg.cyOffset = 0;           /* image from the pointer       */
+                                 /* hotspot                      */
+
+flResult= DrgSetDragitem(pdinfo, &amp;ditem, (ULONG)sizeof(ditem), 0);
+
+/*****************************************************************/
+/* Perform the drag operation:                                   */
+/*****************************************************************/
+
+      hwndDrop = DrgDrag(hwnd,  /* Source of the drag            */
+                  pdinfo,       /* Pointer to DRAGINFO structure */
+                 (PDRAGIMAGE)&amp;dimg,  /* Drag image               */
+                  1,            /* Size of the pdimg array       */
+                  VK_ENGDRAG,   /* Release of drag button        */
+                                /* terminates the drag           */
+                  NULL);        /* Reserved                      */
+
+/*****************************************************************/
+/* Inside ClientWindowProc of Target Window                      */
+/*****************************************************************/
+
+  case DM_DRAGOVER:
+
+      pdinfo = MPFROMP(mp1);
+      pditem = DrgQueryDragitemPtr(pdinfo,0);
+
+      flResult = DrgVerifyTrueType(pditem,"DRF_TEXT");
+
+      if(!flResult)
+
+/*****************************************************************/
+/* Inform the application that you will accept the drop          */
+/*****************************************************************/
+
+      return(MRFROM2SHORT(DOR_DROP,DO_COPY));
+
+  case DM_DROP:
+      pdinfo = MPFROMP(mp1);
+      pditem = DrgQueryDragitemPtr(pdinfo,0);
+
+/*****************************************************************/
+/* Perform the operation represented by the direct manipulation  */
+/*****************************************************************/
+
+DrgQueryStrName(pditem-&gt;hstrSourceName,sizeof(szSource),szSource);
+DrgQueryStrName(pditem-&gt;hstrTargetName,sizeof(szTarget),szTarget);
+flResult = DosCopy(szSource,szTarget,0L);
+
+/*****************************************************************/
+/* If operation is successful, return DMFL_TARGETSUCCESSFUL      */
+/*****************************************************************/
+
+if(!flResult)
+{
+      DrgSendTransferMsg(pditem-&gt;hwndItem,
+                         DM_ENDCONVERSATION,
+                         MPFROMLONG(pditem-&gt;ulItemID),
+                         MPFROMLONG(DMFL_TARGETSUCCESSFUL));
+}
+
+/*****************************************************************/
+/* Otherwise, return DMFL_TARGETFAIL                             */
+/*****************************************************************/
+
+else
+{
+      DrgSendTransferMsg(pditem-&gt;hwndItem,
+                         DM_ENDCONVERSATION,
+                         MPFROMLONG(pditem-&gt;ulItemID),
+                         MPFROMLONG(DMFL_TARGETFAIL));
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="486_L2H_DrgSetDragitemRelate.html">[Back: DrgSetDragitem - Related Functions]</A> <BR>
+<A HREF="488_L2H_DrgSetDragitemTopics.html">[Next: DrgSetDragitem - Topics]</A> 
+</BODY>
+</HTML>

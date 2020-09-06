@@ -1,0 +1,173 @@
+<HTML>
+<HEAD>
+<TITLE>Initializing the HELPINIT Structure</TITLE>
+</HEAD>
+<BODY>
+<H1>Initializing the HELPINIT Structure</H1><!-- entering slot 241 -->
+<P>
+Before you call WinCreateHelpInstance, you must allocate memory for and
+initialize the HELPINIT structure.  This structure defines values that IPF
+needs to create the help instance.  Some of the values can be changed by
+your application after initialization.
+<P>
+The HELPINIT structure and the help table structures referred to by IPF
+during help processing are contained in the PMHELP.H file. The PMHELP.H
+file also contains the error codes returned in the event of an unsuccessful
+call. You include this file in your source code by using the INCL_WINHELP
+define statement. The following shows the HELPINIT structure.
+<PRE>typedef struct _HELPINIT /* hinit */
+{
+
+ULONG          cb;
+ULONG          ulReturnCode;
+PSZ            pszTutorialName;
+PHELPTABLE     phtHelpTable;
+HMODULE        hmodHelpTableModule;
+HMODULE        hmodAccelActionBarModule;
+ULONG          idAccelTable;
+ULONG          idActionBar;
+PSZ            pszHelpWindowTitle;
+ULONG          fShowPanelId;
+PSZ            pszHelpLibraryName;
+} HELPINIT;
+</PRE>
+
+<P>
+Following are descriptions of the HELPINIT structure fields.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Field Name<!-- lm: 0x2 21 -->
+<UL> Description<!-- lm: 0x2 1 -->
+</UL> cb
+<!-- lm: 0x12 21 -->
+<UL>The length of the initialization structure.  This
+value can be use to identify the version of IPF being used.<!-- lm: 0x2 1 -->
+</UL> ulReturnCode
+<!-- lm: 0x12 21 -->
+<UL>The IPF return code<!-- lm: 0x2 1 -->
+</UL> pszTutorialName
+<!-- lm: 0x12 21 -->
+<UL>A pointer to a tutorial name, if one exists.  If
+this value is NULL, either the application help interface does not include
+a tutorial, or the tutorial is referenced from a help window.  If this value
+is not NULL, IPF provides a<B> Tutorial</B> choice in the help pull-down
+and adds a push button to the control area.
+<P>
+If the user selects the<B> Tutorial</B> choice in the pull-down, IPF sends
+the HM_TUTORIAL message to the application so that it can start the tutorial.
+<!-- lm: 0x2 1 -->
+</UL>phtHelpTable<!-- lm: 0x12 21 -->
+<UL> If the help
+table is in memory this ia a pointer to the help table. If the help table
+is a resource, this is the resource ID ORed with 0xFFFF0000.<!-- lm: 0x2 1 -->
+</UL> hmodHelpTableModule
+<!-- lm: 0x12 21 -->
+<UL>The name of the resource file that indexes the
+dynamic link library that contains the help table and its corresponding
+subtables.  If the help table is not being accessed through a dynamic link
+library, this value is 0.<!-- lm: 0x2 1 -->
+</UL> hmodAccelActionBarModule
+<!-- lm: 0x12 21 -->
+<UL>The name of the dynamic link library that contains
+the modified menu bar. If you do not have a modified menu bar, this value
+is 0.<!-- lm: 0x2 1 -->
+</UL> idAccelTable<!-- lm: 0x12 21 -->
+<UL> The
+name of the accelerator table if you are using a modified menu bar; otherwise,
+this value is 0.<!-- lm: 0x2 1 -->
+</UL> idActionBar<!-- lm: 0x12 21 -->
+<UL> The
+identity of the menu bar (action bar) template.  If you are not modifying
+the menu bar, this value is 0.<!-- lm: 0x2 1 -->
+</UL> pszHelpWindowTitle
+<!-- lm: 0x12 21 -->
+<UL>A pointer to the name of the title for the main
+help window.  This name can be changed after initialization by sending the
+message HM_SET_HELP_WINDOW_TITLE.<!-- lm: 0x2 1 -->
+</UL> fShowPanelId<!-- lm: 0x12 21 -->
+<UL> A
+flag used to append the window ID to the beginning of the help window title
+in the title bar of the help window.  If this flag is set to CMIC_SHOW_PANEL_ID,
+the window IDs are displayed. If this flag is set to CMIC_HIDE_PANEL_ID
+or to 0, the window IDs are not displayed.
+<P>
+This flag is useful during the development stages of the help interface.
+
+<P>
+After initialization, this flag can be toggled with the HM_SET_SHOW_PANEL_ID
+message.<!-- lm: 0x2 1 -->
+</UL> pszHelpLibraryName<!-- lm: 0x12 21 -->
+<UL> The
+help library names of the .HLP files containing the help windows. These
+.HLP files are created by the IPF compiler.  When IPF needs to search for
+a help window, it looks for these library names in the path set by the HELP
+environment variable.  If IPF cannot find a library name in this path, it
+then searches the current directory.
+<P>
+After initialization, help library names can be specified with the HM_SET_HELP_LIBRARY_NAME
+message.  If multiple libraries are specified, library names must be separated
+by a blank space.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following example shows a help facility being initialized.  Notice that
+hmodAccelActionBarModule, idAccelTabl      e, and idActionBar have values
+set to 0; this is because this example uses a standard menu bar.
+<PRE>VOID HelpInit (VOID){
+   HELPINIT hini;
+
+   /* if we return because of an error, Help will be <!-- entering slot 242 -->disabled */
+   fHelpEnabled = FALSE;
+
+   /* initialize help init structure */
+   hini.cb = sizeof (HELPINIT)
+   hini.ulReturnCode = 0L;
+
+   hini.pszTutorialName = (PSZ)NULL /*if tutorial added, add name here*/
+
+   hini.phtHelpTable = (PHELPTABLE)MAKELONG(JIGSAW_HELP_TABLE, 0xFFFF);
+   hini.hmodHelpTableModule = (HMODULE)0;
+   hini.hmodAccelActionBarModule = (HMODULE)0;
+   hini.idAccelTable = 0;
+   hini.idActionBar = 0;
+
+   if (!WinLoadString (habMain,
+            (HMODULE)0,
+            IDS_HELPWINDOWTITLE,
+            HELPLIBRARYNAMELEN,
+            (PSZ)szWindowTitle))
+
+   {
+     MessageBox (habMain, IDS_CANNOTLOADSTRING, MB_OK | MB_ERROR, FALSE);
+     return;
+   }
+
+   hini.pszHelpWindowTitle = (PSZ)szWindowTitle;
+
+   /*  if debugging, show panel ids; else, don't   */
+#ifdef DEBUG
+   hini.fShowPanelId = CMIC_SHOW_PANEL_ID;
+#else
+   hini.fShowPanelId = CMIC_HIDE_PANEL_ID;
+#endif
+
+   if (!WinLoadString (habMain,
+            (HMODULE)0,
+            IDS_HELPLIBRARYNAME,
+            HELPLIBRARYNAMELEN,
+            (PSZ)szLibName))
+   {
+   MessageBox (habMain, IDS_CANNOTLOADSTRING, MB_OK | MB_ERROR, FALSE);
+   return;
+   }
+
+   hini.pszHelpLibraryName = (PSZ)szLibName;
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="229_L4_DefiningHelpTablesas.html">[Back: Defining Help Tables as Resources]</A> <BR>
+<A HREF="231_L3_CreatingtheHelpInsta.html">[Next: Creating the Help Instance]</A> 
+</BODY>
+</HTML>

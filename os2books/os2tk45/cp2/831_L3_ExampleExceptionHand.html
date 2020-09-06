@@ -1,0 +1,104 @@
+<HTML>
+<HEAD>
+<TITLE>Example Exception Handler</TITLE>
+</HEAD>
+<BODY>
+<H1>Example Exception Handler</H1><!-- entering slot 850 -->
+<P>
+This section of the chapter will present a simple exception handler. Because
+exception handlers are commonly used to handle memory faults, the example
+will show the exception handler working with a memory fault.
+<P>
+Memory exceptions can occur when an application attempts to access a guard
+page, attempts to use memory that has been allocated but not committed (a
+sparse memory object), or when an application attempts to write to memory
+that has read-only access. Without an application-registered exception handler,
+some of these exceptions might cause the application to terminate. If the
+application registers its own exception handler, it can correct the cause
+of the memory fault and continue to run.
+<P>
+If the application's exception handler handles the exception, it returns
+XCPT_CONTINUE_EXECUTION. If the routine does not handle the exception, it
+returns XCPT_CONTINUE_SEARCH so that the exception will be passed to the
+next handler in the chain.
+<P>
+
+<P>
+The following code fragment shows an exception handling routine set up to
+deal with memory errors:
+<PRE>    #define INCL_BASE
+    #define INCL_DOSEXCEPTIONS
+    #include &lt;os2.h&gt;
+
+    #define HF_STDERR 2    /* Standard error handle */
+
+    ULONG _cdecl myHandler(PEXCEPTIONREPORTRECORD pERepRec,
+                           PEXCEPTIONREGISTRATIONRECORD pERegRec,
+                           PCONTEXTRECORD pCtxRec,
+                           PVOID p)
+    {
+        ULONG   ulWritten,
+                ulMemSize,
+                flMemAttrs;
+
+        APIRET  ulrc;
+
+        /* Access violation at a known location */
+        if (pERepRec-&gt;ExceptionNum == XCPT_ACCESS_VIOLATION &amp;&amp;
+            pERepRec-&gt;ExceptionAddress != (PVOID) XCPT_DATA_UNKNOWN) {
+
+            /* Page fault */
+            if ((pERepRec-&gt;ExceptionInfo[0] == XCPT_READ_ACCESS ||
+                pERepRec-&gt;ExceptionInfo[0] == XCPT_WRITE_ACCESS) &amp;&amp;
+                pERepRec-&gt;ExceptionInfo[1] != XCPT_DATA_UNKNOWN) {
+
+                DosWrite(HF_STDERR,
+                         "\r\nPage Fault\r\n",
+                         15,
+                         &amp;ulWritten);
+
+
+                /* Now query the memory to find out why we faulted. */
+                ulMemSize = 1;
+
+                DosQueryMem((PVOID) pERepRec-&gt;pExceptionInfo[1],
+                            &amp;ulMemSize,
+                            &amp;flMemAttrs);
+
+                /* If the memory is free or committed,            */
+                /* we have some other problem.                    */
+                /* If it is not free or not committed, commit it. */
+                if (!(flMemAttrs &amp; (PAG_FREE | PAG_COMMIT))) {
+                    DosWrite(HF_STDERR,
+                             "\r\nAttempt to access uncommitted memory\r\n",
+                             40,
+                             &amp;ulWritten);
+
+                    ulrc = DosSetMem((PVOID) pERepRec-&gt;ExceptionInfo[1],
+                                     4096,
+                                     PAG_DEFAULT |
+                                     PAG_COMMIT);
+
+                    if (ulrc) {
+                        DosWrite(HF_STDERR, "\r\nError committing memory\r\n",
+                                 27,
+                                 &amp;ulWritten);
+
+                        return (XCPT_CONTINUE_SEARCH);
+                    }
+                    else
+                        return (XCPT_CONTINUE_EXECUTION);
+                }
+            }
+        }
+        return (XCPT_CONTINUE_SEARCH);
+    }
+</PRE>
+
+
+<P><HR>
+
+<A HREF="830_L2_UsingExceptionManage.html">[Back: Using Exception Management]</A> <BR>
+<A HREF="832_L3_RegisteringanExcepti.html">[Next: Registering an Exception Handler]</A> 
+</BODY>
+</HTML>

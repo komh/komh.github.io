@@ -1,0 +1,158 @@
+<HTML>
+<HEAD>
+<TITLE>Extended PAL Format</TITLE>
+</HEAD>
+<BODY>
+<H1>Extended PAL Format</H1><!-- entering slot 2281 -->
+<P>
+The extended PAL format includes the following:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->A palette-header chunk<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A data chunk containing an RGB palette (consisting
+of a LOGPALETTE structure) or some other palette type, including YUV and
+XYZ palettes.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+For an RGB palette, the extended PAL format is represented as follows:
+<PRE>RIFF('PAL' plth( &lt;palette-header&gt; ) data( &lt;LOGPALETTE-data&gt; ))</PRE>
+
+<P>
+For a YUV palette, the extended PAL format is represented as follows:
+<PRE>RIFF('PAL' plth( &lt;palette-header&gt; ) yuvp( &lt;YUV-LOGPALETTE-data&gt; ))
+</PRE>
+
+<P>
+Both the<B> &lt;LOGPALETTE-data&gt;</B> and<B> &lt;YUV-LOGPALETTE-data&gt;
+</B>use the Windows 3.0 LOGPALETTE structure, described in "Simple PAL Format,"
+earlier in this section.  The<B> &lt;YUV-LOGPALETTE-data&gt;</B> contains
+YUV values instead of RGB valves.
+<P>
+The "plth" chunk is defined as follows:
+<PRE>&lt;plth-ck&gt;  PLT( struct {
+           ULONG  ulMapType;
+           USHORT usWhite;          /* Fields from this point on are     */
+           USHORT usBlack;          /* optional. If they are included    */
+           USHORT usBorder;         /* but not used, set them to 0xFFFF. */
+           USHORT usRegisteredMap;
+           USHORT usCustomBase;     /* If an application encounters a    */
+           USHORT usCustomCnt;      /* 'PLT' chunk smaller than shown    */
+           USHORT usRsvBase;        /* here, it should treat the missing */
+           USHORT usRsvCount;       /* fields as unused.                 */
+           USHORT usArtBase;
+           USHORT usArtCnt;
+           USHORT usNumIntense;
+} )
+</PRE>
+
+<P>
+The structure fields are described in the following:<!-- lm: 0x2 1 -->
+<P>
+<B>Field</B><!-- lm: 0x2 21 -->
+<UL><B> Description</B><!-- lm: 0x2 1 -->
+</UL><I> ulMapType
+</I><!-- lm: 0x2 21 -->
+<UL>FOURCC code specifying the type of palette.
+ Currently, the following palette types are identified:<!-- lm: 0x2 21 -->
+<P>
+<B>Code</B><!-- lm: 0x2 34 -->
+<UL><B> Description</B><!-- lm: 0x2 21 -->
+</UL> 'data'
+<!-- lm: 0x2 34 -->
+<UL>Specifies an RGB palette. Data chunk contains a
+LOGPALETTE structure.<!-- lm: 0x2 21 -->
+</UL> 'yuvp'<!-- lm: 0x2 34 -->
+<UL> Specifies
+a YUV palette. Data chunk contains a YUV palette.<!-- lm: 0x2 21 -->
+</UL> 'xyzp'
+<!-- lm: 0x2 34 -->
+<UL>Specifies an XYZ palette. Data chunk contains a
+XYZ palette.<!-- lm: 0x2 21 --><!-- lm: 0x2 1 -->
+</UL><I> usWhite</I>,
+<I>usBlack</I><!-- lm: 0x2 21 -->
+<UL> Specify palette-map indices corresponding
+to the closest value of white and black.  These identify the pair of colors
+with the best contrast for use in cursors, calibration, etc. These values
+are usually changed if the palette changes.  Ignore these fields if they
+contain 0xFFFF.<!-- lm: 0x2 1 -->
+</UL><I> usBorder</I><!-- lm: 0x2 21 -->
+<UL> Specifies
+the index of the palette entry to be used for any display-border regions,
+if supported by the display device.  Ignore this field if it contains 0xFFFF.
+<!-- lm: 0x2 1 -->
+</UL><I>usRegisteredMap</I><!-- lm: 0x2 21 -->
+<UL> Specifies
+how many palette entries correspond to a registered color map.  Registered
+entries are stored at the front of the palette.  Ignore this field if it
+contains 0xFFFF.
+<P>
+Registered map entries are always stored at the beginning of the palette,
+so<I> usRegisteredMap</I> also indicates the index of the first custom color
+in the palette.  Registered color maps include predefined palettes for general
+use, forest/nature, or seasides. Currently defined values are the following:
+<!-- lm: 0x2 21 -->
+<P>
+PAL_UNREGISTERED (0xFFFF)<!-- lm: 0x11 46 -->
+<UL> Color map does not contain
+colors from a registered color map.<!-- lm: 0x2 21 -->
+</UL> PAL_VGA (0x0000)
+<!-- lm: 0x11 46 -->
+<UL>Color map contains the standard 16 VGA colors.
+<!-- lm: 0x2 21 -->
+</UL>PAL_AVC198 (0x0001)<!-- lm: 0x11 46 -->
+<UL> Standard
+AVC 198-entry palette.<!-- lm: 0x2 21 --><!-- lm: 0x2 1 -->
+</UL><I> usCustomBase
+</I><!-- lm: 0x2 21 -->
+<UL>Specifies the index of the first custom color
+of the palette. The beginning of the palette contains the entries of the
+registered map, so<I> usCustomBase</I> also indicates the number of entries
+in the registered palette. Map entries starting with<I> usCustomBase</I> comprise
+additional custom colors used in the bitmap. Ignore this value if<I> usRegisteredPalette
+</I>is PAL_UNREGISTERED, or if<I> usCustomBase</I> contains 0xFFFF.<!-- lm: 0x2 1 -->
+</UL><I> usCustomCnt
+</I><!-- lm: 0x2 21 -->
+<UL>Specifies the number of custom colors in the
+palette.  Ignore this value if<I> usRegisteredPalette</I> is PAL_UNREGISTERED,
+or if this field contains 0xFFFF.<!-- lm: 0x2 1 -->
+</UL><I> usRsvBase</I><!-- lm: 0x2 21 -->
+<UL> Specifies
+the index of the first reserved color of the palette. Reserved colors are
+those reserved for menus, text, and other screen elements.  Reserved colors
+must be stored contiguously.  Ignore this field if it contains 0xFFFF.<!-- lm: 0x2 1 -->
+</UL><I> usRsvCnt
+</I><!-- lm: 0x2 21 -->
+<UL>Specifies the number of reserved entries.  Ignore
+this field if it contains 0xFFFF.<!-- lm: 0x2 1 -->
+</UL><I> usArtBase</I><!-- lm: 0x2 21 -->
+<UL> Specifies
+the index of the first art color of the palette.  Art colors are colors
+used for text and drawing.  Art colors consist of a number of hues, each
+of which has multiple intensities.  The various intensities are used for
+anti-aliasing, a method of using different shades of a color to<!-- entering slot 2282 --> improve
+the quality of images displayed on low-resolution devices.
+<P>
+For example, if the first art color is red anti-aliased to black with three
+intensities, the first three entries in the palette would be dark red, medium
+red, and bright red.  The art colors constitute an array, and all hues have
+the same number of intensities.  The user can set both the number of hues
+and the number of intensities.  Ignore these fields if they contain 0xFFFF.
+<!-- lm: 0x2 1 -->
+</UL><I>usArtCnt</I><!-- lm: 0x2 21 -->
+<UL> Specifies
+the number of art colors.  Ignore this field if it contains 0xFFFF.<!-- lm: 0x2 1 -->
+</UL><I> usNumIntense
+</I><!-- lm: 0x2 21 -->
+<UL>Specifies the number of palette entries reserved
+for the anti-aliased levels of a given art color.  This field must be present
+if<I> usArtBase</I> is present.  Ignore this field if it contains 0xFFFF.
+<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="2275_L3_SimplePALFormat.html">[Back: Simple PAL Format]</A> <BR>
+<A HREF="2277_L2_RichTextFormatRTF.html">[Next: Rich Text Format (RTF)]</A> 
+</BODY>
+</HTML>

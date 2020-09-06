@@ -1,0 +1,78 @@
+<HTML>
+<HEAD>
+<TITLE>MMIOM_GETFORMATINFO</TITLE>
+</HEAD>
+<BODY>
+<H1>MMIOM_GETFORMATINFO</H1><!-- entering slot 143 -->
+<P>
+This message requests information about the format of the IOProc.  MMIO
+provides a list of MMFORMATINFO structures containing descriptive information
+about the formats supported by currently installed IOProcs; for example,
+the format name, the FOURCC identifier, and related information.  If this
+message is not defined in the IOProc or the IOProc does not handle the request
+successfully, mmioGetFormatInfo creates a blank MMFORMATINFO structure and
+attaches it to the internal list.  It is recommended to hard-code the actual
+format information in the IOProc message handler code for the<I> ulStructLen</I>,
+<I>fccIOProc</I>,<I> ulMediaType</I>, and<I> ulFlags</I> fields.  In addition,
+store other information (<I>ulCodePage</I>,<I> ulLanguage</I>,<I> lNameLength</I>,
+and<I> aulDefaultFormatExt</I> if any) in a resource file for NLS considerations.
+
+<P>
+The following example shows an example of how the M-Motion IOProc supports
+the MMIOM_GETFORMATINFO message.
+<PRE>case MMIOM_GETFORMATINFO:
+    {
+    /***********************************************************
+     * Declare local variables.
+     ***********************************************************/
+    PMMFORMATINFO       pmmformatinfo;
+
+    /************************************************************
+     * Set pointer to MMFORMATINFO structure.
+     ************************************************************/
+    pmmformatinfo = (PMMFORMATINFO) lParam1;
+
+    /************************************************************
+     * Fill in the values for the MMFORMATINFO structure.
+     ************************************************************/
+    pmmformatinfo-&gt;ulStructLen  = sizeof (MMFORMATINFO);
+    pmmformatinfo-&gt;fccIOProc    = FOURCC_MMOT;
+    pmmformatinfo-&gt;ulIOProcType = MMIO_IOPROC_FILEFORMAT;
+    pmmformatinfo-&gt;ulMediaType  = MMIO_MEDIATYPE_IMAGE;
+
+    pmmformatinfo-&gt;ulFlags      = MMIO_CANREADTRANSLATED        |
+                                  MMIO_CANREADUNTRANSLATED      |
+                                  MMIO_CANWRITETRANSLATED       |
+                                  MMIO_CANWRITEUNTRANSLATED     |
+                                  MMIO_CANREADWRITEUNTRANSLATED |
+                                  MMIO_CANSEEKTRANSLATED        |
+                                  MMIO_CANSEEKUNTRANSLATED;
+
+    strcpy ((PSZ) pmmformatinfo-&gt;szDefaultFormatExt, pszMotionExt);
+    if (GetNLSData( &amp;pmmformatinfo-&gt;ulCodePage,
+                    &amp;pmmformatinfo-&gt;ulLanguage ))
+       {
+       return( -1L );
+       }
+
+    if (GetFormatStringLength( FOURCC_MMOT,
+                               &amp;(pmmformatinfo-&gt;lNameLength) ))
+       {
+       return( -1L );
+       }
+
+
+    /************************************************************
+     * Return success back to the application.
+     ************************************************************/
+    return (MMIO_SUCCESS);
+    } /* end case of MMIOM_GETFORMATINFO */
+</PRE>
+
+
+<P><HR>
+
+<A HREF="112_L3_MMIOM_IDENTIFYFILE.html">[Back: MMIOM_IDENTIFYFILE]</A> <BR>
+<A HREF="114_L3_MMIOM_GETFORMATNAME.html">[Next: MMIOM_GETFORMATNAME]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,203 @@
+<HTML>
+<HEAD>
+<TITLE>_CRT_term - Terminate DLL Run-Time Environment</TITLE>
+</HEAD>
+<BODY>
+<H1>_CRT_term - Terminate DLL Run-Time Environment</H1><!-- entering slot 92 -->_CRT_term - Terminate DLL Run-Time Environment
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>void _CRT_term(void);
+/* no header file - defined in run-time startup code */
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Description
+<P>
+<!-- lm: 0x2 10 -->
+<UL><LI>CRT_term terminates<I> The Developer's Toolkit
+</I>run-time environment. It is only needed for DLLs where the C run-time
+functions are statically linked.
+<P>
+By default, all DLLs call<I> The Developer's Toolkit</I> _DLL_InitTerm function,
+which in turn calls _CRT_term for you. However, if you are writing your
+own _DLL_InitTerm function (for example, to perform actions other than run
+time initialization and termination), and your DLL statically links to the
+C run-time libraries, you need to call _CRT_term from your _DLL_InitTerm
+function.
+<P>
+If your DLL contains C++ code, you must also call __ctordtorTerm<B> before
+</B>you call _CRT_term to ensure that static constructors and destructors
+are terminated correctly. __ctordtorTerm is defined in the run-time startup
+code as:
+<PRE>   void __ctordtorTerm(void);
+</PRE>
+
+<P>
+Once you have called _CRT_term, you cannot call any other library functions.
+
+<P>
+If your DLL is dynamically linked, you cannot call library functions in
+the termination section of your _DLL_InitTerm function. If your termination
+routine requires calling library functions, you must register the termination
+routine with DosExitList. Note that all DosExitList routines are called
+before DLL termination routines.<!-- lm: 0x2 1 -->
+</UL> Returns
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+There is no return value for _CRT_term.<!-- lm: 0x2 1 -->
+</UL> Example
+Code
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+The following example shows the _DLL_InitTerm function from<I> The Developer's
+Toolkit</I> sample program for building DLLs, which calls _CRT_term to terminate
+the library environment.
+<PRE>#define  INCL_DOSMODULEMGR
+#define  INCL_DOSPROCESS
+#include &lt;os2.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+/* _CRT_init is the C run-time environment initialization function.         */
+/* It will return 0 to indicate success and -1 to indicate failure.         */
+
+int _CRT_init(void);
+#ifdef   STATIC_LINK
+
+/* _CRT_term is the C run-time environment termination function.            */
+/* It only needs to be called when the C run-time functions are statically  */
+/* linked.                                                                  */
+
+void _CRT_term(void);
+#else
+
+/* A clean up routine registered with DosExitList must be used if run-time  */
+/* calls are required and the run time is dynamically linked.  This will    */
+/* guarantee that this clean up routine is run before the library DLL is    */
+/* terminated.                                                              */
+
+static void cleanup(ULONG ulReason);
+#endif
+size_t nSize;
+int *pArray;
+
+/* _DLL_InitTerm is the function that gets called by the operating system   */
+/* loader when it loads and frees this DLL for each process that accesses   */
+/* this DLL.  However, it only gets called the first time the DLL is loaded */
+/* and the last time it is freed for a particular process.  The system      */
+/* linkage convention MUST be used because the operating system loader is   */
+/* calling this function.                                                   */
+
+unsigned long _DLL_InitTerm(unsigned long hModule, unsigned long
+                                    ulFlag)
+{
+   size_t i;
+   APIRET rc;
+   char namebuf[CCHMAXPATH];
+
+   /* If ulFlag is zero then the DLL is being loaded so initialization should*/
+   /* be performed.  If ulFlag is 1 then the DLL is being freed so          */
+   /* termination should be performed.                                      */
+
+   switch (ulFlag) {
+      case 0 :
+
+         /*******************************************************************/
+         /* The C run-time environment initialization function must be      */
+         /* called before any calls to C run-time functions that are not    */
+         /* inlined.                                                        */
+         /*******************************************************************/
+
+         if (_CRT_init() == -1)
+            return 0UL;
+</PRE>
+
+<PRE>#ifndef  STATIC_LINK
+         /********************************************************************/
+         /* A DosExitList routine must be used to clean up if run-time calls */
+         /* are required and the run time is dynamically linked.             */
+         /********************************************************************/
+
+            if (rc = DosExitList(0x0000FF00|EXLST_ADD, cleanup))
+            printf("DosExitList returned %lu\n", rc);
+#endif
+         if (rc = DosQueryModuleName(hModule, CCHMAXPATH, namebuf))
+            printf("DosQueryModuleName returned %lu\n", rc);
+         else
+            printf("The name of this DLL is %s\n", namebuf);
+         srand(17);
+         nSize = (rand()%128)+32;
+         printf("The array size for this process is %u\n", nSize);
+         if ((pArray = malloc(nSize *sizeof(int))) == NULL) {
+            printf("Could not <!-- entering slot 93 -->allocate space for unsorted array.\n");
+            return 0UL;
+         }
+         for (i = 0; i &lt; nSize; ++i)
+            pArray[i] = rand();
+         break;
+      case 1 :
+#ifdef   STATIC_LINK
+         printf("The array will now be freed.\n");
+         free(pArray);
+         _CRT_term();
+#endif
+         break;
+      default  :
+         printf("ulFlag = %lu\n", ulFlag);
+         return 0UL;
+   }
+
+   /* A non-zero value must be returned to indicate success.                */
+
+   return 1UL;
+}
+#ifndef  STATIC_LINK
+static void cleanup(ULONG ulReason)
+{
+   if (!ulReason) {
+      printf("The array will now be freed.\n");
+      free(pArray);
+   }
+   DosExitList(EXLST_EXIT, cleanup);
+   return ;
+}
+#endif
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Related Information
+<P>
+<!-- lm: 0x2 10 -->
+<UL><!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 --><LI>Building Dynamic Link Libraries" in the<I> VisualAge
+C++ Programming Guide</I><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="090_L2__CRT_initInitializeD.html"><LI>CRT_init
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="097_L2__DLL_InitTermInitial.html"><LI>DLL_InitTerm
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="229_L2__rmem_initInitialize.html"><LI>rmem_init
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="230_L2__rmem_termTerminateM.html"><LI>rmem_term
+</A><!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="090_L2__CRT_initInitializeD.html">[Back: _CRT_init - Initialize DLL Run-Time Environment]</A> <BR>
+<A HREF="092_L2__cscanfReadDatafromK.html">[Next: _cscanf - Read Data from Keyboard]</A> 
+</BODY>
+</HTML>

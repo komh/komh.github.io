@@ -1,0 +1,161 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>REXX program to create new sound schemes in WARP 4</TITLE>
+</HEAD>
+<BODY>
+<H1>REXX program to create new sound schemes in WARP 4</H1><!-- entering slot 376 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+Following is a sample REXX program to create a new sound scheme (see also
+<A HREF="362_L4_Addnewsoundschemesin.html">Add new sound schemes in WARP
+4</A>):
+<PRE> 
+/* ------------------------------------------------------------------ */
+/*  SetSound.CMD                                                      */
+/*    Sets up a sound scheme by writing the appropriate               */
+/*    entries into the specified system INI file.                     */
+/*                                                                    */
+/*  Syntax:                                                           */
+/*    SetSound  {filespec}                                            */
+/*                                                                    */
+/*  Source:                                                           */
+/*   <A HREF="1008_L0_.html">Personal Systems</A> Issue 11/96 (online edition)                    */
+/*                                                                    */
+/* ------------------------------------------------------------------ */
+/* Set the sound scheme variables                                     */
+/* ------------------------------------------------------------------ */
+
+  Title =   "MySoundScheme"
+  KeyName = "PM_SOUNDS_MYSOUNDS"
+
+  Event.0  = 13
+  Event.1  = "?:\mmos2\sounds\mysounds\my_warn.wav"
+  Event.2  = "?:\mmos2\sounds\mysounds\my_info.wav"
+  Event.3  = "?:\mmos2\sounds\mysounds\my_err.wav"
+  Event.4  = "?:\mmos2\sounds\mysounds\my_opnw.wav"
+  Event.5  = "?:\mmos2\sounds\mysounds\my_clsw.wav"
+  Event.6  = "?:\mmos2\sounds\mysounds\my_drag.wav"
+  Event.7  = "?:\mmos2\sounds\mysounds\my_drop.wav"
+  Event.8  = "?:\mmos2\sounds\mysounds\my_sstr.wav"
+  Event.9  = "?:\mmos2\sounds\mysounds\my_ssht.wav"
+  Event.10 = "?:\mmos2\sounds\mysounds\my_shrd.wav"
+  Event.11 = "?:\mmos2\sounds\mysounds\my_lock.wav"
+  Event.12 = "?:\mmos2\sounds\mysounds\my_alck.wav"
+  Event.13 = "?:\mmos2\sounds\mysounds\my_prer.wav"
+
+/* ------------------------------------------------------------------ */
+/* Get the input arguments                                            */
+/* ------------------------------------------------------------------ */
+
+  Parse Upper Arg fSpec
+
+/* ------------------------------------------------------------------ */
+/*  Check if the REXX external functions are registered.              */
+/*  If not, then register them so we can use them                     */
+/* ------------------------------------------------------------------ */
+
+  if RxFuncQuery("SysLoadFuncs") then
+  do
+    Call RxFuncAdd "SysLoadFuncs", "RexxUtil", "SysLoadFuncs"
+    Call SysLoadFuncs
+  end /* if */
+
+/* ------------------------------------------------------------------ */
+/* Set up the filespec for the INI file                               */
+/* ------------------------------------------------------------------ */
+  if fSpec = "" then
+  do
+    IniFile = "SYSTEM"
+  end /* if fSpec = "" then */
+  else
+  do
+
+/* ------------------------------------------------------------------ */
+/* Parse the input filespec into its component parts                  */
+/* ------------------------------------------------------------------ */
+
+    tDrive = filespec("drive",fSpec)
+    tPath  = filespec("path",fSpec)
+    tName  = filespec("name",fSpec)
+
+/* ------------------------------------------------------------------ */
+/* Get the local drive and current directory                          */
+/* ------------------------------------------------------------------ */
+
+    LocalCurDir = directory()
+    LocalDrive = substr( LocalCurDir, 1, 1 )
+    lDrive = LocalDrive||":"
+
+    LocalDir = substr(LocalCurDir, 3)
+    lDir = LocalDir||"\"
+
+/* ------------------------------------------------------------------ */
+/* Set the INI file spec                                              */
+/* ------------------------------------------------------------------ */
+
+    if tDrive = "" then
+      tDrive = lDrive
+
+    if tPath = "" then
+      tPath = lDir
+
+    IniFile = tDrive||tPath||tName
+  end /* else */
+
+/* ------------------------------------------------------------------ */
+/* Set the keys for the new sound scheme we're adding                 */
+/* ------------------------------------------------------------------ */
+
+  results = SysIni( IniFile, "PM_SOUND_SCHEMES_LIST", Title, KeyName )
+
+  if results = "ERROR:" then
+  do
+    say "SetSound ERROR:" ,
+        "Unable to set PM_SOUND_SCHEMES_LIST in the INI file"
+    exit
+  end /* if */
+  else
+  do
+    say "SetSound: The following keywords have been set in the INI file:" ,
+         IniFile
+    say "SetSound: PM_SOUND_SCHEMES_LIST ," Title "," KeyName
+  end /* else */
+
+/* ------------------------------------------------------------------ */
+/* For the KeyName, set the sounds for the events                     */
+/* ------------------------------------------------------------------ */
+
+  do i=1 to Event.0
+
+    Type = i-1
+    results = SysIni( IniFile, KeyName, Type, Event.i )
+
+    if results = "ERROR:" then
+    do
+      say "SetSound ERROR: Unable to set Type" Type "for the file" ,
+          Event.i "in the INI file"
+    end /* if */
+    else
+    do
+      say "SetSound: System Event Type" Type " = " Event.i
+    end /* else */
+
+  end /* do i=1 to Event.0 */
+
+exit 0
+
+/* ------------------------------------------------------------------ */
+/* End of REXX script                                                 */
+/* ------------------------------------------------------------------ */
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="364_L5H_Addnewsoundschemesin.html">[Back: Add new sound schemes in WARP 4]</A> <BR>
+<A HREF="366_L2_HowtowaitintheSTARTU.html">[Next: How to wait in the STARTUP.CMD until the WPS is up]</A> 
+</BODY>
+</HTML>

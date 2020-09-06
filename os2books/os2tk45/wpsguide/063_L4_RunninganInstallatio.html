@@ -1,0 +1,121 @@
+<HTML>
+<HEAD>
+<TITLE>Running an Installation Program</TITLE>
+</HEAD>
+<BODY>
+<H1>Running an Installation Program</H1><!-- entering slot 63 -->
+<P>
+You can provide installation programs for your objects. An installation
+program is responsible for:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Copying the DLL that contains the object's class definition
+from a diskette to the \OS2\DLL directory or to a directory in the LIBPATH.
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Registering the class and its DLL name with the Workplace
+Shell by calling WinRegisterObjectClass.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Creating an object instance of the class and placing
+it on the Desktop or in a particular folder by calling WinCreateObject.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+An example of an installation program for a Workplace Shell object is shown
+in the following sample code:
+<PRE>/* Command-line program to install Workplace Shell objects  */
+#define INCL_WINWORKPLACE
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+#if defined(DEBUG)
+   #define LOCATION_DESKTOP ((PSZ)"&lt;WP_DESKTOP&gt;")
+#endif
+
+/*
+ *  Main Function
+ *
+ *    argv[1] = Class Name
+ *    argv[2] = Module (DLL) Name
+ *    argv[3] = Object Title
+ *    argv[4] = Location
+ *    argv[5] = Setup String
+ */
+
+INT main (argc, argv)
+   INT argc;
+   CHAR *argv[];
+
+{
+  HAB vhab;
+  HMQ vhmq;
+  BOOL fSuccess;
+
+  if (argc == 1)
+  {
+    #if defined(DEBUG)
+    {
+      printf("Usage:\n\n");
+      printf("   WPCREATE ClassName ModuleName Title [[Location]
+             [SetupString]]\n");
+    }
+    #endif
+    return (0);
+  } /* End if (argc == 1) */
+
+  if (argc &lt; 4) return (1);   /* First three parms are mandatory */
+
+  /* Register the class  */
+  #if defined(DEBUG)
+    printf("WinRegisterObjectClass(%s, %s)...\n", argv[1], argv[2]);
+  #endif
+
+  fSuccess = WinRegisterObjectClass(
+                argv[1],    /* Class name (case sensitive) */
+                argv[2]);   /* Module name                 */
+
+  if (!fSuccess) return (1);   /* Return non-zero for error */
+
+  #if defined(DEBUG)
+    printf("Success: rc = %u\n", fSuccess);
+  #endif
+
+  /*  Create an instance of the object  */
+  #if defined(DEBUG)
+    printf("WinCreateObject(%s, %s,...)...\n", argv[1], argv[3]);
+  #endif
+  fSuccess = WinCreateObject(
+                argv[1],                                 /* Class name   */
+                argv[3],                                 /* Object title */
+                argc &gt; 5 ? argv[5] : " ",                /* Setup string */
+                argc &gt; 4 ? argv[4] : LOCATION_DESKTOP,   /* Location     */
+                CO_FAILIFEXISTS);                        /* Flags        */
+
+  if (!fSuccess) return (1);   /* Return non-zero for error */
+
+  #if defined(DEBUG)
+    printf("Success: rc = %u\n", fSuccess);
+  #endif
+
+  return(0);
+
+}   /* End main() */
+
+</PRE>
+
+<P>
+Instantiating an object is an optional responsibility of an installation
+program. When a class is registered by calling WinRegisterObjectClass, an
+object template is placed in the Templates folder on the Desktop, if the
+class supports templating. Users can create instances of these objects by
+tearing off a copy of the template. This can be useful for larger applications
+that define data-file objects that are associated with program objects.
+
+
+<P><HR>
+
+<A HREF="062_L3_InstallingWorkplaceS.html">[Back: Installing Workplace Shell Objects]</A> <BR>
+<A HREF="064_L4_RunninganInstallatio.html">[Next: Running an Installation Batch File]</A> 
+</BODY>
+</HTML>

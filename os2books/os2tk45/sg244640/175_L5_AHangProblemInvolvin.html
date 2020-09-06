@@ -1,0 +1,450 @@
+<HTML>
+<HEAD>
+<TITLE>A Hang Problem Involving Locked Records</TITLE>
+</HEAD>
+<BODY>
+<H1>A Hang Problem Involving Locked Records</H1><!-- entering slot 237 -->
+<PRE>
+
+&gt;&gt;&gt; Problem: Program "Pain" running in Slot 4d is hung with a blank
+&gt;&gt;&gt; screen. Everything else in the system seems OK. Mouse moves, we
+&gt;&gt;&gt; can change focus and so on..
+
+&gt;&gt;&gt; Lets take a look at slot 4d.
+
+# .p 4d
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 004d# 001c 001b 001c 0001 blk 0300 ab80f000 ab99e220 ab980620 1e60 1d PAIN
+
+&gt;&gt;&gt; Blocked!
+
+&gt;&gt;&gt; We can approach this two ways:
+
+&gt;&gt;&gt; 1) Take a look at what the application did
+
+&gt;&gt;&gt; 2) Take a look at the BlockId and try see how far the system got
+
+
+&gt;&gt;&gt; Looking at the application we examine its registers and determine
+&gt;&gt;&gt; what API it called to cause it to block.
+
+# .s 4d
+Current slot number: 004d
+
+# .r
+eax=00023305 ebx=00000000 ecx=00000006 edx=0002004f esi=00000000 edi=00000000
+eip=00010181 esp=0002337c ebp=000233fc iopl=2 -- -- -- nv up ei pl zr na pe nc
+cs=005b ss=0053 ds=0053 es=0053 fs=150b gs=0000  cr2=00000000  cr3=001d9000
+005b:00010181 83c414         add     esp,+14
+
+# u %eip-10
+
+%00010171 e8508d45e0         call    %e0468ec6
+%00010176 50                 push    eax
+%00010177 ff75f8             push    dword ptr [ebp-08]
+%0001017a b005               mov     al,05
+%0001017c e8c762f81b         call    %1bf96448
+%00010181 83c414             add     esp,+14
+%00010184 0bc0               or      eax,eax
+%00010186 7404               jz      %0001018c
+%00010188 ebde               jmp     %00010168
+%0001018a 8bc0               mov     eax,eax
+%0001018c b858000200         mov     eax,00020058
+%00010191 e8fa000000         call    %00010290
+# ln  %1bf96448
+
+%1bf96448 DOSCALL1 DOS32SETFILELOCKS
+
+&gt;&gt;&gt; The last call was to DosSetFileLocks and we haven't returned. If
+&gt;&gt;&gt; we want any more information we have to analyse the BlockId.
+
+
+# .pb#
+
+ Slot  Sta BlockID  Name     Type        Addr        Symbol
+ 004d# blk 00b80029 PAIN
+# .m 0b8:29
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 00dd %feaf0308 00000010 %aa7a3000 129 00dc 00de 0000 00cb 00ea 0000   sel=<!-- entering slot 238 -->00b8
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 00ea  00dd 0000  0124 ff47 0000  0000 00  00 00 00 fsreclok
+
+&gt;&gt;&gt; Seems to be blocked on a File System Record Lock (RLR).
+&gt;&gt;&gt; This implies that someone else has already locked a
+&gt;&gt;&gt; conflicting record range.
+
+&gt;&gt;&gt; We need to dump the RLR and locate the System File Table Entry
+&gt;&gt;&gt; associated with it. The BlockId is the address of the RLR.
+
+
+# dw 0b8:29
+
+00b8:00000029  0000 0000 0020 0000 002f 0000 526b 00d0
+00b8:00000039  0000 0018 0000 0002 0000 2000 0000 2f00
+00b8:00000049  0000 2000 9806 29ab 1c00 0300 0000 006e
+00b8:00000059  0000 0000 0000 0000 0000 0000 0000 0000
+00b8:00000069  0000 0000 8500 0000 0000 0000 0000 0000
+00b8:00000079  0000 0000 0000 0000 0000 0000 009c 0000
+00b8:00000089  0000 0000 0000 0000 0000 0000 0000 0000
+00b8:00000099  0000 b300 0000 0000 0000 0000 0000 0000
+
+
+&gt;&gt;&gt; RLR+c is a far16 pointer to the associated System File Table entry
+&gt;&gt;&gt; (SFT).
+
+&gt;&gt;&gt; RLR+4 and RLR+8 are the range of bytes locked. Offset +20 - +2f
+&gt;&gt;&gt; has been locked.
+
+&gt;&gt;&gt; We now format the SFT for the process that locked this range:
+
+
+# .d sft d0:526b
+
+      sf_ref_count: 0001                        sfi_mode: 0042
+        sf_usercnt: 0000                        sfi_hVPB: 04e0
+          reserved: 00                         sfi_ctime: 0000
+       sf_flags(2): 0040:0000                  sfi_cdate: 0000
+         sf_devptr: #0000:04e0                 sfi_atime: 0000
+            sf_FSC: #0000:ff40                 sfi_adate: 0000
+          sf_chain: #0000:0000                 sfi_mtime: 5df6
+            sf_MFT: fe87ca0c                   sfi_mdate: 1f3a
+sfdFAT_firFILEclus: 0197                        sfi_size: 00000061
+    sfdFAT_cluspos: 0000                    sfi_position: 00000030
+    sfdFAT_lstclus: 0197                         sfi_UID: 0000
+     sfdFAT_dirsec: 0000009f                     sfi_PID: 0018
+     sfdFAT_dirpos: 0a                           sfi_PDB: 0000
+       sfdFAT_name: VIN                              sfi_selfsfn: 00a1
+   sfdFAT_EAHandle: 0000                      sfi_tstamp: 00
+          sf_plock: 0000                     sfi_DOSattr: 20
+      sf_NmPipeSfn: 0000
+       sf_codepage: 0000
+
+&gt;&gt;&gt; The SFT contains a pointer to the MFT, which contains the fully
+&gt;&gt;&gt; qualified file name. If the file is FAT then the short name in the
+&gt;&gt;&gt; SFT is also meaningful.
+
+# .d mft % fe87ca0c
+
+     mft_ksem:
+Signature     : KSEM                        Nest: 0000
+Type          : SHARE                    Readers: 0000
+Flags         : 01                PendingReaders: 0000
+Owner         : 0000              PendingWriters: 0000
+     mft_lptr: 0029                    mft_sptr: 00d0:5600
+    mft_pCMap: 00000000                mft_serl: 128f
+ mft_CMapKSem:
+     mft_hvpb: 466d                 mft_opflags: 0000           mft_flags: 0000
+     mft_name: A:\LAB19\VIN
+
+&gt;&gt;&gt; So the locked File is a:\lab19\vin
+
+
+&gt;&gt;&gt; The SFT also contains the Pid of the process that opened, and in
+&gt;&gt;&gt; this case locked, this file - Pid 18
+
+
+# .p
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 0001  0001 0000 0000 0001 blk 0100 ffe3a000 ffe3ca00 ffe3c800 <!-- entering slot 239 -->1e7c 00 *ager
+ 0002  0001 0000 0000 0002 blk 0200 ab779000 ffe3ca00 ab977020 1f3c 00 *tsd
+ 0003  0001 0000 0000 0003 blk 0200 ab77b000 ffe3ca00 ab977220 1f50 00 *ctxh
+ 0004  0001 0000 0000 0004 blk 081f ab77d000 ffe3ca00 ab977420 1f48 00 *kdb
+ 0005  0001 0000 0000 0005 blk 0800 ab77f000 ffe3ca00 ab977620 1f20 00 *lazyw
+ 0006  0001 0000 0000 0006 blk 0800 ab781000 ffe3ca00 ab977820 1f3c 00 *asyncr
+ 0009  0002 0000 0002 0001 rdy 0804 ab787000 ab997020 ab977e20 1c88 00 CNTRL
+ 0008  0002 0000 0002 0002 blk 0804 ab785000 ab997020 ab977c20      00 CNTRL
+ 000b  0002 0000 0002 0003 blk 0804 ab78b000 ab997020 ab978220      00 CNTRL
+ 000c  0002 0000 0002 0004 rdy 0804 ab78d000 ab997020 ab978420 1c9c 00 CNTRL
+ 000a  0003 0000 0003 0001 blk 0800 ab789000 ab997620 ab978020      00 DOSCTL
+ 000d  0004 0001 0004 0001 rdy 0500 ab78f000 ab997c20 ab978620 1ed0 01 PMSHL32
+ 000f  0004 0001 0004 0002 blk 0800 ab793000 ab997c20 ab978a20 1ed4 01 PMSHL32
+ 0010  0004 0001 0004 0003 blk 0800 ab795000 ab997c20 ab978c20      01 PMSHL32
+ 0011  0004 0001 0004 0004 blk 0800 ab797000 ab997c20 ab978e20      01 PMSHL32
+ 0012  0004 0001 0004 0005 blk 0800 ab799000 ab997c20 ab979020      01 PMSHL32
+ 0015  0004 0001 0004 0006 blk 0200 ab79f000 ab997c20 ab979620 1edc 01 PMSHL32
+ 0016  0004 0001 0004 0007 blk 0200 ab7a1000 ab997c20 ab979820 1edc 01 PMSHL32
+ 0017  0004 0001 0004 0008 blk 0200 ab7a3000 ab997c20 ab979a20      01 PMSHL32
+ 0007  0004 0001 0004 0009 blk 0500 ab783000 ab997c20 ab977a20      01 PMSHL32
+ 0018  0004 0001 0004 000a blk 0800 ab7a5000 ab997c20 ab979c20      01 PMSHL32
+ 0019  0004 0001 0004 000b blk 0800 ab7a7000 ab997c20 ab979e20 1eb8 01 PMSHL32
+ 001a  0004 0001 0004 000c blk 0800 ab7a9000 ab997c20 ab97a020 1eb8 01 PMSHL32
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 001b  0004 0001 0004 000d blk 0804 ab7ab000 ab997c20 ab97a220 1ea8 01 PMSHL32
+ 001c  0004 0001 0004 000e blk 0804 ab7ad000 ab997c20 ab97a420 1eb0 01 PMSHL32
+ 001d  0004 0001 0004 000f blk 0500 ab7af000 ab997c20 ab97a620 1ea8 01 PMSHL32
+ 001e  0004 0001 0004 0010 blk 0801 ab7b1000 ab997c20 ab97a820 1bac 01 PMSHL32
+ 001f  0004 0001 0004 0011 blk 0801 ab7b3000 ab997c20 ab97aa20      01 PMSHL32
+ 0020  0004 0001 0004 0012 blk 0801 ab7b5000 ab997c20 ab97ac20      01 PMSHL32
+ 0021  0004 0001 0004 0013 blk 0800 ab7b7000 ab997c20 ab97ae20      01 PMSHL32
+ 0022  0004 0001 0004 0014 blk 0800 ab7b9000 ab997c20 ab97b020 1b80 01 PMSHL32
+ 0024  0004 0001 0004 0015 blk 0200 ab7bd000 ab997c20 ab97b420 1ed0 01 PMSHL32
+ 0030  0004 0001 0004 0016 blk 0800 ab7d5000 ab997c20 ab97cc20 1eac 01 PMSHL32
+ 004c  001b 0004 001b 0001 blk 0400 ab80d000 ab99dc20 ab980420 1ed4 1d CMD
+ 004b  001a 0004 001a 0001 blk 0200 ab80b000 ab99d620 ab980220 1eb8 1c CMD
+ 004a  0019 0004 0019 0001 blk 0200 ab809000 ab99d020 ab980020 1eb8 14 CMD
+ 0048  0017 0004 0017 0001 blk 0200 ab805000 ab99a620 ab97fc20 1ed4 04 CMD
+ 0047  0014 0004 0014 0001 blk 0200 ab803000 ab99c420 ab97fa20 1eb8 11 CMD
+ 003d  0012 0004 0012 0001 blk 0200 ab7ef000 ab99be20 ab97e620 1ed0 1a IBMAVSD
+ 0046  0011 0004 0011 0001 blk 0200 ab801000 ab99b820 ab97f820 1ed0 19 FPWMON
+ 003a  0010 0004 0010 0001 blk 0200 ab7e9000 ab99b220 ab97e020 1ed0 18 PMFAX
+ 0041  0010 0004 0010 0002 blk 0800 ab7f7000 ab99b220 ab97ee20 1edc 18 PMFAX
+ 0043  0010 0004 0010 0003 blk 0500 ab7fb000 ab99b220 ab97f220      18 PMFAX
+ 0045  0010 0004 0010 0005 blk 0500 ab7ff000 ab99b220 ab97f620 1d24 18 PMFAX
+ 0039  000f 0004 000f 0001 blk 0200 ab7e7000 ab99ac20 ab97de20 1ed0 17 FPWPIMX
+ 0040  000f 0004 000f 0002 blk 0200 ab7f5000 ab99ac20 ab97ec20 1ed0 17 FPWPIMX
+ 0042  000f 0004 000f 0003 blk 0200 ab7f9000 ab99ac20 ab97f020 1ed0 17 FPWPIMX
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 0038  000e 0004 000e 0001 blk 0200 ab7e5000 ab99a020 ab97dc20 1ed0 16 DINFO
+ 003f  000e 0004 000e 0002 blk 0500 ab7f3000 ab99a020 ab97ea20 1f00 16 DINFO
+ 0037  000d 0004 000d 0001 blk 0200 ab7e3000 ab999a20 ab97da20 1ed0 15 MRFILE32
+ 003e  000d 0004 000d 0002 blk 0200 ab7f1000 ab999a20 ab97e820      15 MRFILE32
+ <!-- entering slot 240 -->0033  000c 0004 000c 0001 blk 0200 ab7db000 ab998e20 ab97d220 1ed0 13 PULSE
+*003b  000c 0004 000c 0002 run 0100 ab7eb000 ab998e20 ab97e220 1f28 13 PULSE
+ 003c  000c 0004 000c 0003 blk 081f ab7ed000 ab998e20 ab97e420 1f00 13 PULSE
+ 0026  0008 0004 0008 0001 blk 0500 ab7c1000 ab999420 ab97b820 1ed0 12 PMSHL32
+ 002d  0008 0004 0008 0002 blk 0200 ab7cf000 ab999420 ab97c620 1edc 12 PMSHL32
+ 002e  0008 0004 0008 0003 blk 0200 ab7d1000 ab999420 ab97c820      12 PMSHL32
+ 002f  0008 0004 0008 0004 blk 0200 ab7d3000 ab999420 ab97ca20 1ed0 12 PMSHL32
+ 0028  0008 0004 0008 0005 blk 0200 ab7c5000 ab999420 ab97bc20      12 PMSHL32
+ 0025  0008 0004 0008 0006 blk 0200 ab7bf000 ab999420 ab97b620 1edc 12 PMSHL32
+ 002c  0008 0004 0008 0007 blk 0200 ab7cd000 ab999420 ab97c420 1ed0 12 PMSHL32
+ 0031  0008 0004 0008 0008 blk 0500 ab7d7000 ab999420 ab97ce20 1edc 12 PMSHL32
+ 0032  0008 0004 0008 0009 blk 0200 ab7d9000 ab999420 ab97d020 1edc 12 PMSHL32
+ 0034  0008 0004 0008 000b blk 0500 ab7dd000 ab999420 ab97d420      12 PMSHL32
+ 0035  0008 0004 0008 000c blk 0200 ab7df000 ab999420 ab97d620 1eac 12 PMSHL32
+ 0036  0008 0004 0008 000d blk 0500 ab7e1000 ab999420 ab97d820 1eb8 12 PMSHL32
+ 0044  0008 0004 0008 000e blk 0200 ab7fd000 ab999420 ab97f420 1ed0 12 PMSHL32
+ 0023  0006 0004 0006 0001 blk 0200 ab7bb000 ab998820 ab97b220      10 PMSPOOL
+ 0027  0006 0004 0006 0002 blk 0500 ab7c3000 ab998820 ab97ba20      10 PMSPOOL
+ 0029  0006 0004 0006 0003 blk 0200 ab7c7000 ab998820 ab97be20      10 PMSPOOL
+ 002a  0006 0004 0006 0004 blk 0500 ab7c9000 ab998820 ab97c020      10 PMSPOOL
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 002b  0006 0004 0006 0005 blk 0500 ab7cb000 ab998820 ab97c220      10 PMSPOOL
+ 000e  0005 0004 0005 0001 blk 0800 ab791000 ab998220 ab978820      00 HARDERR
+ 0013  0005 0004 0005 0002 blk 0800 ab79b000 ab998220 ab979220      00 HARDERR
+ 0014  0005 0004 0005 0003 blk 0800 ab79d000 ab998220 ab979420      00 HARDERR
+ 0049  0018 0017 0018 0001 blk 0200 ab807000 ab99ca20 ab97fe20 1cd4 04 FROMAGE
+ 004d# 001c 001b 001c 0001 blk 0300 ab80f000 ab99e220 ab980620 1e60 1d PAIN
+
+&gt;&gt;&gt; Pid 18 is evidently FROMAGE.
+
+&gt;&gt;&gt; FROMAGE has the VIN and PAIN wants it!
+
+&gt;&gt;&gt; We had better find out why FROMAGE has blocked.
+
+# .s 49
+Current slot number: 0049
+
+# .r
+eax=00000001 ebx=00020366 ecx=1bf90000 edx=00020004 esi=13fa0000 edi=13fa1052
+eip=0000a0c3 esp=0000324a ebp=00023270 iopl=2 -- -- -- nv up ei ng nz ac pe cy
+cs=dfdf ss=0017 ds=9fe7 es=9fe7 fs=150b gs=0000  cr2=00000000  cr3=001d9000
+
+Invalid linear address: dfdf:0000a0c3
+# ln
+
+dfdf:0000a053 DOSCALL1 GetCharIn + 70
+
+&gt;&gt;&gt; Looking at this from the application aspect may be difficult since
+&gt;&gt;&gt; some of the code has been paged out (The invalid linear address
+&gt;&gt;&gt; <!-- entering slot 241 -->message).
+
+&gt;&gt;&gt; The near symbol gives a clue. We could try unwinding the stack and
+&gt;&gt;&gt; hope that the stack is still paged in.
+
+# dw %ebp
+%00023270  b17e dfdf 9fe7 0000 0000 a97a dfdf 0000
+%00023280  0000 0366 9fe7 a8ec a48d 1052 a399 32a6
+%00023290  203c 0053 9fdf 1052 1052 32c8 32a6 0360
+%000232a0  0007 4fa8 32b4 b1f0 dfdf 9fd7 0000 0005
+%000232b0  bb2b dfd7 0000 0000 1044 9fd7 1052 9fd7
+%000232c0  32c8 0002 0053 1bf9 32f0 0002 1cba 1bf9
+%000232d0  0000 0000 0000 0000 1044 13fa 1052 13fa
+%000232e0  0000 0000 0360 0002 0360 0002 0042 0008
+# d
+
+%000232f0  3334 0002 78cd 0001 0000 0000 0000 0009
+%00023300  1000 0000 3330 0002 0000 0000 0360 0002
+%00023310  0360 0002 0000 0002 0000 0000 0000 0000
+%00023320  0000 0000 0000 0000 0000 0000 0000 0000
+%00023330  7000 ab80 3388 0002 2abc 0001 0360 0002
+%00023340  0000 0009 1000 0000 33f0 0002 0029 0000
+%00023350  0020 0000 0001 0000 0000 0000 0000 0000
+%00023360  0000 0000 3388 0002 02c5 0001 339c 0002
+
+&gt;&gt;&gt; This is going to be haphazard. Evidently the code we are currently
+&gt;&gt;&gt; executing is not using EBP as a stack frame pointer. All we can do
+&gt;&gt;&gt; is scan through the stack looking for a likely stack frame or a
+&gt;&gt;&gt; return address to user code.
+
+&gt;&gt;&gt; %232f0 looks like a candidate. Let's unassemble the return address
+&gt;&gt;&gt; to see if it makes sense.
+
+# u %178cd-10
+
+%000178bd 03ca               add     ecx,edx
+%000178bf 51                 push    ecx
+%000178c0 8b5d08             mov     ebx,dword ptr [ebp+08]
+%000178c3 ff7320             push    dword ptr [ebx+20]
+%000178c6 b004               mov     al,04
+%000178c8 e83ba3f71b         call    %1bf91c08
+%000178cd 83c410             add     esp,+10
+%000178d0 8bc8               mov     ecx,eax
+%000178d2 0bc0               or      eax,eax
+%000178d4 741b               jz      %000178f1
+%000178d6 824b0802           or      byte ptr [ebx+08],02
+%000178da c705e81302003c000000 mov     dword ptr [000213e8],0000003c
+# ln  %1bf91c08
+
+%1bf91c08 DOSCALL1 DOS32READ
+
+&gt;&gt;&gt; So far so good. We need to see if this is consistent with the
+&gt;&gt;&gt; BlockId, which is the most up-to-date status indicator for this
+&gt;&gt;&gt; process.
+
+
+# .pb#
+ Slot  Sta BlockID  Name     Type        Addr        Symbol
+ 0049# blk 05100604 FROMAGE
+# .m  0510:0604
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0003 %<!-- entering slot 242 -->feaef04c 00000400 %fe6ef000 001 0002 0023 0000 0000 0003 0000      =0000
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 0003  0003 fec5  0000 ffec 0000  0000 00  01 00 00 vmkrhrw
+
+&gt;&gt;&gt; This blockid points to data within the kernel resident read/write
+&gt;&gt;&gt; heap. Heap blocks have headers that tell us more about the user of
+&gt;&gt;&gt; the data.  The data portion of a help block is usually mapped to a
+&gt;&gt;&gt; GDT selector.  In this example, selector 510.  510:0 should
+&gt;&gt;&gt; be the address of the beginning of the data and therefore point
+&gt;&gt;&gt; just after the end of the header.  We look at the data before
+&gt;&gt;&gt; 510:0 to see the heap block header.
+
+
+# dg 510
+0510  Data    Bas=fe6f3000 Lim=00000b2a DPL=0 P  RW    A
+# dd % fe6f3000-10
+
+%fe6f2ff0  ffa4000c feaeef28 0002036f 00000b39
+%fe6f3000  05000000 0000c981 424b2d29 20202444
+%fe6f3010  05182020 00000510 00020000 00000000
+%fe6f3020  a8030ec8 424b0170 19002444 00000000
+%fe6f3030  00000000 00000000 00000000 00000000
+%fe6f3040  00000000 00061400 001b0014 0a000003
+%fe6f3050  00028101 81010500 0a000001 0003c747
+%fe6f3060  00000000 00000000 00000000 00000000
+
+
+&gt;&gt;&gt; For resident heaps the header is a double-word.  This one begins
+&gt;&gt;&gt; at %fe6f2ffc.  The low 2 bits are flags, the remainder is the
+&gt;&gt;&gt; length of the heap block in double-words.
+
+&gt;&gt;&gt; If the flag bit 0 is 1 then this is an extended heap. Which it is.
+&gt;&gt;&gt; We need to look at the header extension at the end of the block.
+
+&gt;&gt;&gt; The length of the block in bytes is b38 (by mentaly AND-ing b39
+&gt;&gt;&gt; and 0xffc)
+
+
+# dd % fe6f3000-4+b38-10
+
+%fe6f3b24  ffff0000 0000ffff ff530510 ff77bd64
+%fe6f3b34  ffc2001c 00000008 00000000 00000000
+%fe6f3b44  ab240001 4d5000a6 00005854 ff9e0014
+%fe6f3b54  001b0083 fe6f3b80 fe701da0 fe8777b0
+%fe6f3b64  ffa4000c fe6f3b74 000102e9 ffa4000c
+%fe6f3b74  fe7ea73c 0001071f ff9e0014 001b005d
+%fe6f3b84  fe83baa8 fe876eac fe877654 ffc2001c
+%fe6f3b94  00000008 00000000 00000000 da680001
+
+&gt;&gt;&gt; The header extension is in the last 2 double-words of the heap
+&gt;&gt;&gt; block. The owner Id and the selector are in the first of these (at
+&gt;&gt;&gt; %fe6f3b2c).
+
+
+# .mo ff53
+
+ff53 dd4
+
+&gt;&gt;&gt; This tells us selector 510 was allocated by, or is part of the 4th
+&gt;&gt;&gt; device driver to initialise. Listing the physical device driver
+&gt;&gt;&gt; MTEs will find this. They are listed last initialised first.
+
+&gt;&gt;&gt; Note: frequently we find that dd16 is the owner. This refers to
+&gt;&gt;&gt; all device drivers from the 16th and subsequent. The first 15
+&gt;&gt;&gt; device drivers to initialise are assigned unique owner ids from
+&gt;&gt;&gt; dd1 to dd15, <!-- entering slot 243 -->where the numbers are in decimal.
+
+# .lmp
+hmte=0249 pmte=%fe848df4 mflags=0008f1c9 h:\faxpro\fmd.sys
+hmte=0242 pmte=%fe856f04 mflags=0008f1c9 c:\os2tools\theseus2.sys
+hmte=0240 pmte=%fe848e7c mflags=0008f1c9 c:\os2\vdisk.sys
+hmte=0235 pmte=%fe848f58 mflags=0008f1c9 h:\os2\apps\sysios2.sys
+hmte=0234 pmte=%fe848f08 mflags=0008f1c9 h:\tcpip\bin\ifndisnl.sys
+hmte=011e pmte=%fe83ff84 mflags=0008f1c9 h:\tcpip\bin\inet.sys
+hmte=012b pmte=%fe83996c mflags=0008f1c9 h:\mmos2\r0stub.sys
+hmte=012a pmte=%fe839da0 mflags=0000f1c1 h:\mmos2\ssmdd.sys
+hmte=0123 pmte=%fe83df4c mflags=8008f1c9 c:\os2\com.sys
+hmte=0121 pmte=%fe839e64 mflags=8008f1c9 h:\os2\boot\mouse.sys
+hmte=0120 pmte=%fe839ef4 mflags=8008f1c9 h:\os2\boot\pointdd.sys
+hmte=011d pmte=%fe83afdc mflags=8008f1c9 h:\os2\boot\os2cdrom.dmd
+hmte=0111 pmte=%fe83af88 mflags=8008f1ca h:\os2\boot\pmdd.sys
+hmte=0087 pmte=%fe839fdc mflags=0008f1c9 h:\os2\boot\dos.sys
+hmte=0089 pmte=%fe839f80 mflags=8008f1c9 h:\os2\boot\testcfg.sys
+hmte=0103 pmte=%fe71095c mflags=0008f1c9 i:\brew\os20memu.sys
+hmte=00e2 pmte=%fe6fefc4 mflags=8008e1c9 h:\os2scsi.dmd
+hmte=00e1 pmte=%fe6fdf64 mflags=8008e1c9 h:\os2dasd.dmd
+hmte=00de pmte=%fe6f6fb0 mflags=0008e1c9 h:\xdfloppy.flt
+hmte=00a9 pmte=%fe6f5fb0 mflags=8008e1c9 h:\fd16-700.add
+hmte=00a7 pmte=%fe6f4f3c mflags=8008e1c9 h:\ibm1s506.add
+hmte=00a5 pmte=%fe6f3db4 mflags=8008e1c9 h:\ibm1flpy.add
+hmte=009c pmte=%feaeeea0 mflags=8008e1c9 h:\print01.sys
+hmte=009b pmte=%fe6f1fb8 mflags=8008e1c9 h:\ibmkbd.sys
+hmte=009a pmte=%feaeeed8 mflags=8008e1c9 h:\kbdbase.sys
+hmte=0099 pmte=%feaeef34 mflags=0008e1c9 h:\screen01.sys
+hmte=0098 pmte=%feaeefc0 mflags=8008e1c9 h:\clock01.sys
+hmte=0096 pmte=%fe6f1fdc mflags=0008e1c9 h:\resource.sys
+
+&gt;&gt;&gt; Counting backwards, the 4th device driver is kbdbase.sys.
+
+&gt;&gt;&gt; We dump its object table.
+
+
+# .lmo 9a
+hmte=009a pmte=%feaeeed8 mflags=8008e1c9 h:\kbdbase.sys
+seg  sect psiz vsiz hob  sel  flags
+0001 0001 158c 170e 0000 0510 8c41 data prel
+0002 000c 3270 3270 0000 0518 8d60 code shr prel rel
+0003 0026 1987 1988 0000 0520 8d60 code shr prel rel
+0004 0033 0743 0744 0000 0528 8d60 code shr prel rel
+
+&gt;&gt;&gt; Selector 510 is indeed the first data selector of kbdbase.sys and
+&gt;&gt;&gt; will contain the device driver header at offset +0
+
+# .d dev 510:0
+          DevNext: 0500:0000
+          DevAttr: c981
+         DevStrat: 0000
+           DevInt: 2d29
+          DevName: KBD$
+        DevProtCS: 0518
+        DevProtDS: 0510
+        DevRealCS: 0000
+        DevRealDS: 0000
+
+
+&gt;&gt;&gt; We conclude that FROMAGE is waiting for the device driver to
+&gt;&gt;&gt; respond to the DosRead - i.e. A keyboard interrupt
+
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="174_L4_TheRecordLockRecord.html">[Back: The Record Lock Record]</A> <BR>
+<A HREF="176_L3_ExploringMemoryManag.html">[Next: Exploring Memory Management]</A> 
+</BODY>
+</HTML>

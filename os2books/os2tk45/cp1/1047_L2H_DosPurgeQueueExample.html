@@ -1,0 +1,87 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosPurgeQueue - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosPurgeQueue - Example Code</H1><!-- entering slot 1063 -->
+<P>
+This example creates a queue, writes to it, queries it, purges it, and finally
+closes it.
+<PRE>#define INCL_DOSQUEUES   /* DOS Queue values */
+#define INCL_DOSERRORS   /* DOS Error values */
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+#define QUE_NAME "\\QUEUES\\PANDAWRITE\\LOCALQUEUE"
+
+int main(VOID) {
+
+   HQUEUE QueueHandle = NULLHANDLE;  /* Queue handle                   */
+   CHAR   *DataBuffer = "";          /* Data to write to queue         */
+   ULONG  ulNumElems  = 0L;          /* Number of elements on queue    */
+   APIRET rc          = NO_ERROR;    /* Return code                    */
+
+   rc = DosCreateQueue(&amp;QueueHandle, /* Queue handle                   */
+           QUE_LIFO |                /* Last In, First Out ordering    */
+           QUE_CONVERT_ADDRESS,      /* Do 16-bit to 32-bit conversion */
+           QUE_NAME);                /* Name of the queue              */
+   if (rc!= NO_ERROR) {
+      printf ("DosCreateQueue error: return code = %u\n", rc);
+      return 1;
+   }
+
+   DataBuffer = "Element 1 of 2";
+   rc = DosWriteQueue (QueueHandle, 100L, strlen(DataBuffer),
+                       (PVOID)DataBuffer, 0L);
+   if (rc!= NO_ERROR) {
+      printf ("DosWriteQueue error: return code = %u\n", rc);
+      return 1;
+   }
+
+   rc = DosQueryQueue (QueueHandle, &amp;ulNumElems);
+   if (rc != NO_ERROR) {
+      printf ("DosQueryQueue error: return code = %u\n", rc);
+      return 1;
+   } else { printf ("DosQueryQueue: %u elements\n", ulNumElems); }
+
+   DataBuffer = "Element 2 of 2";
+   rc = DosWriteQueue (QueueHandle, 200L, strlen(DataBuffer),
+                       (PVOID)DataBuffer, 0L);
+   if (rc!= NO_ERROR) {
+      printf ("DosWriteQueue error: return code = %u\n", rc);
+      return 1;
+   }
+
+   rc = DosQueryQueue (QueueHandle, &amp;ulNumElems);
+   if (rc != NO_ERROR) {
+      printf ("DosQueryQueue error: return code = %u\n", rc);
+      return 1;
+   } else { printf ("DosQueryQueue: %u elements\n", ulNumElems); }
+
+   rc = DosPurgeQueue (QueueHandle);
+   if (rc != NO_ERROR) {
+      printf ("DosPurgeQueue error: return code = %u\n", rc);
+      return 1;        }
+   rc = DosQueryQueue (QueueHandle, &amp;ulNumElems);
+   if (rc != NO_ERROR) {
+      printf ("DosQueryQueue error: return code = %u\n", rc);
+      return 1;
+   } else { printf ("DosQueryQueue: %u elements\n", ulNumElems); }
+
+   rc = DosCloseQueue(QueueHandle);      /* Close the queue */
+   if (rc!= NO_ERROR) {
+      printf ("DosCloseQueue error: return code = %u\n", rc);
+      return 1;       }
+
+   return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1046_L2H_DosPurgeQueueRelated.html">[Back: DosPurgeQueue - Related Functions]</A> <BR>
+<A HREF="1048_L2H_DosPurgeQueueTopics.html">[Next: DosPurgeQueue - Topics]</A> 
+</BODY>
+</HTML>

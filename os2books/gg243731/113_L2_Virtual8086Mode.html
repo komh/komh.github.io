@@ -1,0 +1,83 @@
+<HTML>
+<HEAD>
+<TITLE>Virtual 8086 Mode</TITLE>
+</HEAD>
+<BODY>
+<H1>Virtual 8086 Mode</H1><!-- entering slot 120 -->
+<P>
+In a native 8086 environment, the processor does not constrain an application
+in any way.  The application may access all available memory and execute
+all processor instructions, since it is running as a single task in an unprotected,
+real mode environment.  Operating systems and applications written for the
+8086 (such as DOS) typically take advantage of this freedom to exercise
+direct control over hardware and system resources.
+<P>
+The 80386 processor exhibits its best performance when running in protected
+mode.  However, in the protected mode environment, applications are restricted
+to a subset of the system memory and processor instruction set, and real
+mode applications written for the 8086 processor can violate the protection
+rules imposed by the processor.
+<P>
+The virtual 8086 mode of the 80386 processor allows an operating system
+to integrate existing applications, written for the 8086 processor, into
+the protected mode multitasking environment of the 80386, and to execute
+such applications concurrently with other 8086 applications and protected
+mode applications.
+<P>
+V86 mode tasks execute in the 80386 processor at privilege level 3, and
+are compatible with the virtual memory and paging facilities of the 80386.
+ A V86 mode task may execute most 8086 instructions, including those which
+reference memory mapped or I/O mapped devices, or which access the 80386
+interrupt enable flag.  These instructions may be executed by the 80386
+processor directly, or the 80386 operating system may trap and emulate such
+instructions.
+<P>
+Certain 8086 instructions may not be executed in V86 mode; these include
+instructions which generate interrupts or exceptions, some of which are
+not valid in a normal protected mode task.  However, such instructions may
+be valid for a V86 mode task.  For example, an application running in V86
+mode may issue an interrupt 21h operating system call.  An 80386 operating
+system may register an exception handler to trap and emulate such instructions
+at a higher privilege level.
+<P>
+<A HREF="018_L2_VDMExceptionsandInte.html">Figure "VDM Exceptions and Interrupt
+Handling in a V86 Mode Task"</A>
+<P>
+An interrupt or exception in the V86 mode task causes the processor to switch
+from V86 mode to protected mode.  An exception handler running as a protected
+mode task at privilege level 0 is then invoked by the 80386 operating system.
+This handler first determines that the task which issued the interrupt or
+exception instruction is a valid V86 mode task.  It does this by checking
+the VM bit in the EFLAGS register.  Two possible states are possible:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><I>If this bit is set</I>, the current task is a V86
+mode task.  The exception handler then invokes a <A HREF="472_L2_virtualmachinemonito.html"><I>virtual
+machine monitor</I></A>.
+<P>
+The virtual machine monitor locates the instruction which caused the interrupt
+or exception, decodes the instruction and, if it is a valid 8086 instruction,
+simulates its execution by invoking appropriate 80386 operating system services.
+ If the instruction is not valid (for example, a privileged 80386 instruction),
+the virtual machine monitor terminates the V86 mode task.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><I>If the bit is not set</I>, the task has issued
+an illegal instruction, and is terminated by the virtual machine monitor.
+<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+Once the instruction which caused the interrupt or exception has been processed,
+the virtual machine monitor transforms the result into the expected format
+for the V86 mode task.  It then advances the V86 mode task's EIP (Extended
+Instruction Pointer) to the next instruction, and issues an IRET instruction
+which causes the processor to switch back to V86 mode and continue execution
+of the V86 mode task.
+<P>
+The<I> 8086 Emulation component of MVDM is a virtual machine monitor.</I>
+
+<P><HR>
+
+<A HREF="112_L1_8086Emulation.html">[Back: 8086 Emulation]</A> <BR>
+<A HREF="114_L2_DOSSoftwareInterrupt.html">[Next: DOS Software Interrupt Handling]</A> 
+</BODY>
+</HTML>

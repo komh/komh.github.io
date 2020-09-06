@@ -1,0 +1,69 @@
+<HTML>
+<HEAD>
+<TITLE>Memory Protection</TITLE>
+</HEAD>
+<BODY>
+<H1>Memory Protection</H1><!-- entering slot 87 -->
+<P>
+With the flat memory model, OS/2 V2.0 implements memory protection using
+two machine states (user and supervisor) and by providing separate address
+spaces for the supervisor and each of the processes running in the system.
+The global address space encompasses the entire linear address space and
+consists of the system region and the current process's address space.  The
+global address space is only accessible when the processor is running at
+ring 0, which is reserved for the operating system.  All other processes
+run in ring 3 (privilege level 3). The ring protection architecture of the
+80386 processor is described in <A HREF="198_L3_PrivilegeLevels.html">Privilege
+Levels</A>. While executing at ring 3, the system region is not visible
+to the current process. Neither are the addresses spaces of any of the other
+processes running in the system accessible.
+<P>
+Since memory is managed by the operating system on a page-by-page basis,
+even the allocation of a 1 byte memory object will actually reserve a full
+page (4KB) in memory.  Furthermore, as the memory protection scheme has
+also changed under OS/2 Version 2.0, a memory reference outside the expected
+range but within the 4KB page boundary will<I> not</I> give the Trap 000D
+segmentation violation experienced in previous versions of OS/2. Instead,
+an exception is generated only when an invalid page is referenced or an
+invalid access occurs (such as write operation to a page previously declared
+as read-only).  An invalid page is a page that has not been committed in
+the process address space or is outside the limit of the address space.
+
+<P>
+Here is where we see a major difference between the<I> segmented</I> memory
+model and the<I> linear</I> or<I> flat</I> memory model.  A 32-bit program
+can address the entire 4GB address space with a 32-bit offset.  Memory is
+seen as a single continuum.  16-bit applications see memory as discrete
+areas each with their own defined size. 16-bit applications running under
+OS/2 V2.0 are subject to segment limit checking and generally behave as
+they did under previous versions of OS/2.  The discussion here refers to
+32-bit applications.
+<P>
+For example, an application may request the allocation of 1KB of memory;
+the operating system will allocate a full 4KB page.  The application can
+then write up to 4096 bytes of data into the memory object, and the operating
+system will not detect an error.  However, if the application attempts to
+write 4097 bytes into the memory object, a general protection exception
+(Trap 000D) may occur.  Such an exception is<I> only</I> generated when
+the next page in the process address space is invalid. If the next page
+exists in the process address space, no exception is generated.
+<P>
+Note that any of these exceptions may be trapped and processed using exception
+handlers registered by the application.  See <A HREF="093_L1_TaskManagement.html">Task
+Management</A> for further discussion of exception handling.
+<P>
+Since 32-bit programs can address the entire address space with a 32-bit
+offset, it is easier for 32-bit programs to corrupt data in the shared region
+than for 16-bit programs.  OS/2 V2.0 provides a facility for DLL routines
+to have their shared data areas allocated in a<I> protected</I> area of
+memory, which is not accessible to 32-bit programs, thereby providing a
+level of protection.  There is a new<B> PROTECT</B> option on the<B> MEMMAN
+</B>statement in the CONFIG.SYS, which is used to enable memory protection
+for DLLs.
+
+<P><HR>
+
+<A HREF="081_L3_PageAttributes.html">[Back: Page Attributes]</A> <BR>
+<A HREF="083_L2_PhysicalMemoryManage.html">[Next: Physical Memory Management]</A> 
+</BODY>
+</HTML>

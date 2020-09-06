@@ -1,0 +1,108 @@
+<HTML>
+<HEAD>
+<TITLE>How do I prevent Shutdown from stopping my app?</TITLE>
+</HEAD>
+<BODY>
+<H1>How do I prevent Shutdown from stopping my app?</H1><!-- entering slot 80 -->
+<P>
+In our application, the WM_CLOSE message processor determines the state
+of the application, issues all the "Are you sure?" questions, etc. If the
+close is to be continued, a WM_QUIT message is posted and a value of FALSE
+is returned. Otherwise a value of TRUE is returned.
+<P>
+The window receiving the WMU_EndTask message handles it by posting a WM_CLOSE
+message to itself, and letting the WM_CLOSE processing handle it. The only
+reason it is not translated to a WM_CLOSE within the message loop is allow
+future use. This message requires no special handling.
+<P>
+The window receiving the WMU_ShutDown message handles it by sending (not
+posting) a WM_CLOSE message to itself. If the WM_CLOSE message returns TRUE,
+then a WinCancelShutdown (hmq, FALSE) call is issued to cancel this instance
+of the shutdown.
+<P>
+If you issue a WinCancelShutdown (hmq, TRUE), a WM_QUIT message will never
+be sent to your message queue, so will not have an opportunity to stop the
+shutdown.  This is intended for secondary message queues that do not have
+a message loop.
+<PRE>  while (1) {
+
+    HWND hwndClient;
+
+    // Get next message from queue
+    if (!WinGetMsg (hab, &amp;qmsg, NULLHANDLE, 0, 0)) {
+
+      // The WM_QUIT message has three sources:
+      //   1. The task manager 'End task' pulldown
+      //   2. System shutdown from desktop manager
+      //   3. Posted by the application
+
+      // This is a WM_QUIT message.  Check the window handle, if the
+      // handle matches mp2, it is from switch list close
+      if (qmsg.hwnd == HWNDFROMMP (qmsg.mp2)) {
+
+        // This is from close on the task list, convert to our message
+        qmsg.msg = WMU_EndTask;
+
+        // Get the intended client's window handle
+        if (!(hwndClient = WinWindowFromID (qmsg.hwnd, FID_CLIENT))) {
+
+          // Failed to find client. No idea who this belongs to,
+          // give it to default window for processing
+          hwndClient = hwndDefault
+        }
+
+        // Otherwise, readdress the message to the appropriate client
+        qmsg.hwnd = hwndClient;
+
+        // We can use mp1 and mp2 for anything we want.
+        // Currently, just clear both
+        qmsg.mp1  = qmsg.mp2 = 0L;
+
+      } else if (qmsg.hwnd == NULLHANDLE) {
+
+        // This message is from shutdown,
+        // Address it to default window for processing
+        qmsg.hwnd = hwndDefault;
+
+        // And set the message to our shutdown message,
+        qmsg.msg = WMU_SysShutdown;
+
+      } else {
+
+        // If here, we posted the WM_QUIT message, so break out of
+        // the message loop
+        break;
+      }
+    }
+
+    // This is not a WM_QUIT message, intercept all other
+    // messages intended for the NULL window
+    if (qmsg.hwnd == NULLHANDLE) {
+
+      // Pass all NULL window messages to the NULL window handler
+      NullMsg (qmsg.hwnd, qmsg.msg, qmsg.mp1, qmsg.mp2);
+
+    } else {
+
+      // This is not a WM_QUIT message, nor is it intended for the NULL
+      // window.  Pass this message to the message filter hook for
+      // processing.
+      if (!WinCallMsgFilter (hab, (PQMSG) &amp;qmsg, 0)) {
+
+        // Filter hook has not cancelled the message, so dispatch
+        // the message to the proper window
+        WinDispatchMsg (hab, &amp;qmsg);
+      }
+    }
+  }
+</PRE>
+
+<P>
+Credit:  Matt Osborn 
+
+<P><HR>
+
+<A HREF="066_L2_Howtoensurethesizing.html">[Back: How to ensure the sizing's correct so the dlg "fits" in the notebook...?]</A> <BR>
+<A HREF="068_L2_WhenIpassastructuret.html">[Next: When I pass a structure to WinCreateWindow, sometimes it doesn't work!]</A> 
+</BODY>
+</HTML>

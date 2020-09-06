@@ -1,0 +1,241 @@
+<HTML>
+<HEAD>
+<TITLE>DosFileIO</TITLE>
+</HEAD>
+<BODY>
+<H1>DosFileIO</H1><!-- entering slot 44 -->Bindings:  <A HREF="212_L2H_DosFileIO.html">C</A>,
+<A HREF="387_L2H_DosFileIO.html">MASM</A>
+<BR>
+
+<P>
+This call performs multiple locking, unlocking, seeking, and I/O operations
+on an
+<BR>
+opened file.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+DosFileIO<!-- lm: 0x2 15 -->
+<UL> (FileHandle, CommandList, CommandListLen,
+ErrorOffset)<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+<B>FileHandle</B> (HFILE) - input<!-- lm: 0x11 4 -->
+<UL> The handle of
+the file.<!-- lm: 0x2 1 -->
+</UL><B> CommandList</B> (PBYTE) - input<!-- lm: 0x11 4 -->
+<UL> Address
+of the list of entries, indicating the operations to be performed. CmdLock,
+CmdUnlock, CmdSeek, and CmdIO operations are atomic. Thus, the completion
+of one operation is not dependent upon the completion of another operation
+following it in the list. Operations are performed until all are complete
+or until one fails.<!-- lm: 0x2 4 -->
+<P>
+<B>CmdLock</B><!-- lm: 0x11 7 -->
+<UL> Lock command structure. To perform
+lock operations on one or more regions in a file, a structure is created
+that has the following format:<!-- lm: 0x2 7 -->
+<P>
+<B>Cmd</B> (USHORT) - input<!-- lm: 0x11 10 -->
+<UL> A value of 0 is required
+for a lock operation.<!-- lm: 0x2 7 -->
+</UL><B> LockCnt</B> (USHORT) -
+input<!-- lm: 0x11 10 -->
+<UL> Number of regions in the file that are to
+be locked.<!-- lm: 0x2 7 -->
+</UL><B> TimeOut</B> (LONG) - input<!-- lm: 0x11 10 -->
+<UL> The
+count in milliseconds until the requesting process is to resume execution
+if the requested locks are not available. In addition to specifying a milliseconds
+value, the following values and their meanings may also be specified:<!-- lm: 0x2 10 -->
+<P>
+Value<!-- lm: 0x2 22 -->
+<UL> Definition<!-- lm: 0x2 10 -->
+</UL>FFFFFFFFH<!-- lm: 0x2 22 -->
+<UL> Wait indefinitely until the requested
+locks become available.<!-- lm: 0x2 10 -->
+</UL>00000000H<!-- lm: 0x2 22 -->
+<UL> Return immediately to the requesting
+process.
+<P>
+Because the lock operation is atomic, if a lock within a CmdLock causes
+a time out, none of the other locks within the scope of CmdLock are in force.
+<!-- lm: 0x2 4 -->
+</UL><B>Lock</B><!-- lm: 0x11 7 -->
+<UL> Lock record
+structure. The CmdLock structure is followed by a series of records in the
+following format:<!-- lm: 0x2 7 -->
+<P>
+<B>Share</B> (USHORT) - input<!-- lm: 0x11 10 -->
+<UL> Defines the type
+of access other processes may have to the file range being locked. Values
+and their meanings are:<!-- lm: 0x2 10 -->
+<P>
+Value<!-- lm: 0x2 20 -->
+<UL> Definition<!-- lm: 0x2 10 -->
+</UL> 0<!-- lm: 0x2 20 -->
+<UL> Other
+processes have "No-Access" to the locked range.  The current process has
+both read and write access to the locked range.  A region with Share = 0
+must not overlap any other locked region.<!-- lm: 0x2 10 -->
+</UL> 1<!-- lm: 0x2 20 -->
+<UL> Other
+processes and the current process have "Read-Only" access to the locked
+range. A range locked with Share = 1 may overlap other ranges locked with
+Share = 1, but must not overlap other ranges locked with Share = 0.<!-- lm: 0x2 7 -->
+</UL><B> Start
+</B>(ULONG) - input<!-- lm: 0x11 10 -->
+<UL> Offset into file where region
+to be locked starts.<!-- lm: 0x2 7 -->
+</UL><B> Length</B> (ULONG) - input
+<!-- lm: 0x11 10 -->
+<UL>Length of region to be locked.<!-- lm: 0x2 4 -->
+</UL><B> CmdUnlock
+</B><!-- lm: 0x11 7 -->
+<UL>Unlock command structure. To perform unlock
+operations on one or more regions in a file, a structure is created that
+has the following format:<!-- lm: 0x2 7 -->
+<P>
+<B>Cmd</B> (USHORT) - input<!-- lm: 0x11 10 -->
+<UL> A value of 1 is required
+for an unlock operation.<!-- lm: 0x2 7 -->
+</UL><B> UnlockCnt</B> (USHORT)
+- input<!-- lm: 0x11 10 -->
+<UL> Number of regions in the file that are
+to be unlocked.<!-- lm: 0x2 4 -->
+</UL><B> UnLock</B><!-- lm: 0x11 7 -->
+<UL> Unlock
+record structure. The CmdUnlock structure is followed by a series of records
+in the following format:<!-- lm: 0x2 7 -->
+<P>
+<B>Start</B> (ULONG) - input<!-- lm: 0x11 10 -->
+<UL> Offset into file where
+region to be unlocked starts.<!-- lm: 0x2 7 -->
+</UL><B> Length</B> (ULONG)
+- input<!-- lm: 0x11 10 -->
+<UL> Length of region to be unlocked.<!-- lm: 0x2 4 -->
+</UL><B> CmdSeek
+</B><!-- lm: 0x11 7 -->
+<UL>Seek command structure. To perform seek operations
+on one or more locked regions in a file, a structure is created that has
+the following format:<!-- lm: 0x2 7 -->
+<P>
+<B>Cmd</B> (USHORT) - input<!-- lm: 0x11 10 -->
+<UL> A value of 2 is required
+for a seek operation.<!-- lm: 0x2 7 -->
+</UL><B> Method</B> (USHORT) - input
+<!-- lm: 0x11 10 -->
+<UL>Location in file whose offset is used to calculate
+the new position of the file pointer by adding to it the offset specified
+by Position.<!-- lm: 0x2 10 -->
+<P>
+Value<!-- lm: 0x2 20 -->
+<UL> Definition<!-- lm: 0x2 10 -->
+</UL>0<!-- lm: 0x2 20 -->
+<UL> Beginning of the file<!-- lm: 0x2 10 -->
+</UL>1<!-- lm: 0x2 20 -->
+<UL> Current location of the file pointer<!-- lm: 0x2 10 -->
+</UL>2<!-- lm: 0x2 20 -->
+<UL> End of the file.<!-- lm: 0x2 7 -->
+</UL><B> Position
+</B>(LONG) - input<!-- lm: 0x11 10 -->
+<UL> The distance to move, in bytes.
+<!-- lm: 0x2 7 -->
+</UL><B>Actual</B> ULONG - output<!-- lm: 0x11 10 -->
+<UL> New
+position of the file pointer.<!-- lm: 0x2 4 -->
+</UL><B> CmdIO</B><!-- lm: 0x11 7 -->
+<UL> I/O
+command structure. To perform I/O operations on one or more locked regions
+in a file, a structure is created that has the following format:<!-- lm: 0x2 7 -->
+<P>
+<B>Cmd</B> (USHORT) - input<!-- lm: 0x11 10 -->
+<UL> Either of the following
+values are specified:<!-- lm: 0x2 10 -->
+<P>
+Value<!-- lm: 0x2 20 -->
+<UL> Definition<!-- lm: 0x2 10 -->
+</UL>3<!-- lm: 0x2 20 -->
+<UL> Read operation<!-- lm: 0x2 10 -->
+</UL>4<!-- lm: 0x2 20 -->
+<UL> Write operation.<!-- lm: 0x2 7 -->
+</UL><B> Buffer
+</B>(PBYTE) - input/output<!-- lm: 0x11 10 -->
+<UL> Address of the input
+or output buffer.<!-- lm: 0x2 7 -->
+</UL><B> BufferLen</B> (USHORT) - input
+<!-- lm: 0x11 10 -->
+<UL>Number of bytes requested to be read or written.
+<!-- lm: 0x2 7 -->
+</UL><B>Actual</B> (USHORT) - output<!-- lm: 0x11 10 -->
+<UL> Number
+of bytes actually transferred.<!-- lm: 0x2 1 -->
+</UL><B> CommandListLen
+</B>(USHORT) - input<!-- lm: 0x11 4 -->
+<UL> The length in bytes of CommandList.
+<!-- lm: 0x2 1 -->
+</UL><B>ErrorOffset</B> (PLONG) - output<!-- lm: 0x11 4 -->
+<UL> Address
+of the byte offset of the record in which the error occurred.<!-- lm: 0x2 1 -->
+</UL><B> rc
+</B>(USHORT) - return<!-- lm: 0x11 4 -->
+<UL> Return code descriptions are:
+<!-- lm: 0x2 4 -->
+<P>
+<LI><!-- lm: 0x2 14 -->NO_ERROR<!-- lm: 0x2 4 --> 5<!-- lm: 0x2 14 -->
+<UL> ERROR_ACCESS_DENIED
+<!-- lm: 0x2 4 -->
+</UL>6<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_HANDLE<!-- lm: 0x2 4 -->
+</UL>33<!-- lm: 0x2 14 -->
+<UL> ERROR_LOCK_VIOLATION<!-- lm: 0x2 4 -->
+</UL>36<!-- lm: 0x2 14 -->
+<UL> ERROR_SHARING_BUFFER_EXCEEDED<!-- lm: 0x2 4 -->
+</UL>87<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_PARAMETER<!-- lm: 0x2 4 -->
+</UL>95<!-- lm: 0x2 14 -->
+<UL> ERROR_INTERRUPT<!-- lm: 0x2 4 -->
+</UL>130<!-- lm: 0x2 14 -->
+<UL> ERROR_DIRECT_ACCESS_HANDLE<!-- lm: 0x2 4 -->
+</UL>131<!-- lm: 0x2 14 -->
+<UL> ERROR_NEGATIVE_SEEK<!-- lm: 0x2 4 -->
+</UL>132<!-- entering slot 45 --> <!-- lm: 0x2 14 -->
+<UL> ERROR_SEEK_ON_DEVICE
+<!-- lm: 0x2 1 -->
+</UL><B>Remarks</B>
+<P>
+DosFileIO combines the following operations into a single request:<!-- lm: 0x2 1 -->
+<P>
+o<!-- lm: 0x2 3 -->
+<UL>Unlocking and locking multiple file ranges<!-- lm: 0x2 1 -->
+</UL>o<!-- lm: 0x2 3 -->
+<UL>Changing the file position pointer<!-- lm: 0x2 1 -->
+</UL>o<!-- lm: 0x2 3 -->
+<UL>Performing file I/O.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The ability to combine operations on files provides improved performance
+and makes DosFileIO particularly suited to a networking environment.
+<P>
+Unlike <A HREF="038_L2_DosFileLocks.html">DosFileLocks</A>, which unconditionally
+prevents access to only one range in a file at a time, DosFileIO permits
+multiple regions to be locked. DosFileIO also offers the option of read-only
+access to locked regions by the current process and any sharing processes.
+
+<P>
+If another process attempts to read or write in a "No-access" region, or
+if any process attempts to write in a "Read-only" region, ERROR_ACCESS_DENIED
+is returned.
+<P>
+A range to be locked must first be cleared of any locked subranges or overlapping
+ranges. If a time out occurs before locking can be completed, DosFileIO
+returns with an unsuccessful return code. The caller may return after the
+time-out period has expired without receiving an ERROR_SEM_TIMEOUT.  Therefore,
+semaphore time-out values should not be used for exact timing and sequencing.
+
+
+<P><HR>
+
+<A HREF="036_L2_DosExitList.html">[Back: DosExitList]</A> <BR>
+<A HREF="038_L2_DosFileLocks.html">[Next: DosFileLocks]</A> 
+</BODY>
+</HTML>

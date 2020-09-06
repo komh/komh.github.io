@@ -1,0 +1,462 @@
+<HTML>
+<HEAD>
+<TITLE>A 16-Bit Code File</TITLE>
+</HEAD>
+<BODY>
+<H1>A 16-Bit Code File</H1><!-- entering slot 90 -->
+<PRE>;       Static Name Aliases
+;
+;       $S180_inbuf     EQU     inbuf
+        TITLE   DEMO.C
+        .286p
+        .287
+DEMO_TEXT       SEGMENT  WORD PUBLIC 'CODE'
+DEMO_TEXT       ENDS
+_DATA   SEGMENT  WORD PUBLIC 'DATA'
+_DATA   ENDS
+CONST   SEGMENT  WORD PUBLIC 'CONST'
+CONST   ENDS
+_BSS    SEGMENT  WORD PUBLIC 'BSS'
+_BSS    ENDS
+DGROUP  GROUP   CONST, _BSS, _DATA
+        ASSUME  CS: DEMO_TEXT, DS: DGROUP, SS: DGROUP
+EXTRN   __acrtused:ABS
+EXTRN   _printf:FAR
+EXTRN   _sscanf:FAR
+EXTRN   _fgets:FAR
+_BSS      SEGMENT
+COMM NEAR       _prime:  2:      5000
+_BSS      ENDS
+EXTRN   __iob:BYTE
+_DATA      SEGMENT
+$SG188  DB      'there are %u primes less than 65536',  0aH,  00H
+$SG191  DB      '%u',  00H
+$SG195  DB      'Enter number to factor: ',  00H
+$SG197  DB      '%u',  00H
+$SG198  DB      'Unable to convert number. Please try again',  0aH,  00H
+$SG207  DB      '%u is prime',  0aH,  00H
+$SG208  DB      '%u=%u',  00H
+$SG212  DB      '*%u',  00H
+$SG213  DB      0aH,  00H
+_DATA      ENDS
+_BSS      SEGMENT
+$S180_inbuf     DW 028H DUP (?)
+_BSS      ENDS
+CONST      SEGMENT
+$T20004 DW SEG _prime
+CONST      ENDS
+DEMO_TEXT      SEGMENT
+        ASSUME  CS: DEMO_TEXT
+;|***
+;|*** #include &lt;stdio.h&gt;
+</PRE>
+
+<PRE>; Line 2
+;|*** #define INBUFSIZE 80
+;|*** #define NPRIME 5000
+;|*** unsigned short prime[NPRIME];
+;|***
+;|*** int gen(void)
+;|***   {
+; Line 8
+        PUBLIC  _gen
+_gen    PROC FAR
+        *** 000000      c8 24 00 00             enter   WORD PTR 36,0
+        *** 000004      57                      push    di
+        *** 000005      56                      push    si
+;       ix = -6
+;       l = -16
+;       ll = -14
+;       npr = -2
+;       q = -4
+;       t = -10
+;       tp = -8
+;       tt = -12
+;|***   unsigned short ix,l=2,ll=25,npr=3,q,t,tp=2,tt;
+; Line 9
+        *** 000006      c7 46 f0 02 00          mov     WORD PTR [bp-16],2      ;l
+        *** 00000b      c7 46 f2 19 00          mov     WORD PTR [bp-14],25     ;ll
+        *** 000010      c7 46 fe 03 00          mov     WORD PTR [bp-2],3       ;npr
+        *** 000015      c7 46 f8 02 00          mov     WORD PTR [bp-8],2       ;tp
+;|***   prime[0]=2;
+; Line 10
+        *** 00001a      8e 06 00 00             mov     es,$T20004
+        *** 00001e      26 c7 06 00 00 02 00    mov     WORD PTR es:_prime,2
+;|***   prime[1]=3;
+; Line 11
+        *** 000025      26 c7 06 02 00 03 00    mov     WORD PTR es:_prime+2,3
+;|***   prime[2]=5;
+; Line 12
+        *** 00002c      26 c7 06 04 00 05 00    mov     WORD PTR es:_prime+4,5
+;|***   for ( t=7 ; t&lt;65530 ; t+=tp )
+; Line 13
+        *** 000033      c7 46 f6 07 00          mov     WORD PTR [bp-10],7      ;t
+        *** 000038      c7 46 e2 04 00          mov     WORD PTR [bp-30],OFFSET _prime+4
+        *** 00003d      c7 46 e4 00 00          mov     WORD PTR [bp-28],SEG _prime
+        *** 000042      c7 46 de 06 00          mov     WORD PTR [bp-34],OFFSET _prime+6
+        *** 000047      c7 46 e0 00 00          mov     WORD PTR [bp-32],SEG _prime
+                                        $L20002:
+;|***     {
+; Line 14
+;|***     tp=6-tp;
+; Line 15
+        *** 00004c      b8 06 00                mov     ax,6
+        *** 00004f      2b 46 f8                sub     ax,WORD PTR [bp-8]      ;tp
+        *** 000052      89 46 f8                mov     WORD PTR [bp-8],ax      ;tp
+</PRE>
+
+<PRE>;|***     if ( ll&lt;=t )
+; Line 16
+        *** 000055      8b 46 f6                mov     ax,WORD PTR [bp-10]     ;t
+        *** 000058      39 46 f2                cmp     WORD PTR [bp-14],ax     ;ll
+        *** 00005b      77 15                   ja      $I170
+;|***       {
+; Line 17
+;|***       l++;
+; Line 18
+        *** 00005d      83 46 e2 02             add     WORD PTR [bp-30],2
+        *** 000061      ff 46 f0                inc     WORD PTR [bp-16]        ;l
+;|***       ll=prime[l]*prime[l];
+; Line 19
+        *** 000064      c4 5e e2                les     bx,DWORD PTR [bp-30]
+        *** 000067      26 8b 07                mov     ax,WORD PTR es:[bx]
+        *** 00006a      89 46 dc                mov     WORD PTR [bp-36],ax
+        *** 00006d      f7 e0                   mul     ax
+        *** 00006f      89 46 f2                mov     WORD PTR [bp-14],ax     ;ll
+;|***       }
+; Line 20
+;|***     for ( ix=2 ; ix&lt;l ; ix++ )
+; Line 21
+                                        $I170:
+        *** <!-- entering slot 91 -->000072      be 02 00                mov     si,2
+        *** 000075      39 76 f0                cmp     WORD PTR [bp-16],si     ;l
+        *** 000078      76 39                   jbe     $FB173
+        *** 00007a      8b 46 f6                mov     ax,WORD PTR [bp-10]     ;t
+        *** 00007d      89 46 ec                mov     WORD PTR [bp-20],ax
+        *** 000080      c7 46 ee 00 00          mov     WORD PTR [bp-18],0
+        *** 000085      c7 46 e8 04 00          mov     WORD PTR [bp-24],OFFSET _prime+4
+        *** 00008a      c7 46 ea 00 00          mov     WORD PTR [bp-22],SEG _prime
+        *** 00008f      c4 7e e8                les     di,DWORD PTR [bp-24]
+                                        $L20000:
+;|***       {
+; Line 22
+;|***       q=t/prime[ix];
+; Line 23
+        *** 000092      26 8b 0d                mov     cx,WORD PTR es:[di]
+        *** 000095      8b 46 ec                mov     ax,WORD PTR [bp-20]
+        *** 000098      8b 56 ee                mov     dx,WORD PTR [bp-18]
+        *** 00009b      f7 f1                   div     cx
+        *** 00009d      89 46 fc                mov     WORD PTR [bp-4],ax      ;q
+;|***       tt=q*prime[ix];
+; Line 24
+        *** 0000a0      f7 e1                   mul     cx
+        *** 0000a2      89 46 f4                mov     WORD PTR [bp-12],ax     ;tt
+;|***       if ( t==tt ) break;
+; Line 25
+        *** 0000a5      39 46 f6                cmp     WORD PTR [bp-10],ax     ;t
+        *** 0000a8      74 09                   je      $FB173
+        *** 0000aa      83 c7 02                add     di,2
+        *** 0000ad      46                      inc     si
+        *** 0000ae      39 76 f0                cmp     WORD PTR [bp-16],si     ;l
+        *** 0000b1      77 df                   ja      $L20000
+                                        $FB173:
+;|***       }
+</PRE>
+
+<PRE>;|***     if ( l==ix ) prime[npr++]=t;
+; Line 27
+        *** 0000b3      39 76 f0                cmp     WORD PTR [bp-16],si     ;l
+        *** 0000b6      75 10                   jne     $I175
+        *** 0000b8      c4 5e de                les     bx,DWORD PTR [bp-34]
+        *** 0000bb      8b 46 f6                mov     ax,WORD PTR [bp-10]     ;t
+        *** 0000be      26 89 07                mov     WORD PTR es:[bx],ax
+        *** 0000c1      83 46 de 02             add     WORD PTR [bp-34],2
+        *** 0000c5      ff 46 fe                inc     WORD PTR [bp-2] ;npr
+;|***     }
+; Line 28
+                                        $I175:
+        *** 0000c8      8b 46 f8                mov     ax,WORD PTR [bp-8]      ;tp
+        *** 0000cb      01 46 f6                add     WORD PTR [bp-10],ax     ;t
+        *** 0000ce      83 7e f6 fa             cmp     WORD PTR [bp-10],-6     ;t
+        *** 0000d2      73 03                   jae     $JCC210
+        *** 0000d4      e9 75 ff                jmp     $L20002
+                                        $JCC210:
+        *** 0000d7      89 76 fa                mov     WORD PTR [bp-6],si      ;ix
+;|***   return npr;
+; Line 29
+        *** 0000da      8b 46 fe                mov     ax,WORD PTR [bp-2]      ;npr
+        *** 0000dd      5e                      pop     si
+        *** 0000de      5f                      pop     di
+        *** 0000df      c9                      leave
+        *** 0000e0      cb                      ret
+        *** 0000e1      90                      nop
+
+_gen    ENDP
+;|***   }
+;|***
+;|*** int main(int argc, char *argv[])
+;|***   {
+; Line 33
+        PUBLIC  _main
+_main   PROC FAR
+        *** 0000e2      c8 60 00 00             enter   WORD PTR 96,0
+        *** 0000e6      57                      push    di
+        *** 0000e7      56                      push    si
+;       argc = 6
+;       argv = 8
+;       ix = -6
+;       last = -10
+;       nf = -8
+;       fact = -76
+;       input = -2
+;       is = -12
+;       q = -4
+;|***   static char inbuf[INBUFSIZE];
+;|***   int ix,last,nf;
+;|***   unsigned short fact[32],input=0,is,q;
+; Line 36
+        *** 0000e8      c7 46 fe 00 00          mov     WORD PTR [bp-2],0       ;input
+</PRE>
+
+<PRE>;|***   last=gen();
+; Line 37
+        *** 0000ed      0e                      push    cs
+        *** 0000ee      e8 00 00                call    NEAR PTR _gen
+        *** 0000f1      89 46 f6                mov     WORD PTR [bp-10],ax     ;last
+;|***   printf("there are %u primes less than 65536\n",last);
+; Line 38
+        *** 0000f4      50                      push    ax
+        *** 0000f5      1e                      push    ds
+        *** 0000f6      68 00 00                push    OFFSET DGROUP:$SG188
+        *** 0000f9      9a 00 00 00 00          call    FAR PTR _printf
+        *** <!-- entering slot 92 -->0000fe      83 c4 06                add     sp,6
+;|***   if ( 1&lt;argc )
+; Line 39
+        *** 000101      83 7e 06 01             cmp     WORD PTR [bp+6],1       ;argc
+        *** 000105      7e 25                   jle     $I190
+;|***     if ( 0==sscanf(argv[1],"%u",&amp;input) ) argc=1;
+; Line 40
+        *** 000107      8d 46 fe                lea     ax,WORD PTR [bp-2]      ;input
+        *** 00010a      16                      push    ss
+        *** 00010b      50                      push    ax
+        *** 00010c      1e                      push    ds
+        *** 00010d      68 25 00                push    OFFSET DGROUP:$SG191
+        *** 000110      c4 5e 08                les     bx,DWORD PTR [bp+8]     ;argv
+        *** 000113      26 ff 77 06             push    WORD PTR es:[bx+6]
+        *** 000117      26 ff 77 04             push    WORD PTR es:[bx+4]
+        *** 00011b      9a 00 00 00 00          call    FAR PTR _sscanf
+        *** 000120      83 c4 0c                add     sp,12
+        *** 000123      0b c0                   or      ax,ax
+        *** 000125      75 05                   jne     $I190
+        *** 000127      c7 46 06 01 00          mov     WORD PTR [bp+6],1       ;argc
+;|***   while ( 2&gt;argc )
+; Line 41
+                                        $I190:
+        *** 00012c      83 7e 06 02             cmp     WORD PTR [bp+6],2       ;argc
+        *** 000130      7d 4b                   jge     $FB194
+        *** 000132      8b 76 06                mov     si,WORD PTR [bp+6]      ;argc
+                                        $L20005:
+;|***     {
+; Line 42
+;|***     printf("Enter number to factor: ");
+; Line 43
+        *** 000135      1e                      push    ds
+        *** 000136      68 28 00                push    OFFSET DGROUP:$SG195
+        *** 000139      9a 00 00 00 00          call    FAR PTR _printf
+        *** 00013e      83 c4 04                add     sp,4
+;|***     fgets(inbuf,INBUFSIZE,stdin);
+; Line 44
+        *** 000141      1e                      push    ds
+        *** 000142      68 00 00                push    OFFSET __iob
+        *** 000145      6a 50                   push    80
+        *** 000147      1e                      push    ds
+        *** 000148      68 00 00                push    OFFSET DGROUP:$S180_inbuf
+        *** 00014b      9a 00 00 00 00          call    FAR PTR _fgets
+        *** 000150      83 c4 0a                add     sp,10
+</PRE>
+
+<PRE>;|***     if ( 0==sscanf(inbuf,"%u",&amp;input) )
+; Line 45
+        *** 000153      8d 46 fe                lea     ax,WORD PTR [bp-2]      ;input
+        *** 000156      16                      push    ss
+        *** 000157      50                      push    ax
+        *** 000158      1e                      push    ds
+        *** 000159      68 41 00                push    OFFSET DGROUP:$SG197
+        *** 00015c      1e                      push    ds
+        *** 00015d      68 00 00                push    OFFSET DGROUP:$S180_inbuf
+        *** 000160      9a 00 00 00 00          call    FAR PTR _sscanf
+        *** 000165      83 c4 0c                add     sp,12
+        *** 000168      0b c0                   or      ax,ax
+        *** 00016a      75 11                   jne     $FB194
+;|***       printf("Unable to convert number. Please try again\n");
+; Line 46
+        *** 00016c      1e                      push    ds
+        *** 00016d      68 44 00                push    OFFSET DGROUP:$SG198
+        *** 000170      9a 00 00 00 00          call    FAR PTR _printf
+        *** 000175      83 c4 04                add     sp,4
+;|***     else break;
+;|***     }
+; Line 48
+        *** 000178      83 fe 02                cmp     si,2
+        *** 00017b      7c b8                   jl      $L20005
+                                        $FB194:
+;|***   for ( ix=nf=0,is=input ; ix&lt;last ; ix++ )
+; Line 49
+        *** 00017d      2b c0                   sub     ax,ax
+        *** 00017f      89 46 f8                mov     WORD PTR [bp-8],ax      ;nf
+        *** 000182      89 46 fa                mov     WORD PTR [bp-6],ax      ;ix
+        *** 000185      8b 46 fe                mov     ax,WORD PTR [bp-2]      ;input
+        *** 000188      89 46 f4                mov     WORD PTR [bp-12],ax     ;is
+        *** 00018b      83 7e f6 00             cmp     WORD PTR [bp-10],0      ;last
+        *** 00018f      7f 03                   jg      $JCC399
+        *** 000191      e9 8e 00                jmp     $FB202
+                                        $JCC399:
+        *** 000194      8b 46 fa                mov     ax,WORD PTR [bp-6]      ;ix
+        *** 000197      d1 e0                   shl     ax,1
+        *** 000199      05 00 00                add     ax,OFFSET _prime
+        *** 00019c      89 46 a6                mov     WORD PTR [bp-90],ax
+        *** 00019f      c7 46 a8 00 00          mov     WORD PTR [bp-88],SEG _prime
+        *** 0001a4      8d 46 b4                lea     ax,WORD PTR [bp-76]     ;fact
+        *** 0001a7      89 46 a2                mov     WORD PTR [bp-94],ax
+        *** 0001aa      <!-- entering slot 93 -->8c 56 a4                mov     WORD PTR [bp-92],ss
+        *** 0001ad      8b 46 f6                mov     ax,WORD PTR [bp-10]     ;last
+        *** 0001b0      2b 46 fa                sub     ax,WORD PTR [bp-6]      ;ix
+        *** 0001b3      89 46 a0                mov     WORD PTR [bp-96],ax
+        *** 0001b6      01 46 fa                add     WORD PTR [bp-6],ax      ;ix
+        *** 0001b9      8b 4e fe                mov     cx,WORD PTR [bp-2]      ;input
+                                        $L20008:
+;|***     {
+; Line 50
+</PRE>
+
+<PRE>;|***     q=input/prime[ix];
+; Line 51
+        *** 0001bc      c4 5e a6                les     bx,DWORD PTR [bp-90]
+        *** 0001bf      26 8b 07                mov     ax,WORD PTR es:[bx]
+        *** 0001c2      89 46 aa                mov     WORD PTR [bp-86],ax
+        *** 0001c5      8b c1                   mov     ax,cx
+        *** 0001c7      2b d2                   sub     dx,dx
+        *** 0001c9      f7 76 aa                div     WORD PTR [bp-86]
+        *** 0001cc      89 46 fc                mov     WORD PTR [bp-4],ax      ;q
+;|***     while ( q*prime[ix]==input )
+; Line 52
+        *** 0001cf      8b 46 aa                mov     ax,WORD PTR [bp-86]
+        *** 0001d2      f7 66 fc                mul     WORD PTR [bp-4] ;q
+        *** 0001d5      3b c1                   cmp     ax,cx
+        *** 0001d7      75 3d                   jne     $FB205
+        *** 0001d9      26 8b 07                mov     ax,WORD PTR es:[bx]
+        *** 0001dc      89 46 b2                mov     WORD PTR [bp-78],ax
+        *** 0001df      8b f0                   mov     si,ax
+        *** 0001e1      8b 46 a2                mov     ax,WORD PTR [bp-94]
+        *** 0001e4      8b 56 a4                mov     dx,WORD PTR [bp-92]
+        *** 0001e7      89 46 ac                mov     WORD PTR [bp-84],ax
+        *** 0001ea      89 56 ae                mov     WORD PTR [bp-82],dx
+        *** 0001ed      c4 7e ac                les     di,DWORD PTR [bp-84]
+                                        $L20006:
+;|***       {
+; Line 53
+;|***       fact[nf++]=prime[ix];
+; Line 54
+        *** 0001f0      26 89 35                mov     WORD PTR es:[di],si
+        *** 0001f3      83 c7 02                add     di,2
+        *** 0001f6      83 46 a2 02             add     WORD PTR [bp-94],2
+        *** 0001fa      ff 46 f8                inc     WORD PTR [bp-8] ;nf
+;|***       input/=prime[ix];
+; Line 55
+        *** 0001fd      8b c1                   mov     ax,cx
+        *** 0001ff      2b d2                   sub     dx,dx
+        *** 000201      f7 f6                   div     si
+        *** 000203      8b c8                   mov     cx,ax
+;|***       q=input/prime[ix];
+; Line 56
+        *** 000205      2b d2                   sub     dx,dx
+        *** 000207      f7 f6                   div     si
+        *** 000209      89 46 fc                mov     WORD PTR [bp-4],ax      ;q
+;|***       }
+</PRE>
+
+<PRE>; Line 57
+        *** 00020c      8b 46 b2                mov     ax,WORD PTR [bp-78]
+        *** 00020f      f7 66 fc                mul     WORD PTR [bp-4] ;q
+        *** 000212      3b c1                   cmp     ax,cx
+        *** 000214      74 da                   je      $L20006
+                                        $FB205:
+;|***     }
+; Line 58
+        *** 000216      83 46 a6 02             add     WORD PTR [bp-90],2
+        *** 00021a      ff 4e a0                dec     WORD PTR [bp-96]
+        *** 00021d      75 9d                   jne     $L20008
+        *** 00021f      89 4e fe                mov     WORD PTR [bp-2],cx      ;input
+                                        $FB202:
+;|***   if ( nf&lt;2 ) return printf("%u is prime\n",is);
+; Line 59
+        *** 000222      83 7e f8 02             cmp     WORD PTR [bp-8],2       ;nf
+        *** 000226      7d 14                   jge     $I206
+        *** 000228      ff 76 f4                push    WORD PTR [bp-12]        ;is
+        *** 00022b      1e                      push    ds
+        *** 00022c      68 70 00                push    OFFSET DGROUP:$SG207
+        *** 00022f      9a 00 00 00 00          call    FAR PTR _printf
+        *** 000234      83 c4 06                add     sp,6
+        *** 000237      5e                      pop     si
+        *** 000238      5f                      pop     di
+        *** 000239      c9                      leave
+        *** 00023a      cb                      ret
+        *** 00023b      90                      nop
+                                        $I206:
+        *** 00023c      ff 76 b4                push    WORD PTR [bp-76]        ;fact
+        *** 00023f      ff 76 f4                push    WORD PTR [bp-12]        ;is
+        *** 000242      1e                      push    ds
+        *** 000243      68 7d 00                push    OFFSET DGROUP:$SG208
+        *** 000246      9a 00 00 00 00          call    FAR PTR _printf
+        *** 00024b      83 c4 08                add     sp,8
+;|***   printf("%u=%u",is,fact[0]);
+</PRE>
+
+<PRE>;|***   for ( ix=1 ; ix&lt;nf ; ix++ )
+; Line 61
+        *** 00024e      c7 46 fa 01 00          mov     WORD PTR [bp-6],1       ;ix
+        *** 000253      83 7e f8 01             cmp     WORD PTR [bp-8],1       ;nf
+        *** 000257      7e 29                   jle     $FB211
+        *** 000259      8d 46 b6                lea     ax,WORD PTR [bp-74]
+        *** 00025c      89 46 a2                mov     WORD PTR [bp-94],ax
+        *** <!-- entering slot 94 -->00025f      8c 56 a4                mov     WORD PTR [bp-92],ss
+        *** 000262      8b 76 f8                mov     si,WORD PTR [bp-8]      ;nf
+        *** 000265      4e                      dec     si
+        *** 000266      01 76 fa                add     WORD PTR [bp-6],si      ;ix
+                                        $L20010:
+;|***     printf("*%u",fact[ix]);
+; Line 62
+        *** 000269      c4 5e a2                les     bx,DWORD PTR [bp-94]
+        *** 00026c      26 ff 37                push    WORD PTR es:[bx]
+        *** 00026f      1e                      push    ds
+        *** 000270      68 83 00                push    OFFSET DGROUP:$SG212
+        *** 000273      9a 00 00 00 00          call    FAR PTR _printf
+        *** 000278      83 c4 06                add     sp,6
+        *** 00027b      83 46 a2 02             add     WORD PTR [bp-94],2
+        *** 00027f      4e                      dec     si
+        *** 000280      75 e7                   jne     $L20010
+                                        $FB211:
+;|***   return printf("\n");
+; Line 63
+        *** 000282      1e                      push    ds
+        *** 000283      68 87 00                push    OFFSET DGROUP:$SG213
+        *** 000286      9a 00 00 00 00          call    FAR PTR _printf
+        *** 00028b      83 c4 04                add     sp,4
+        *** 00028e      5e                      pop     si
+        *** 00028f      5f                      pop     di
+        *** 000290      c9                      leave
+        *** 000291      cb                      ret
+
+_main   ENDP
+DEMO_TEXT       ENDS
+END
+;|***   }
+</PRE>
+
+
+<P><HR>
+
+<A HREF="074_L3_A16bitMapFile.html">[Back: A 16-bit Map File]</A> <BR>
+<A HREF="076_L3_Questions.html">[Next: Questions]</A> 
+</BODY>
+</HTML>

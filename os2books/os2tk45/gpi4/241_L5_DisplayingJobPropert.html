@@ -1,0 +1,92 @@
+<HTML>
+<HEAD>
+<TITLE>Displaying Job Properties Dialog</TITLE>
+</HEAD>
+<BODY>
+<H1>Displaying Job Properties Dialog</H1><!-- entering slot 252 -->
+<P>
+The sample code in the following figure shows how to display the job properties
+dialog. All the parameters required are available from the<A><!-- external link: 1D 95 C4 7B --> PRQINFO3
+</A>structure returned by SplEnumQueue or SplQueryQueue.
+<P>
+In the case of printer pooling, the<I> pszPrinters</I> field of the<A><!-- external link: 1D 95 C4 7B --> PRQINFO3
+</A>structure contains a list of device names, separated by commas. It is
+sufficient to choose the first printer in the list because the printer object
+ensures that the configuration of each spooled printer is the same.
+<P>
+<B>Note: </B> It is possible that the printer driver now uses a larger buffer
+for the job properties than the application is expecting. This occurs when
+a new version of a printer driver that supports some additional features
+is installed. In this case, the application must discard the existing document
+job properties, after a confirmation from the user, and query the printer
+driver for its device defaults, using the<I> DPDM_QUERYJOBPROPS</I> parameter
+to DevPostDeviceModes.
+<P>
+
+<P>
+
+<PRE>#define INCL_DEV
+#define INCL_DOS
+#include &lt;os2.h&gt;
+#include &lt;memory.h&gt;
+
+{
+    ULONG         ulrc=FALSE;
+    HAB           hab;
+    PPRQINFO3     pprq3Queue;    /* From SplEnumQueue or SplQueryQueue */
+    PSZ           pszDriverName,pszDeviceName,pszTmp;
+    HDC           hdc=NULL;
+    LONG          cbBuf;
+
+/* Use the first device name in the PRQINFO3 structure                 */
+   pszTmp = strchr(pprq3Queue-&gt;pszPrinters, ',');
+   if (pszTmp)
+       *pszTmp = '\0';
+
+/* Use just the driver name from the driver.device string              */
+   pszDeviceName = strchr(pprq3Queue-&gt;pszDriverName, '.');
+   if (pszDeviceName)
+   {
+       *pszDeviceName = '\0';
+       pszDeviceName++;
+   }
+
+/* Check size of buffer required for job properties                    */
+    cbBuf = DevPostDeviceModes( hab,
+                                (PDRIVDATA)NULL,
+                                pprq3Queue-&gt;pszDriverName,
+                                pszDeviceName,
+                                pprq3Queue-&gt;pszPrinters,
+                                DPDM_POSTJOBPROP
+                              );
+
+/* Return error to caller                                              */
+    if (cbBuf&lt;=0)
+        return(cbBuf);
+
+/* Return BUFFER TOO SMALL error to caller                             */
+    if (cbBuf &gt; pprq3Queue-&gt;pDriverData-&gt;cb)
+        return(DPDM_ERROR);
+
+/* Display job properties dialog &amp; get updated job properties from driver */
+    ulrc = DevPostDeviceModes( hab,
+                               pprq3Queue-&gt;pDriverData,
+                               pprq3Queue-&gt;pszDriverName,
+                               pszDeviceName,
+                               pprq3Queue-&gt;pszPrinters,
+                               DPDM_POSTJOBPROP
+                             );
+    return(ulrc);
+}
+
+</PRE>
+
+<P>
+
+
+<P><HR>
+
+<A HREF="240_L5_RetrievingJobPropert.html">[Back: Retrieving Job Properties]</A> <BR>
+<A HREF="242_L4_FontDialogandDeviceF.html">[Next: Font Dialog and Device Font Considerations]</A> 
+</BODY>
+</HTML>

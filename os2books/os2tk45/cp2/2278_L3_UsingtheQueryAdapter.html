@@ -1,0 +1,67 @@
+<HTML>
+<HEAD>
+<TITLE>Using the Query Adapter ID to Verify EISA Adapter</TITLE>
+</HEAD>
+<BODY>
+<H1>Using the Query Adapter ID to Verify EISA Adapter</H1><!-- entering slot 2323 -->
+<P>
+The following example uses the OEMHLP IOCtl interface to verify the EISA
+card ID:
+<PRE>컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+</PRE>
+
+<PRE>USHORT FindMyEISACard(void)
+{
+  HFILE filehandle;
+  USHORT action;
+
+  EISAFunctionInfo.efi_SubFunc = OEM_GET_SLOT_INFO; /* EISA Get Slot Info */
+  EISAFunctionInfo.efi_Slot    = 0;                 /* Slot 0             */
+
+  rc = DosOpen("OEMHLP$",
+               &amp;filehandle,
+               &amp;action,
+               0L,
+               0,
+               1,
+               0x40,
+               0L);
+  if (rc == 0)
+    {
+    for(index=1;index&lt;CFG_MAX_EISA_SLOTS;index++)   /* For each slot      */
+      {
+      EISAFunctionInfo.efi_Slot    = (UCHAR) index; /* Slot Number        */
+      EISASlotInfo.esi_CardID  = 0;                 /* Reset Card ID value*/
+      rc = DosDevIOCtl((PVOID)&amp;EISASlotInfo,        /* Data Packet */
+                       (PVOID)&amp;EISAFunctionInfo,    /* Parm Packet */
+                       (USHORT)OEMHLP_QUERYEISACONFIG,
+                       (USHORT)OEMHLP_CATEGORY,
+                       (HFILE)filehandle);
+      /* If IOCtl successful and slot has adapter, then store away
+         the adapter ID, otherwise mark as empty with a zero.
+       */
+      if((rc==0)&amp;&amp;(EISASlotInfo.esi_Error==0))
+        {
+        if (EISASlotInfo.esi_CardID == MYCARDID)
+           DosClose(filehandle);        /* Close handle to OEMHLP$ */
+           return(FOUND);
+        }
+      }
+      DosClose(filehandle);             /* Close handle to OEMHLP$ *    /
+    }
+   return(NOTFOUND);
+}
+</PRE>
+
+<PRE>컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+</PRE>
+
+<P>
+
+
+<P><HR>
+
+<A HREF="2277_L2_Category80hOEMHLPIOC.html">[Back: Category 80h OEMHLP IOCtls]</A> <BR>
+<A HREF="2279_L3_UsingtheDevHlp_ABIOS.html">[Next: Using the DevHlp_ABIOSCall to Verify Micro Channel Adapter]</A> 
+</BODY>
+</HTML>

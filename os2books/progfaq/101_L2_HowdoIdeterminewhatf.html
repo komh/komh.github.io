@@ -1,0 +1,106 @@
+<HTML>
+<HEAD>
+<TITLE>How do I determine what file system a drive uses?</TITLE>
+</HEAD>
+<BODY>
+<H1>How do I determine what file system a drive uses?</H1><!-- entering slot 120 -->16 bit:  DosQFsInfo().
+<BR>
+32 but:  DosQueryFSInfo()
+<BR>
+
+<P>
+The folling little 16 bit program produces the following output on my computer:
+
+<PRE> LOCAL  C:  FAT
+ LOCAL  D:  HPFS
+ LOCAL  E:  HPFS
+ LOCAL  F:  FAT
+ REMOTE P:  LAN   \\SERV1\C$
+ REMOTE Q:  LAN   \\SERV1\D$
+ REMOTE R:  LAN   \\SERV1\E$
+</PRE>
+
+<P>
+Code....
+<PRE> /* qdisk.c */
+ #define INCL_NOPM
+ #define INCL_DOS
+ #include &lt;os2.h&gt;
+ #include &lt;stdio.h&gt;
+ #include &lt;stdlib.h&gt;
+
+
+ void errorRC(USHORT rc)
+ {
+     char msg[256];
+     USHORT bc;
+     if(0 != (rc=DosGetMessage(NULL, 0, msg, sizeof(msg), rc,
+                               "OSO001.MSG", &amp;bc))) {
+         printf("SYS%04u: Unable to access OSO001.MSG\n", rc);
+     }
+     else DosWrite(2, msg, bc, &amp;bc);
+ }
+
+ void qdisk(char drv)
+ {
+     USHORT rc, len;
+     char dev[3];
+     void *buf;
+     char *p;
+
+     if(drv &lt; 'C')
+         return;
+     sprintf(dev, "%c:", drv);
+     buf = malloc(2048);
+     len = 2048;
+     rc = DosQFSAttach(dev, 0, FSAIL_QUERYNAME, buf, &amp;len, 0L);
+     if(rc){
+         errorRC(rc);
+         return;
+     }
+     switch((*(PUSHORT)buf)){
+         case FSAT_CHARDEV  : printf("CHAR   "); break;
+         case FSAT_PSEUDODEV: printf("DEV    "); break;
+         case FSAT_LOCALDRV : printf("LOCAL  "); break;
+         case FSAT_REMOTEDRV: printf("REMOTE "); break;
+         default: printf("Unknown "); break;
+     }
+     p = buf;
+     p += sizeof(USHORT);    /* itype */
+     printf("%-3s ", p+sizeof(USHORT));
+     p += (sizeof(USHORT) + (*(USHORT *)p) + 1);    /* cbName */
+     printf("%-8s ", p+sizeof(USHORT));
+     p += (sizeof(USHORT) + (*(USHORT *)p) + 1);    /* cbFSDName */
+     if((*(USHORT *)p))                             /* cbFSAData */
+         printf("%s", p+sizeof(USHORT));
+     printf("\n");
+     free(buf);
+ }
+
+ void cdecl main(void)
+ {
+     char drv;
+     USHORT usDisk;
+     ULONG ulDrives;
+     DosQCurDisk(&amp;usDisk, &amp;ulDrives); /* gets current drive */
+     for (drv = 'A'; drv &lt;= 'Z'; drv++) {
+         if (ulDrives &amp; 1)		      /* if the drive bit is set, */
+             qdisk(drv);
+         ulDrives &gt;&gt;= 1;
+     }
+ }
+</PRE>
+
+<P>
+ps: DosQSysInfo() will return the max path length that your version of OS/2
+supports.  But since this API is specific to OS/2,  and not to a particular
+drive,  it does not answer your original question.
+<P>
+Credit: Peter Fitzsimmons 
+
+<P><HR>
+
+<A HREF="100_L2_HowdoIuseDosMontostu.html">[Back: How do I use DosMon*() to stuff the kbd buf?]</A> <BR>
+<A HREF="102_L2_HowdoIgettheerrormes.html">[Next: How do I get the error message from a DOS API call?]</A> 
+</BODY>
+</HTML>

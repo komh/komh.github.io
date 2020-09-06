@@ -1,0 +1,53 @@
+<HTML>
+<HEAD>
+<TITLE>The 'somdReleaseResources' method and object-owned parameters</TITLE>
+</HEAD>
+<BODY>
+<H1>The 'somdReleaseResources' method and object-owned parameters</H1><!-- entering slot 265 -->
+<P>
+As stated earlier, the CORBA policy asserts that method parameters and return
+results are uniformly caller-owned. This means the method caller has the
+responsibility for freeing memory after invoking a method, regardless of
+whether the memory was allocated by the caller or the object.
+<P>
+A class implementor can designate certain method parameters and results
+as object-owned, however, by using the<B> object_owns_result</B> and<B> object_owns_parameters
+</B>SOM IDL modifiers. These modifiers signify that the object, rather than
+the caller, is responsible for freeing the memory associated with the parameter/result.
+For "in" parameters, the object can free the memory any time after receiving
+it; for "inout" and "out" parameters, and for return results, the object
+will free the memory sometime before the object is destroyed. (See the section
+entitled "Implementation statements" in Chapter 4, "SOM IDL and the SOM
+Compiler," for more information on these modifiers.)
+<P>
+When a DSOM client program makes a remote method invocation, via a proxy,
+and the method being invoked has an object-owned parameter or return result,
+then the client-side memory associated with the parameter/result will be
+owned by the caller's proxy, and the server-side memory will be owned by
+the remote object. The memory owned by the caller's proxy will be freed
+when the proxy is released by the client program. (The time at which the
+server-side memory will be freed depends on the implementation of the remote
+object.)
+<P>
+A DSOM client can also instruct a proxy object to free all memory that it
+owns on behalf of the client without releasing the proxy (assuming that
+the client program is finished using the object-owned memory), by invoking
+the<B> somdReleaseResource</B> method on the proxy object. Calling<B> somdReleaseResources
+</B>can prevent unused memory from accumulating in a proxy.
+<P>
+For example, consider a client program repeatedly invoking a remote method
+"get_string", which returns a string that is designated (in SOM IDL) as
+"object-owned". The proxy on which the method is invoked will store the
+memory associated with all the returned strings, even if the strings are
+not unique, until the proxy is released. If the client program only uses
+the last result returned from "get_string", then unused memory accumulates
+in the proxy. The client program can prevent this by invoking<B> somdReleaseResources
+</B>on the proxy object periodicall (for example, each time it finishes
+using the result of the last "get_string" call).
+
+<P><HR>
+
+<A HREF="227_L4_TheCORBApolicyforpar.html">[Back: The CORBA policy for parameter memory management]</A> <BR>
+<A HREF="229_L3_Writingclientsthatar.html">[Next: Writing clients that are also servers]</A> 
+</BODY>
+</HTML>

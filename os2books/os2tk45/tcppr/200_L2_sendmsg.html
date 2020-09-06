@@ -1,0 +1,179 @@
+<HTML>
+<HEAD>
+<TITLE>sendmsg()</TITLE>
+</HEAD>
+<BODY>
+<H1>sendmsg()</H1><!-- entering slot 225 -->
+<P>
+The socket call sends data and control information on a specified socket.
+
+<P>
+<B>Syntax</B>
+<PRE>#include &lt;types.h&gt;
+#include &lt;sys\socket.h&gt;
+int sendmsg(<I>s</I>, <I>msg</I>, <I>flags</I>)
+int <I>s</I>;
+struct msghdr *<I>msg</I>;
+int <I>flags</I>;
+</PRE>
+
+<P>
+<B>Parameters</B><!-- lm: 0x2 0 -->
+<P>
+<I>s</I><!-- lm: 0x11 2 -->
+<UL> Socket descriptor.<!-- lm: 0x2 0 -->
+</UL><I> msg
+</I><!-- lm: 0x11 2 -->
+<UL>Pointer to a message header containing a message
+to be sent.<!-- lm: 0x2 0 -->
+</UL><I> flags</I><!-- lm: 0x11 2 -->
+<UL> Allows
+the sender to control the message transmission. Set this parameter by specifying
+one or more of the following flags. If you specify more than one flag, use
+the logical OR operator (|) to separate them. Setting this parameter is
+supported only for sockets in the internet domain.<!-- lm: 0x2 2 -->
+<P>
+MSG_DONTROUTE<!-- lm: 0x12 29 -->
+<UL> The SO_DONTROUTE socket option is
+turned on for the duration of the operation.  This is usually used only
+by diagnostic or routing programs.<!-- lm: 0x2 2 -->
+</UL> MSG_DONTWAIT
+<!-- lm: 0x12 29 -->
+<UL>Do not wait for resources during this call.<!-- lm: 0x2 2 -->
+</UL> MSG_EOF
+<!-- lm: 0x12 29 -->
+<UL>Indicates that the sending of data on the connection
+is complete. This flag is effective on T/TCP connections only.<!-- lm: 0x2 2 -->
+</UL> MSG_OOB
+<!-- lm: 0x12 29 -->
+<UL>Sends out-of-band data on the socket.<!-- lm: 0x2 2 --><!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>Description</B>
+<P>
+This call sends a msghdr structure on a socket with descriptor<I> s</I>.
+
+<P>
+Networking services supports the following msghdr structure.
+<P>
+<B>Note: </B> The fields<I> msg_control</I> and<I> msg_controllen</I> are
+ignored for the NetBIOS and Local IPC domains.
+<PRE>struct msghdr {       caddr_t msg_name;             /* optional pointer to destination address buffer */
+       int     msg_namelen;          /* size of address buffer */
+       struct iovec  *msg_iov;       /* scatter/gather array */
+       int     msg_iovlen;           /* number of elements in msg_iov, maximum 1024 */
+       caddr_t msg_control;          /* ancillary data */
+       u_int   msg_controllen;       /* ancillary data length */
+       int     msg_flags;            /* flags on received message */
+};
+</PRE>
+<!-- lm: 0x2 0 -->
+<P>
+
+<P>
+To broadcast on a socket, the application program must first issue a setsockopt()
+call using the SO_BROADCAST option, to gain broadcast permission.
+<P>
+The sendmsg() call applies to connection-oriented and connectionless sockets.
+
+<P>
+msg_iov is a scatter/gather array of iovec structures. The iovec structure
+is defined in &lt;SYS/UIO.H&gt; and contains the following fields:<!-- lm: 0x2 0 -->
+<P>
+<B>Field</B><!-- lm: 0x2 15 -->
+<UL><B>Description</B><!-- lm: 0x2 0 -->
+</UL><I>iov _ base</I><!-- lm: 0x12 15 -->
+<UL>Pointertothebuffer<!-- lm: 0x2 0 -->
+</UL><I>iov _ len</I><!-- lm: 0x12 15 -->
+<UL>Lengthofthebuffer<!-- lm: 0x2 0 -->
+</UL>
+<P>
+TCP/IP alters<I> iov_base</I> and<I> iov_len</I> for each element in the
+input struct iovec array.<I> iov_base</I> will point to the next character
+of the processed (sent or received) data on the original buffer, and<I> iov_len
+</I>will become (input value - processed length). Thus if only partial data
+has been sent or received and the application expects more data to send
+or receive, it can pass the same iovec structure back in a subsequent call.
+
+<P>
+This call returns the length of the data sent. If the socket with descriptor
+<I>s</I> is not ready for sending data, the sendmsg() call waits unless
+the socket is in nonblocking mode. See <A HREF="187_L2_ioctl.html">ioctl()
+</A>for a description of how to set nonblocking mode.
+<P>
+<B>Return Values</B>
+<P>
+When successful, the number of bytes of data sent is returned.  Successful
+completion does not guarantee delivery of the data to the receiver. The
+return value -1 indicates an error was detected on the sending side of the
+connection.<!-- entering slot 226 --> You can get the specific error code
+by calling sock_errno() or psock_errno().<!-- lm: 0x2 0 -->
+<P>
+<B>Error Code</B><!-- lm: 0x2 22 -->
+<UL><B>Description</B><!-- lm: 0x2 0 -->
+</UL>SOCEDESTADDRREQ<!-- lm: 0x12 22 -->
+<UL>Themsghdr<I>msg
+_ name</I>parameterissettoNULLandadestinationaddressisrequired .<!-- lm: 0x2 0 -->
+</UL>SOCENOTSOCK<!-- lm: 0x12 22 -->
+<UL>The<I>s</I>parameterisnotavalidsocketdescriptor
+.<!-- lm: 0x2 0 -->
+</UL>SOCEFAULT<!-- lm: 0x12 22 -->
+<UL>Using<I>msg</I>wouldresultinanattempttoaccessmemoryoutsidethecaller
+' saddressspace .<!-- lm: 0x2 0 -->
+</UL>SOCEINTR<!-- lm: 0x12 22 -->
+<UL>Interruptedsystemcall
+.<!-- lm: 0x2 0 -->
+</UL>SOCEINVAL<!-- lm: 0x12 22 -->
+<UL><I>msg _ namelen</I>isnotthesizeofavalidaddressforthespecifiedaddressfamily
+.<!-- lm: 0x2 0 -->
+</UL>SOCEMSGSIZE<!-- lm: 0x12 22 -->
+<UL>Themessagewastoobigtobesentasasingledatagram
+.<!-- lm: 0x2 0 -->
+</UL>SOCENOBUFS<!-- lm: 0x12 22 -->
+<UL>Nobufferspaceisavailabletosendthemessage
+.<!-- lm: 0x2 0 -->
+</UL>SOCENOTCONN<!-- lm: 0x12 22 -->
+<UL>Thesocketisnotconnected
+.<!-- lm: 0x2 0 -->
+</UL>SOCEWOULDBLOCK<!-- lm: 0x12 22 -->
+<UL>The<I>s</I>parameterisinnonblockingmodeandthedatacannotbesentwithoutblocking
+.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>Related Calls</B><!-- lm: 0x2 5 -->
+<UL>
+<P>
+<A HREF="186_L2_getsockopt.html">getsockopt()</A><!-- lm: 0x2 5 --> <A HREF="187_L2_ioctl.html">ioctl()
+</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="192_L2_readv.html">readv()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="193_L2_recv.html">recv()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="194_L2_recvfrom.html">recvfrom()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="195_L2_recvmsg.html">recvmsg()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="197_L2_select.html">select()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="198_L2_send.html">send()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="201_L2_sendto.html">sendto()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="202_L2_setsockopt.html">setsockopt()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="203_L2_shutdown.html">shutdown()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="205_L2_sock_errno.html">sock_errno()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="206_L2_socket.html">socket()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="223_L2_writev.html">writev()</A><!-- lm: 0x2 0 -->
+</UL>
+
+<P><HR>
+
+<A HREF="199_L2_send_file.html">[Back: send_file()]</A> <BR>
+<A HREF="201_L2_sendto.html">[Next: sendto()]</A> 
+</BODY>
+</HTML>

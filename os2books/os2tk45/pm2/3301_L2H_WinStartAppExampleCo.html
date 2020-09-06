@@ -1,0 +1,110 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>WinStartApp - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>WinStartApp - Example Code</H1><!-- entering slot 3315 -->
+<P>
+This example calls WinStartApp in a typical termination sequence.
+<PRE>#define INCl_DOSSESMGR
+#include &lt;os2.h&gt;
+
+HWND         hwndNotify;
+PPROGDETAILS pDetails;
+HAPP         happ;
+
+pDetails = (PPROGDETAILS) malloc( sizeof(PROGDETAILS) );   /* Allocate structure */
+
+pDetails-&gt;Length                      = sizeof(PROGDETAILS);
+pDetails-&gt;progt.progc                 = PROG_WINDOWABLEVIO;
+pDetails-&gt;progt.fbVisible             = SHE_VISIBLE;
+pDetails-&gt;pszTitle                    = "TEXT";
+pDetails-&gt;pszExecutable               = "TEXT.EXE";
+pDetails-&gt;pszParameters               = NULL;
+pDetails-&gt;pszStartupDir               = "";
+pDetails-&gt;pszICON                     = "T.ICO";
+pDetails-&gt;pszEnvironment              = "WORKPLACE\0\0";
+pDetails-&gt;swpInitial.fl               = SWP_ACTIVATE;        /* Window positioning   */
+pDetails-&gt;swpInitial.cy               = 0;                   /* Width of window      */
+pDetails-&gt;swpInitial.cx               = 0;                   /* Height of window     */
+pDetails-&gt;swpInitial.y                = 0;                   /* Lower edge of window */
+pDetails-&gt;swpInitial.x                = 0;                   /* Left edge of window  */
+pDetails-&gt;swpInitial.hwndInsertBehind = HWND_TOP;
+pDetails-&gt;swpInitial.hwnd             = hwndNotify;
+pDetails-&gt;swpInitial.ulReserved1      = 0;
+pDetails-&gt;swpInitial.ulReserved2      = 0;
+
+happ = WinStartApp(hwndNotify,
+                   pDetails,
+                   NULL, NULL,
+                   SAF_STARTCHILDAPP);
+       .
+       .
+       .
+WinTerminateApp(happ);
+</PRE>
+
+<P>
+The following example  calls WinStartApp inorder to start Dos/Windows applications.
+
+<PRE>#define INCL_WIN
+#define INCL_DOSSESMGR
+#include &lt;os2.h&gt;
+
+ PROGDETAILS  pDetails;
+ HAPP         happ;
+ ULONG        dataLen=0;
+ ULONG        length=0;
+ BOOL         rc;
+ PSZ          pBuffer;
+
+/*Query for the size of the settings for a particular key */
+rc =   PrfQueryProfileSize(HINI_USERPROFILE,"WINOS2","PM_GlobalWindows31Settings",
+
+  if(rc   dataLen &gt; 0)
+  {
+     pBuffer = (PSZ)malloc((DataLen+1)*sizeof(char));
+     if(pBuffer)
+     {
+         memset(pBuffer,0,(DataLen+1)*sizeof(char));
+         /*Now get the settings */
+         length = PrfQueryProfileString(HINI_USERPROFILE,"WINOS2","PM_GlobalWindows31Settings",NULL,pBuffer,dataLen);
+
+           /* The settings retrieved from USERPROFILE are seperated with a ';'. These will have to be replaced with a '\0'
+                 and an additional '\0' will have to be inserted into tthe string at the end*/
+
+         if(length &gt; 0)
+         {
+            pDetails.Length          = sizeof(PROGDETAILS);
+            pDetails.progt.progc     = PROG_31_STDSEAMLESSCOMMON;
+            pDetails.progt.fbVisible = SHE_VISIBLE;
+            pDetails.pszTitle        = "Calculator";
+            pDetails.pszExecutable   = "calc.exe";
+            pDetails.pszParameters   = NULL;
+            pDetails.pszStartupDir   = NULL;
+            pDetails.pszIcon         = NULL;
+            pDetails.pszEnvironment = pBuffer;
+            pDetails.swpInitial.fl   = SWP_SHOW;
+            pDetails.swpInitial.cy   = 0;
+            pDetails.swpInitial.cx   = 0;
+            pDetails.swpInitial.y    = 0;
+            pDetails.swpInitial.x    = 0;
+            pDetails.swpInitial.hwndInsertBehind = HWND_TOP;
+            pDetails.swpInitial.hwnd             = (HWND)NULL;
+            pDetails.swpInitial.ulReserved1      = 0;
+            pDetails.swpInitial.ulReserved2      = 0;
+
+            happ = WinStartApp((HWND)NULL, INSTALLEDCMDLINE);
+         }
+     }
+  }
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="3300_L2H_WinStartAppRelatedMe.html">[Back: WinStartApp - Related Messages]</A> <BR>
+<A HREF="3302_L2H_WinStartAppTopics.html">[Next: WinStartApp - Topics]</A> 
+</BODY>
+</HTML>

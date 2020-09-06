@@ -1,0 +1,140 @@
+<HTMLHIDDEN>
+<HEAD>
+<TITLE>DosSetPrty</TITLE>
+</HEAD>
+<BODY>
+<H1>DosSetPrty</H1><!-- entering slot 370 -->
+<PRE>#define INCL_DOSPROCESS
+
+USHORT  rc = DosSetPrty(Scope, PriorityClass, PriorityDelta, ID);
+
+USHORT           Scope;         /* Indicate scope of change */
+USHORT           PriorityClass; /* Priority class to set */
+SHORT            PriorityDelta; /* Priority delta to apply */
+USHORT           ID;            /* Process or thread ID */
+
+USHORT           rc;            /* return code */
+</PRE>
+
+<P>
+<B>Example</B>
+<P>
+The following example illustrates how to obtain the priority of a thread
+and how to change the priority.  The main thread creates Thread2 and allows
+it to begin executing.  Thread2  iterates through a loop that prints a line
+and then sleeps, relinquishing its time slice to the main thread. After
+one or two iterations by Thread2, the main thread obtains Thread2's priority
+information and prints it.  It then raises Thread2's priority to fixed-high,
+and increments the level by ten.  Since Thread2 is now at a high priority,
+it immediately finishes its remaining iterations before relinquishing control
+on a long sleep; at this point, the main thread re-examines Thread2's priority
+and reports its new priority level.  In this example, it is helpful to understand
+how the DosSleep calls are used either to relinquish control of the processor,
+or to keep a thread alive (see DosTimerAsync or DosTimerStart for alternatives
+to DosSleep).
+<PRE>#define INCL_DOSPROCESS
+
+#include &lt;os2.h&gt;
+
+#define      PRTYC_FIXEDHIGH   4         /* Priority class: fixed-high */
+#define      PRTY_DELTA        10        /* Priority delta: increase
+                                                by 10 */
+#define      SEGSIZE           4000      /* Number of bytes requested in
+                                             segment */
+#define      ALLOCFLAGS        0         /* Segment allocation flags - no
+                                             sharing */
+#define      SLEEPSHORT        0L        /* Sleep interval -
+                                             5 milliseconds */
+#define      SLEEPLONG         20L       /* Sleep interval -
+                                             75 milliseconds */
+#define      RETURN_CODE       0         /* Return code for DosExit() */
+
+
+VOID APIENTRY Thread2()
+{
+  USHORT     i;
+
+  /* Loop with four iterations */
+  for(i=1; i&lt;5; i++)
+  {
+    printf("In Thread2, i is now %d\n", i);
+
+    /** Sleep to relinquish time slice to main thread **/
+    DosSleep(SLEEPSHORT);          /* Sleep interval */
+  }
+  DosExit(EXIT_THREAD,             /* Action code - end a thread */
+          RETURN_CODE);            /* Return code */
+}
+</PRE>
+
+<PRE>main()
+{
+  USHORT     Priority;            /* Thread priority */
+  USHORT     Class;               /* Priority class */
+  USHORT     Level;               /* Priority level */
+  SEL        ThreadStackSel;      /* Segment selector for thread stack */
+  PBYTE      StackEnd;            /* Ptr. to end of thread stack */
+  USHORT     rc;
+
+  /* Allocate segment for thread stack; this is better than just */
+  /* declaring an array of bytes to use as a stack.  Make pointer eos. */
+  rc = DosAllocSeg(SEGSIZE,                    /* Number of bytes
+                                                   requested */
+                   &amp;ThreadStackSel,            /* Segment selector
+                                                       (returned) */
+                   ALLOCFLAGS);                /* Allocation flags */
+  StackEnd = MAKEP(ThreadStackSel, SEGSIZE-1);
+
+  /* Start Thread2 */
+  if(!(DosCreateThread((PFNTHREAD) Thread2,    /* Thread address */
+                       &amp;ThreadID,              /* Thread ID (returned) */
+                       StackEnd)))             /* End of thread stack */
+    printf("Thread2 created.\n");
+
+  /** Sleep to allow Thread2 to execute **/
+  if(!(DosSleep(SLEEPLONG)))                       /* Sleep interval */
+    printf("Slept a little to let Thread2 execute.\n");
+
+  /** Obtain Thread2's priority information and report it **/
+  if(!(rc=DosGetPrty(PRTYS_THREAD,                /* Scope - single
+                                                         thread */
+                     &amp;Priority,                   /* Address to put
+                                                          priority */
+                     ThreadID)))                  /* ID - thread ID */
+  {
+    /* Extract priority class and level information */
+    Class = HIBYTE(Priority);
+    Level = LOBYTE(Priority);
+    printf("Thread2: ID is %d, Priority Class is %d and Level is %d\n",
+           ThreadID, Class, Level);
+  }
+  /** Raise Thread2's priority **/
+  if(!(rc=DosSetPrty(PRTYS_THREAD,             /* Scope - single thread */
+                     PRTYC_FIXEDHIGH,          /* Prty class -
+                                                      fixed-high */
+                     PRTY_DELTA,               /* Prty delta - increase
+                                                      by 10 */
+                     ThreadID)))               /* ID - thread ID */
+  {
+    /* Obtain Thread2' new priority information and report it */
+    rc=DosGetPrty(PRTYS_THREAD,                /* Scope - single thread */
+                  &amp;Priority,                   /* Address to put
+                                                       priority */
+                  ThreadID);                   /* ID - thread ID */
+
+    /* Extract priority class and level information */
+    Class = HIBYTE(Priority);
+    Level = LOBYTE(Priority);
+    printf("Thread2: ID is %d, New Priority Class is %d and Level is %d\n",
+           ThreadID, Class, Level);
+  }
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="326_L2H_DosSetProcCp.html">[Back: DosSetProcCp]</A> <BR>
+<A HREF="328_L2H_DosSetSession.html">[Next: DosSetSession]</A> 
+</BODY>
+</HTML>

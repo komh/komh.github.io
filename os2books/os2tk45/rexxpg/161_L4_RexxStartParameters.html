@@ -1,0 +1,158 @@
+<HTML XPOS=RIGHT YPOS=BOTTOM WIDTH=65% HEIGHT=75% GROUP=30>
+<HEAD>
+<!-- extra bytes: 03 04 44 02 00 08 00 11 41 00 4B 00 1E 00 --><TITLE>RexxStart - Parameters</TITLE>
+</HEAD>
+<BODY>
+<H1>RexxStart - Parameters</H1><!-- entering slot 170 --><!-- lm: 0x2 1 -->
+<UL>
+<P>
+ArgCount<I> (LONG) - input<!-- lm: 0x11 11 -->
+<UL></I> The number of elements
+in the<I> ArgList</I> array. This is the value that the<I> ARG()</I> built-in
+function in the REXX program returns.<I> ArgCount</I> includes RXSTRINGs
+that represent omitted arguments. Omitted arguments are empty RXSTRINGs
+(<I>strptr</I> is NULL).<!-- lm: 0x2 1 -->
+</UL> ArgList<I> (PRXSTRING)
+- input<!-- lm: 0x11 11 -->
+<UL></I> An array of RXSTRING structures that
+are the REXX program arguments.<!-- lm: 0x2 1 -->
+</UL> ProgramName<I> (PSZ)
+- input<!-- lm: 0x11 11 -->
+<UL></I> Address of the ASCIIZ name of the REXX
+procedure. If<I> Instore</I> is NULL,<I> ProgramName</I> must contain at
+least the file name of the REXX procedure. You can also provide an extension,
+drive, and path specification. If you do not specify a file extension, the
+default is ".CMD". A REXX program can use any extension. If you do not provide
+the path and drive, the REXX interpreter uses the usual file search (current
+directory, then environment path).
+<P>
+If<I> Instore</I> is not NULL,<I> ProgramName</I> is the name used in the
+PARSE SOURCE instruction. If<I> Instore</I> requests a REXX procedure from
+the macrospace,<I> ProgramName</I> is the macrospace function name (see
+<A HREF="332_L2_MacrospaceInterface.html">Macrospace Interface</A>).<!-- lm: 0x2 1 -->
+</UL> Instore
+<I>(PRXSTRING) - input<!-- lm: 0x11 11 -->
+<UL></I> An array of two RXSTRING
+descriptors for in-storage REXX procedures. If the<I> strptr</I> fields
+of both RXSTRINGs are NULL, the interpreter searches for REXX procedure
+<I>ProgramName</I> in the REXX macrospace (see <A HREF="332_L2_MacrospaceInterface.html">Macrospace
+Interface</A>). If the procedure is not in the macrospace, the call to RexxStart
+terminates with an error return code.
+<P>
+If either<I> Instore strptr</I> field is not NULL,<I> Instore</I> is used
+to run a REXX procedure directly from storage.<!-- lm: 0x2 11 -->
+<P>
+Instore[0]<!-- lm: 0x11 26 -->
+<UL> An RXSTRING describing a memory buffer
+containing the REXX procedure source. The source must be an exact image
+of a REXX procedure disk file (complete with carriage returns, line feeds,
+and end-of-file characters).<!-- lm: 0x2 11 -->
+</UL> Instore[1]<!-- lm: 0x11 26 -->
+<UL> An
+RXSTRING containing the translated image of the REXX procedure. If<I> Instore[1]
+</I>is empty, the REXX interpreter returns the translated image in<I> Instore[1]
+</I>when the REXX procedure finishes running. The translated image may be
+used in<I> Instore[1]</I> on subsequent RexxStart calls.
+<P>
+If<I> Instore[1]</I> is not empty, the interpreter runs the translated image
+directly. The program source provided in<I> Instore[0]</I> is used only
+if the REXX procedure uses the SOURCELINE built-in function.<I> Instore[0]
+</I>can be empty if SOURCELINE is not used. If<I> Instore[0]</I> is empty
+and the procedure uses the SOURCELINE built-in function, SOURCELINE() returns
+0 lines and any attempt to access the source returns Error 40.
+<P>
+If<I> Instore[1]</I> is not empty, but does not contain a valid REXX translated
+image, unpredictable results can occur. The REXX interpreter may be able
+to determine that the translated image is incorrect and retranslate the
+source.
+<P>
+<I>Instore[1]</I> is both an input and an output parameter.<!-- lm: 0x2 11 -->
+</UL> If
+the procedure is executed from disk, the<I> Instore pointer</I> must be
+NULL. If the first argument string in<I> Arglist</I> contains the string
+"//T" and the<I> CallType</I> is RXCOMMAND, the interpreter translates the
+procedure source and writes the translated image to disk. Since the<I> Instore
+pointer</I> is NULL, the translated image is not returned in an<I> Instore
+</I>parameter.
+<P>
+The program calling RexxStart must release<I> Instore[1]</I> using DosFreeMem
+when the translated image is no longer needed.
+<P>
+The format of the translated image of a REXX program is not a programming
+interface. Only the interpreter version that created the image can run the
+translated image. Therefore, do not move a translated image to other systems
+or save it for later use. You can, however, use the translated image multiple
+times during a single application instance.<!-- lm: 0x2 1 -->
+</UL> EnvName
+<I>(PSZ) - input<!-- lm: 0x11 11 -->
+<UL></I> Address of the ASCIIZ initial
+ADDRESS environment name. The ADDRESS environment is a subcommand handler
+registered using RexxRegisterSubcomExe or RexxRegisterSubcomDll.<I> EnvName
+</I>is used as the initial setting for the REXX ADDRESS instruction.
+<P>
+If<I> EnvName</I> is NULL, the file extension is used as the initial ADDRESS
+environment. The environment name cannot be longer than 250 characters.
+
+<P>
+<!-- lm: 0x2 1 -->
+</UL>CallType<I> (LONG) - input<!-- lm: 0x11 11 -->
+<UL></I> The
+type of REXX procedure execution. Allowed execution types are:<!-- lm: 0x2 11 -->
+<P>
+RXCOMMAND<!-- lm: 0x2 31 -->
+<UL> The REXX procedure is a system or application
+command. REXX commands usually have a single argument string. The REXX PARSE
+SOURCE instruction returns COMMAND as the second token.<!-- lm: 0x2 11 -->
+</UL> RXSUBROUTINE
+<!-- lm: 0x2 31 -->
+<UL>The REXX procedure is a subroutine of another program.
+The subroutine can have multiple arguments and does not need to return a
+result. The REXX PARSE SOURCE instruction returns SUBROUTINE as the second
+token.<!-- lm: 0x2 11 -->
+</UL> RXFUNCTION<!-- lm: 0x2 31 -->
+<UL> The REXX
+procedure is a function called from another program. The subroutine may
+have multiple arguments and must return a result. The REXX PARSE SOURCE
+instruction returns FUNCTION as the second token.<!-- lm: 0x2 11 -->
+</UL><!-- lm: 0x2 1 -->
+</UL> Exits
+<I>(PRXSYSEXIT) - input<!-- lm: 0x11 11 -->
+<UL></I> An array of RXSYSEXIT
+structures defining exits for the REXX interpreter to use. The RXSYSEXIT
+structures have the following<!-- entering slot 171 --> form:
+<PRE>typedef struct {
+   PSZ             sysexit_name;  /* name of exit handler        */
+   LONG            sysexit_code;  /* system exit function code   */
+} RXSYSEXIT;
+</PRE>
+
+<P>
+The<I> sysexit_name</I> is the address of an ASCIIZ exit handler name registered
+with RexxRegisterExitExe or RexxRegisterExitDll.<I> Sysexit_code</I> is
+a code identifying the handler exit type. <A HREF="217_L2_SystemExitInterface.html">System
+Exits</A> provides exit code definitions. An RXENDLST entry identifies the
+system exit list end.<I> Exits</I> must be NULL if exits are not used.<!-- lm: 0x2 1 -->
+</UL> ReturnCode
+<I>(PSHORT) - output<!-- lm: 0x11 11 -->
+<UL></I> The integer form of the
+<I>Result</I> string. If the<I> Result</I> string is a whole number in the
+range -(2**15) to 2**15-1, it is converted to an integer and also returned
+in<I> ReturnCode</I>.<!-- lm: 0x2 1 -->
+</UL> Result<I> (PRXSTRING) - output
+<!-- lm: 0x11 11 -->
+<UL></I>The string returned from the REXX procedure
+with the REXX RETURN or EXIT instruction. A default RXSTRING can be provided
+for the returned result. If a default RXSTRING is not provided or the default
+is too small for the returned result, the REXX interpreter allocates an
+RXSTRING using DosAllocMem. The caller of RexxStart is responsible for releasing
+the RXSTRING storage with DosFreeMem.
+<P>
+The REXX interpreter does not add a terminating null to<I> Result</I>.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="160_L4_RexxStartSyntax.html">[Back: RexxStart - Syntax]</A> <BR>
+<A HREF="162_L4_RexxStartReturns.html">[Next: RexxStart - Returns]</A> 
+</BODY>
+</HTML>

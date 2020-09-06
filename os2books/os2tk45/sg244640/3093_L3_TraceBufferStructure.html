@@ -1,0 +1,198 @@
+<HTML>
+<HEAD>
+<TITLE>Trace Buffer Structures</TITLE>
+</HEAD>
+<BODY>
+<H1>Trace Buffer Structures</H1><!-- entering slot 3328 -->
+<P>
+<B>Note: </B>
+<P>
+The from OS/2 2.11 fix pack 91 and OS/2 3.0 fix pack 8 the format of the
+STDA has changed to allow more meaningful time-stamp information. See <A HREF="3094_L4_NewSTDAFormat.html">New
+STDA Format</A> at the end of this section for details.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+<U><I>Circular Trace Buffer (STDA)</I></U>
+<PRE>
+           Pointer to                                   Pointer to    Pointer to
+           First (#1)                                    Next (#3)     Last (#2)
+                    ³                                            ³     ³
+                         Entry #3                 Entry #10          
+  ÚÄÄÄÄÄÄÄÄÂÄÄÂÄÄÂÄÄ¿ ÚÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄ¿   ÚÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÄÄÄ¿
+  ³SYSTRACE³  ³  ³  ³.³  ³  ³  ³  ³ 0³  ³...³  ³  ³  ³  ³  ³ 2³  ³...  ³
+  ÀÄÄÄÄÄÄÄÄÁÄÄÁÄÄÁÄÄÙ ÀÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÙ   ÀÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÄÄÄÙ
+                                                 
+Pointer 1 ÄÄÄÙ  ³  ³    ³  ³  ³  ³  ³  ³      ³  ³  ³  ³  ³  ³  ÀÄ Major Code
+Pointer 2 ÄÄÄÄÄÄÙ  ³    ³  ³  ³  ³  ³  ³      ³  ³  ³  ³  ³  ÀÄÄÄÄ Length
+Pointer 3 ÄÄÄÄÄÄÄÄÄÙ    ³  ³  ³  ³  ³  ³      ³  ³  ³  ³  ÀÄÄÄÄÄÄÄ Minor Code
+                        ³  ³  ³  ³  ³  ³      ³  ³  ³  ÀÄÄÄÄÄÄÄÄÄÄ Process ID
+            Timestamp  ÄÙ  ³  ³  ³  ³  ³      ³  ³  ÀÄÄÄÄÄÄÄÄÄÄÄÄÄ Flags
+            Flags      ÄÄÄÄÙ  ³  ³  ³  ³      ³  ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ Timestamp
+            Process ID ÄÄÄÄÄÄÄÙ  ³  ³  ³      ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ Data (2 bytes)
+            Minor Code ÄÄÄÄÄÄÄÄÄÄÙ  ³  ³
+            Length     ÄÄÄÄÄÄÄÄÄÄÄÄÄÙ  ³
+            Major Code ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+
+</PRE>
+
+<P>
+<U><I>Field Descriptions:</I></U> Trace Control Record
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³<I>Name</I>                     ³<I>#Bytes</I>³<I>Description</I>                             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ID of Data Area          ³8     ³Contains ASCII 'SYSTRACE'               ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Pointer 1                ³2     ³Offset of first byte of the trace buffer³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Pointer 2                ³2     ³Offset of last byte of the trace buffer ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Pointer 3                ³2     ³Offset of next available byte in the    ³
+³                         ³      ³trace buffer                            ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+ 
+<P>
+<U><I>Field Descriptions:</I></U> Trace Event Trailer Record (with Timestamp)
+
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³<I>Name</I>                     ³<I>#Bytes</I>³<I>Description</I>                                                 ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Timestamp                ³2     ³Timestamp in seconds and hundredths of seconds (Conditional ³
+³                         ³      ³on bit 1 in the Flags byte)                                 ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Flags                    ³1     ³Trace record flag                                           ³
+³                         ³      ³Bit 0: 0 indicates an internal kernel generated trace       ³
+³                         ³      ³record.                                                     ³
+³                         ³      ³Bit 1: 0 indicates that a time-stamp is present.            ³
+³                         ³      ³Bit 2: 1 signifies that the trace record was generated in   ³
+³                         ³      ³protect mode.                                               ³
+³                         ³      ³Bit 3: 0 signifies a static trace record, 1 a dynamic trace ³
+³                         ³      ³record.                                                     ³
+³                         ³      ³Bit 4: 1 indicates an incomplete dynamic trace record.      ³
+³                         ³      ³Bit 5 - 7: reserved.                                        ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³PID                      ³2     ³ID of the process calling the API being traced              ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Minor Code               ³2     ³Minor Event Code                                            ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Length                   ³2     ³Length of data for the traced API                           ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Major Code               ³1     ³Major Event Code                                            ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+ 
+<P>
+<U><I>Remarks</I></U>
+<P>
+The buffer returned by<B> DosGetSTDA</B> is a simple circular buffer that
+is a snapshot of the OS/2 System Trace buffer at the time that the API was
+called. The actual System Trace buffer is emptied by the call. The buffer
+contains a header record that has pointers to the FIRST, LAST and NEXT bytes
+in the buffer. The offsets of the FIRST and LAST bytes are constant and
+the offset to NEXT is used to indicate the last (most recent) trace record
+in the buffer. This pointer is logically moved backwards as the buffer is
+traversed. Since it is possible for a trace record to wrap back to the end
+of the buffer, it is necessary to look at each part of the data individually
+(trailer, timestamp and data) to determine whether the length of the data
+is greater than the distance between NEXT and FIRST. If the length is greater,
+then the data is continued at the offset to LAST. 
+<P>
+For example (see figure below), the buffer has been traversed until the
+pointer to NEXT is at byte 26. The event trailer record is 8 bytes and the
+distance from NEXT to FIRST is 12, so the trailer is in contiguous memory.
+The pointer to NEXT is then set to byte 18. There is a timestamp which is
+two bytes. Our distance to FIRST is now 4 so the timestamp is contiguous
+and the pointer to NEXT is reset to 16. This record has 4 bytes of data
+attached to it. The distance to FIRST at this point is 2, so the data is
+wrapped: 2 bytes are adjacent to the NEXT, and the other 2 bytes begin at
+the pointer to LAST. 
+<PRE>
+            First (Byte 14)        Next (byte 26)                          Last
+                  ³                      ³                                    ³
+                                                                            
+     ÚÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÂÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄ¿
+     ³TRACE HEADER³    ³T ³EVENT TRAILER ³T ³EVENT TRAILER ³(other trace ³    ³
+     ³ (14 BYTES) ³<!-- entering slot 3329 -->DATA³ S³DATA LENGTH: 4³ S³DATA LENGTH: 0³   records)  ³DATA³
+     ÀÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÁÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÙ
+                                                                          
+                    ³                                                      ³
+                  2 Bytes                                                2 Bytes
+
+</PRE>
+ 
+<P>
+End of data in the trace buffer is indicated by a trace event trailer that
+contains a major code field of zero and a length field of zero. 
+<P>
+The display format of the OS/2 system supplied tracepoint data is described
+in the <A HREF="445_L1_SystemTracepointsRef.html">System Tracepoints Reference
+</A>chapter. Note that for data using the '%S' (ASCIIZ string) format type,
+the first byte of the data is reserved, bytes two and three contain the
+actual length of the string and the string begins at byte 4.
+<P>
+<U><I>TRACEFMT</I></U> Unformatted Trace Buffer
+<P>
+The trace formatter (TRACEFMT) is able to save the unformatted STDA buffer
+for formatting at a later date. The format of this buffer is as follows:
+ 
+<PRE>
+
+
+  File Header
+
+  ÚÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄ¿
+  ³STDA LN³   D A T E T I M E   ³   C H E C K  K E Y  ³
+  ÀÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÙ
+  0       4                     f                     1a
+
+  STDA
+
+  ÚÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+  ³S Y S T R A C E³STA³END³NXT³ TRACE RECORDS .....
+  ÀÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+  1a              22  24  26  28
+
+
+</PRE>
+
+<P>
+<U><I>Remarks</I></U><!-- lm: 0x2 1 -->
+<P>
+STDA LN<!-- lm: 0x11 11 -->
+<UL> ULONG length of the STDA read by<B> DosGetSTDA.
+</B>Length is 1 greater than then STDA end offset.<!-- lm: 0x2 1 -->
+</UL> DATETIME
+<!-- lm: 0x11 11 -->
+<UL>A DATETIME structure returned by<B> DosGetDateTime
+</B>when this file buffer is created.<!-- lm: 0x2 1 -->
+</UL> CHECK KEY
+<!-- lm: 0x11 11 -->
+<UL>The DATETIME field Exclusively ORed with the string
+constant "TRCFMTBUFF$"<!-- lm: 0x2 1 -->
+</UL> STDA<!-- lm: 0x11 11 -->
+<UL> The
+STDA returned by<B> DosGetSTDA.</B><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Note: </B>
+<P>
+<B>DosGetSTDA</B> resets the internal start, end and next offsets after
+the STDA has been read. This allows trace formatting programs to detect
+an empty buffer.
+<P>
+For GA OS/2 2.x and 3.x the default start offset is 0x000e.
+<P>
+After fix pack 91 (OS/2 2.11) and fix pack 8 (OS/2 3.0) the the default
+start offset is 0x001e.<!-- lm: 0x2 1 -->
+<P>
+
+
+<P><HR>
+
+<A HREF="3092_L2_DosGetSTDAGetTheSyst.html">[Back: DosGetSTDA (Get The System Trace Data Area)]</A> <BR>
+<A HREF="3094_L4_NewSTDAFormat.html">[Next: New STDA Format]</A> 
+</BODY>
+</HTML>

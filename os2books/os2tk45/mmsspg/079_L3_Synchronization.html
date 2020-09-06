@@ -1,0 +1,82 @@
+<HTML>
+<HEAD>
+<TITLE>Synchronization</TITLE>
+</HEAD>
+<BODY>
+<H1>Synchronization</H1><!-- entering slot 100 -->
+<P>
+DLL stream handlers can process sync pulses as either a master or slave
+stream. A master of a sync group must have the SPCBHAND_GENSYNC or the SPCBHAND_NOSYNC
+bits set in the SPCB that is returned to the SSM on the SHC_CREATE call.
+Otherwise, the stream handler cannot be a master.
+<P>
+If you would like to create a stream handler that can generate sync pulses,
+you must either use a hardware device (such as an audio card) to generate
+timing interrupts at a fixed rate, or use the OS/2 timer services such as
+the OS/2 device driver SetTimer DevHelp or the OS/2 DosAsyncTimer functions.
+You can then call GetDOSVar to query the address of the global information
+segment structure (GlobalInfoSeg). This allows you to get the real time
+so that you can detect missed timing messages. For further information,
+refer to the<I> Physical Device Driver Reference for OS/2</I>.
+<P>
+<B>Note: </B> We provide the architecture for synchronization. The audio
+stream handler can be a master (generate sync pulses). The audio stream
+handler can also be a slave, but it does not support the ability to re-synchronize
+to a master stream.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<PRE>/************************************************************************/
+/* Master                                                               */
+/* Synchronization - If we are the master stream, then report the       */
+/*                   current time to the Sync/Stream Manager so that    */
+/*                   it can be distributed to any slave streams.        */
+/*                                                                      */
+/************************* END OF SPECIFICATIONS ************************/
+PARM_EVENT  parmevent;               /* parms for SMH_NOTIFY calls    */
+SYNC_EVCB   syncevcb;                /* Cuepoint event control block  */
+
+if (psib-&gt;ulStatus &amp; STREAM_MASTER_SYNC) {
+   parm_event.ulFunction = SMH_REPORTEVENT;     /* Set function         */
+   parm_event.hid = psib-&gt;HandlerID;            /* Source handler ID    */
+   parm_event.hevent = hevent;                  /* Event handle         */
+   parm_event.pevcbEvent = (PEVCB) &amp;syncevcb;   /* Pointer to Sync EVCB */
+   syncevcb.ulType = EVENT_CUE_TIME;            /* Set event type       */
+   syncevcb.hstream = psib-&gt;hStream;            /* Set stream handle    */
+   syncevcb.hid = hid;                          /* Set handler ID       */
+   syncevcb.ulStatus = 0;                       /* No status            */
+   syncevcb.mmtimeStream = mmtimeCurrent;       /* Set current time     */
+
+   if (rc = SMHEntryPoint (&amp;parm_event))
+      return(rc);                               /* Error! */
+
+   }
+
+/***********************************************************************/
+/* Slave                                                               */
+/* Synchronization - If we are the slave stream, then update the slave */
+/*                   time and determine if this slave stream is        */
+/*                   too slow or too fast with respect to the master   */
+/*                   stream.                                           */
+/*                                                                     */
+/************************ END OF SPECIFICATIONS ************************/
+
+if ((pSTREAM)-&gt;ulStateFlg &amp; STREAM_SLAVE_SYNC) {
+        (pSTREAM)-&gt;SyncEvcb.mmtimeSlave = mmtimeCurrStreamTime;
+        if ((pSTREAM)-&gt;SyncEvcb.ulStatus &amp; SYNCPOLLING) {
+             if (mmtimeCurrStreamTime &gt; (pSTREAM)-&gt;SyncEvcb.mmtimeMaster)
+                     /* I need to slow my stream */
+                     ;
+             if (mmtimeCurrStreamTime &lt; (pSTREAM)-&gt;SyncEvcb.mmtimeMaster)
+                     /* I need to speed up my stream */
+                     ;
+        }
+</PRE>
+
+
+<P><HR>
+
+<A HREF="078_L3_DLLInitialization.html">[Back: DLL Initialization]</A> <BR>
+<A HREF="080_L3_WorkerThreadCreation.html">[Next: Worker Thread Creation]</A> 
+</BODY>
+</HTML>

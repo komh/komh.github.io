@@ -1,0 +1,116 @@
+<HTML>
+<HEAD>
+<TITLE>Building the DLL Containing the Resource</TITLE>
+</HEAD>
+<BODY>
+<H1>Building the DLL Containing the Resource</H1><!-- entering slot 183 -->
+<P>
+Next, you must build the DLL containing the resource.  A DLL is generated
+that will be used in <A HREF="144_L3_UpdatingtheSPIINIFil.html">Updating
+the SPI.INI File</A> to update the SPI.INI profile. The DLL is built by
+entering the following command:
+<PRE>NMAKE /F MAKERES.MAK
+</PRE>
+
+<P>
+The following example shows a sample makefile (MAKERES.MAK), which is used
+to build the TESTRES.DLL containing the resource shown in the previous example.
+ (See <A HREF="142_L3_CreatingaResourceFil.html">Creating a Resource File</A>.)
+
+<PRE>.SUFFIXES: .com .sys .exe .obj .mbj .asm .inc .def .lrf .crf .ref \
+           .lst .sym .map .c .h .lib .msg .pro .txt .cod .cvk
+RCDLL=testres
+/*******************************/
+/* Compiler and Tools location */
+/*******************************/
+MSRC     =..
+TOOLS    =..\..\TOOLS
+SHIP_LIB =..\..\SHIP_LIB
+SHIP_H   =..\SHIP_H
+SHIP_INC =..\SHIP_INC
+COMMON   =..\COMMON
+INC      =..\..\SRC\INC
+H        =..\..\SRC\H
+H386     =..\..\SRC\H386
+LIB      =..\..\SRC\LIB
+LIB386   =..\..\SRC\LIB386
+
+/******************************/
+/* Definitions for C Compiler */
+/******************************/
+CCOMP386=cl386
+CFLAGS386= /c /G3 /AS /W3 /Od /DLINT_ARGS
+CINC386=-I. -I$(SHIP_H) -I$(COMMON) -I$(H386) -I$(H386)\SYS -I$(H) -I$(H)\SYS
+
+/******************************/
+/* Definitions for linker     */
+/******************************/
+LINK386  =link386
+LFLAGS386= $(LNK_DEBUG) /batch /map /nod /noi /packcode /packdata
+LIBS386  =$(NAMELIB) os2386 libc doscalls
+
+/*************************************/
+/* Definitions for RESOURCE compiler */
+/*************************************/
+RC       = rc
+RCINC    = -i $(H) -i $(SHIP_H) -i $(COMMON)
+
+/**************************/
+/*  Object file lists     */
+/**************************/
+
+RCOBJS   =$(COMMON)\rcstub.obj
+
+/*************************************/
+/* Inference Rules                   */
+/*************************************/
+.c.obj:
+        $(CCOMP386) $(CFLAGS386) $(CINC386) /Fo$(&lt;R).obj $(C_LST) $(&lt;R).c
+
+/*************************************/
+/* Target Descriptions               */
+/*************************************/
+!include        "$(H)\common.mak"
+
+all: rc
+
+/*************************************/
+/* SSMRES.DLL Target Descriptions    */
+/*************************************/
+rc: $(RCDLL).dll
+
+$(RCDLL).dll:  $(RCOBJS) $(RCDLL).rc makeres.mak $(RCDLL).lrf  \
+               $(RCDLL).def
+        $(LINK386) $(LFLAGS386) @$(RCDLL).lrf
+        $(RC) $(RCINC) $(RCDLL).rc $(RCDLL).dll
+#
+# Make DEF file
+#
+$(RCDLL).def:  makeres.mak
+        @echo Creating file &lt;&lt;$(@B).def
+LIBRARY $(RCDLL)
+DESCRIPTION 'DLL file containing resources'
+STUB 'OS2STUB.EXE'
+DATA NONE
+&lt;&lt;keep
+
+#
+# Make link response file
+#
+$(RCDLL).lrf: makeres.mak
+        @echo Creating file &lt;&lt;$(@B).lrf
+$(RCOBJS)
+$(RCDLL).dll
+$(RCDLL).map $(LFLAGS386)
+os2386 libcdll
+$(RCDLL).def;
+&lt;&lt;keep
+</PRE>
+
+
+<P><HR>
+
+<A HREF="142_L3_CreatingaResourceFil.html">[Back: Creating a Resource File]</A> <BR>
+<A HREF="144_L3_UpdatingtheSPIINIFil.html">[Next: Updating the SPI.INI File]</A> 
+</BODY>
+</HTML>

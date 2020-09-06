@@ -1,0 +1,92 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>LogOpenEventNotification - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>LogOpenEventNotification - Example Code</H1><!-- entering slot 239 -->
+<P>
+The following example opens error-logging event notification. It will initialize
+an event-notification filter that specifies any Error Log entry that has
+a product manufacturer named "IBM" and a severity less than 4.
+<PRE>  #define INCL_LOGGING
+  #include &lt;unidef.h&gt;
+  #include &lt;os2.h&gt;
+  #include &lt;stdio.h&gt;
+  #include &lt;lfdef.h&gt;
+  #define ERROR_LOG_FILE_ID 1
+
+  ULONG service;
+  ULONG severity = 4;
+  ULONG entry_id = 12;
+  LOENREQUEST open_event_packet;
+  HLOGNOTIFY log_notify;
+  SUBBLOCK subblock1, subblock2, subblock3;
+  HEADERBLOCK headerblock1, headerblock2;
+  FILTERBLOCK filter;
+
+  UniChar *manufacturer_name = L"IBM";
+
+  service = ERROR_LOGGING_SERVICE;
+
+  /*  Construct an event notification filter with 2 header blocks. */
+  /*  The first header block points to a single subblock.          */
+  /*  The second header block points to a chain of two subblocks.  */
+
+  filter.packet_size = sizeof(FILTERBLOCK);
+  filter.packet_revision_number = LF_UNI_API;
+  filter.header_block = &amp;headerblock1;
+
+  /*-------------construct headerblock1---------------------*/
+  headerblock1.pSubblock = &amp;subblock1;
+  headerblock1.pNextBlock = &amp;headerblock2;
+
+  /*construct subblock1 of headerblock1*/
+  subblock1.entry_attribute_ID = LOG_ERROR_DMI_VENDOR_TAG;
+  subblock1.comparison_operator = LOG_ERROR_EQUAL;
+  subblock1.comparison_data_ptr = &amp;manufacturer_name;
+  subblock1.next_subblock = NULL;
+
+  /*------------construct headerblock2----------------------*/
+  headerblock2.pSubblock = &amp;subblock2;
+  headerblock2.pNextBlock = NULL;
+
+  /*construct subblock2 of headerblock2*/
+  subblock2.entry_attribute_ID = LOG_ERROR_SEVERITY;
+  subblock2.comparison_operator = LOG_ERROR_LESS_THAN;
+  subblock2.comparison_data_ptr = severity;
+  subblock2.comparison_data_length = sizeof(ULONG);
+  subblock2.next_subblock = &amp;subblock3;
+
+  /*construct subblock3 of headerblock2*/
+  subblock3.entry_attribute_ID = LOG_ERROR_ENTRY_ID;
+  subblock3.comparison_operator = LOG_ERROR_GREATER_THAN;
+  subblock3.comparison_data_ptr = entry_id;
+  subblock3.comparison_data_length = sizeof(ULONG);
+  subblock3.next_subblock = null;
+
+  /* Construct the LogOpenEventNotification parameter packet.*/
+  open_event_packet.packet_size = sizeof(LOENREQUEST);
+  open_event_packet.packet_revision_number = LF_UNI_API;
+  open_event_packet.log_file_ID = ERROR_LOG_FILE_ID;
+  open_event_packet.pLogNotify = &amp;log_notify;
+  open_event_packet.pFilter = &amp;filter;
+  open_event_packet.read_flags = 0;
+
+  rc = LogOpenEventNotification(service,        /*service*/
+                       &amp;open_event_packet); /*parameter packet*/
+
+  if (rc |= 0)
+    {
+     printf("LogOpenEventNotification error: return code = %d",rc);
+     return;
+    }
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="225_L3H_LogOpenEventNotifica.html">[Back: LogOpenEventNotification - Related Functions]</A> <BR>
+<A HREF="227_L3H_LogOpenEventNotifica.html">[Next: LogOpenEventNotification - Topics]</A> 
+</BODY>
+</HTML>

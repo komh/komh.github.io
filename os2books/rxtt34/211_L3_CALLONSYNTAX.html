@@ -1,0 +1,86 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>CALL ON SYNTAX</TITLE>
+</HEAD>
+<BODY>
+<H1>CALL ON SYNTAX</H1><!-- entering slot 209 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+Unfortunately there's no CALL ON SYNTAX possible in REXX, despite thte fact
+that SIGNAL ON SYNTAX is possible. But there's a workaround for it: Use
+a separate routine to interpret the statement. In this routine you can install
+a local error handler for syntax errors (and others). Example:
+<PRE> 
+/*                                                                    */
+/* sample program to test the "CALL ON SYNTAX" workaround             */
+/*                                                                    */
+
+  do forever
+    say "Enter a REXX statement (exit to end): "
+    curStmt = lineIn()
+    if translate( curStmt ) = "EXIT" then
+      leave
+
+    say ""
+    say "Executing your input ..."
+    thisRC = InterpretCommand( curStmt )
+    say " ... the result is " || thisRC
+  end /* do forever */
+
+exit
+
+/* ------------------------------------------------------------------ */
+/* function: interpret a command simulating "CALL ON SYNTAX"          */
+/*                                                                    */
+/* call:     interpretCommand cmd                                     */
+/*                                                                    */
+/* where:    cmd - command to interpret                               */
+/*                                                                    */
+/* returns:  0 - execution okay                                       */
+/*           else error executing the command                         */
+/*                                                                    */
+/*                                                                    */
+/* note:     do not use the keyword PROCEDURE!                        */
+/*                                                                    */
+InterpretCommand:
+  parse arg IC.__CurLine
+
+                        /* init return code with failure code         */
+  IC.__ThisRC = 1
+
+                        /* install a local error handler              */
+  SIGNAL ON SYNTAX    NAME InterpretCommand1
+  SIGNAL OFF NOVALUE
+  SIGNAL OFF FAILURE
+  SIGNAL OFF ERROR
+  SIGNAL OFF NOTREADY
+
+                        /* execute the line                           */
+  interpret IC.__CurLine
+
+                        /* set return code to OK                      */
+                        /* this statement is not executed if an error */
+                        /* occurs while executing the previous        */
+                        /* interpret command                          */
+  IC.__ThisRC = 0
+
+InterpretCommand1:
+  if IC.__ThisRC = 1 then
+    IC.__ThisRC = rc
+
+                        /* drop unnecessary local variables         */
+  drop IC.__CurLine
+
+RETURN IC.__ThisRC
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="210_L3_Catchingdebugoutput.html">[Back: Catching debug output]</A> <BR>
+<A HREF="212_L3_TurnonNOVALUE.html">[Next: Turn on NOVALUE]</A> 
+</BODY>
+</HTML>

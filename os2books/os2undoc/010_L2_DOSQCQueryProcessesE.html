@@ -1,0 +1,214 @@
+<HTML>
+<HEAD>
+<TITLE>DOSQ.C - Query Processes (Example)</TITLE>
+</HEAD>
+<BODY>
+<H1>DOSQ.C - Query Processes (Example)</H1><!-- entering slot 12 --><!-- lm: 0x2 1 -->
+<UL>
+<PRE>#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include "dosqss.h"
+
+extern APIRET APIENTRY DosQuerySysState (ULONG func,
+                                ULONG par1, ULONG pid, ULONG _reserved_,
+                                PVOID buf,
+                                ULONG bufsz);
+
+static void dump_global(PQTOPLEVEL);
+static void dump_process(PQTOPLEVEL);
+static void dump_sema(PQTOPLEVEL);
+static void dump_shrmem(PQTOPLEVEL);
+static void dump_module(PQTOPLEVEL);
+static void dump_files(PQTOPLEVEL);
+static void dump_sema32(PQTOPLEVEL);
+
+main(void)
+{
+        int i;
+        APIRET rc;
+
+#define BUFSIZE 128000l
+#define RESERVED 0
+        char *buf = malloc(BUFSIZE);
+        memset(buf,0,BUFSIZE);
+
+        rc = DosQuerySysState(0x3f, RESERVED, RESERVED, RESERVED, (PCHAR)buf, BUFSIZE);
+
+        if (!rc) {
+                PQTOPLEVEL top = (PQTOPLEVEL)buf;
+                dump_global(top);
+                dump_process(top);
+                dump_module(top);
+                dump_sema(top);
+                dump_shrmem(top);
+                dump_sema32(top);
+                dump_files(top);
+        }
+}
+
+static void dump_global(PQTOPLEVEL top)
+{
+        PQGLOBAL g = top-&gt;gbldata;
+
+        printf("\n\n***** Global section: *****\n");
+        printf("\t# of processes: %d\n",g-&gt;proccnt);
+        printf("\t# of threads: %d\n",g-&gt;threadcnt);
+        printf("\t# of modules: %d\n\n",g-&gt;modulecnt);
+}
+
+static void dump_process(PQTOPLEVEL top)
+{
+        PQPROCESS p = top-&gt;procdata;
+        PQTHREAD t;
+        int i;
+
+        printf("\n\n***** Process section: *****\n");
+
+        while (p   p-&gt;rectype == 1) {
+                printf("\n    PID: %d\n",p-&gt;pid);
+                printf("\tPPID: %d\n",p-&gt;ppid);
+                printf("\ttype: %x\n",p-&gt;type);
+                printf("\tstate: %x\n",p-&gt;state);
+                printf("\tsession id: %d\n",p-&gt;sessid);
+                printf("\tmod handle: %x\n",p-&gt;hndmod);
+                printf("\t# of threads: %d\n",p-&gt;threadcnt);
+
+                t = p-&gt;threads;
+                for (i=0; i&lt;p-&gt;threadcnt; i++,t++) {
+                        printf("\t    TID: %d\n",t-&gt;threadid);
+                        printf("\t\tslot: %x\n",t-&gt;slotid);
+                        printf("\t\tsleepid: %x\n",t-&gt;sleepid);
+                        printf("\t\tpriority: %x\n",t-&gt;priority);
+                        printf("\t\tsystime: %d\n",t-&gt;systime);
+                        printf("\t\tusertime: %d\n",t-&gt;usertime);
+                        printf("\t\tstate: %d\n",t-&gt;state);
+                }
+                printf("\t# of 16 bit sema: %d\n",p-&gt;sem16cnt);
+                if (p-&gt;sem16cnt) {
+                        printf("\t\t");
+                        for (i=0; i&lt;p-&gt;sem16cnt; i++)
+                                printf("%04X ",p-&gt;sem16s[i]);
+                        printf("\n");
+                }
+                printf("\t# of dlls: %d\n",p-&gt;dllcnt);
+                if (p-&gt;dllcnt) {
+                        printf("\t\t");
+                        for (i=0; i&lt;p-&gt;dllcnt; i++)
+                                printf("%04X ",p-&gt;dlls[i]);
+                        printf("\n");
+                }
+                printf("\t# of shrmem: %d\n",p-&gt;shrmemcnt);
+                if (p-&gt;shrmemcnt) {
+                        printf("\t\t");
+                        for (i=0; i&lt;p-&gt;shrmemcnt; i++)
+                                printf("%04X ",p-&gt;shrmems[i]);
+                        printf("\n");
+                }
+                p = (PQPROCESS)t;
+        }
+}
+
+static void dump_module(PQTOPLEVEL top)
+{
+        PQMODULE m = top-&gt;moddata;
+        int i;
+
+        printf("\n\n***** Module section: *****\n");
+
+        while (m) {
+                printf("\thandle: %x\n",m-&gt;hndmod);
+                printf("\ttype: %d\n",m-&gt;type);
+                printf("\treference count: %d\n",m-&gt;refcnt);
+                if (m-&gt;refcnt) {
+                        printf("\t\t");
+                        for (i=0; i&lt;m-&gt;refcnt; i++) {
+                                printf("%04X ",m-&gt;modref[i]);
+                        }
+                        printf("\n");
+                }
+                printf("\tsegment count: %d\n",m-&gt;segcnt);
+                printf("\tname: %s\n",m-&gt;name);
+                m = m-&gt;next;
+        }
+}
+
+static void dump_sema(PQTOPLEVEL top)
+{
+        PQSEMSTRUC s = top-&gt;semadata;
+        PQSEMA p =  
+        int i;
+
+        printf("\n\n***** Semaphore section: *****\n");
+        while (p) {
+                printf("\treference count: %d\n",p-&gt;refcnt);
+                printf("\tflags: %x\n",p-&gt;sysflags);
+                printf("\tproc count: %x\n",p-&gt;sysproccnt);
+                printf("\tindex: %x\n",p-&gt;index);
+                printf("\tname: %s\n",p-&gt;name);
+                p = p-&gt;next;
+        }
+}
+
+static void dump_shrmem(PQTOPLEVEL top)
+{
+        PQSHRMEM s = top-&gt;shrmemdata;
+
+        printf("\n\n***** Shared Memory section: *****\n");
+        while (s) {
+                printf("\n    handle: %x\n",s-&gt;hndshr);
+                printf("\tselector: %d\n",s-&gt;selshr);
+                printf("\treference count: %d\n",s-&gt;refcnt);
+                printf("\tname: %s\n",s-&gt;name);
+                s = s-&gt;next;
+        }
+}
+
+static void dump_files(PQTOPLEVEL top)
+{
+        PQFILE f = (PQFILE)top-&gt;filedata;
+        PQFDS fd;
+
+        printf("\n\n***** File data section: *****\n");
+        while (f   f-&gt;rectype==8) {
+
+                printf("\n    name: %s\n",f-&gt;name);
+                printf("\topencnt: %d\n",f-&gt;opencnt);
+                fd = f-&gt;filedata;
+                printf("\tsfn: %x\n",fd-&gt;sfn);
+                printf("\trefcnt: %d\n",fd-&gt;refcnt);
+                printf("\tflags: %x\n",fd-&gt;flags);
+                printf("\taccmode: %x\n",fd-&gt;accmode);
+                printf("\tfilesize: %d\n",fd-&gt;filesize);
+                printf("\tvolhnd: %d\n",fd-&gt;volhnd);
+                printf("\tattrib: %x\n",fd-&gt;attrib);
+
+                f = f-&gt;next;
+        }
+}
+
+static void dump_sema32(PQTOPLEVEL top)
+{
+        PQSEM32STRUC s3 = (PQSEM32STRUC)top-&gt;sem32data;
+
+        printf("\n\n***** SEM32 section: *****\n");
+        while (s3) {
+                printf("\n    pid: %d\n",s3-&gt;evsem.own-&gt;pid);
+                printf("\towner: %d\n",s3-&gt;evsem.own-&gt;opencnt);
+                printf("\tpid: %d\n",s3-&gt;muxsem.own-&gt;pid);
+                printf("\towner: %d\n",s3-&gt;muxsem.own-&gt;opencnt);
+                printf("\tpid: %d\n",s3-&gt;smuxsem.own-&gt;pid);
+                printf("\towner: %d\n",s3-&gt;smuxsem.own-&gt;opencnt);
+
+                s3 = s3-&gt;next;
+        }
+}
+</PRE>
+<!-- lm: 0x2 1 --> 
+
+<P><HR>
+
+<A HREF="009_L2_DOSQSSH.html">[Back: DOSQSS.H]</A> <BR>
+<A HREF="011_L2_LSOFCListOpenFilesEx.html">[Next: LSOF.C - List Open Files (Example)]</A> 
+</BODY>
+</HTML>

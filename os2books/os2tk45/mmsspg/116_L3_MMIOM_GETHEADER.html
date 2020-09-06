@@ -1,0 +1,111 @@
+<HTML>
+<HEAD>
+<TITLE>MMIOM_GETHEADER</TITLE>
+</HEAD>
+<BODY>
+<H1>MMIOM_GETHEADER</H1><!-- entering slot 146 -->
+<P>
+This message requests the IOProc to return header-specific information about
+the current file or file element opened for reading by mmioOpen; for example,
+media type, media structure, and the size of the media structure.  When
+you call mmioRead to read in the file header, use the size of the header,
+which is passed in by the<I> lParam2</I> parameter.
+<P>
+When the translate header is TRUE, the IOProc is expected to return the
+standard presentation header structure for that media type.  The IOProc
+must transpose the file's native header data into that structure.
+<P>
+The following example shows an example of how the M-Motion IOProc supports
+the MMIOM_GETHEADER message.
+<PRE>case MMIOM_GETHEADER:
+    {
+    /************************************************************
+     * Declare local variables.
+     ************************************************************/
+    PMMFILESTATUS       pVidInfo;
+
+    /************************************************************
+     * Check for valid MMIOINFO block.
+     ************************************************************/
+    if (!pmmioinfo)
+        return (0);
+
+    /************************************************************
+     * Set up our working file status variable.
+     ************************************************************/
+    pVidInfo = (PMMFILESTATUS)pmmioinfo-&gt;pExtraInfoStruct;
+
+    /**************************************************
+     * Getheader only valid in READ or READ/WRITE mode.
+     * There is no header to get in WRITE mode.  We
+     * must also have a valid file handle to read from
+     **************************************************/
+    if ((pmmioinfo-&gt;ulFlags &amp; MMIO_WRITE) ||
+        (!(pVidInfo-&gt;hmmioSS)))
+       return (0);
+
+    /************************************************************
+     * Check for Translation mode.
+     ************************************************************/
+    if (!(pmmioinfo-&gt;ulTranslate &amp; MMIO_TRANSLATEHEADER))
+        {
+        /********************************************************
+         * Translation is off.
+         ********************************************************/
+        if (lParam2 &lt; sizeof (MMOTIONHEADER))
+            {
+            pmmioinfo-&gt;ulErrorRet = MMIOERR_INVALID_BUFFER_LENGTH;
+            return (0);
+            }
+
+        if (!lParam1)
+            {
+            pmmioinfo-&gt;ulErrorRet = MMIOERR_INVALID_STRUCTURE;
+            return (0);
+            }
+
+        /********************************************************
+         * Read in first 16 bytes to fill up M-Motion header.
+         ********************************************************/
+        memcpy ((PVOID) lParam1,
+                (PVOID)&amp;pVidInfo-&gt;mmotHeader,
+                sizeof (MMOTIONHEADER));
+
+        /* Indicate that the header has been set, which    */
+        /* is meaningless in read mode, but allows the     */
+        /* application to do writes in read/write mode     */
+        pVidInfo-&gt;bSetHeader = TRUE;
+
+        return (sizeof (MMOTIONHEADER));
+        }   /* end IF NOT TRANSLATED block */
+
+    /******************
+     * TRANSLATION IS ON
+     ******************/
+    if (lParam2 &lt; sizeof (MMIMAGEHEADER))
+        {
+        pmmioinfo-&gt;ulErrorRet = MMIOERR_INVALID_BUFFER_LENGTH;
+        return (0);
+        }
+
+    if (!lParam1)
+        {
+        pmmioinfo-&gt;ulErrorRet = MMIOERR_INVALID_STRUCTURE;
+        return (0);
+        }
+
+    memcpy ((PVOID)lParam1,
+            (PVOID)&amp;pVidInfo-&gt;mmImgHdr,
+            sizeof (MMIMAGEHEADER));
+
+    return (sizeof (MMIMAGEHEADER));
+    } /* end case of MMIOM_GETHEADER */
+</PRE>
+
+
+<P><HR>
+
+<A HREF="115_L3_MMIOM_QUERYHEADERLEN.html">[Back: MMIOM_QUERYHEADERLENGTH]</A> <BR>
+<A HREF="117_L3_MMIOM_SETHEADER.html">[Next: MMIOM_SETHEADER]</A> 
+</BODY>
+</HTML>

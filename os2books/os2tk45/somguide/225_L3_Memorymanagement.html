@@ -1,0 +1,92 @@
+<HTML>
+<HEAD>
+<TITLE>Memory management</TITLE>
+</HEAD>
+<BODY>
+<H1>Memory management</H1><!-- entering slot 262 -->
+<P>
+DSOM programs must manage four different kinds of memory resources: objects,
+object references, Environment structures, and blocks of memory. There are
+different techniques for allocating and releasing each kind of resource.
+
+<P>
+<B>Objects and object references</B>
+<P>
+Creating and destroying remote objects was discussed previously in this
+section (see "Creating remote objects" and "Destroying remote objects").
+Creating and destroying local objects is described in section 3.2, "Using
+SOM Classes - the Basics," in Chapter 3, "Using SOM Classes in Client Programs."
+ Object references are typically created automatically by DSOM as needed
+by the client program. They are also released in the client program by using
+either the<B> release</B> method or the<B> somdProxyFree</B> method. (The
+two methods are equivalent.)
+<P>
+<B>Environment structures</B>
+<P>
+When a client invokes a method and the method returns an exception in the
+Environment structure, it is the client's responsibility to free the exception.
+This is done by calling either<B> exception_free</B> or<B> somdExceptionFree
+</B>on the Envirnmen structure in which the exception was returned. (The
+two functions are equivalent.) A similar function,<B> somExceptionFree,
+</B>is available for SOM programmers however DSOM programmers can use<B> somdExceptionFree
+</B>to free all exceptions (regardless of whether they were returned from
+a local or remote method call).
+<P>
+<B>Blocks of memory</B>
+<P>
+For allocating and releasing blocks of memory within a client program, SOM
+provides the<B> SOMMalloc</B> and<B> SOMFree</B> functions (analogous to
+the C "mallo" and "free" functions). The "Memory Management" section of
+Chapter 3 describes these functions. To release memory allocated by DSOM
+in response to a remote method call, however, DSOM client programs should
+use the<B> ORBfree</B> function
+<P>
+For example, when a method is invoked that returns a result of type string,
+sequence, or array, DSOM will allocate memory for the result in the client's
+address space. Ownership of this memory becomes the responsibility of the
+client program. When finished using this memory, the client program should
+free it using the<B> ORBfree</B> function, rather than<B> free</B> or<B> SOMFree</B>.
+This is because the memory has been allocated by DSOM using special memory-management
+techniques; therefore, the client should ask DSOM to also free the memory.
+If the storage is freed using<B> SOMFree</B> rather than<B> ORBfree,</B> then
+memory leaks will result.
+<P>
+The differences between the<B> SOMFree</B> and<B> ORBfree</B> functions
+are twofold:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->First,<B> SOMFree</B> should only be used to
+free memory not allocated by DSO(for example, memory the client program
+allocated itself using<B> SOMMalloc</B>), while<B> ORBfree</B> should be
+used to free memory allocated by DSOM in response to a remote method call.
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Second,<B> SOMFee</B> only frees a single block
+of memory (in the same way that the C "free" function does), while<B> ORBfree
+</B>will free an entire data structure, including any allocated blocks of
+memory within in. For example, if a remote method call returns a sequence
+of structs, and each struct contains a string,<B> ORBfree</B> will free,
+with a single call, not only the sequence's "_buffer" member, but also each
+struct and all the strings within the structs. Freeing a similar data structure
+using<B> SOMFree</B> would require multiple calls (one for each call to
+<B>SOMMalloc</B> used to build the data structure).<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Some programmers may wish to use a single function to free blocks of memory,
+regardless of whether they were allocated locally or by DSOM in response
+to a remote method call. For these programmers, DSOM provides a function,
+<B>SOMD_NoORBfree,</B> which can be called just after calling<B> SOMD_Init
+</B>in the client program. (It requires no arguments and returns no value.)
+This function specifies that the client program will free all memory blocks
+using<B> SOMFree,</B> rather than<B> ORBfree.</B> In response to this call,
+DSOM will not keep track of the memory it allocates for the client. Instead,
+it assumes that the client program will be responsible for walking all data
+structures returned from remote method calls, while calling<B> SOMFree</B> for
+each block of memory within.
+
+<P><HR>
+
+<A HREF="224_L3_Passingobjectreferen.html">[Back: Passing object references in method calls]</A> <BR>
+<A HREF="226_L4_Memorymanagementform.html">[Next: Memory management for method parameters]</A> 
+</BODY>
+</HTML>

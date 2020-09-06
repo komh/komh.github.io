@@ -1,0 +1,138 @@
+<HTML>
+<HEAD>
+<TITLE>Creating an Exit List</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating an Exit List</H1><!-- entering slot 108 -->
+<P>
+You call<A><!-- external link: 1D 86 C3 53 --> DosExitList</A> to add to
+the exit list a routine that is to be given control when a process is ended
+(or finishes its execution). Multiple routines can be added to the list.
+When the process is ending, OS/2 transfers control to each address on the
+list.
+<P>
+If there are multiple addresses on the list, each function gets control
+in numerical order (with 0 being first and 0FFH being last), based on a
+value supplied by the application when it calls<A><!-- external link: 1D 86 C3 FC --> DosExitList</A>.
+In case of duplicate entries for this parameter, the routines will be executed
+in LIFO (last in, first out) order.
+<P>
+<A><!-- external link: 1D 86 C3 53 -->DosExitList</A> requires a function
+code that specifies an action and a pointer to the function that is to receive
+control upon termination.
+<P>
+The following code fragment adds the locally defined function<I> SaveFiles
+</I>to the exit list:
+<PRE>    #define INCL_DOSPROCESS         /* Process and thread values */
+    #include &lt;os2.h&gt;
+
+    #define HF_STDOUT 1             /* Standard output handle    */
+
+    VOID main(VOID)
+    {
+        .
+        .
+        .
+        DosExitList(EXLST_ADD,
+                    (PFNEXITLIST) SaveFiles);
+        .
+        .
+        .
+        DosExit(EXIT_PROCESS,
+                0);
+    }
+
+    VOID APIENTRY SaveFiles(ULONG ulTermCode)
+    {
+        ULONG ulWritten;
+
+        switch (ulTermCode) {
+            case TC_EXIT:
+            case TC_KILLPROCESS:
+                 DosWrite(HF_STDOUT,
+                          "Goodbye\r\n",
+                          10,
+                          &amp;ulWritten);
+                 break;
+
+            case TC_HARDERROR:
+            case TC_TRAP:
+                 break;
+
+        }
+        DosExitList(EXLST_EXIT,
+                    0);
+    }
+
+</PRE>
+
+<P>
+Any function that you add to the list must take one parameter. The function
+can carry out any task, as shown in the preceding example, but as its last
+action it must call<A><!-- external link: 1D 86 C3 FC --> DosExitList</A>,
+specifying the EXLST_EXIT constant. An exit-list function must not have
+a return value and must not call<A><!-- external link: 1D 84 C3 52 --> DosExit
+</A>to end.
+<P>
+When an exit-list routine receives control, the parameter (located at ESP+4
+on the stack) contains an indicator of why the process ended. The values
+returned are the same as those for termination codes returned by<A><!-- external link: 1D 0A C4 56 --> DosWaitChild
+</A>or<A><!-- external link: 1D 83 C3 51 --> DosExecPgm</A> requests. These
+values are:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+TC_EXIT (0)<!-- lm: 0x2 23 -->
+<UL> Normal exit<!-- lm: 0x2 1 -->
+</UL>TC_HARDERROR (1)<!-- lm: 0x2 23 -->
+<UL> Hard-error halt<!-- lm: 0x2 1 -->
+</UL>TC_TRAP (2)<!-- lm: 0x2 23 -->
+<UL> Trap operation for a 16-bit child
+process<!-- lm: 0x2 1 -->
+</UL>TC_KILLPROCESS (3)<!-- lm: 0x2 23 -->
+<UL> Unintercepted DosKillProcess
+<!-- lm: 0x2 1 -->
+</UL>TC_EXCEPTION (4)<!-- lm: 0x2 23 -->
+<UL> Exception operation for a
+32-bit child process<!-- lm: 0x2 1 -->
+</UL>
+<P>
+To execute the exit-list functions, OS/2 reassigns thread 1 after ending
+all other threads in the process. If thread 1 has already exited (for example,
+if it called<A><!-- external link: 1D 84 C3 52 --> DosExit</A> without ending
+other threads in the process), the exit-list functions cannot be executed.
+In general, it is poor practice to end thread 1 without ending all other
+threads.
+<P>
+Before transferring control to the termination routines, OS/2 resets the
+stack to its initial value. Transfer is by way of an assembly language JMP
+instruction. The routine must be in the address space of the ending process.
+The termination routine at that address takes the necessary steps and then
+calls<A><!-- external link: 1D 86 C3 53 --> DosExitList</A> with FunctionOrder=EXLST_EXIT.
+Control is then transferred to the next address in the invocation order
+of the exit list. When all such addresses have been<!-- entering slot 109 --> processed,
+the process completes exiting. If a routine on the list does not call<A><!-- external link: 1D 86 C3 1E --> DosExitList
+</A>at the completion of its processing, the process waits, and OS/2 prevents
+termination.
+<P>
+During<A><!-- external link: 1D 86 C3 1E --> DosExitList</A> processing,
+the process is in a state of partial termination. All threads of the process
+are ended, except for the one executing the exit-list routines. To ensure
+good response to a user request to end a program, there should be minimal
+delay in completing termination. Termination routines should be short and
+fail-safe.
+<P>
+You can use<A><!-- external link: 1D 86 C3 1E --> DosExitList</A> with the
+EXLST_REMOVE constant to remove a function from the list.
+<P>
+The designer of an exit-list routine must carefully consider which functions
+will be used by the routine. In general, calls to most OS/2 functions are
+valid in a<A><!-- external link: 1D 86 C3 1E --> DosExitList</A> routine,
+but certain functions, such as<A><!-- external link: 1D 74 C3 1C --> DosCreateThread
+</A>and<A><!-- external link: 1D 83 C3 FC --> DosExecPgm</A>, are not.
+
+<P><HR>
+
+<A HREF="103_L3_TerminatingaProcess.html">[Back: Terminating a Process]</A> <BR>
+<A HREF="105_L2_UsingThreads.html">[Next: Using Threads]</A> 
+</BODY>
+</HTML>

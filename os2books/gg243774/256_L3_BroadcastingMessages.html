@@ -1,0 +1,84 @@
+<HTML>
+<HEAD>
+<TITLE>Broadcasting Messages</TITLE>
+</HEAD>
+<BODY>
+<H1>Broadcasting Messages</H1><!-- entering slot 276 -->
+<P>
+In certain circumstances, a window procedure may wish to indicate an  event
+to multiple windows, and therefore need to pass the same message  to each
+of these windows.  Presentation Manager provides the capability for a message
+ to be broadcast to multiple windows with a single<B> WinBroadcastMsg()
+</B>function call.
+<P>
+The<B> WinBroadcastMsg()</B> function passes a message of a specified class
+to the descendants of a specified parent window, as shown in <A HREF="041_L2_WinBroadcastMsgFunct.html">Figure
+"WinBroadcastMsg() Function"</A>.
+<P>
+The example shown in <A HREF="041_L2_WinBroadcastMsgFunct.html">Figure "WinBroadcastMsg()
+Function"</A> passes a message of the application-defined class WMP_MYMESSAGE
+to all children of the current window (that is, the window associated with
+the window procedure in which the function call is made), with message parameters
+as shown.  The message is posted to the target windows via a message queue,
+and is thus processed asynchronously; the<B> WinBroadcastMsg()</B> function
+also allows for synchronous processing using the BMSG_SEND flag.
+<P>
+The parent/child hierarchy allows windows to be grouped in particular ways
+to suit application requirements.  For example, all the  object windows
+created by an application may be created as children of  a "dummy" master
+object window.  If a particular message must then  be sent to all these
+object windows (for example, to close all the  windows), this can be done
+by broadcasting the message to all children  of the master object window.
+
+<P>
+The BMSG_DESCENDANTS flag may be set in the<B> WinBroadcastMsg()</B> call
+to cause a message to be passed to all descendants of the specified parent
+window, rather than just the direct children of that parent.  This enables
+a message to be broadcast  to a wider target group, should the application
+so require.  Alternatively, the BMSG_FRAMEONLY flag may be set, causing
+the message  to be passed only to frame windows.  This is useful in situations
+where  an application wishes to initiate an action by multiple display windows
+ at the same time.
+<P>
+The<B> WinBroadcastMsg()</B> function must be used with caution,  particularly
+when it may cause messages to be sent to windows created  by other applications.
+ This is possible if the BMSG_DESCENDANTS flag  is set and the desktop window
+is specified as the parent, and may cause  complications in other applications.
+ For example, consider the  following message definitions:
+<PRE><B>Application 1</B>
+
+#define     WMP_REFRESH     WM_USER+12
+
+<B>Application 2</B>
+
+#define     WMP_CLOSEALL    WM_USER+12
+</PRE>
+
+<P>
+In the example above, each application defines a message class, and each
+message is to be used for a different purpose.  However, both messages have
+the same message identifier.  Now let us assume that Application 1 makes
+the following function call:
+<PRE>rc = WinBroadcastMsg(HWND_DESKTOP,
+                     WMP_REFRESH,
+                     mp1,
+                     (MPARAM)0,
+                     BMSG_POST);
+</PRE>
+
+<P>
+This function call would cause a WMP_REFRESH message to be passed to all
+display windows in Application 1<I> and</I> Application 2.  However, the
+windows in Application 2 would interpret the message as a WMP_CLOSEALL message,
+with possibly undesirable results.
+<P>
+It is therefore strongly recommended that developers exercise extreme care
+in using the<B> WinBroadcastMsg()</B> function, in order to accurately determine
+the potential results of the messages being broadcast.
+
+<P><HR>
+
+<A HREF="255_L3_CreatingMessageParam.html">[Back: Creating Message Parameters]</A> <BR>
+<A HREF="257_L2_PassingControl.html">[Next: Passing Control]</A> 
+</BODY>
+</HTML>

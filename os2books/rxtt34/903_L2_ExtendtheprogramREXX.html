@@ -1,0 +1,151 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Extend the program REXXTRY.CMD</TITLE>
+</HEAD>
+<BODY>
+<H1>Extend the program REXXTRY.CMD</H1><!-- entering slot 951 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+The program REXXTRY.CMD (in the directory<B> \OS2</B>) is really useful
+to test some REXX statements. But it has one disadvantage: The input routine
+is very simple.
+<P>
+But, thanks to Albert Crosby, there's a simple way to overcome this disadvantage.
+Albert Crosby who's that you might ask. Well, <A HREF="1002_L0_.html">Albert
+Crosby</A> is the author of a REXX routine called <A HREF="904_L3_CMDLINECMD.html">CMDLINE1.CMD
+</A>which is very suitable to extend the input routine from REXXTRY.CMD
+
+<P>
+To do this do the following:
+<P>
+Create a copy of the file REXXTRY.CMD and name it<B> EREXXTRY.CMD</B>.
+<P>
+Extract the source code of <A HREF="904_L3_CMDLINECMD.html">CMDLINE.CMD
+</A>from this document (see <A HREF="106_L3_Usingthesamples.html">Using
+the samples</A>)
+<P>
+Load the file EREXXTRY.CMD into a text editor and append the source of CMDLINE1.CMD
+at the end of EREXXTRY.CMD.
+<P>
+Then insert the following lines in EREXXTRY.CMD before the line<B> parse
+arg argrx</B>:
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* history of changes for RXT&amp;T version:                              */
+/*                                                                    */
+/* RXT&amp;T v1.60 /bs                                                    */
+/*  - changed code to also work if REXXUTIL is not accessible         */
+/*                                                                    */
+/* RXT&amp;T v1.70 /bs                                                    */
+/*  - corrected an error in the RxFuncAdd calls                       */
+/*  - in the previous version, undefined function keys lead to        */
+/*    invalid return codes in cmdline. Corrected.                     */
+/*  - added code to save and load the history list to the routine     */
+/*    cmdline                                                         */
+/*    The keys for handling the history file are:                     */
+/*      F2       - save the history list (overwrite an existing file) */
+/*      ALT-F2   - save the history list (append to an existing file) */
+/*      SHIFT-F2 - load the history list                              */
+/*      CTRL-F2  - change the history list file                       */
+/*      ALT-F4   - save history list and exit program                 */
+/*  - added online help for the edit keys (CTRL-F1)                   */
+/*                                                                    */
+/* RXT&amp;T v2.00 /bs                                                    */
+/*  - added code to handle situations when other programs drop the    */
+/*    REXXUTIL functions                                              */
+/* RXT&amp;T v2.30 /bs                                                    */
+/*  - added key definitions for loading and dropping REXXUTIL         */
+/*    functions (F11 and F12)                                         */
+/* RXT&amp;T v2.40 /bs                                                    */
+/*  - added code to show the version of the active REXX interpreter   */
+/*                                                                    */
+/* (c) 1996 <A HREF="002_L1_GeneralForeword.html">Bernd Schemmer</A>, Germany, EMail: Bernd.Schemmer@gmx.de     */
+/*                                                                    */
+/*                                                                    */
+ReStart:                                                     /* v2.00 */
+
+  if rxFuncQuery "SysCurPos" = 0 then                        /* v1.60 */
+    call rxFuncDrop "SysCurPos"                              /* v1.60 */
+  if rxFuncQuery "SysGetKey" = 0 then                        /* v1.60 */
+    call rxFuncDrop "SysGetKey"                              /* v1.60 */
+
+                        /* load the necessary REXXUTIL          v1.60 */
+                        /* functions                            v1.60 */
+  call RxFuncAdd "SysCurPos", "RexxUtil", "SysCurPos"        /* v1.70 */
+  call RxFuncAdd "SysGetKey", "RexxUtil", "SysGetKey"        /* v1.70 */
+
+  !rexxUtilLoaded = 0                                        /* v1.60 */
+
+                        /* check if the rxFuncAdd calls were    v1.60 */
+                        /* successful                           v1.60 */
+  signal ON Syntax Name RexxUtilNotLoaded                    /* v1.60 */
+
+  call SysCurPos                                             /* v1.60 */
+
+                         /* use the extended input              v1.60 */
+                         /* routine only if possible            v1.60 */
+  !rexxUtilLoaded  = 1                                       /* v1.60 */
+
+                         /* name of the file for the history    v1.70 */
+                         /* list                                v1.70 */
+  !history.file = "EREXXTRY.HST"                             /* v1.70 */
+
+                                       /* redefine some keys          */
+  !history.key.61  = "exit"            /* F3                          */
+  !history.key.104 = "?"               /* ALT-F1                      */
+
+
+                                       /* F11 load REXXUTIL     v2.30 */
+  !history.key.133 = "call rxFuncAdd 'SysLoadFuncs', 'REXXUTIL', 'SysLoadFuncs'; call SysLoadFuncs; say 'REXXUTIL loaded.'";
+
+                                       /* F12 drop REXXUTIL     v2.30 */
+  !history.key.134 = "call SysDropFuncs; say 'REXXUTIL functions dropped.'"
+
+
+                    /* see <A HREF="437_L3_Redefinesomekeys.html">Key redefinitions</A> for further key codes    */
+
+RexxUtilNotLoaded:                                           /* v1.60 */
+/* ------------------------------------------------------------------ */
+</PRE>
+
+<P>
+Now replace the line<B> parse pull inputrx</B> in EREXXTRY.CMD with
+<PRE> 
+/* ------------------------------------------------------------------ */
+   parse version tVersion                                    /* v2.40 */
+   say "  --- Current REXX interpreter is: "tversion         /* v2.40 */
+
+   if !rexxUtilLoaded &lt;&gt; 1 then                              /* v1.60 */
+   do                                                        /* v2.00 */
+     say "  --- no extended keys available --- "             /* v2.00 */
+     say "  --- use ""signal restart"" to try to load"  ,    /* v2.30 */
+         "the extended key support again --- "               /* v2.30 */
+     inputrx = lineIN()                                      /* v1.60 */
+   end                                                       /* v2.00 */
+   else                                                      /* v1.60 */
+   do                                                        /* v1.70 */
+     say "  --- extended keys are active," || ,              /* v1.70 */
+         " CTRL-F1 = online help ---"                        /* v1.70 */
+     inputrx = <!-- entering slot 952 -->cmdLine()                                     /* v1.60 */
+   end                                                       /* v1.70 */
+/* ------------------------------------------------------------------ */
+</PRE>
+
+<P>
+Save the file EREXXTRY.CMD.
+<P>
+That's all! You've just created EREXXTRY.CMD - a clone of REXXTRY.CMD with
+a much more comfortable input routine. 
+<P>
+<B>See also: </B> <A HREF="861_L3_CMDLINEextendedinput.html">CMDLINE</A><!-- lm: 0x2 1 -->
+<UL>
+<P>
+ 
+
+<P><HR>
+
+<A HREF="902_L2_PreventREXXfromcreat.html">[Back: Prevent REXX from creating a token image]</A> <BR>
+<A HREF="904_L3_CMDLINECMD.html">[Next: CMDLINE.CMD]</A> 
+</BODY>
+</HTML>

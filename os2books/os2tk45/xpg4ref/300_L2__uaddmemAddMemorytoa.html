@@ -1,0 +1,151 @@
+<HTML>
+<HEAD>
+<TITLE>_uaddmem - Add Memory to a Heap</TITLE>
+</HEAD>
+<BODY>
+<H1>_uaddmem - Add Memory to a Heap</H1><!-- entering slot 326 -->_uaddmem - Add Memory to a Heap<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>#include &lt;umalloc.h&gt;
+Heap_t _uaddmem(Heap_t <I>heap</I>, void *<I>block</I>, size_t <I>size</I>, int <I>clean</I>);
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Description
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+<LI>uaddmem adds a<I> block</I> of memory of<I> size</I> bytes into the
+specified user<I> heap</I> (created with _ucreate). Before calling _uaddmem,
+you must first get the<I> block</I> from the operating system, typically
+by using an OS/2 function like DosAllocMem or by allocating it statically.
+(See the<I> Control Program Guide and Reference</I> for details on OS/2
+functions for memory management.)
+<P>
+If the memory<I> block</I> has been initialized to 0, specify _BLOCK_CLEAN
+for the<I> clean</I> parameter.  If not, specify !_BLOCK_CLEAN. (This information
+makes calloc and _ucalloc more efficient).
+<P>
+<B>Note: </B> Memory returned by DosAllocMem is initialized to 0.<!-- lm: 0x2 10 -->
+<P>
+
+<P>
+For fixed-size heaps, you must return all the blocks you added with _uaddmem
+to the system. (For expandable heaps, these blocks are returned by your
+<I>release_fn</I> when you call _udestroy.)
+<P>
+For more information about creating and using heaps, see "Managing Memory"
+in the<I> VisualAge C++ Programming Guide</I>.
+<P>
+<B>Note: </B> For every block of memory you add, a small number of bytes
+from it are used to store internal information. To reduce the total amount
+of overhead, it is better to add a few large blocks of memory than many
+small blocks.<!-- lm: 0x2 10 -->
+<P>
+<!-- lm: 0x2 1 -->
+</UL>Returns
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+
+<P>
+<LI>uaddmem returns a pointer to the heap the memory was added to. If the
+heap specified is not valid, _uaddmem returns NULL.<!-- lm: 0x2 1 -->
+</UL> Example
+Code
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+The following example creates a heap myheap, and then uses _uaddmem to add
+memory to it.
+<PRE>#define  INCL_DOSMEMMGR             /* Memory Manager values */
+#include &lt;os2.h&gt;
+#include &lt;bsememf.h&gt;                /* Get flags for memory management  */
+#include &lt;stdlib.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;umalloc.h&gt;
+
+int main(void)
+{
+   void    *initial_block, *extra_chunk;
+   APIRET  rc;
+   Heap_t  myheap;
+   char    *p1, *p2;
+
+   /* Call DosAllocMem to get the initial block of memory */
+   if (0 != (rc = DosAllocMem(&amp;initial_block, 65536,
+                              PAG_WRITE | PAG_READ | PAG_COMMIT))) {
+      printf("DosAllocMem for initial block failed: return code = %ld\n", rc);
+      exit(EXIT_FAILURE);
+   }
+   /* Create a fixed size heap starting with the block declared earlier */
+   if (NULL == (myheap = _ucreate(initial_block, 65536, _BLOCK_CLEAN,
+                                  _HEAP_REGULAR, NULL, NULL))) {
+      puts("_ucreate failed.");
+      exit(EXIT_FAILURE);
+   }
+   if (0 != _uopen(myheap)) {
+      puts("_uopen failed.");
+      exit(EXIT_FAILURE);
+   }
+   p1 = _umalloc(myheap, 100);
+   /* Call DosAllocMem to get another block of memory */
+   if (0 != (rc = DosAllocMem(&amp;extra_chunk, 10 * 65536,
+                              PAG_WRITE | PAG_READ | PAG_COMMIT))) {
+      printf("DosAllocMem for extra chunk failed: return code = %ld\n", rc);
+      exit(EXIT_FAILURE);
+   }
+   /* Add the second chunk of memory to user heap */
+   if (myheap != _uaddmem(myheap, extra_chunk, 10 * 65536, _BLOCK_CLEAN)) {
+      puts("_uaddmem failed.");
+      exit(EXIT_FAILURE);
+   }
+   p2 = _umalloc(myheap, 100000);
+   free(p1);
+   free(p2);
+   if (0 != _uclose(myheap)) {
+      puts("_uclose failed");
+      exit(EXIT_FAILURE);
+   }
+   if (0 != DosFreeMem(initial_block) || 0 != DosFreeMem(extra_chunk)) {
+      puts("DosFreeMem error.");
+      exit(EXIT_FAILURE);
+   }
+   return 0;
+}
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Related Information
+<P>
+<!-- lm: 0x2 10 -->
+<UL><!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 --><A HREF="303_L2__ucreateCreateaMemor.html"><LI>ucreate
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="305_L2__udestroyDestroyaHea.html"><LI>udestroy
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="307_L2__uheapminReleaseUnus.html"><LI>uheapmin
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="046_L2_Differentiatingbetwe.html">Differentiating
+between Memory Management Functions</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><LI>Managing Memory" in the<I> VisualAge C++ Programming
+Guide</I><!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="299_L2_tzsetSetTimeZoneInfo.html">[Back: tzset - Set Time Zone Information]</A> <BR>
+<A HREF="301_L2__ucallocReserveandIn.html">[Next: _ucalloc - Reserve and Initialize Memory from User Heap]</A> 
+</BODY>
+</HTML>

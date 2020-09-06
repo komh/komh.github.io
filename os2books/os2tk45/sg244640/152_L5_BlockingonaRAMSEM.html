@@ -1,0 +1,206 @@
+<HTML>
+<HEAD>
+<TITLE>Blocking on a RAMSEM</TITLE>
+</HEAD>
+<BODY>
+<H1>Blocking on a RAMSEM</H1><!-- entering slot 192 -->
+<P>
+Potentially this is the most problematical type of wait to deal with. The
+BlockId is conventional and of the form:
+<PRE>
+
+      fffexxxx       where xxxx is taken from the low order word
+                     of the user's RAMSEM.
+
+
+</PRE>
+
+<P>
+There is no accountability associated with this type of semaphore. It is
+the responsibility of the user to manage their own accounting information.
+Accordingly most applications tend to imbed RAMSEMs into larger structures,
+which contain information such as use counts, owner identification, timeouts.
+
+<P>
+Two structures in particular are in common use:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+<A HREF="3124_L3_FastSafeRamSemStruc.html">The Fast Safe RAMSEM</A><!-- lm: 0x2 6 -->
+<P>
+<A HREF="3125_L3_FastSafeRamSemStrucP.html">The PM Fast Safe RAMSEM</A><!-- lm: 0x2 1 -->
+</UL>
+<P>
+The first step with RAMSEM BlockIds is to locate the user's RAMSEM address.
+
+<P>
+Next check ownership just in case this gives a clue to the associated process.
+
+<P>
+Ownership is indicated by a non-zero value in byte 0 of the RAMSEM. Very
+occasionally a RAMSEM is owned by the system. When this happens happens
+the ownership flags takes the value of the owning process.
+<P>
+We hope that the RAMSEM is embedded in either a Fast Safe RAMSEM or PM Fast
+Safe RAMSEM.
+<P>
+Both of these structures have a length prefix. The PM version is 0x12 and
+the non-PM version 0x0e.
+<P>
+Display storage before the RAMSEM and examine offset -0x12. Is this word
+0x0012? If not then this is not a PM FSRS. Try -0xe. Does that contain 0x000e?
+If not then we will have to resort to more speculative analysis.
+<P>
+If either of these lengths correspond, look at the next two words, these
+contain the owning PID and TID. See whether this process and thread exists
+and what it is doing.
+<P>
+<B>Note: </B>
+<P>
+Tid is sometimes 0 when there is only one thread in a process.<!-- lm: 0x2 1 -->
+<P>
+
+<P>
+If this technique fails us then check the owner of the semaphore address,
+which is saved in<B> TCB_SemInfo</B> and displayed by the<B> .PB</B> command.
+ The owner of the semaphore, if it has not died, has to one of its accessors.
+ If the RAMSEM is located in a Private Arena, then the owner is limited
+to one of the threads of the process that has blocked.  If it is in shared
+storage, then the owned will be a thread in one of the processes on the
+VMCO chain.  If we are lucky, the number of possibilities will be small,
+though this is not guaranteed. 
+<P>
+The following example illustrates this technique:
+<PRE>&gt;&gt;&gt; Slot 31 is blocked. Why?
+
+.pb 31
+ Slot  Sta BlockID  Name     Type        Addr    Symbol
+ 0031  blk fffe01ba aires    RamSem    e69f:000a
+
+&gt;&gt;&gt; Bad news! a RamSem. First check to see if its imbedded in a
+&gt;&gt;&gt; FastSafeRamSem. We look at the RamSem address, back a few bytes
+
+##.s 31
+
+##dw e69f:000a-10
+Past end of segment: e69f:fffffffa
+
+&gt;&gt;&gt; It can't be a PM FSRamSem
+
+##dw e69f:000a-a
+e69f:00000000  000e 0019 <!-- entering slot 193 -->0000 0000 0000 01ff 01ba 0000
+e69f:00000010  0000 0000 0000 0000 0000 0000 0000 0000
+e69f:00000020  0000 0000 0000 0000 0000 0000 0000 0000
+e69f:00000030  0000 0000 0000 0000 0000 0000 0000 0000
+e69f:00000040  0000 0000 0000 0000 0000 0000 0000 0000
+e69f:00000050  0000 0000 0000 0000 0000 0000 0000 0000
+e69f:00000060  0000 0000 0000 0000 0000 0000 0000 0000
+e69f:00000070  0000 0000 0000 0000 0000 0000 0000 0000
+
+&gt;&gt;&gt; But it does look like a normal Fast Safe RamSem
+&gt;&gt;&gt; Pid 19, Tid=0 (this is OK if just one thread in process 19).
+
+##.p
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 0001  0001 0000 0000 0001 blk 0100 ffe3a000 ffe3c7d4 ffe3c620 1e7c 00 *ager
+ 0002  0001 0000 0000 0002 blk 0200 7b92a000 ffe3c7d4 7bb28020 1f3c 00 *tsd
+ 0003  0001 0000 0000 0003 blk 0200 7b92c000 ffe3c7d4 7bb281d4 1f50 00 *ctxh
+ 0004  0001 0000 0000 0004 blk 081f 7b92e000 ffe3c7d4 7bb28388 1f48 00 *kdb
+ 0005  0001 0000 0000 0005 blk 0800 7b930000 ffe3c7d4 7bb2853c 1f20 00 *lazyw
+ 0006  0001 0000 0000 0006 blk 0800 7b932000 ffe3c7d4 7bb286f0 1f3c 00 *asyncr
+*0008# 0006 0001 0006 0001 blk 0500 7b936000 7bb460d0 7bb28a58 1eb8 01 pmshell
+ 000d  0006 0001 0006 0002 blk 0800 7b940000 7bb460d0 7bb292dc 1ed4 01 pmshell
+ 000e  0006 0001 0006 0003 blk 0800 7b942000 7bb460d0 7bb29490      01 pmshell
+ 000f  0006 0001 0006 0004 blk 0800 7b944000 7bb460d0 7bb29644      01 pmshell
+ 0010  0006 0001 0006 0005 blk 0800 7b946000 7bb460d0 7bb297f8      01 pmshell
+ 0007  0006 0001 0006 0006 blk 0200 7b934000 7bb460d0 7bb288a4 1ecc 01 pmshell
+ 0013  0006 0001 0006 0007 blk 0200 7b94c000 7bb460d0 7bb29d14 1ecc 01 pmshell
+ 0015  0006 0001 0006 0008 blk 0200 7b950000 7bb460d0 7bb2a07c      01 pmshell
+ 0016  0006 0001 0006 0009 blk 0200 7b952000 7bb460d0 7bb2a230      01 pmshell
+ 0017  0006 0001 0006 000a blk 0800 7b954000 7bb460d0 7bb2a3e4      01 pmshell
+ 0018  0006 0001 0006 000b blk 0800 7b956000 7bb460d0 7bb2a598      01 pmshell
+ 0019  0006 0001 0006 000c blk 0800 7b958000 7bb460d0 7bb2a74c 1eb8 01 pmshell
+ 001a  0006 0001 0006 000d blk 0804 7b95a000 7bb460d0 7bb2a900 1ea8 01 pmshell
+ 001b  0006 0001 0006 000e blk 0804 7b95c000 7bb460d0 7bb2aab4 1eb0 01 pmshell
+ 001c  0006 0001 0006 000f blk 0500 7b95e000 7bb460d0 7bb2ac68 1ea8 01 pmshell
+ 001d  0006 0001 0006 0010 blk 0800 7b960000 7bb460d0 7bb2ae1c 1bb0 01 pmshell
+ 001e  0006 0001 0006 0011 blk 0800 7b962000 7bb460d0 7bb2afd0 1b8c 01 pmshell
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 001f  0006 0001 0006 0012 blk 0200 7b964000 7bb460d0 7bb2b184 1eb8 01 pmshell
+ 0009  0007 0006 0007 0001 blk 0800 7b938000 7bb44020 7bb28c0c      00 harderr
+ 0011  0007 0006 0007 0002 blk 0800 7b948000 7bb44020 7bb299ac      00 harderr
+ 0012  0007 0006 0007 0003 blk 0800 7b94a000 7bb44020 7bb29b60      00 harderr
+ 000a  0003 0000 0003 0001 blk 0200 7b93a000 7bb4484c 7bb28dc0      00 lanmsgex
+ 000b  0004 0000 0004 0001 blk 080b 7b93c000 7bb45078 7bb28f74 1cf0 00 landll
+ 000c  0005 0000 0005 0001 blk 0200 7b93e000 7bb458a4 7bb29128      00 lsdaemon
+ 0014  0008 0000 0008 0001 blk 0200 7b94e000 7bb468fc 7bb29ec8      01 stoplan
+ 0020  0009 0006 0009 0001 blk 0200 7b966000 7bb47128 7bb2b338      10 cmd
+ 0021  000a 0006 000a 0001 blk 0500 7b968000 7bb47954 7bb2b4ec 1eb8 11 pmshell
+ 0023  000a 0006 000a 0002 blk 0200 7b96c000 7bb47954 7bb2b854 1ecc 11 pmshell
+ 0024  000a 0006 000a 0003 blk 0200 7b96e000 7bb47954 7bb2ba08 1eb8 11 pmshell
+ 0025  000a 0006 000a 0004 blk 0200 7b970000 7bb47954 7bb2bbbc      11 pmshell
+ 0026  000a 0006 000a 0005 blk 0200 7b972000 7bb47954 7bb2bd70 1ecc 11 pmshell
+ 0027  000a 0006 000a 0006 blk 0200 7b974000 7bb47954 7bb2bf24      11 pmshell
+ 0028  000a 0006 000a 0007 blk 0200 7b976000 7bb47954 7bb2c0d8      11 pmshell
+ 0029  000a 0006 000a 0008 blk 0200 7b978000 7bb47954 7bb2c28c      11 pmshell
+ 002a  000a 0006 000a 0009 blk 0200 7b97a000 7bb47954 7bb2c440      11 pmshell
+ 002c  000a 0006 000a 000b blk 0200 7b97e000 7bb47954 7bb2c7a8 1eac 11 pmshell
+ 002d  000a 0006 000a 000c blk 0200 7b980000 7bb47954 7bb2c95c 1eb8 11 pmshell
+ 002b  000d 0006 000d 0001 blk 0200 7b97c000 7bb48180 7bb2c5f4 1eb8 12 mrfilepm
+ 0022  000d 0006 000d 0002 blk 0200 <!-- entering slot 194 -->7b96a000 7bb48180 7bb2b6a0 1ecc 12 mrfilepm
+ 002e  000f 000e 000f 0001 blk 0200 7b982000 7bb491d8 7bb2cb10      13 fvp
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 002f  000e 0006 000e 0001 blk 0200 7b984000 7bb489ac 7bb2ccc4      13 cmd
+ 0030  0010 0006 0010 0001 blk 0200 7b986000 7bb49a04 7bb2ce78 1ed4 14 cmd
+ 0031  0018 0010 0018 0001 blk 0200 7b988000 7bb4a230 7bb2d02c 1f00 14 aries
+ 0032  0017 0006 0017 0001 blk 0400 7b98a000 7bb4aa5c 7bb2d1e0 1ed4 15 cmd
+ 0033  0019 0017 0019 0001 blk 0300 7b98c000 7bb4b288 7bb2d394 1f00 15 orian
+
+&gt;&gt;&gt; Pid 19 is single threaded and is blocked. See what its Block-Id is.
+
+
+##.pb 33
+ Slot  Sta BlockID  Name     Type        Addr    Symbol
+ 0033  blk fffe01bb orian    RamSem    e66f:0000
+
+&gt;&gt;&gt; Once again a RamSem. This time there's no point in looking back
+&gt;&gt;&gt; a few bytes to see if it's imbedded in a FastSafeRamSem because
+&gt;&gt;&gt; the RamSem is allocated at the beginning of segment e66f.
+
+&gt;&gt;&gt; Our only hope is to see who else has access to this semaphore.
+
+##.m e66f:0000
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0420 %fed03aca 00000010 %1ccd0000 369 03f1 0075 0000 0000 051b 0000  hco=007ff
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 051b  0420 0000  4a2c ff82 04f1  0000 00  00 00 00 mshare
+ hco=007ff pco=fe85f816  hconext=007b6 hptda=04d1 f=16  pid=0019 a:orian.exe
+ hco=007b6 pco=fe85f6a9  hconext=00000 hptda=04fd f=17  pid=0018 a:aries.exe
+
+&gt;&gt;&gt; The RamSem is allocated in Named Shared Storage (mshare is the
+&gt;&gt;&gt; owner). The only two processes able to access this are Pids 19 and
+&gt;&gt;&gt; 18. Pid 19 is this thread, which we know doesn't own this RamSem
+&gt;&gt;&gt; since it's waiting for it. The leaves 18.
+
+&gt;&gt;&gt; We can't be certain from the evidence presented so far, but we can
+&gt;&gt;&gt; say:
+&gt;&gt;&gt; Either the RamSem is owned by 18, or it was owned by another
+&gt;&gt;&gt; thread that has since terminated. If it is owned by 18 then we
+&gt;&gt;&gt; have a deadlock between 18 and 19:
+&gt;&gt;&gt; orian.exe owns the FSRamSem and is waiting for the RamSem.
+&gt;&gt;&gt; aries.exe owns the RamSem and is waiting for the FSRamSem.
+
+</PRE>
+ 
+<P>
+Fortunately simple RAMSEMs are becoming something of the past. And now that
+<!-- entering slot 195 -->PM is 32-bit we will not see many Fast Safe RAMSEM
+either. We will look in detail later on at the semaphore structure that
+has replaced the FSRSEM in PM: the PMSEM and GRESEM. 
+
+<P><HR>
+
+<A HREF="151_L5_BlockingonaChildWait.html">[Back: Blocking on a ChildWait]</A> <BR>
+<A HREF="153_L5_TheMUXWait.html">[Next: The MUX Wait]</A> 
+</BODY>
+</HTML>

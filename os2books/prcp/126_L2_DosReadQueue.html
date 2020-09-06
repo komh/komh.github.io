@@ -1,0 +1,131 @@
+<HTML>
+<HEAD>
+<TITLE>DosReadQueue</TITLE>
+</HEAD>
+<BODY>
+<H1>DosReadQueue</H1><!-- entering slot 156 -->Bindings:  <A HREF="301_L2H_DosReadQueue.html">C</A>,
+<A HREF="476_L2H_DosReadQueue.html">MASM</A>
+<BR>
+
+<P>
+This call reads an element from a queue and removes it.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+DosReadQueue<!-- lm: 0x2 20 -->
+<UL> (QueueHandle, Request, DataLength,
+DataAddress, ElementCode, NoWait, ElemPriority, SemaphoreHandle)<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+<B>QueueHandle</B> (HQUEUE) - input<!-- lm: 0x11 4 -->
+<UL> Handle of the
+queue to read from.<!-- lm: 0x2 1 -->
+</UL><B> Request</B> (PULONG) - output
+<!-- lm: 0x11 4 -->
+<UL>Address of a data field that returns the following
+information.
+<P>
+The first word is the PID of the process that added the element to the queue.
+
+<P>
+The second word is used for event encoding by the application. The data
+in this word is the same as that furnished by the Request parameter on the
+<A HREF="175_L2_DosWriteQueue.html">DosWriteQueue</A> request for the corresponding
+queue element.<!-- lm: 0x2 1 -->
+</UL><B> DataLength</B> (PUSHORT) - output
+<!-- lm: 0x11 4 -->
+<UL>Address of the length of the data being received.
+<!-- lm: 0x2 1 -->
+</UL><B>DataAddress</B> (PULONG) - output<!-- lm: 0x11 4 -->
+<UL> Address
+of the element being received from the queue.<!-- lm: 0x2 1 -->
+</UL><B> ElementCode
+</B>(USHORT) - input<!-- lm: 0x11 4 -->
+<UL> Overrides the normal priority,
+FIFO-, or LIFO-read ordering.  This operand is used to identify a specific
+element that is to be read. This field can be set to zero to read the first
+element in the queue, or it can contain an identifier for a particular element,
+which was returned to ElementCode by a <A HREF="096_L2_DosPeekQueue.html">DosPeekQueue
+</A>request.<!-- lm: 0x2 1 -->
+</UL><B> NoWait</B> (UCHAR) - input<!-- lm: 0x11 4 -->
+<UL> Action
+to be performed when no entries are found in the queue.<!-- lm: 0x2 4 -->
+<P>
+Value<!-- lm: 0x2 14 -->
+<UL> Definition<!-- lm: 0x2 4 -->
+</UL>0<!-- lm: 0x2 14 -->
+<UL> The requesting thread waits.<!-- lm: 0x2 4 -->
+</UL>1<!-- lm: 0x2 14 -->
+<UL> The requesting thread does not wait.<!-- lm: 0x2 1 -->
+</UL><B> ElemPriority
+</B>(PBYTE) - output<!-- lm: 0x11 4 -->
+<UL> Address of the element's priority.
+ This is the value that was specified for ElemPriority by the <A HREF="175_L2_DosWriteQueue.html">DosWriteQueue
+</A>call that added the element to the queue. ElemPriority is a numeric
+value in the range of 0 to 15, with 15 being the highest priority.<!-- lm: 0x2 1 -->
+</UL><B> SemaphoreHandle
+</B>(HSEM) - input<!-- lm: 0x11 4 -->
+<UL> Handle of the semaphore cleared
+when an element is written to the queue and NoWait=0 is specified. If NoWait=1
+is specified, this parameter should be set to null.
+<P>
+The semaphore can be either a RAM or system semaphore. If the semaphore
+is a RAM semaphore, it must be in a segment that is shared between the process
+that owns the queue and any process that issues a <A HREF="175_L2_DosWriteQueue.html">DosWriteQueue
+</A>request to the queue.
+<P>
+If multiple threads are processing elements from the queue using NoWait=0,
+the same semaphore must be provided on all <A HREF="096_L2_DosPeekQueue.html">DosPeekQueue
+</A>or DosReadQueue requests.<!-- lm: 0x2 1 -->
+</UL><B> rc</B> (USHORT)
+- return<!-- lm: 0x11 4 -->
+<UL> Return code descriptions are:<!-- lm: 0x2 4 -->
+<P>
+<LI><!-- lm: 0x2 14 -->NO_ERROR<!-- lm: 0x2 4 --> 330<!-- lm: 0x2 14 -->
+<UL> ERROR_QUE_PROC_NOT_OWNED
+<!-- lm: 0x2 4 -->
+</UL>333<!-- lm: 0x2 14 -->
+<UL> ERROR_QUE_ELEMENT_NOT_EXIST<!-- lm: 0x2 4 -->
+</UL>337<!-- lm: 0x2 14 -->
+<UL> ERROR_QUE_INVALID_HANDLE<!-- lm: 0x2 4 -->
+</UL>342<!-- lm: 0x2 14 -->
+<UL> ERROR_QUE_EMPTY<!-- lm: 0x2 4 -->
+</UL>433<!-- lm: 0x2 14 -->
+<UL> ERROR_QUE_INVALID_WAIT<!-- lm: 0x2 1 -->
+</UL><B>Remarks</B>
+<P>
+A process that creates a queue with <A HREF="018_L2_DosCreateQueue.html">DosCreateQueue
+</A>owns it. Only the owning process and any threads it creates can issue
+DosReadQueue to remove an element from the queue. If the queue is empty
+and NoWait = 0 is specified, the thread waits for an element to be written
+to the queue. If the queue is empty and NoWait = 1 is specified, the thread
+returns with ERROR_QUE_EMPTY.
+<P>
+If ElementCode is set to zero, the elements in the queue are removed in
+the order specified at the time of the queue's creation (FIFO, LIFO, or
+priority).
+<P>
+ElementCode can also be set to a value returned by <A HREF="096_L2_DosPeekQueue.html">DosPeekQueue</A>,
+which uses ElementCode to return identifiers for successive queue elements.
+ The assigning of identifiers by <A HREF="096_L2_DosPeekQueue.html">DosPeekQueue
+</A>to individual queue elements allows the queue owner to examine a queue
+element with <A HREF="096_L2_DosPeekQueue.html">DosPeekQueue</A> and compare
+it with a queue element it has read.
+<P>
+The semaphore provided by SemaphoreHandle is typically used by a <A HREF="089_L2_DosMuxSemWait.html">DosMuxSemWait
+</A>request to wait for an element to be written to a queue or other events.
+If DosReadQueue is issued with NoWait=0, it clears the semaphore indicated
+by SemaphoreHandle as soon as the element is read.
+<P>
+The Request, DataLength and DataAddress parameters contain data understood
+by the thread adding the element to the queue and by the thread that receives
+the queue element. There is no special meaning to this data; applications
+may use these parameters for any purpose they wish. OS/2 does not alter
+this data; it simply copies this data intact. OS/2 does not validate the
+address of DataBuffer or the DataLength.
+
+<P><HR>
+
+<A HREF="125_L2_DosReadAsync.html">[Back: DosReadAsync]</A> <BR>
+<A HREF="127_L2_DosReallocHuge.html">[Next: DosReallocHuge]</A> 
+</BODY>
+</HTML>

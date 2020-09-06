@@ -1,0 +1,279 @@
+<HTML>
+<HEAD>
+<TITLE>_DLL_InitTerm - Initialize and Terminate DLL Environment</TITLE>
+</HEAD>
+<BODY>
+<H1>_DLL_InitTerm - Initialize and Terminate DLL Environment</H1><!-- entering slot 99 -->_DLL_InitTerm - Initialize and Terminate DLL Environment
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>unsigned long _DLL_InitTerm(unsigned long <I>modhandle</I>,
+                                    unsigned long <I>flag</I>);
+/* no header file - defined in run-time startup code */
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Description
+<P>
+<!-- lm: 0x2 10 -->
+<UL><LI>DLL_InitTerm is the initialization and termination
+entry point for a DLL. When each new process gains access to the DLL, _DLL_InitTerm
+initializes the necessary environment for the DLL, including storage, semaphores,
+and variables. When each process frees its access to the DLL, _DLL_InitTerm
+terminates the DLL environment created for that process.
+<P>
+The default _DLL_InitTerm function performs the actions required to initialize
+and terminate the run-time environment, or for subsystem DLLs, to initialize
+and terminate memory functions. It is called automatically when you link
+to the DLL. If your DLL requires initialization or termination actions in
+addition to the actions performed in the default function, you will need
+to create your own _DLL_InitTerm function.
+<P>
+If the value of the<I> flag</I> parameter is 0, the DLL environment is initialized.
+If the value of the<I> flag</I> parameter is 1, the DLL environment is ended.
+
+<P>
+The<I> modhandle</I> parameter is the module handle assigned by the operating
+system for this DLL. You can use the module handle as a parameter to various
+OS/2 function calls. For example, you can call DosQueryModuleName with the
+module handle to return the fully-qualified path name of the DLL, which
+tells you where the DLL was loaded from.
+<P>
+For more information on creating your own _DLL_InitTerm function, see the
+chapter "Building Dynamic Link Libraries in the<I> VisualAge C++ Programming
+Guide</I>.
+<P>
+<B>Note: </B> A _DLL_InitTerm function for a subsystem DLL has the same
+prototype, but the content of the function is different because there is
+no run-time environment to initialize or terminate. For more information
+on building subsystem DLLs, see the section "Building a Subsystem DLL" in
+the<I> VisualAge C++ Programming Guide</I>.<!-- lm: 0x2 10 -->
+<P>
+<!-- lm: 0x2 1 -->
+</UL>Returns
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+The return code from _DLL_InitTerm tells the loader if the initialization
+or termination was performed successfully. If the call was successful, _DLL_InitTerm
+returns a nonzero value. A return code of 0 indicates that the function
+failed. If a failure is indicated, the loader will not load the program
+that is accessing the DLL.<!-- lm: 0x2 1 -->
+</UL> Example Code
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+The following example shows the _DLL_InitTerm function sample program for
+building DLLs.
+<PRE>#define  INCL_DOSMODULEMGR
+#define  INCL_DOSPROCESS
+#include &lt;os2.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+/* _CRT_init is the C run-time environment initialization function.         */
+/* It will return 0 to indicate success and -1 to indicate failure.         */
+
+int _CRT_init(void);
+#ifdef   STATIC_LINK
+
+/* _CRT_term is the C run-time environment termination function.            */
+/* It only needs to be called when the C run-time functions are statically  */
+/* linked.                                                                  */
+
+void _CRT_term(void);
+#else
+
+/* A clean up routine registered with DosExitList must be used if run-time  */
+/* calls are required and the run time is dynamically linked.  This will    */
+/* guarantee that this clean up routine is run before the library DLL is    */
+/* terminated.                                                              */
+
+static void cleanup(ULONG ulReason);
+#endif
+size_t nSize;
+int *pArray;
+
+/* _DLL_InitTerm is the function that gets called by the operating system   */
+/* loader when it loads and frees this DLL for each process that accesses   */
+/* this DLL.  However, it only gets called the first time the DLL is loaded */
+/* and the last time it is freed for a particular process.  The system      */
+/* linkage convention MUST be used because the operating system loader is   */
+/* calling this function.                                                   */
+
+unsigned long _DLL_InitTerm(unsigned long <!-- entering slot 100 -->hModule, unsigned long
+                                    ulFlag)
+{
+   size_t i;
+   APIRET rc;
+   char namebuf[CCHMAXPATH];
+   /* If ulFlag is zero then the DLL is being loaded so initialization should*/
+   /* be performed.  If ulFlag is 1 then the DLL is being freed so          */
+   /* termination should be performed.                                      */
+</PRE>
+
+<PRE>   switch (ulFlag) {
+      case 0 :
+
+         /*******************************************************************/
+         /* The C run-time environment initialization function must be      */
+         /* called before any calls to C run-time functions that are not    */
+         /* inlined.                                                        */
+         /*******************************************************************/
+
+         if (_CRT_init() == -1)
+            return 0UL;
+#ifndef  STATIC_LINK
+
+         /********************************************************************/
+         /* A DosExitList routine must be used to clean up if run-time calls */
+         /* are required and the run time is dynamically linked.              */
+         /********************************************************************/
+
+            if (rc = DosExitList(0x0000FF00|EXLST_ADD, cleanup))
+            printf("DosExitList returned %lu\n", rc);
+#endif
+         if (rc = DosQueryModuleName(hModule, CCHMAXPATH, namebuf))
+            printf("DosQueryModuleName returned %lu\n", rc);
+         else
+            printf("The name of this DLL is %s\n", namebuf);
+         srand(17);
+         nSize = (rand()%128)+32;
+         printf("The array size for this process is %u\n", nSize);
+         if ((pArray = malloc(nSize *sizeof(int))) == NULL) {
+            printf("Could not allocate space for unsorted array.\n");
+            return 0UL;
+         }
+         for (i = 0; i &lt; nSize; ++i)
+            pArray[i] = rand();
+         break;
+      case 1 :
+#ifdef   STATIC_LINK
+         printf("The array will now be freed.\n");
+         free(pArray);
+         _CRT_term();
+#endif
+         break;
+      default  :
+         printf("ulFlag = %lu\n", ulFlag);
+         return 0UL;
+   }
+   /* A non-zero value must be returned to indicate success.                */
+
+   return 1UL;
+}
+#ifndef  STATIC_LINK
+static void cleanup(ULONG ulReason)
+{
+   if (!ulReason) {
+      printf("The array will now be freed.\n");
+      free(pArray);
+   }
+   DosExitList(EXLST_EXIT, cleanup);
+   return ;
+}
+#endif
+</PRE>
+
+<P>
+
+<P>
+The following example shows the _DLL_InitTerm function sample for building
+subsystem DLLs.
+<PRE>/* _DLL_InitTerm() - called by the loader for DLL
+initialization/termination  */
+/* This function must return a non-zero value if successful and a zero value  */
+/* if unsuccessful.                                                           */
+
+unsigned long _DLL_InitTerm( unsigned long hModule, unsigned long ulFlag )
+   {
+   APIRET rc;
+
+   /* If ulFlag is zero then initialization is required:                      */
+   /*    If the shared memory pointer is NULL then the DLL is being loaded    */
+   /*    for the first time so acquire the named shared storage for the       */
+   /*    process control structures.  A linked list of process control        */
+   /*    structures will be maintained.  Each time a new process loads this   */
+   /*    DLL, a new process control structure is created and it is inserted   */
+   /*    at the end of the list by calling DLLREGISTER.                       */
+   /*                                                                         */
+   /* If ulFlag is 1 then termination is required:                            */
+   /*    Call DLLDEREGISTER which will remove the process control structure   */
+   /*    and free the shared memory block from its virtual address space.     */
+
+   switch( ulFlag )
+      {
+      case 0:
+         if ( !ulProcessCount )
+            {
+            /* Create the shared mutex semaphore.                             */
+
+            if ( ( rc = DosCreateMutexSem( SHARED_SEMAPHORE_NAME,
+                                           &amp;hmtxSharedSem,
+                                           0,
+                                           FALSE ) ) != NO_ERROR )
+               {
+               printf( "DosCreateMutexSem rc = %lu\n", rc );
+               return 0;
+               }
+            }
+         /* Register the current process.                                     */
+
+         if ( DLLREGISTER( ) )
+            return 0;
+         break;
+
+      case 1:
+         /* De-register the current process.                                  */
+
+         if ( DLLDEREGISTER( ) )
+            return 0;
+         break;
+
+      default:
+         return 0;
+      }
+
+   /* Indicate success.  Non-zero means success!!!             */
+
+   return 1;
+   }
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Related Information
+<P>
+<!-- lm: 0x2 10 -->
+<UL><!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 --><LI>Building a Dynamic Link Library" in the<I> VisualAge
+C++ Programming Guide</I><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><LI>Building a Subsystem DLL" in the<I> VisualAge
+C++ Programming Guide</I><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="090_L2__CRT_initInitializeD.html"><LI>CRT_init
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="091_L2__CRT_termTerminateDL.html"><LI>CRT_term
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="229_L2__rmem_initInitialize.html"><LI>rmem_init
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="230_L2__rmem_termTerminateM.html"><LI>rmem_term
+</A><!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="096_L2_divCalculateQuotient.html">[Back: div - Calculate Quotient and Remainder]</A> <BR>
+<A HREF="098_L2_dupAssociateSecondHa.html">[Next: dup - Associate Second Handle with Open File]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,137 @@
+<HTML>
+<HEAD>
+<TITLE>DosExitList</TITLE>
+</HEAD>
+<BODY>
+<H1>DosExitList</H1><!-- entering slot 42 -->Bindings:  <A HREF="211_L2H_DosExitList.html">C</A>,
+<A HREF="386_L2H_DosExitList.html">MASM</A>
+<BR>
+
+<P>
+This call maintains a list of routines that execute when the current process
+ends.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+DosExitList<!-- lm: 0x2 15 -->
+<UL> (FcnCode_Order, RtnAddress)<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+<B>FcnCode_Order</B> (USHORT) - input<!-- lm: 0x11 4 -->
+<UL> Two-byte fields.
+The low-order byte indicates the operation being performed by DosExitList,
+which can be used to update the list of routines, or to transfer to the
+next address on the termination list at the completion of a routine. The
+values of the byte and their meanings are:<!-- lm: 0x2 4 -->
+<P>
+Value<!-- lm: 0x2 14 -->
+<UL> Definition<!-- lm: 0x2 4 -->
+</UL>1<!-- lm: 0x2 14 -->
+<UL> Add address to termination list.<!-- lm: 0x2 4 -->
+</UL>2<!-- lm: 0x2 14 -->
+<UL> Remove address from termination list.<!-- lm: 0x2 4 -->
+</UL>3<!-- lm: 0x2 14 -->
+<UL> Transfer to next address on termination list.
+<!-- lm: 0x2 1 -->
+</UL> <!-- lm: 0x11 4 -->
+<UL> The high-order byte indicates
+the invocation order. This value is valid only when the low-order byte is
+1 (add an address).  For the other low-order byte values, the high-order
+byte must be set to zero.<!-- lm: 0x2 1 -->
+</UL>  <!-- lm: 0x11 4 -->
+<UL> The
+invocation order determines the order in which routines are invoked. Routines
+given a value of 0 are invoked first and routines with a value of 255 are
+invoked last. If more than one routine is added with the same invocation
+order value, the last routine to be added is invoked first. The following
+values are used by OS/2 components:<!-- lm: 0x2 4 -->
+<P>
+Value<!-- lm: 0x2 16 -->
+<UL> Definition<!-- lm: 0x2 4 -->
+</UL>80H-88H<!-- lm: 0x2 16 -->
+<UL> OS/2 Extended Edition Database Manager
+<!-- lm: 0x2 4 -->
+</UL>90H-98H<!-- lm: 0x2 16 -->
+<UL> OS/2 Extended Edition Communications
+Manager<!-- lm: 0x2 4 -->
+</UL>A0H-A8H<!-- lm: 0x2 16 -->
+<UL> OS/2 Presentation Manager<!-- lm: 0x2 4 -->
+</UL>B0H<!-- lm: 0x2 16 -->
+<UL> OS/2 KBD component<!-- lm: 0x2 4 -->
+</UL>C0H<!-- lm: 0x2 16 -->
+<UL> OS/2 VIO component<!-- lm: 0x2 4 -->
+</UL>D0H<!-- lm: 0x2 16 -->
+<UL> OS/2 IPC Queues component<!-- lm: 0x2 1 -->
+</UL><B> RtnAddress
+</B>(PFNEXITLIST) - input<!-- lm: 0x11 4 -->
+<UL> The address of a routine
+to be executed. This address cannot be in an IOPL segment.<!-- lm: 0x2 1 -->
+</UL><B> rc
+</B>(USHORT) - return<!-- lm: 0x11 4 -->
+<UL> Return code descriptions are:
+<!-- lm: 0x2 4 -->
+<P>
+<LI><!-- lm: 0x2 14 -->NO_ERROR<!-- lm: 0x2 4 --> 8<!-- lm: 0x2 14 -->
+<UL> ERROR_NOT_ENOUGH_MEMORY
+<!-- lm: 0x2 4 -->
+</UL>13<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_DATA<!-- lm: 0x2 1 -->
+</UL><B>Remarks</B>
+<P>
+DosExitList maintains a list of addresses to routines that receive control
+when a process is terminated.  These addresses must be in the address space
+of the terminating process. DosExitList routines perform clean-up operations
+on resources. For example, DosExitList can be used in a dynamic link library
+module to free resources and semaphores after a client program has ended.
+
+<P>
+During DosExitList processing, the process is in a state of partial termination.
+ All threads of the process are terminated, except for the one executing
+the routines.  Ownership of any exclusive semaphores created by the process
+with <A HREF="019_L2_DosCreateSem.html">DosCreateSem</A> was transferred
+to the DosExitList thread, so the thread can access protected resources.
+Termination routines should be short and fail-safe, so there is minimum
+delay in completing process termination.
+<P>
+Before transferring control to the termination routines, OS/2 resets the
+stack to its initial value. Transfer is by way of a JMP instruction. The
+first parameter on the stack (located at SS:SP+4) contains an indicator
+of why the process ended. The meanings of values returned are the same as
+those for termination codes returned by <A HREF="021_L2_DosCwait.html">DosCwait
+</A>or  <A HREF="033_L2_DosExecPgm.html">DosExecPgm</A> requests. These
+values are:<!-- lm: 0x2 1 -->
+<P>
+<LI><!-- lm: 0x2 11 -->EXIT (normal exit)<!-- lm: 0x2 1 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->Hard error abort<!-- lm: 0x2 1 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->Trap operation<!-- lm: 0x2 1 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->Unintercepted <A HREF="075_L2_DosKillProcess.html">DosKillProcess</A>.
+<!-- lm: 0x2 1 -->
+<BR>
+
+<P>
+Each routine on the list receives control in numeric order by function high-order
+byte. For example, low (0) is first with high (0FFH) being last.  In case
+of duplicate entries for the same value, the routines are executed in LIFO
+order.
+<P>
+When a routine has completed its processing, it issues<!-- entering slot 43 -->
+DosExitList with function = 3. Control is then transferred to the next address
+in the invocation order. If a routine on the list does not issue DosExitList
+at the completion of its processing, the process hangs, and OS/2 prevents
+termination. When all addresses are serviced, the process completes exiting.
+
+<P>
+Most OS/2 system calls are valid in a DosExitList routine; however, certain
+functions such as <A HREF="020_L2_DosCreateThread.html">DosCreateThread
+</A>and <A HREF="033_L2_DosExecPgm.html">DosExecPgm</A> are not. Functions
+requested in a routine must not be higher in the function code order hierarchy
+than the invocation order specified for the routine.
+
+<P><HR>
+
+<A HREF="035_L2_DosExitCritSec.html">[Back: DosExitCritSec]</A> <BR>
+<A HREF="037_L2_DosFileIO.html">[Next: DosFileIO]</A> 
+</BODY>
+</HTML>

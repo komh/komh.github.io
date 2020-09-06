@@ -1,0 +1,162 @@
+<HTML>
+<HEAD>
+<TITLE>Generating a TRAP</TITLE>
+</HEAD>
+<BODY>
+<H1>Generating a TRAP</H1><!-- entering slot 94 -->
+<P>
+A trap can be issued at any time after a DPI OPEN was successful. To do
+so, you must create a trap packet and send it to the agent.  With the TRAP,
+you can pass all sorts of varBinds if you want.  In this example, we pass
+two varBinds one with integer data and one with an octet string.  You can
+also pass an Enterprise ID, but with DPI 2.0, the agent will use your subagent
+ID as the enterprise ID if you do not pass one with the trap.  In most cases
+that will probably be fine.
+<P>
+We must first prepare a varBind list chain that contains the two variables
+that we want to pass along with the trap.  To do so we must prepare a chain
+of two snmp_dpi_set_packet structures, which looks like:
+<PRE>struct dpi_set_packet {
+  char                   *object_p;   /* ptr to OIDstring     */
+  char                   *group_p;    /* ptr to sub-tree      */
+  char                   *instance_p; /* ptr to rest of OID   */
+  unsigned char           value_type; /* SNMP_TYPE_xxxx       */
+  unsigned short          value_len;  /* value length         */
+  char                   *value_p;    /* ptr to value itself  */
+  struct dpi_set_packet  *next_p;     /* ptr to next in chain */
+};
+typedef struct dpi_set_packet        snmp_dpi_set_packet;
+#define snmp_dpi_set_packet_NULL_p   ((snmp_dpi_set_packet *)0)
+</PRE>
+
+<P>
+We can use the mkDPIset() function to prepare such a structure. This function
+expects the following parameters:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->A pointer to an existing snmp_dpi_set_packet structure
+if the new varBind must be added to an existing chain of varBinds.  If this
+is the first or the only varBind in the chain, pass the snmp_dpi_set_packet_NULL_p
+pointer to indicate this.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A pointer to the sub-tree that we registered.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A pointer to the rest of the OID, in other words,
+the piece that follows the sub-tree.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The value type of the value to be bound to the variable
+name.  This is must be one of the SNMP_TYPE_xxxx values as defined in the
+snmp_dpi.h include file.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The length of the value.  For integer type values,
+this must be a length of 4.  We always work with 32-bit signed or unsigned
+integers except for the Counter64 type.  For the Counter64 type, we must
+point to a snmp_dpi_u64 structure and pass the length of that structure.
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A pointer to the value.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Memory for the varBind is dynamically allocated and the data itself is copied.
+ Upon return, we can dispose of our own pointers and allocated memory as
+we please.  If the call is successful, a pointer is returned as follows:
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->To a new snmp_dpi_set_packet if it is the first or
+only varBind.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->To the existing snmp_dpi_set_packet that we passed
+on the call.  In this case, the new packed has been chained to the end of
+the varBind list.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+If the mkDPIset() call fails, a NULL pointer is returned.
+<P>
+Once we have prepared the SET-varBind data, we can create a DPI TRAP packet.
+ To do so we can use the mkDPItrap() function which expects these parameters:
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->The generic trap code.  Use 6 for enterprise specific
+trap type.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The specific trap type.  This is a type that is defined
+by the MIB which we are implementing.  In our example we just use a 1.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A pointer to a chain of varBinds or the NULL pointer
+if no varBinds need to be passed with the trap.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A pointer to the enterprise OID if we want to use
+a different enterprise ID than the OID we used to identify ourselves as
+a subagent at DPI-OPEN time.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following code creates an enterprise specific trap with specific type
+1 and passes two varBinds.  The first varBind with our object 1, instance
+0, Integer32 value; the second varBind with our object 2, instance 0, Octet
+String.  We pass no enterprise ID.
+<PRE>static int do_trap(void){
+  unsigned char       *packet_p;
+  int                  rc;
+  snmp_dpi_set_packet *varBind_p;
+
+  varBind_p =                        /* init the varBindchain */
+     snmp_dpi_set_packet_NULL_p,     /* to a NULL pointer     */
+
+  varBind_p = mkDPIset(              /* Make DPI set packet   */
+                varBind_p,           /* ptr to varBind chain  */
+                DPI_SIMPLE_MIB,      /* ptr to sub-tree       */
+                DPI_SIMPLE_INTEGER,  /* ptr to rest of OID    */
+                SNMP_TYPE_Integer32, /* value type Integer 32 */
+                sizeof(value1),      /* length of value       */
+                &amp;value1);            /* ptr to value          */
+
+  if (<!-- entering slot 95 -->!varBind_p) return(-1);        /* If it failed, return  */
+
+  varBind_p = mkDPIset(                 /* Make DPI set packet*/
+                varBind_p,              /* ptr to varBindchain*/
+                DPI_SIMPLE_MIB,         /* ptr to sub-tree    */
+                DPI_SIMPLE_STRING,      /* ptr to rest of OID */
+                SNMP_TYPE_DisplayString,/* value type         */
+                strlen(value2_p),       /* length of value    */
+                value2_p);              /* ptr to value       */
+
+  if (!varBind_p) return(-1);        /* If it failed, return  */
+</PRE>
+
+<PRE>
+  varBind_p = mkDPIset(                 /* Make DPI set packet*/
+                varBind_p,              /* ptr to varBindchain*/
+                DPI_SIMPLE_MIB,         /* ptr to sub-tree    */
+                DPI_SIMPLE_COUNTER32,   /* ptr to rest of OID */
+                SNMP_TYPE_Counter32,    /* value type         */
+                sizeof(value3),         /* length of value    */
+                &amp;value3);               /* ptr to value       */
+
+  if (!varBind_p) return(-1);        /* If it failed, return  */
+
+  packet_p = mkDPItrap(              /* Make DPItrap packet   */
+               6,                    /* enterpriseSpecific    */
+               1,                    /* specific type = 1     */
+               varBind_p,            /* varBind data, and use */
+               (char *)0);           /* default enterpriseID  */
+
+  if (!packet_p) return(-1);         /* If it failed, return  */
+
+  rc  = DPIsend_packet_to_agent(     /* send TRAP packet      */
+           handle,                   /* on this connection    */
+           packet_p,                 /* this is the packet    */
+           DPI_PACKET_LEN(packet_p));/* and this is its length*/
+
+  return(rc);                        /* return retcode        */
+} /* end of do_trap() */
+</PRE>
+
+
+<P><HR>
+
+<A HREF="085_L2_ProcessingaCLOSERequ.html">[Back: Processing a CLOSE Request]</A> <BR>
+<A HREF="087_L1_Notices.html">[Next: Notices]</A> 
+</BODY>
+</HTML>

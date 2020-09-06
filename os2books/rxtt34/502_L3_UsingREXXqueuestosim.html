@@ -1,0 +1,189 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Using REXX queues to simulate a semaphore</TITLE>
+</HEAD>
+<BODY>
+<H1>Using REXX queues to simulate a semaphore</H1><!-- entering slot 519 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* REXX procedure to use a REXX queue to simulate a semaphore         */
+/* based on an idea and code of Petges Romain                         */
+/* (see <A HREF="960_L2H_EMailaddressesR.html">EMail Addresses</A>)                                              */
+/*                                                                    */
+/*                                                                    */
+/* (see also <A HREF="501_L3_Simulateasemaphore.html">Simulate a semaphore</A> and <A HREF="503_L3_Usingafileassemaphor.html">Using a file as semaphore</A>)      */
+/*                                                                    */
+/* Summary of routines:                                               */
+/*                                                                    */
+/* CreateSemaphore                                                    */
+/* DeleteSemaphore                                                    */
+/* RequestSemaphore                                                   */
+/* ReleaseSemaphore                                                   */
+/*                                                                    */
+/*                                                                    */
+
+/* ------------------------------------------------------------------ */
+/* function: create a semaphore                                       */
+/*                                                                    */
+/* call:     CreateSemaphore {semName}                                */
+/*                                                                    */
+/* where:    SemName - name of the semaphore (def.: SEMWAIT)          */
+/*                                                                    */
+/* returns:  0 - semaphore created                                    */
+/*           -1 - semaphore already exist                             */
+/*           else error                                               */
+/*                                                                    */
+CreateSemaphore: PROCEDURE
+  parse arg SemName
+
+                        /* init the return code                       */
+  thisRC = -255
+
+                        /* check the parameter                        */
+  semName = CheckSemaphoreName( semName )
+
+                        /* try to create the queue                    */
+  newSem = rxQueue( "Create", semName )
+  if newSem &lt;&gt; semName then
+  do
+                        /* semaphore already exist                    */
+
+                        /* delete the just created queue              */
+    call rxqueue "Delete", newSem
+
+                        /* set the return code                        */
+    thisRC = -1
+  end /* if rxQueue( ... */
+  else
+  do
+                        /* semaphore successfull created              */
+
+                        /* release the semaphore                      */
+    thisRC = ReleaseSemaphore( semName )
+
+  end /* else */
+
+RETURN thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: delete a semaphore                                       */
+/*                                                                    */
+/* call:     DeleteSemaphore {semName}                                */
+/*                                                                    */
+/* where:    SemName - name of the semaphore (def.: SEMWAIT)          */
+/*                                                                    */
+/* returns:  0 - semaphore deleted                                    */
+/*           else errorcode from RXQUEUE                              */
+/*                                                                    */
+DeleteSemaphore: PROCEDURE
+  parse arg SemName
+
+  semName = CheckSemaphoreName( semName )
+
+  thisRC = rxQueue( "Delete", semName )
+
+RETURN thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: release a semaphore                                      */
+/*                                                                    */
+/* call:     ReleaseSemaphore {semName}                               */
+/*                                                                    */
+/* where:    SemName - name of the semaphore (def.: SEMWAIT)          */
+/*                                                                    */
+/* returns:  0 - semaphore released                                   */
+/*           -1 - semaphore does not exist                            */
+/*           else error                                               */
+/*                                                                    */
+ReleaseSemaphore: PROCEDURE
+  action = 'push "RELEASE"'
+  signal RR_Semaphore
+
+/* ------------------------------------------------------------------ */
+/* function: request a semaphore                                      */
+/*                                                                    */
+/* call:     RequestSemaphore {semName}                               */
+/*                                                                    */
+/* where:    SemName - name of the semaphore (def.: SEMWAIT)          */
+/*                                                                    */
+/* returns:  0 - got the semaphore                                    */
+/*           -1 - semaphore does not exist                            */
+/*           else error                                               */
+/*                                                                    */
+RequestSemaphore: PROCEDURE
+  action = 'call LineIn "QUEUE:"'
+
+RR_Semaphore:
+  parse arg SemName
+
+                        /* init the return code                       */
+  thisRC = 0
+
+                        /* check the parameter                        */
+  semName = CheckSemaphoreName( semName )
+
+
+                        /* try to create the queue                    */
+  newSem = rxQueue( "Create", semName )
+
+                        /* ... and delete it                          */
+  call rxqueue "Delete", newSem
+
+  if newSem &lt;&gt; semName then
+  do
+                        /* semaphore exist                            */
+
+                        /* save the current queue name                */
+    curQueue = RxQueue( "Get" )
+
+                        /* make the semaphore queue the active queue  */
+    call rxQueue "Set", semName
+
+                        /* check for errors                           */
+    if rxqueue( "Get" ) = semName then
+      interpret action          /* wait for the semaphore             */
+                                /* or free it                         */
+    else
+      thisRC = -2       /* error activating the queue                 */
+
+                        /* restore the active queue                   */
+    call rxQueue "Set", curQueue
+
+  end /* if rxQueue( ... */
+  else
+  do
+                        /* semaphore does not exist                   */
+                        /* set the return code                        */
+    thisRC = -1
+  end /* else */
+
+RETURN thisRC
+
+/* ------------------------------------------------------------------ */
+/* sub routine to check the name of the semaphore and use the default */
+/* if the name is missing                                             */
+/*                                                                    */
+CheckSemaphoreName: PROCEDURE
+  parse upper arg SemName
+
+  if SemName = "" then
+    semName = "SEMWAIT"
+RETURN semName
+
+/* ------------------------------------------------------------------ */
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="501_L3_Simulateasemaphore.html">[Back: Simulate a semaphore]</A> <BR>
+<A HREF="503_L3_Usingafileassemaphor.html">[Next: Using a file as semaphore]</A> 
+</BODY>
+</HTML>

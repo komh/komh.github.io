@@ -1,0 +1,167 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Read a textfile using CharIn()</TITLE>
+</HEAD>
+<BODY>
+<H1>Read a textfile using CharIn()</H1><!-- entering slot 491 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* Based on source code from John Wunderlin (see <A HREF="965_L2H_EMailaddressesW.html">EMail Addresses</A>)     */
+
+
+/* ------------------------------------------------------------------ */
+/* function: Read a file using CharIn() and split it into lines by    */
+/*           hand                                                     */
+/*                                                                    */
+/* call:     rxReadStem = stem_for_the_lines                          */
+/*           call RxReadTextFile fileName  {, lineSep }               */
+/*                                                                    */
+/* where:    rxReadStem - name of the stem for the file contents      */
+/*                        The name MUST end with a dot!               */
+/*           fileName - name of the file to read                      */
+/*           LineSep - line separator chars                           */
+/*                     (def.: "0D0A"x)                                */
+/*                                                                    */
+/* returns:                                                           */
+/*           0 -&gt; ok                                                  */
+/*           1 -&gt; parameter missing                                   */
+/*           2 -&gt; file not found                                      */
+/*           3 -&gt; variable referenced in RxReadStem is invalid        */
+/*           4 -&gt; NOTREADY condition occured                          */
+/*           5 -&gt; ERROR condition occured                             */
+/*           6 -&gt; FAILURE condition occured                           */
+/*           7 -&gt; unexpected condition occured                        */
+/*                                                                    */
+/* example:  To read the file \CONFIG.SYS into the stem 'CONFIG.' use */
+/*                                                                    */
+/*             rxReadStem = 'CONFIG.'                                 */
+/*             CONFIG.0 = 0                                           */
+/*             thisRC = RxReadTextFile( '\CONFIG.SYS' )               */
+/*                                                                    */
+/* History                                                            */
+/*   RXTT32: Corrected a bug in the handling of the result var        */
+/*           Added code to handle empty files correct                 */
+/*           Added code for more return codes                         */
+/*                                                                    */
+/*                                                                    */
+/*                                                                    */
+RxReadTextFile: PROCEDURE expose (RxReadStem) (exposeList)
+
+                    /* install local error handlers                   */
+  SIGNAL ON  NOTREADY Name RxReadTextFileError
+  SIGNAL ON  ERROR    Name RxReadTextFileError
+  SIGNAL ON  FAILURE  Name RxReadTextFileError
+
+                    /* init the return code                           */
+  thisRC = 3
+                    /* check the name of the variable for the         */
+                    /* result                                         */
+  if  symbol( rxReadStem || 0 ) = 'VAR' &amp; right( rxReadStem,1 ) = '.' then
+  do
+
+                    /* get the parameter                              */
+    parse arg fileName , lineSep
+
+                    /* remove leading and trailing blanks from the    */
+                    /* parameter                                      */
+    fileName = strip( fileName )
+    lineSep = strip( lineSep )
+
+                    /* use default line separator if necessary        */
+    if lineSep = "" then
+      lineSep = d2c(13) || d2c(10)
+
+                    /* set the return code                            */
+    thisRC = 1
+
+                    /* init the stem with the lines of the file       */
+    interpret drop rxReadStem
+    call value rxReadStem || '0', 0
+
+    if fileName &lt;&gt; "" then
+    do
+      if stream( fileName, "c", "QUERY EXISTS" ) &lt;&gt; "" then
+      do
+        if stream( fileName, "c", "QUERY SIZE" ) &lt;&gt; 0 then
+        do
+                    /* open the file                            v3.20 */
+           call stream fileName, "c", "OPEN READ"
+                    /* read the complete file using Charin()    v3.20 */
+           fileContents = charIN( fileName, 1, chars( fileName ) )
+                    /* close the file                           v3.20 */
+           call stream fileName, "c", "CLOSE"
+        end /* if */
+        else
+           fileContents = ""
+
+                    /* close the file                                 */
+        call stream fileName, "c", "CLOSE"
+
+                    /* split the file into lines by hand              */
+        startpos = 1
+        do lineCount = 1 by 1
+
+                    /* search the end of the current line             */
+          curpos = pos( lineSep,filecontents,startpos )
+          if curpos = 0 then
+            leave lineCount
+
+          lineLen = ( curpos - startpos )
+
+                    /* save the line in the stem                      */
+          call value rxReadStem || LineCount , ,
+                       substr( fileContents,startpos,linelen )
+
+          startpos = curpos + length( lineSep )
+        end lineCount
+
+                    /* save the no. of lines                          */
+        call value rxReadStem || '0' , lineCount -1
+
+                    /* set the return code                            */
+        thisRC = 0
+
+      end /* if stream( ... */
+    end /* if filename &lt;&gt; "" then */
+  end /* if */
+
+RETURN thisRC
+
+/* error exit for RxReadTextFile                                      */
+
+RxReadTextFileError:
+                    /* turn off the condition that caused the error   */
+  INTERPRET 'SIGNAL OFF ' condition( 'C' )
+
+  curCondition = condition('C')
+  select
+    when curCondition = 'NOTREADY' then
+      thisRC = 4
+    when curCondition = 'ERROR' then
+      thisRC = 5
+    when curCondition = 'FAILURE' then
+      thisRC = 6
+    otherwise
+      thisRC = 7
+  end /* select */
+
+                    /* close the file                                 */
+  call stream fileName, 'c', 'CLOSE'
+
+return thisRC
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="472_L3_Readafileintoacompou.html">[Back: Read a file into a compound variable]</A> <BR>
+<A HREF="474_L3_WriteastemusingCharO.html">[Next: Write a stem using CharOut()]</A> 
+</BODY>
+</HTML>

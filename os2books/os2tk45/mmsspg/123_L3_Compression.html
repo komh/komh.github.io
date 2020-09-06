@@ -1,0 +1,350 @@
+<HTML>
+<HEAD>
+<TITLE>Compression</TITLE>
+</HEAD>
+<BODY>
+<H1>Compression</H1><!-- entering slot 156 -->
+<P>
+The following section illustrates how to compress raw digital images into
+a smaller form so they can use less storage space.  Follow these steps for
+compression support:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Determine which CODEC procedure to use.<!-- lm: 0x2 2 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 6 -->Load the CODEC DLL file.<!-- lm: 0x2 2 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 6 -->Load and initialize the CODEC procedure.<!-- lm: 0x2 2 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 6 -->Call the CODEC to compress the data.<!-- lm: 0x2 2 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 6 -->Close the CODEC and release resources after use.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The IOSET.C file shown in the following example uses the MMEXTENDINFO data
+structure to set values for the source header, destination header, and other
+information.
+<P>
+<B>Note: </B> You can only associate one stream or track.<!-- lm: 0x2 1 -->
+<P>
+
+<PRE>/*************************START OF SPECIFICATIONS ****************//* SOURCE FILE NAME:  IOSET.C                                    */
+/*                                                               */
+/* DESCRIPTIVE NAME: File Format IOProc routine for MMIOM_SET    */
+/*                                                               */
+/* COPYRIGHT:     IBM - International Business Machines          */
+/*            Copyright (c) IBM Corporation  1991, 1992, 1993    */
+/*                        All Rights Reserved                    */
+/*                                                               */
+/* STATUS: OS/2 Release 2.0                                      */
+/*                                                               */
+/* FUNCTION: This source module contains the set functions.      */
+/* NOTES:                                                        */
+/*    DEPENDENCIES: none                                         */
+/*    RESTRICTIONS: Runs in 32-bit protect mode (OS/2 2.0)       */
+/*                                                               */
+/* ENTRY POINTS:                                                 */
+/*              IOProcSet                                        */
+/*                                                               */
+/************************* END OF SPECIFICATIONS *****************/
+
+#include        &lt;stdio.h&gt;
+#include        &lt;string.h&gt;
+#include        &lt;stdlib.h&gt;
+#include        &lt;memory.h&gt;
+
+#define         INCL_DOS             /* #define  INCL_DOSPROCESS.*/
+#define         INCL_ERRORS
+#define         INCL_WIN
+#define         INCL_GPI
+
+#include        &lt;os2.h&gt;              /* OS/2 headers.            */
+#include        &lt;pmbitmap.h&gt;
+
+#define         INCL_OS2MM
+#define         INCL_MMIO_CODEC
+#define         INCL_MMIO_DOSIOPROC
+
+#include        &lt;os2me.h&gt;            /* Multimedia IO extensions. */
+#include        &lt;hhpheap.h&gt;
+#include        &lt;ioi.h&gt;
+
+/************************** START OF SPECIFICATIONS **********/
+/*                                                           */
+/* SUBROUTINE NAME: IOProcSet                                */
+/*                                                           */
+/* DESCRIPTIVE NAME: Set various conditions in IOProc        */
+/*                                                           */
+/* FUNCTION:                                                 */
+/*                                                           */
+/* NOTES: None                                               */
+/*                                                           */
+/* ENTRY POINT: IOProcSet                                    */
+/*   LINKAGE:   CALL FAR (00:32)                             */
+/*                                                           */
+/* INPUT:                                                    */
+/*   PMMIOINFO   pmmioinfo - ptr to instance structure       */
+/*   LONG        lParam1  - first parameter                  */
+/*   LONG        lParam2  - Second parameter                 */
+/*                                                           */
+/*                                                           */
+/* EXIT-NORMAL:                                              */
+/*              MMIO_SUCCESS                                 */
+/*                                                           */
+/* EXIT-ERROR:                                               */
+/*              MMIO_ERROR                                   */
+/*                                                           */
+/* SIDE EFFECTS:                                             */
+/*                                                           */
+/*************************** END OF SPECIFICATIONS ***********/
+LONG IOProcSet ( PMMIOINFO pmmioinfo,
+                 LONG lParam1,
+                 LONG lParam2 )
+
+{
+   PINSTANCE       pinstance;
+   LONG            rc = MMIO_SUCCESS;
+   PMMEXTENDINFO   pmmextendinfo = (PMMEXTENDINFO)lParam1;
+   PCCB            pccb;
+   ULONG           ulCCBCount;
+   PCODECASSOC     pcodecassoc;
+   ULONG           ulSize;
+   PVOID           PtrNextAvail;
+
+   if (rc = ioGetPtrInstance(pmmioinfo,&amp;pinstance))
+      return(rc);
+
+   switch(lParam2){
+      /*************************/
+      /* SET INFO              */
+      /*************************/
+      case MMIO_SET_EXTENDEDINFO:   /* Set extended information */
+         if (pmmextendinfo) {     /* error check */
+
+            /********************/
+            /* Set active track */
+            /********************/
+            if (pmmextendinfo-&gt;ulFlags &amp; MMIO_TRACK) {
+
+               if (pmmextendinfo-&gt;ulTrackID == (ULONG)MMIO_RESETTRACKS) {
+                  pinstance-&gt;lCurrentTrack = pmmextendinfo-&gt;ulTrackID;
+                  }
+               else {
+                 if (pinstance-&gt;ulFlags &amp; OPENED_READONLY) {
+                   if (ioFindTracki(pinstance,pmmextendinfo-&gt;ulTrackID)) {
+                      pinstance-&gt;lCurrentTrack = pmmextendinfo-&gt;ulTrackID;
+                       }
+                     else {
+                        pmmioinfo-&gt;ulErrorRet = MMIOERR_INVALID_PARAMETER;
+                        rc = MMIO_ERROR;
+                        break;
+                        }
+                     }
+
+                  else if (pinstance-&gt;ulFlags &amp;
+                          (OPENED_READWRITE | OPENED_WRITECREATE)) {
+                     pinstance-&gt;lCurrentTrack = pmmextendinfo-&gt;ulTrackID;
+                     }
+
+                  else {
+                     pmmioinfo-&gt;ulErrorRet = MMIOERR_INVALID_PARAMETER;
+                     rc = MMIO_ERROR;
+                     break;
+                     }
+                  } /* else */
+               }  /* MMIO_TRACK */
+
+            /**********************************************************/
+            /* Reset all Non-normal <!-- entering slot 157 -->reading modes.  All request audio */
+            /* and video frames are returned.                         */
+            /**********************************************************/
+            if (pmmextendinfo-&gt;ulFlags &amp; MMIO_NORMAL_READ) {
+               pinstance-&gt;ulMode = MODE_NORMALREAD;
+               } /* MMIO_NORMAL_READ */
+
+            /***********************************************************/
+            /* Set IOProc into SCAN mode for the active track. Reading */
+            /* will now be done, but only Key frames are returned for  */
+            /* video.                                                  */
+            /***********************************************************/
+            else if (pmmextendinfo-&gt;ulFlags &amp; MMIO_SCAN_READ) {
+               pinstance-&gt;ulMode = MODE_SCANREAD;
+               } /* MMIO_SCAN_READ */
+
+            /***********************************************************/
+            /* Set IOProc into REVERSE mode for the active track.      */
+            /* Reading will now be done, but only Key frames are       */
+            /* returned for video                                      */
+            /***********************************************************/
+            else if (pmmextendinfo-&gt;ulFlags &amp; MMIO_REVERSE_READ) {
+               pinstance-&gt;ulMode = MODE_REVERSEREAD;
+               } /* MMIO_REVERSE_READ */
+
+            /****************************************************/
+            /* Associate CODEC information for recording        */
+            /****************************************************/
+            if (pmmextendinfo-&gt;ulFlags &amp; MMIO_CODEC_ASSOC) {
+
+               /* Don't alow a CODEC association for read only files */
+               if (pinstance-&gt;ulFlags &amp; OPENED_READONLY) {
+                  pmmioinfo-&gt;ulErrorRet = MMIOERR_INVALID_PARAMETER;
+                  rc = MMIO_ERROR;
+                  break;
+                  }
+
+               /* Can only associate 1 CODEC for record */
+               if (pmmextendinfo-&gt;ulNumCODECs == 1) {
+                  if (rc = ioAssociateCodec(pmmioinfo,
+                                            pinstance,
+                                            pmmextendinfo-&gt;pCODECAssoc)) {
+                     pmmioinfo-&gt;ulErrorRet = rc;
+                     rc = MMIO_ERROR;
+                     }
+                  }
+               else {
+                  pmmioinfo-&gt;ulErrorRet = MMIOERR_INVALID_PARAMETER;
+                  rc = MMIO_ERROR;
+                  }
+               } /* MMIO_CODEC_ASSOC */
+            } /* pmmextendedinfo */
+
+         else { /* error - data structure missing */
+            pmmioinfo-&gt;ulErrorRet = MMIOERR_INVALID_PARAMETER;
+            rc = MMIO_ERROR;
+            }
+         break;
+      /********************************/
+      /* QUERY BASE AND CODEC INFO    */
+      /********************************/
+      case MMIO_QUERY_EXTENDEDINFO_ALL:
+        /* Query Also CODEC associated info */
+
+       /* Create the array of codecassoc structures to return to caller */
+       pcodecassoc = pmmextendinfo-&gt;pCODECAssoc;  /* Point to beginning */
+       for (pccb = pinstance-&gt;pccbList; pccb; pccb = pccb-&gt;pccbNext) {
+          pcodecassoc-&gt;pCodecOpen = NULL;
+          pcodecassoc-&gt;pCODECIniFileInfo = NULL;
+          pcodecassoc++;
+          }
+        PtrNextAvail = (PVOID)pcodecassoc;
+
+        /* Fill in pointers to the CODECIniFileInfo structures to follow */
+        ulSize = 0L;
+        pcodecassoc = pmmextendinfo-&gt;pCODECAssoc;  /* Point to beginning */
+        for (pccb = pinstance-&gt;pccbList; pccb; pccb = pccb-&gt;pccbNext) {
+
+          /* Create and copy CODECINIFILEINFO structure */
+          pcodecassoc-&gt;pCODECIniFileInfo = (PCODECINIFILEINFO)PtrNextAvail;
+          memcpy(pcodecassoc-&gt;pCODECIniFileInfo,&amp;pccb-&gt;
+             cifi,sizeof(CODECINIFILEINFO));
+          PtrNextAvail = (PVOID) (((ULONG)PtrNextAvail)
+             + sizeof(CODECINIFILEINFO));
+
+           /* Create and copy CODECOPEN structure */
+           pcodecassoc-&gt;pCodecOpen = PtrNextAvail;
+           memcpy(pcodecassoc-&gt;pCodecOpen,&amp;pccb-&gt;codecopen,
+              sizeof(CODECOPEN));
+           PtrNextAvail = (PVOID) (((ULONG)PtrNextAvail)
+              + sizeof(CODECOPEN));
+
+            /* Create and copy Pointers to structures   */
+            /* in the CODECOPEN structure.              */
+            if (pccb-&gt;codecopen.pControlHdr) {
+               ulSize = *((PULONG)pccb-&gt;codecopen.pControlHdr);
+               ((PCODECOPEN)pcodecassoc-&gt;pCodecOpen)-&gt;pControlHdr =
+                  (PVOID)PtrNextAvail;
+               memcpy(((PCODECOPEN)pcodecassoc-&gt;pCodecOpen)-&gt;pControlHdr,
+                      pccb-&gt;codecopen.pControlHdr,
+                      ulSize);
+               PtrNextAvail = (PVOID) (((ULONG)PtrNextAvail) + ulSize);
+               }
+            if (pccb-&gt;codecopen.pSrcHdr) {
+               ulSize = *((PULONG)pccb-&gt;codecopen.pSrcHdr);
+               ((PCODECOPEN)pcodecassoc-&gt;pCodecOpen)-&gt;pSrcHdr
+                   = PtrNextAvail;
+               memcpy(((PCODECOPEN)pcodecassoc-&gt;pCodecOpen)-&gt;pSrcHdr,
+                      pccb-&gt;codecopen.pSrcHdr,
+                      ulSize);
+               PtrNextAvail = (PVOID) (((ULONG)PtrNextAvail) + ulSize);
+               }
+
+            if (pccb-&gt;codecopen.pDstHdr) {
+               ulSize = *((PULONG)pccb-&gt;codecopen.pDstHdr);
+               ((PCODECOPEN)pcodecassoc-&gt;pCodecOpen)-&gt;pDstHdr
+                   = PtrNextAvail;
+               memcpy(((PCODECOPEN)pcodecassoc-&gt;pCodecOpen)-&gt;pDstHdr,
+                      pccb-&gt;codecopen.pDstHdr,
+                      ulSize);
+               PtrNextAvail = (PVOID) (((ULONG)PtrNextAvail) + ulSize);
+               }
+
+            if (pccb-&gt;codecopen.pOtherInfo) {
+               ulSize = *((PULONG)pccb-&gt;codecopen.pOtherInfo);
+               ((PCODECOPEN)pcodecassoc-&gt;pCodecOpen)-&gt;pOtherInfo
+                    = PtrNextAvail;
+               memcpy(((PCODECOPEN)pcodecassoc-&gt;pCodecOpen)-&gt;pOtherInfo,
+                      pccb-&gt;codecopen.pOtherInfo,
+                      ulSize);
+               PtrNextAvail = (PVOID) (((ULONG)PtrNextAvail) + ulSize);
+               }
+            pcodecassoc++;
+            }
+
+      /*************************************************/
+      /* QUERY BASE INFO  (NOTE: Fall through    */
+      /* from previous case!)                          */
+      /*************************************************/
+      case MMIO_QUERY_EXTENDEDINFO_BASE: /* Query only MMEXTENDINFO info */
+         pmmextendinfo-&gt;ulStructLen = sizeof(MMEXTENDINFO);
+         pmmextendinfo-&gt;ulTrackID = (ULONG)pinstance-&gt;lCurrentTrack;
+         /* pmmextendinfo-&gt;pCODECAssoc = NULL;  */
+
+         /* Compute ulBufSize for complete information return */
+         ulSize = 0L;
+         for (pccb = pinstance-&gt;pccbList, ulCCBCount = 0; /* Count CCB's */
+              pccb;
+              ulCCBCount++, pccb = pccb-&gt;pccbNext) {
+            ulSize += sizeof(CODECASSOC)+sizeof(CODECOPEN)
+                +sizeof(CODECINIFILEINFO); /* static stuff */
+
+            /* Extract ulStructLen as first field of structure  */
+            /* that ptr points to.                              */
+            if (pccb-&gt;codecopen.pControlHdr) {
+               ulSize += *((PULONG)pccb-&gt;codecopen.pControlHdr);
+               }
+            if (pccb-&gt;codecopen.pSrcHdr) {
+               ulSize += *((PULONG)pccb-&gt;codecopen.pSrcHdr);
+               }
+            if (pccb-&gt;codecopen.pDstHdr) {
+               ulSize += *((PULONG)pccb-&gt;codecopen.pDstHdr);
+               }
+            if (pccb-&gt;codecopen.pOtherInfo) {
+               ulSize += *((PULONG)pccb-&gt;codecopen.pOtherInfo);
+               }
+            }
+
+         pmmextendinfo-&gt;ulNumCODECs = ulCCBCount;
+         pmmextendinfo-&gt;ulBufSize = ulSize;
+         break;
+
+      /*********/
+      /* ERROR */
+      /*********/
+      default:
+         pmmioinfo-&gt;ulErrorRet = MMIOERR_INVALID_PARAMETER;
+         rc = MMIO_ERROR;
+         break;
+      }/* end switch */
+
+   return(rc);
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="122_L4_LoadingtheCODECProce.html">[Back: Loading the CODEC Procedure]</A> <BR>
+<A HREF="124_L4_AssociatingaCODECwit.html">[Next: Associating a CODEC with a File]</A> 
+</BODY>
+</HTML>

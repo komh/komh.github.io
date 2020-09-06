@@ -1,0 +1,105 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>SplSetJob - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>SplSetJob - Example Code</H1><!-- entering slot 1628 -->
+<P>
+This sample code first gets a queue name and a jobid from the command prompt.
+It then prompts the user to enter a parameter number and a value for that
+number.
+<PRE>#define INCL_BASE
+#define INCL_DOSMEMMGR
+#define INCL_SPL
+#define INCL_SPLDOSPRINT
+#define INCL_SPLERRORS
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+
+INT main (argc, argv)
+    INT argc;
+    CHAR *argv[];
+{
+    CHAR   bufValue[2]={0};
+    CHAR   bufInput[128]={0};
+    ULONG  splerr  ;
+    ULONG  cbBuf;
+    ULONG  ulParmNum ;
+    ULONG  ulJob ;
+    USHORT usParm;
+    PSZ    pszComputerName ;
+    PSZ    pszQueueName ;
+    PVOID  pBuf;
+
+    if (argc != 3)
+    {
+       printf("Syntax:  sjset  QueueName  JobID  \n");
+       DosExit( EXIT_PROCESS , 0 ) ;
+    }
+    pszComputerName = (PSZ)NULL ;
+
+    /* Set values to those entered at the prompt. */
+    pszQueueName = argv[1] ;
+    ulJob = atoi (argv[2]);
+
+    /* Request a parameter and the associated value. Store them in buffers. */
+    printf("Enter Parameter number to be modified\n");
+    gets(&amp;bufValue[0]);
+    printf("Enter new parameter value \n");
+    gets(&amp;bufInput[0]);
+
+    /* Convert the ParmNum to a ULONG. */
+    ulParmNum = atoi(&amp;bufValue[0]);
+    switch (ulParmNum)
+    {
+       case  6:
+       case 14:
+          /* Calculate size of buffer needed if this is the parameter.*/
+          cbBuf = sizeof(PUSHORT);
+
+          /* Convert input parameter into a USHORT. */
+          usParm =(USHORT)atoi(&amp;bufInput[0]);
+
+          /* Point pBuf to the value. */
+          pBuf = &amp;usParm;
+          break;
+       case  3:
+       case  4:
+       case  5:
+       case 11:
+       case 12:
+       case 16:
+          /* Calculate size of buffer needed if this is the parameter.*/
+          cbBuf = strlen(&amp;bufInput[0])+1;
+
+          /* Point pBuf to the value. */
+          pBuf = (PSZ)&amp;bufInput;
+          break;
+       case 18:
+          printf("In order to keep code simple, this is not implemented.");
+          break;
+       default:
+          printf("Invalid number\n");
+    }
+
+    splerr = SplSetJob(pszComputerName,pszQueueName,ulJob,3L,
+                       pBuf,cbBuf,ulParmNum) ;
+    if ( !splerr)
+       printf("Parameter was set.");
+    else
+       printf("SplSetJob Error= %ld, Parameter= %d, Buf= %ld ,ParmNum= %ld\n",
+                      splerr, usParm, cbBuf, ulParmNum);
+    DosExit( EXIT_PROCESS , 0 ) ;
+    return (splerr) ;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1613_L2H_SplSetJobRelatedFunc.html">[Back: SplSetJob - Related Functions]</A> <BR>
+<A HREF="1615_L2H_SplSetJobTopics.html">[Next: SplSetJob - Topics]</A> 
+</BODY>
+</HTML>

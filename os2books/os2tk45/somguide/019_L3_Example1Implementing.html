@@ -1,0 +1,274 @@
+<HTML>
+<HEAD>
+<TITLE>Example 1-Implementing a Simple Class with One Method</TITLE>
+</HEAD>
+<BODY>
+<H1>Example 1-Implementing a Simple Class with One Method</H1><!-- entering slot 24 -->
+<P>
+Example 1 defines a class "Hello" which introduces one new method, "sayHello".
+ When invoked from a client program, the "sayHello" method will print the
+fixed string "Hello, World!"  The example follows the six steps described
+in the preceding topic, "Basic Steps for Implementing SOM Classes."<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Define the interface to class "Hello", which
+inherits methods from the root class<B> SOMObject</B> and introduces one
+new method, "sayHello". Define these IDL specifications in the file "hello.idl".
+
+<P>
+The "interface" statement introduces the name of a new class and any parents
+(base classes) it may have (here, the root class<B> SOMObject</B>).  The
+body of the interface declaration introduces the method "sayHello." Observe
+that method declarations in IDL have syntax similar to C and C++ function
+prototypes:
+<PRE>#include &lt;somobj.idl&gt;  //# Get the parent class definition.
+
+<B>interface Hello : SOMObject</B>
+/*  This is a simple class that demonstrates how to define the
+ *  interface to a new class of objects in SOM IDL.
+ */
+{
+    <B>void sayHello();</B>
+    // This method outputs the string "Hello, World!".
+       /* On Windows, use: string sayHello();
+        * This method returns the string "Hello, World!". */
+};
+</PRE>
+
+<P>
+Note that the method "sayHello" has no (explicit) arguments and returns
+no value (except on Windows, which returns a string). The characters "//"
+start a line comment, which finishes at the end of the line.  The characters
+"/*" start a block comment which finishes with the "*/". Block comments
+do not nest. The two comment styles can be used interchangeably. Throw-away
+comments are also permitted in a .idl file; they are ignored by the SOM
+Compiler.  Throw-away comments start with the characters "//#" and terminate
+at the end of the line.
+<P>
+<B>Note: </B> For simplicity, this IDL fragment does not include a<B> releaseorder
+</B>modifier; consequently, the SOM Compiler will issue a warning for the
+method "sayHello". For directions on using the<B> releaseorder</B> modifier
+to remove this warning, see the topic "Modifier statements" in Chapter 4,
+"Implementing Classes in SOM."<!-- lm: 0x2 6 -->
+<UL><!-- lm: 0x2 2 -->
+</UL>
+2.<!-- lm: 0x2 6 -->
+<UL>Run the SOM Compiler to produce binding files and
+an implementation template (that is, issue the<B> sc</B> command):
+<PRE>&gt; sc -s"c;h;ih" hello.idl      (for C bindings on AIX or OS/2)
+&gt; sc -s"xc;xh;xih" hello.idl   (for C++ bindings on AIX or OS/2)
+</PRE>
+
+<P>
+When set to generate C binding files, the SOM Compiler generates the following
+implementation template file, named "hello.c". The template implementation
+file contains<I> stub procedures</I> for each new method.  These are procedures
+whose bodies are largely vacuous, to be filled in by the implementor. (Unimportant
+details have been removed for this tutorial.)
+<PRE>#include &lt;hello.ih&gt;
+/*
+ *  This method outputs the string "Hello, World!".
+ */
+
+SOM_Scope  void   SOMLINK  <B>sayHello(Hello somSelf, Environment *ev)</B>
+{
+    /* HelloData *somThis = HelloGetData(somSelf); */
+    HelloMethodDebug("Hello", "sayHello");
+}
+</PRE>
+
+<P>
+The terms SOM_Scope and SOMLINK appear in the prototype for all stub procedures,
+but they are defined by SOM and are not of interest to the developer. In
+the method procedure for the "sayHello" method, "somSelf" is a pointer to
+the target object (here, an instance of the class "Hello") that will respond
+to the method. A "somSelf" parameter appears in the procedure prototype
+for every method, since SOM requires every method to<!-- entering slot 25 --> act
+on some object.
+<P>
+The<I> target object</I> is always the first parameter of a method's procedure,
+although it should<I> not</I> be included in the method's IDL specification.
+The second parameter (which also is not included in the method's IDL specification)
+is the parameter<B> (Environment *ev)</B>.  This parameter can be used by
+the method to return exception information if the method encounters an error.
+ (Contrast the prototype for the "sayHello" method in steps 1 and 2 above.)
+
+<P>
+The remaining lines of the template above are not pertinent at this point.
+ (For those interested, they are discussed in section 5.4 of Chapter 5,
+"Implementing SOM Classes.")  The file is now ready for customization with
+the C code needed to implement method "sayHello".
+<P>
+When set to generate C++ binding files, the SOM Compiler generates an implementation
+template file, "hello.C" (on AIX) or "hello.cpp (on OS/2), similar to the
+one above.  (Chapter 5 discusses the implementation template in more detail.)
+
+<P>
+Recall that, in addition to generating a template implementation file, the
+SOM Compiler also generates implementation bindings (in a header file to
+be included in the implementation file) and usage bindings (in a header
+file to be included in client programs).  These files are named "hello.ih"
+and "hello.h" for C bindings, and are "hello.xih" and "hello.xh" for C++
+bindings. Notice that the "hello.c" file shown above includes the "hello.ih"
+implementation binding file.<!-- lm: 0x2 2 -->
+</UL>  3.<!-- lm: 0x2 6 -->
+<UL>Customize
+the implementation, by adding code to the template implementation file.
+
+<P>
+Modify the body of the "sayHello" method procedure in the "hello.c" (or,
+for C++,"hello.C" on AIX, "hello.cpp" on OS/2) implementation file so that
+the "sayHello" method prints "Hello, World!":
+<PRE>SOM_Scope void   SOMLINK sayHello(Hello somSelf, Environment *ev)
+{
+    /* HelloData *somThis = HelloGetData(somSelf); */
+    HelloMethodDebug("Hello","sayHello");
+
+    <B>printf("Hello, World!\n");</B>
+}
+</PRE>
+<!-- lm: 0x2 2 -->
+</UL> 4.<!-- lm: 0x2 6 -->
+<UL>Create a client program
+that uses the class.
+<P>
+Write a program "main" that creates an instance (object) of the "Hello"
+class and invokes the method "sayHello" on that object.
+<P>
+A C programmer would write the following program in "main.c", using the
+bindings defined in the "hello.h" header file:
+<PRE>#include &lt;hello.h&gt;
+
+int main(int argc, char *argv[])
+{
+    /* Declare a variable to point to an instance of Hello */
+    <B>Hello obj;</B>
+
+    /* Create an instance of the Hello class */
+    <B>obj = HelloNew();</B>
+
+    /* Execute the "sayHello" method */
+    <B>_sayHello(obj, somGetGlobalEnvironment());</B>
+
+    /* Free the instance: */
+    <B>_somFree(obj);</B>
+    return (0);
+}
+</PRE>
+
+<P>
+Notice the statement obj = HelloNew();  The "hello.h" header file automatically
+contains the SOM-defined macro &lt;<I>className</I>&gt;<B>New()</B>, which
+is used to create an instance of the &lt;<I>className</I>&gt; class (here,
+the "Hello" class).
+<P>
+Also notice that, in C, a method is invoked on an object by using the form:
+
+<PRE>_&lt;<I>methodName</I>&gt;(&lt;<I>objectName</I>&gt;, &lt;<I>environment_argument</I>&gt;, <I>&lt;other_method_arguments&gt;</I>)
+</PRE>
+
+<P>
+as used above in the statement _sayHello(obj, somGetGlobalEnvironment()).
+ As shown in this example, the SOM-provided<B> somGetGlobalEnvironment</B> function
+can be used to supply the (<B>Environment</B> *) argument of the method.
+
+<P>
+Finally, the code uses the method<B> somFree</B>, which SOM also provides,
+to free the object created by HelloNew().  Notice that<B>  somFree</B> does
+not require an (<B>Environment *</B>) argument. This is because the method
+procedures for some of the classes in the SOMobjects Toolkit (including
+<B>SOMObject</B>,<B> SOMClass</B>, and<B> SOMClassMgr</B>) do not have an
+Environment parameter, to ensure compatibility with the previous release
+of SOM.  The documentation for each SOM-kernel method in the<I> SOMobjects
+Developer Toolkit: Programmers Reference Manual</I> indicates<!-- entering slot 26 --> whether
+an Environment parameter is used.
+<P>
+A C++ programmer would write the following program in "main.C" (on AIX)
+or "main.cpp" (on OS/2), using the bindings defined in the "hello.xh" header
+file:
+<PRE>#include &lt;hello.xh&gt;
+
+int main(int argc, char *argv[])
+{
+    /* Declare a variable to point to an instance of Hello */
+    <B>Hello *obj;</B>
+
+    /* Create an instance of the Hello class */
+    <B>obj = new Hello;</B>
+
+    /* Execute the "sayHello" method */
+    <B>obj-&gt;sayHello(somGetGlobalEnvironment());</B>
+
+    <B>obj-&gt;somFree();</B>
+    return (0);
+}
+</PRE>
+
+<P>
+Notice that the only argument passed to the "sayHello" method by a C++ client
+program is the<B> Environment</B> pointer.  (Contrast this with the invocation
+of "sayHello" in the C client program, above.<!-- lm: 0x2 2 -->
+</UL>  5.<!-- lm: 0x2 6 -->
+<UL>Compile
+and link the client code with the class implementation.
+<P>
+Note: On AIX or OS/2, the environment variable SOMBASE represents the directory
+in which SOM has been installed.
+<P>
+Under AIX, for C programmers:
+<PRE>&gt; xlc -I. -I$SOMBASE/include -o hello main.c hello.c  -L$SOMBASE/lib -l somtk
+</PRE>
+
+<P>
+Under AIX, for C++ programmers:
+<PRE>&gt; xlc -I. -I$SOMBASE/include -o hello main.C hello.C  -L$SOMBASE/lib -lsomtk
+</PRE>
+
+<P>
+Under OS/2, for C programmers:
+<PRE>&gt; set LIB=%SOMBASE%\lib;%LIB%
+&gt; icc -I. -I%SOMBASE%\include -Fe hello main.c hello.c  somtk.lib
+</PRE>
+
+<P>
+Under OS/2, for C++ programmers:
+<PRE>&gt; set LIB=%SOMBASE%\lib;%LIB%
+&gt; icc -I. -I\%SOMBASE%\include -Fe hello main.cpp hello.cpp  somtk.lib
+</PRE>
+<!-- lm: 0x2 2 -->
+</UL> 6.<!-- lm: 0x2 6 -->
+<UL>Execute the client program.
+
+<PRE>&gt; hello
+Hello, World!
+</PRE>
+
+<P>
+Example 2 will extend the "Hello" class to introduce an "attribute."
+<P>
+
+<P>
+<B>File Extensions for SOM Files</B>
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³IDL source file:                   ³.idl    ³for all users              ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Implementation template file:      ³.c      ³for C, all systems         ³
+³                                   ³.C      ³for C++, on AIX            ³
+³                                   ³.cpp    ³for C++, on OS/2 or Windows³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Header file for implementation     ³.ih     ³for C                      ³
+³file:                              ³.xih    ³for C++                    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Header file for program file:      ³.h      ³for C                      ³
+³                                   ³.xh     ³for C++                    ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="018_L2_BasicStepsforImpleme.html">[Back: Basic Steps for Implementing SOM Classes]</A> <BR>
+<A HREF="020_L3_Example2AddinganAttr.html">[Next: Example 2-Adding an Attribute to the Hello class]</A> 
+</BODY>
+</HTML>

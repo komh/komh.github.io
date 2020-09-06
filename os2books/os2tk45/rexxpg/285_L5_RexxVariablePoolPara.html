@@ -1,0 +1,257 @@
+<HTML XPOS=RIGHT YPOS=BOTTOM WIDTH=65% HEIGHT=75% GROUP=30>
+<HEAD>
+<!-- extra bytes: 03 04 44 02 00 08 00 11 41 00 4B 00 1E 00 --><TITLE>RexxVariablePool - Parameters</TITLE>
+</HEAD>
+<BODY>
+<H1>RexxVariablePool - Parameters</H1><!-- entering slot 295 --><!-- lm: 0x2 1 -->
+<UL>
+<P>
+RequestBlockList<I> (PSHVBLOCK) - input<!-- lm: 0x11 11 -->
+<UL></I> A linked
+list of shared variable request blocks (SHVBLOCK). Each shared variable
+request block in the linked list is a separate variable access request.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The SHVBLOCK has the following form: SHVBLOCKdatastructure
+<BR>
+
+<PRE>typedef struct shvnode {
+    struct shvnode    *shvnext;
+    RXSTRING           shvname;
+    RXSTRING           shvvalue;
+    ULONG              shvnamelen;
+    ULONG              shvvaluelen;
+    UCHAR              shvcode;
+    UCHAR              shvret;
+}   SHVBLOCK;
+</PRE>
+
+<P>
+<!-- lm: 0x2 1 -->
+<P>
+shvnext<!-- lm: 0x2 11 -->
+<UL> The address of the next SHVBLOCK in the
+request list.<I> shvnext</I> is NULL for the last request block.<!-- lm: 0x2 1 -->
+</UL> shvname
+<!-- lm: 0x2 11 -->
+<UL>An RXSTRING containing a REXX variable name.<I> shvname
+</I>usage varies for the different SHVBLOCK request codes:<!-- lm: 0x2 11 -->
+<P>
+RXSHV_SET<!-- lm: 0x2 11 -->
+<P>
+RXSHV_SYSET<!-- lm: 0x2 11 -->
+<P>
+RXSHV_FETCH<!-- lm: 0x2 11 -->
+<P>
+RXSHV_SYFET<!-- lm: 0x2 11 -->
+<P>
+RXSHV_DROPV<!-- lm: 0x2 11 -->
+<P>
+RXSHV_SYDRO<!-- lm: 0x2 11 -->
+<P>
+RXSHV_PRIV<!-- lm: 0x12 26 -->
+<UL><I> shvname</I> is an RXSTRING pointing
+to the name of the REXX variable the shared variable request block accesses.
+<!-- lm: 0x2 11 -->
+</UL>RXSHV_NEXTV<!-- lm: 0x12 26 -->
+<UL><I> shvname
+</I>is an RXSTRING defining an area of storage to receive the name of the
+next variable.<I> shvnamelen</I> is the length of the RXSTRING area. If
+the variable name is longer than<I> shvnamelen</I> characters, the name
+is truncated and the RXSHV_TRUNC bit of<I> shvret</I> is set. On return,
+<I>shvname.strlength</I> contains the length of the variable name;<I> shvnamelen
+</I>is unchanged.
+<P>
+If<I> shvname</I> is an empty RXSTRING (<I>strptr</I> is NULL), the REXX
+interpreter allocates and returns an RXSTRING to hold the variable name.
+If the REXX interpreter allocates the RXSTRING, an RXSHV_TRUNC condition
+cannot occur. However, RXSHV_MEMFL errors are possible for these operations.
+If an RXSHV_MEMFL condition occurs, memory is not allocated for that request
+block. The RexxVariablePool caller must release the storage with DosFreeMem.
+
+<P>
+<B>Note: </B> The RexxVariablePool does not add a terminating null character
+to the variable name.<!-- lm: 0x2 26 -->
+<P>
+<!-- lm: 0x2 11 -->
+</UL>RXSHV_EXIT<!-- lm: 0x12 26 -->
+<UL><I> shvname
+</I>is unused for the RXSHV_EXIT function.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL> shvvalue
+<!-- lm: 0x2 11 -->
+<UL>An RXSTRING containing a REXX variable value. The
+meaning of<I> shvvalue</I> varies for the different SHVBLOCK request codes:
+<!-- lm: 0x2 11 -->
+<P>
+RXSHV_SET<!-- lm: 0x2 11 -->
+<P>
+RXSHV_SYSET<!-- lm: 0x12 26 -->
+<UL><I> shvvalue</I> is the value assigned
+to the REXX variable in<I> shvname</I>.<I> shvvaluelen</I> contains the
+length of the variable value.<!-- lm: 0x2 11 -->
+</UL> RXSHV_EXIT<!-- lm: 0x12 26 -->
+<UL><I> shvvalue
+</I>is the value assigned to the exit handler return value.<I> shvvaluelen
+</I>contains the length of the variable value.<!-- lm: 0x2 11 -->
+</UL> RXSHV_FETCH
+<!-- lm: 0x2 11 -->
+<P>
+RXSHV_SYFET<!-- lm: 0x2 11 -->
+<P>
+RXSHV_PRIV<!-- lm: 0x2 11 -->
+<P>
+RXSHV_NEXT<!-- lm: 0x12 26 -->
+<UL><I> shvvalue</I> is a buffer the REXX
+interpreter uses to return a copy of REXX variable<I> shvname</I>.<I> shvvaluelen
+</I>contains the length of the value buffer. On return,<I> shvvalue.strlength
+</I>is set to the length of the returned value and<I> shvvaluelen</I> is
+unchanged. If the variable value is longer than<I> shvvaluelen</I> characters,
+the value is truncated and the RXSHV_TRUNC bit of<I> shvret</I> is set.
+On return,<I> shvvalue.strlength</I> is set to the length of the returned
+value;<I> shvvaluelen</I> is unchanged.
+<P>
+If<I> shvvalue</I> is an empty RXSTRING (<I>strptr</I> is NULL), the REXX
+interpreter allocates and returns an RXSTRING to hold the variable value.
+If the REXX interpreter allocates the RXSTRING, an RXSHV_TRUNC condition
+cannot occur. However, RXSHV_MEMFL errors are possible for these operations.
+If an RXSHV_MEMFL condition occurs, memory is not allocated for that request
+block. The RexxVariablePool caller must release the storage with DosFreeMem.
+
+<P>
+<B>Note: </B> The RexxVariablePool does not add a terminating null character
+to the variable value.<!-- lm: 0x2 26 -->
+<P>
+<!-- lm: 0x2 11 -->
+</UL>RXSHV_DROPV<!-- lm: 0x2 11 -->
+<P>
+RXSHV_SYDRO<!-- lm: 0x12 26 -->
+<UL><I> shvvalue</I> is not used.<!-- lm: 0x2 11 -->
+</UL><!-- lm: 0x2 1 -->
+</UL> shvcode
+<!-- lm: 0x2 11 -->
+<UL>The shared variable block request code. The request
+codes are:<!-- lm: 0x2 11 -->
+<P>
+RXSHV_SET<!-- lm: 0x2 11 -->
+<P>
+RXSHV_SYSET<!-- lm: 0x12 26 -->
+<UL> Assign a new value to a REXX procedure
+variable.<!-- lm: 0x2 11 -->
+</UL> RXSHV_FETCH<!-- lm: 0x2 11 -->
+<P>
+RXSHV_SYFET<!-- lm: 0x12 26 -->
+<UL> Retrieve the value of a REXX procedure
+variable.<!-- lm: 0x2 11 -->
+</UL> RXSHV_DROPV<!-- lm: 0x2 11 -->
+<P>
+RXSHV_SYDRO<!-- lm: 0x12 26 -->
+<UL> Drop (unassign) a REXX procedure variable.
+<!-- lm: 0x2 11 -->
+</UL>RXSHV_PRIV<!-- lm: 0x12 26 -->
+<UL> Fetch REXX
+procedure private information. The following information items can be retrieved
+by name:<!-- lm: 0x2 26 -->
+<P>
+EXITNAME<!-- lm: 0x11 41 -->
+<UL> The name of the current system exit handler
+for this thread. If not called from within an exit handler, a null string
+will be returned.<!-- lm: 0x2 26 -->
+</UL> PARM<!-- lm: 0x11 41 -->
+<UL> The
+number of arguments supplied to the REXX procedure. The number is formatted
+as a character string.<!-- lm: 0x2 26 -->
+</UL> PARM.n<!-- lm: 0x11 41 -->
+<UL> The
+Nth argument string to the REXX procedure. If the Nth argument was not supplied
+to the procedure (either omitted or fewer than N parameters were specified),
+a null string is returned.<!-- lm: 0x2 26 -->
+</UL> QUENAME<!-- lm: 0x11 41 -->
+<UL> The
+current REXX data queue name.<!-- lm: 0x2 26 -->
+</UL> SOURCE<!-- lm: 0x11 41 -->
+<UL> The
+REXX procedure source string used for the PARSE SOURCE instruction.<!-- lm: 0x2 26 -->
+</UL> VERSION
+<!-- lm: 0x11 41 -->
+<UL>The REXX interpreter version string used for the
+PARSE SOURCE instruction.<!-- lm: 0x2 26 -->
+</UL><!-- lm: 0x2 11 -->
+</UL> RXSHV_NEXTV
+<!-- lm: 0x12 26 -->
+<UL>Fetch next variable. RXSHV_NEXTV traverses the
+variables in the current generation of REXX variables, excluding variables
+hidden by PROCEDURE instructions. The variables are not returned in any
+specified order.
+<P>
+The REXX interpreter maintains an internal pointer to its list of variables.
+The variable pointer is reset to the first REXX variable whenever:<!-- lm: 0x2 27 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 31 -->An external program returns control to the interpreter
+<!-- lm: 0x2 27 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 31 -->A set, fetch or drop RexxVariablePool function
+is used.<!-- lm: 0x2 26 -->
+</UL> RXSHV_NEXTV returns both the name and
+the value of REXX variables until the end of the variable list is reached.
+If no REXX variables are left to return, RexxVariablePool sets the RXSHV_LVAR
+bit in<I> shvret</I>.<!-- lm: 0x2 11 -->
+</UL> RXSHV_EXIT<!-- lm: 0x12 26 -->
+<UL> Set
+a return value for an external function or system exit call. RXSHV_EXIT
+is valid only from external functions or system exit events that return
+a string value. An external function or exit handler can use RXSHV_EXIT
+only once.<!-- lm: 0x2 11 -->
+</UL><!-- lm: 0x2 1 -->
+</UL> shvret<!-- lm: 0x2 11 -->
+<UL> Individual
+shared variable request return code.<I> shvret</I> is a 1-byte field of
+status flags for the individual shared variable request. The<I> shvret</I> fields
+for all request blocks in the list are ORed<!-- entering slot 296 --> together
+to form the RexxVariablePool return code. The individual status conditions
+are:<!-- lm: 0x2 11 -->
+<P>
+RXSHV_OK<!-- lm: 0x11 26 -->
+<UL> The request was processed without error
+(all flag bits are FALSE).<!-- lm: 0x2 11 -->
+</UL> RXSHV_NEWV<!-- lm: 0x11 26 -->
+<UL> The
+named variable was uninitialized at the time of the call.<!-- lm: 0x2 11 -->
+</UL> RXSHV_LVAR
+<!-- lm: 0x11 26 -->
+<UL>No more variables are available for an RXSHV_NEXTV
+operation.<!-- lm: 0x2 11 -->
+</UL> RXSHV_TRUNC<!-- lm: 0x11 26 -->
+<UL> A
+variable value or variable name was truncated because the supplied RXSTRING
+was too small for the copied value.<!-- lm: 0x2 11 -->
+</UL> RXSHV_BADN
+<!-- lm: 0x11 26 -->
+<UL>The variable name specified in<I> shvname</I> was
+invalid for the requested operation.<!-- lm: 0x2 11 -->
+</UL> RXSHV_MEMFL
+<!-- lm: 0x11 26 -->
+<UL>The REXX interpreter was unable to obtain the storage
+required to complete the request.<!-- lm: 0x2 11 -->
+</UL> RXSHV_BADF<!-- lm: 0x11 26 -->
+<UL> The
+shared variable request block contains an invalid function code.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+The REXX interpreter processes each request block in the order provided;
+RexxVariablePool returns to the caller after the last block is processed
+or after a severe error (such as an out-of-memory condition).
+<P>
+The RexxVariablePool function return code is a composite return code for
+the entire set of shared variable requests. The return codes for all of
+the individual requests are ORed together to form the composite return code.
+Individual shared variable request return codes are returned in the request
+shared variable blocks.
+
+<P><HR>
+
+<A HREF="284_L5_RexxVariablePoolSynt.html">[Back: RexxVariablePool - Syntax]</A> <BR>
+<A HREF="286_L5_RexxVariablePoolRetu.html">[Next: RexxVariablePool - Returns]</A> 
+</BODY>
+</HTML>

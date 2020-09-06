@@ -1,0 +1,123 @@
+<HTML>
+<HEAD>
+<TITLE>Application-Initiated Communication</TITLE>
+</HEAD>
+<BODY>
+<H1>Application-Initiated Communication</H1><!-- entering slot 315 -->
+<P>
+In the former case, the communication is quite simple since the initiator
+of the communication typically has knowledge of the type of object to which
+the communication is being passed, and can usually initiate the communication
+by simply invoking a method in the receiving object, in a similar manner
+to that discussed in <A HREF="271_L3_Methods.html">Methods (Invoking Another
+Object's Methods)</A>.
+<P>
+However, it is often necessary to determine the identity of the object for
+which a method must be invoked.  The Workplace Shell provides access to
+objects using the HOBJECT and the OBJECTID and, at a base level, system
+object model provides pointers to objects and SOM IDs.  Each of these is
+described in the following sections, and some discussion is included on
+converting between identifiers.
+<P>
+<B>HOBJECT</B>
+<P>
+This identifier is the object handle, which is allocated by the Workplace
+Shell and passed as the return value from the<B> WinCreateObject()</B> function.
+ It is a persistent object handle that remains allocated to an object for
+the duration of its existence.  Object handles persist across system restarts,
+and may therefore be used by one object to refer to another object at any
+time.
+<P>
+An object handle can be determined from the object's OBJECTID using the
+<B>WinQueryObject()</B> function, as follows:
+<PRE>HOBJECT  hObject;                            /* Object handle         */
+PSZ      szObjectID = "&lt;OBJECTID&gt;";          /* OBJECTID string       */
+
+hObject = WinQueryObject(szObjectID);        /* Query object handle   */
+</PRE>
+
+<P>
+Note that this function may be called from any process; its use is not restricted
+to objects in the Workplace Shell process.
+<P>
+<B>OBJECTID</B>
+<P>
+The OBJECTID is provided by an application or object class as part of the
+setup string parameter in the<B> WinCreateObject()</B> call, when an object
+is created.  It is persistent in the same way as an object handle, but provides
+a more meaningful reference for an object, which can be used by other objects.
+
+<P>
+<A HREF="068_L2_ReferencinganObjectU.html">Figure "Referencing an Object
+Using OBJECTID"</A>
+<P>
+Note that the angle brackets ("&lt;" and "&gt;") used within the OBJECTID
+are an important part of the syntax.
+<P>
+Note also that the Workplace Shell provides a number of predefined OBJECTIDs
+for system-defined objects.  The first and third<B> WinCreateObject()</B> calls
+in <A HREF="068_L2_ReferencinganObjectU.html">Figure "Referencing an Object
+Using OBJECTID"</A> use the &lt;WP_DESKTOP&gt; OBJECTID to place the objects
+on the desktop.
+<P>
+<B>SOM Pointer</B>
+<P>
+SOM pointers come in various forms, but can all be typecast to<I> SOMAny
+*</I>.  From a Workplace Shell perspective, a SOM pointer is the return
+value of the<I> _wpclsNew</I> class method; this is the method used for
+creating objects within the Workplace Shell process.  An object's public
+methods and data can be accessed using the object's SOM pointer.
+<P>
+A SOM pointer for an object may be obtained from an object handle using
+the<I> _wpclsQueryObject</I> method provided by the<I> WPObject</I> class,
+as follows:
+<PRE>SOMAny *Asomptr;                             /* SOM pointers          */
+SOMAny *Bsomptr;
+
+Asomptr = _wpclsQueryObject(_WPObject,       /* Query SOM pointer     */
+                            hObject);        /* Object handle         */
+</PRE>
+
+<P>
+A SOM pointer for a class may be obtained from the SOM ID for that class,
+using the<I> _somFindClass</I> method shown below:
+<PRE>Asomptr = _somFindClass(SOMClassMgrObject,
+                        AsomId,
+                        1,
+                        1);
+</PRE>
+
+<P>
+A SOM pointer for a class may be obtained from the SOM pointer for any object
+within that class, using the<I> _somGetClass</I> method as follows:
+<PRE>Asomptr = _somGetClass(Bsomptr);
+</PRE>
+
+<P>
+The SOM pointer is typically used to invoke class methods from an object
+in another class.  The<I> _SOMDispatchL()</I> method shown in <A HREF="050_L2_InvokingaMethodinAno.html">Figure
+"Invoking a Method in Another Object Class"</A> requires a SOM pointer as
+a parameter.
+<P>
+<B>SOM ID</B>
+<P>
+A SOM ID is simply a way of mapping a unique number to a string.  This string
+may represent the name of a method or class.  SOM IDs are integers that
+are managed by the Workplace Shell using the Atom Manager facility of Presentation
+Manager.  A SOM ID is obtained using the<B> SOM_IdFromString()</B> function
+as follows:
+<PRE>somId    AsomId;
+
+AsomId = SOM_IdFromString("WPFolder");
+</PRE>
+
+<P>
+The SOM ID is typically used to obtain a SOM pointer, which can then be
+used to invoke a method.
+
+<P><HR>
+
+<A HREF="285_L2_CommunicationBetween.html">[Back: Communication Between Objects]</A> <BR>
+<A HREF="287_L3_UserInitiatedCommuni.html">[Next: User-Initiated Communication]</A> 
+</BODY>
+</HTML>

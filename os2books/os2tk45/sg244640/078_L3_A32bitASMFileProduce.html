@@ -1,0 +1,252 @@
+<HTML>
+<HEAD>
+<TITLE>A 32-bit .ASM File, Produced by CSET/2</TITLE>
+</HEAD>
+<BODY>
+<H1>A 32-bit .ASM File, Produced by CSET/2</H1><!-- entering slot 97 -->
+<PRE>        TITLE   DEMO.C
+        .386
+        .387
+        INCLUDELIB OS2386.LIB
+        INCLUDELIB dde4nbs.lib
+CODE32  SEGMENT DWORD USE32 PUBLIC 'CODE'
+CODE32  ENDS
+DATA32  SEGMENT DWORD USE32 PUBLIC 'DATA'
+DATA32  ENDS
+CONST32 SEGMENT DWORD USE32 PUBLIC 'CONST'
+CONST32 ENDS
+BSS32   SEGMENT DWORD USE32 PUBLIC 'BSS'
+BSS32   ENDS
+DGROUP  GROUP CONST32, BSS32, DATA32
+        ASSUME  CS:FLAT, DS:FLAT, SS:FLAT, ES:FLAT
+        EXTRN   DosAllocMem:PROC
+        EXTRN   _printfieee:PROC
+        EXTRN   _DosFlatToSel:PROC
+        EXTRN   _DosSelToFlat:PROC
+        EXTRN   _exeentry:PROC
+DATA32  SEGMENT
+@STAT1  DB "non-zero return code fro"
+DB "m DosAllocMem=%d",0aH,0H
+        ALIGN 04H
+@STAT2  DB "there are %u primes less"
+DB " than 65536",0aH,0H
+        ALIGN 04H
+@STAT3  DB "%6u ",0H
+@STAT4  DB 0aH,0H
+        DD      _exeentry
+DATA32  ENDS
+BSS32   SEGMENT
+BSS32   ENDS
+CONST32 SEGMENT
+CONST32 ENDS
+CODE32  SEGMENT
+
+;***** 9 int gen(int *prime)
+        ALIGN 04H
+
+        PUBLIC gen
+gen     PROC
+        PUSH    EBP
+        MOV     EBP,ESP
+        PUSH    EBX
+        PUSH    ESI
+        PUSH    EDI
+        MOV     [EBP+08H],EAX;  prime
+
+;***** 11   int ix,l=2,ll=25,npr=3,q,t,tp=2,tt;
+        MOV     DWORD PTR [EBP-018H],019H;      ll
+        MOV     DWORD PTR [EBP-014H],03H;       npr
+        MOV     DWORD PTR [EBP-010H],02H;       tp
+</PRE>
+
+<PRE>;***** 12   prime[0]=2;
+        MOV     DWORD PTR [EAX],02H
+;***** 13   prime[1]=3;
+        MOV     DWORD PTR [EAX+04H],03H
+;***** 14   prime[2]=5;
+        MOV     DWORD PTR [EAX+08H],05H
+;***** 15   for ( t=7 ; t&lt;65530 ; t+=tp )
+        MOV     ECX,[EBP-01cH]; ix
+        MOV     EBX,07H
+        MOV     EDI,02H
+        ALIGN 04H
+FELB6:
+
+;***** 16     {
+;***** 17     tp=6-tp;
+        MOV     EDX,[EBP-010H]; tp
+        NEG     EDX
+        ADD     EDX,06H
+        MOV     [EBP-010H],EDX; tp
+;***** 18     if ( ll&lt;=t )
+        CMP     [EBP-018H],EBX; ll
+        JG      FELB7
+;***** 19       {
+;***** 20       l++;
+        INC     EDI
+;***** 21       ll=prime[l]*prime[l];
+        MOV     EDX,DWORD PTR [EAX+EDI*04H]
+        IMUL    EDX,EDX
+        MOV     [EBP-018H],EDX; ll
+;***** 22       }
+FELB7:
+
+;***** 23     for ( ix=2 ; ix&lt;l ; ix++ )
+        MOV     ECX,02H
+        CMP     EDI,02H
+        JLE     FELB8
+        ALIGN 04H
+FELB9:
+        MOV     [EBP-020H],EDI; @CBE17
+        MOV     ESI,EAX
+;***** 24       {
+;***** 25       q=t/prime[ix];
+;***** 26       tt=q*prime[ix];
+;***** 27       if ( t==tt ) break;
+        MOV     EDI,DWORD PTR [ESI+ECX*04H]
+        MOV     EAX,EBX
+        CDQ
+        IDIV    EDI
+        MOV     EDX,EDI
+        MOV     EDI,[EBP-020H]; @CBE17
+        XCHG    ESI,EAX
+        IMUL    EDX,ESI
+        CMP     EDX,EBX
+        JE      FELB8
+</PRE>
+
+<PRE>;***** 28       }
+        INC     ECX
+        CMP     ECX,EDI
+        JL      FELB9
+FELB8:
+
+;***** 29     if ( l==ix ) prime[npr++]=t;
+        CMP     EDI,ECX
+        JNE     FELB12
+        MOV     EDX,[EBP-014H]; npr
+        MOV     DWORD PTR [EAX+EDX*04H],EBX
+        INC     EDX
+        MOV     [EBP-014H],EDX; npr
+FELB12:
+        MOV     EDX,EBX
+
+;***** 30     }
+        MOV     EBX,[EBP-010H]; tp
+        ADD     EBX,EDX
+        CMP     EBX,0fffaH
+        JL      FELB6
+
+;***** 31   return npr;
+        MOV     EAX,[EBP-014H]; npr
+        POP     EDI
+        POP     ESI
+        POP     EBX
+        LEAVE
+        RET
+gen     ENDP
+
+;***** 34 int main(int argc, char *argv[])
+        ALIGN 04H
+
+        PUBLIC main
+main    PROC
+        PUSH    EBX
+        PUSH    ESI
+        PUSH    EDI
+        SUB     ESP,0cH
+
+</PRE>
+
+<PRE>;***** 39   rc=DosAllocMem(&amp;mem,16384,PAG_READ+PAG_WRITE+PAG_COMMIT);
+        PUSH    013H
+        PUSH    04000H
+        LEA     ECX,[ESP+010H]; mem
+        PUSH    ECX
+        MOV     AL,03H
+        CALL    DosAllocMem
+        ADD     ESP,0cH
+
+;***** 40   if ( rc ) return printf("non-zero return code from DosAllocMem=%d\n",rc);
+        OR      EAX,EAX
+        JE      FELB18
+        PUSH    EAX
+        MOV     EAX,OFFSET FLAT: @STAT1
+        SUB     ESP,04H
+        CALL    _printfieee
+        ADD     ESP,014H
+        POP     EDI
+        POP     ESI
+        POP     EBX
+        RET
+FELB18:
+
+;***** 41   last=gen(p=mem);
+        MOV     EAX,[ESP+08H];  mem
+        MOV     [ESP+04H],EAX;  p
+        CALL    gen
+        MOV     ESI,EAX
+
+;***** 42   printf("there are %u primes less than 65536\n",last);
+        PUSH    ESI
+        MOV     EAX,OFFSET FLAT: @STAT2
+        SUB     ESP,04H
+        CALL    _printfieee
+        MOV     EAX,ESI
+        ADD     ESP,08H
+
+;***** 43   for ( ix=0 ; ix&lt;last ; ix++ )
+        OR      EAX,EAX
+        JLE     FELB20
+        MOV     EBX,EAX
+        MOV     EDI,[ESP+04H];  p
+        XOR     ESI,ESI
+        ALIGN 04H
+</PRE>
+
+<PRE>FELB21:
+
+;***** 44     {
+;***** 45     printf("%6u ",p[ix]);
+        PUSH    DWORD PTR [EDI+ESI*04H]
+        MOV     EAX,OFFSET FLAT: @STAT3
+        SUB     ESP,04H
+        CALL    _printfieee
+        ADD     ESP,08H
+
+;***** 46     if ( 9==(ix%10) ) printf("\n");
+        MOV     EAX,ESI
+        MOV     ECX,0aH
+        CDQ
+        IDIV    ECX
+        CMP     EDX,09H
+        JNE     FELB22
+        MOV     EAX,OFFSET FLAT: @STAT4
+        CALL    _printfieee
+FELB22:
+
+;***** 47     }
+        INC     ESI
+        CMP     ESI,EBX
+        JL      FELB21
+FELB20:
+
+;***** 48   return 0;
+        XOR     EAX,EAX
+        ADD     ESP,0cH
+        POP     EDI
+        POP     ESI
+        POP     EBX
+        RET
+main    ENDP
+CODE32  ENDS
+END
+</PRE>
+
+
+<P><HR>
+
+<A HREF="077_L3_A32bitMapFile.html">[Back: A 32-bit Map File]</A> <BR>
+<A HREF="079_L3_Questions.html">[Next: Questions]</A> 
+</BODY>
+</HTML>

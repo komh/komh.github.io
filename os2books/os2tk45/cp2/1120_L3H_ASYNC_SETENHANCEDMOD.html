@@ -1,0 +1,145 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>ASYNC_SETENHANCEDMODEPARMS (54h) - Remarks</TITLE>
+</HEAD>
+<BODY>
+<H1>ASYNC_SETENHANCEDMODEPARMS (54h) - Remarks</H1><!-- entering slot 1157 -->
+<P>
+This function is used to disable/enable the Enhanced mode operations or
+to control the Receive/Transmit operations on a COM port with the Enhanced
+UART or compatibles.  As a default, the physical device driver automatically
+runs I/O operations in Enhanced mode, which is either DMA mode or Enhanced
+FIFO mode.  In DMA mode, the data transfer from port to memory, or from
+memory to port, can be done directly by the DMA chip, alleviating the CPU
+operations and gaining maximum performance gain. A DMA-mode operation requires
+a system resource called the<I> DMA channel</I>.
+<P>
+In Enhanced FIFO mode, the full capacity of Extended Hardware Buffering
+is used automatically by the physical device driver.  In both operations,
+the ABIOS function interfaces are used by the physical device driver to
+maintain full compatibility with existing communication protocols. The Extended
+Hardware Buffering Flags3 bit settings of <A HREF="1098_L3_ASYNC_SETDCBINFO53hS.html">ASYNC_SETDCBINFO
+</A>are ignored.
+<P>
+The user can turn the Enhanced mode<I> off</I> with this function, if desired.
+ In this case, a COM port behaves as if it is a conventional serial device
+with Extended Hardware Buffering capability.  The Extended Hardware Buffering
+bit settings of Flags3 (Function 53h) are used to control the hardware FIFO
+buffer.
+<P>
+If a general failure error is not returned, then the actions described below
+are taken by the physical device driver.  If the Data Packet pointer is
+not NULL, the IOCtl fails with the ERROR_GEN_FAILURE return code.
+<P>
+To maintain hardware compatibility, the application must call <A HREF="1236_L3_ASYNC_GETENHANCEDMOD.html">ASYNC_GETENHANCEDMODEPARMS</A>,
+before the Function 54h is used.  This allows the Reserved bits to be set
+correctly in a future release of the device driver.  By calling Function
+74h first, the application can maintain the state of the physical device
+driver for a mode that the application is not aware of.
+<P>
+<B>Note 1</B>
+<P>
+Enhanced Flags1.  Bits 0, 6, and 7 are only for querying the status of the
+Enhanced mode (Function 74h) and are ignored when the user calls Function
+54h.  Before setting bits 1-5, the user must call Function 74h to ensure
+that a COM port supports the Enhanced mode and must check to see if bit
+0 of the Enhanced Flags1 is set.  If bit 1 is set in Function 54h, the physical
+device driver generates the general failure error return code.
+<P>
+As a default, when the Enhanced mode is supported, it is enabled and the
+Enable Enhanced Mode bit is set.  The user can disable the Enhanced mode
+by resetting this bit.  When Enhanced mode is disabled, the settings of
+bits 2-5 are ignored and the enhanced FIFO/DMA capabilities of the hardware
+are not exploited.  It is important that the user not disable the Enhanced
+mode unless it is required to control the hardware FIFO buffer manually.
+ In Enhanced mode, the physical device driver automatically controls the
+hardware FIFO buffer for its maximum efficiency.  The advanced function
+interfaces provided by the hardware allow a full compatibility with the
+existing RS232-C communication protocols.
+<P>
+When the Disable DMA Receive Capability option is chosen, the device driver
+does not try to use the DMA capability for receive operations. Instead,
+the physical device driver runs receive operations in Enhanced FIFO mode
+where the full FIFO capability and the enhanced ABIOS function interfaces
+are automatically exploited.  The efficiency of the Enhanced FIFO-mode operations
+is not as good as the DMA-mode operation, but is better than the Character-mode
+operation.  This option allows the user to control the use of a limited
+number of the available DMA channels in the system.  When the Enhanced mode
+is disabled, the system runs in conventional mode and the advanced function
+features provided by the hardware are not utilized.
+<P>
+The initial default system uses the Enable DMA Receive Capability option.
+ In Enhanced mode, the physical device driver tries to use a DMA channel
+at Open request time.  If there is no DMA channel available at that moment,
+the operation defaults to Enhanced FIFO-mode operation. If the physical
+device driver can successfully allocate a DMA channel, then the receive
+operation operates in DMA mode.  When the Enhanced mode is disabled, no
+attempt is made to allocate a DMA channel.
+<P>
+When the Dedicate a DMA Channel to Receive Operation option is requested,
+the physical device driver tries to allocate a DMA channel as a dedicated
+one for receive operations.  If a DMA channel cannot be allocated at the
+time of request, the physical device driver returns the general failure
+error.  If a DMA channel can be allocated successfully by Function 54h,
+it is not deallocated until the user issues Function 54h again with<!-- entering slot 1158 --> another
+option such as Enable DMA Receive Operation, Disable DMA Receive Operation,
+or Disable Enhanced Mode.
+<P>
+<B>Note: </B> If the user requests to switch the state of DMA Receive Capability
+while a receive operation is in process, there is a chance of loss of data.
+ It is important that the user check the emptiness of the device driver
+receive and transmit queues through <A HREF="1186_L3_ASYNC_GETINQUECOUNT6.html">ASYNC_GETINQUECOUNT</A>,
+and <A HREF="1195_L3_ASYNC_GETOUTQUECOUNT.html">ASYNC_GETOUTQUECOUNT</A>.
+ Before requesting the DMA-mode switch, the user must stop transmitting
+and communication protocols must be employed to ensure the transmitting
+system on the other end of the line has stopped transmitting.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+When the Disable DMA Transmit Capability option is chosen, the physical
+device driver does not try to use the DMA capability for transmit operations.
+ Instead, the physical device driver runs transmit operations in Enhanced
+FIFO-mode, where the full FIFO capability and the enhanced ABIOS function
+interfaces are automatically exploited. The efficiency of the Enhanced FIFO-mode
+operations is not as good as the DMA-mode operation, but is better than
+the Character-mode operation. This option allows the user to control the
+use of a limited number of the available DMA channels in the system.  When
+the Enhanced mode is disabled, the system runs in conventional mode and
+the advanced function features provided by the hardware are not utilized.
+
+<P>
+The initial default system uses the Enable DMA Transmit Capability option.
+ In Enhanced mode, with this option, the physical device driver tries to
+use a DMA channel at each transmit request, and if there is no DMA channel
+available at that moment, then the operation defaults to Enhanced FIFO-mode
+operation.  If the physical device driver can successfully allocate a DMA
+channel, then the transmit operation operates in DMA mode.  When the Enhanced
+mode is disabled, no attempt is made to allocate a DMA channel.
+<P>
+When the Dedicate a DMA Channel to Transmit Operation option is requested,
+the physical device driver tries to allocate a DMA channel as a dedicated
+one for transmit operation.  If a DMA channel cannot be allocated at the
+time of request, the physical device driver returns the general failure
+error.  If a DMA channel can be allocated successfully by Function 54h,
+it is not deallocated until the user issues Function 54h again with another
+option such as Enable DMA Transmit Operation, Disable DMA Transmit Operation,
+or Disable Enhanced Mode.
+<P>
+<B>Note: </B> If the user requests to switch the state of DMA Transmit Capability
+while a transmit operation is in process, there is a chance of loss of data.
+ It is important that the user check the emptiness of the device driver
+transmit queue through <A HREF="1195_L3_ASYNC_GETOUTQUECOUNT.html">ASYNC_GETOUTQUECOUNT</A>.
+<!-- lm: 0x2 1 -->
+<P>
+
+<P>
+The First Level Open or Last Level Close does not affect the bit settings
+of Enhanced Flags1.
+
+<P><HR>
+
+<A HREF="1119_L3H_ASYNC_SETENHANCEDMOD.html">[Back: ASYNC_SETENHANCEDMODEPARMS (54h) - Returns]</A> <BR>
+<A HREF="1121_L3H_ASYNC_SETENHANCEDMOD.html">[Next: ASYNC_SETENHANCEDMODEPARMS (54h) -]</A> 
+</BODY>
+</HTML>

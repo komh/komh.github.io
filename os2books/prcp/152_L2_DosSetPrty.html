@@ -1,0 +1,141 @@
+<HTML>
+<HEAD>
+<TITLE>DosSetPrty</TITLE>
+</HEAD>
+<BODY>
+<H1>DosSetPrty</H1><!-- entering slot 186 -->Bindings:  <A HREF="327_L2H_DosSetPrty.html">C</A>,
+<A HREF="502_L2H_DosSetPrty.html">MASM</A>
+<BR>
+
+<P>
+This call allows a process to change the priority of all the threads of
+any process; or all the threads of the current process or a child process,
+as well as any descendants; or a single thread within the current process.
+When a process changes the priority of threads in other processes, only
+default priorities are changed.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+DosSetPrty<!-- lm: 0x2 16 -->
+<UL> (Scope, PriorityClass, PriorityDelta,
+ID)<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+<B>Scope</B> (USHORT) - input<!-- lm: 0x11 4 -->
+<UL> The extent of the
+priority change.<!-- lm: 0x2 4 -->
+<P>
+Value<!-- lm: 0x2 14 -->
+<UL> Definition<!-- lm: 0x2 4 -->
+</UL> 0<!-- lm: 0x2 14 -->
+<UL> All
+the threads of any process.<!-- lm: 0x2 4 -->
+</UL> 1<!-- lm: 0x2 14 -->
+<UL> All
+the threads of a process and any descendants. The indicated process must
+be the current process or a process created by the current process. Detached
+processes may not be specified. The indicated process may possibly have
+terminated.<!-- lm: 0x2 4 -->
+</UL> 2<!-- lm: 0x2 14 -->
+<UL> A single thread
+of the current process.<!-- lm: 0x2 1 -->
+</UL><B> PriorityClass</B> (USHORT)
+- input<!-- lm: 0x11 4 -->
+<UL> Priority class of a process. The values
+and descriptions are:<!-- lm: 0x2 4 -->
+<P>
+Value<!-- lm: 0x2 14 -->
+<UL> Definition<!-- lm: 0x2 4 -->
+</UL>0<!-- lm: 0x2 14 -->
+<UL> No change, leave as is<!-- lm: 0x2 4 -->
+</UL>1<!-- lm: 0x2 14 -->
+<UL> Idle-time<!-- lm: 0x2 4 -->
+</UL>2<!-- lm: 0x2 14 -->
+<UL> Regular<!-- lm: 0x2 4 -->
+</UL>3<!-- lm: 0x2 14 -->
+<UL> Time-critical.<!-- lm: 0x2 4 -->
+</UL>4<!-- lm: 0x2 14 -->
+<UL> Fixed-high.<!-- lm: 0x2 1 -->
+</UL><B> PriorityDelta
+</B>(SHORT) - input<!-- lm: 0x11 4 -->
+<UL> Delta priority to apply to the
+process's current base priority level.  This value must range from -31 to
++31.<!-- lm: 0x2 1 -->
+</UL><B> ID</B> (USHORT) - input<!-- lm: 0x11 4 -->
+<UL> A
+process ID (scope = 0 or 1) or a thread ID (scope = 2). If this operand
+is equal to zero, the current process or thread is assumed.<!-- lm: 0x2 1 -->
+</UL><B> rc
+</B>(USHORT) - return<!-- lm: 0x11 4 -->
+<UL> Return code descriptions are:
+<!-- lm: 0x2 4 -->
+<P>
+<LI><!-- lm: 0x2 14 -->NO_ERROR<!-- lm: 0x2 4 --> 303<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_PROCID
+<!-- lm: 0x2 4 -->
+</UL>304<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_PDELTA<!-- lm: 0x2 4 -->
+</UL>305<!-- lm: 0x2 14 -->
+<UL> ERROR_NOT_DESCENDANT<!-- lm: 0x2 4 -->
+</UL>307<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_PCLASS<!-- lm: 0x2 4 -->
+</UL>308<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_SCOPE<!-- lm: 0x2 4 -->
+</UL>309<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_THREADID<!-- lm: 0x2 1 -->
+</UL><B>Remarks</B>
+<P>
+The OS/2 scheduler has a concept of priority classes and levels.  DosSetPrty
+allows threads to move between classes in response to changes in their execution
+environments. Within each class, a thread's priority level can vary because
+of a DosSetPrty request or action taken by the system. System-initiated
+priority variation is performed as a combination of a specific thread's
+actions and the overall system activity.
+<P>
+A time-critical thread has the highest priority class and executes before
+any fixed-high, regular, or idle-time threads. A fixed-high thread has a
+priority class that is lower than time-critical but executes before any
+regular or idle-time threads.
+<P>
+Time-critical threads have static priorities that are not varied by OS/2.
+ Threads are scheduled in priority order, with round-robin scheduling of
+threads of equal priority.
+<P>
+For each of the four priority classes, there are 32 distinct priority levels,
+0 to +31. Whenever DosSetPrty is issued with a class specification, but
+no value is specified for PriorityDelta, the base priority level defaults
+to zero.
+<P>
+The priority level of a process consists of a computed priority value that
+is based upon the display status (foreground or background) of the process,
+its recent I/O and processor time-usage history, and other factors. The
+signed value specified in PriorityDelta is added to the computed priority
+to produce the actual priority used by the scheduler. The result is restricted
+to the valid range, based upon the current priority class.
+<P>
+Specifying a higher priority delta allows a thread to obtain better processor
+scheduling than it normally would.  A lower priority delta gives the thread
+less processor resource than it normally receives.
+<P>
+When used with PriorityClass to change to a different class, the delta value
+applies to the base priority. A new base level of 0 is assigned the target
+thread and any PriorityDelta specified is relative to zero.
+<P>
+A process can change the priority of any thread within its current process.
+However, when a process changes the priority of threads in another process,
+only those with default priorities are changed. The priority of any thread
+in another process that has explicitly changed its priority from the default
+with DosSetPrty is not changed.
+<P>
+The initial thread of execution for an application is given a regular class
+priority that varies by the system. A thread started with <A HREF="020_L2_DosCreateThread.html">DosCreateThread
+<!-- entering slot 187 --></A> inherits the priority of the thread in the
+process that creates it. A child process started by a <A HREF="033_L2_DosExecPgm.html">DosExecPgm
+</A>call inherits the priority of the thread in the parent process that
+creates it.
+
+<P><HR>
+
+<A HREF="151_L2_DosSetProcCp.html">[Back: DosSetProcCp]</A> <BR>
+<A HREF="153_L2_DosSetSession.html">[Next: DosSetSession]</A> 
+</BODY>
+</HTML>

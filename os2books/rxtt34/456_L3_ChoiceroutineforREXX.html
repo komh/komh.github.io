@@ -1,0 +1,117 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Choice routine for REXX</TITLE>
+</HEAD>
+<BODY>
+<H1>Choice routine for REXX</H1><!-- entering slot 474 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* sample choice routine with timeout                                 */
+
+                        /* load REXXUTIL                              */
+ call rxFuncAdd "SysLoadFuncs", "REXXUTIL", "SysLoadFuncs"
+ call SysLoadFuncs
+
+                        /* default key if no key is pressed           */
+ thisDefault= "Y"
+                        /* timeout value in seconds                   */
+ thisTimeOut = 10
+
+ call CharOut , "Waiting for a key "
+ parse value GetKey( thisDefault, thisTimeOut, "." ) with ,
+             thisRC "," pressedKey "," KeyPressed "," isFunctionKey
+
+ if thisRC = 1 then
+   if keyPressed = 1 then
+     if isFunctionKey = 1 then
+       say "Pressed the function key with the code " || C2D( pressedKey )
+     else
+       say "Pressed key is &lt;" || pressedKey || "&gt;"
+   else
+     say "No key pressed. Using the default."
+ else
+   say "Error while calling GetKey()!"
+exit 0
+
+/* ------------------------------------------------------------------ */
+/* function: Get a key with timeout                                   */
+/*                                                                    */
+/* usage:    GetKey default , timeOut, inProgressInd                  */
+/*                                                                    */
+/* where:    default       - default key                              */
+/*           timeOut       - timeOut in seconds                       */
+/*           inProgressInd - if &lt;&gt; "" char for the in progress        */
+/*                           indicator                                */
+/*                                                                    */
+/* returns:  thisRc, key, keypressed, functionKey                     */
+/*                                                                    */
+/* where:    thisRC      - 1 if okay, else error                      */
+/*           key         - pressed key (or default)                   */
+/*           keypressed  - 1 if a key was pressed else 0              */
+/*           functionKey - 1 if a function key was pressed else 0     */
+/*                                                                    */
+/* note:     This function does not work as desired in OO REXX! v2.30 */
+/*           The reason is the different behaviour of the       v2.30 */
+/*           function CHARS() in OO REXX!                       v2.30 */
+/*                                                                    */
+/*           [Tested with OBJREXX 6.00 12 Jul 1996]                   */
+/*           [Fixed in OBJREXX 6.00 26 Feb 1997 and newer versions]   */
+/*                                                                    */
+GetKey: PROCEDURE
+  parse arg default, timeOut, inProgressInd
+
+                            /* init the return code(s)                */
+  thisRC = 0
+  thisKey = default
+  keyPressed = 0
+  functionKey = 0
+
+                            /* install a local error handler          */
+  SIGNAL ON SYNTAX Name GetKeyEnd
+
+  do timeCount = 0 to timeOut
+    if InProgressInd &lt;&gt; "" then
+      call CharOut , inProgressInd
+
+    if chars() &lt;&gt; 0 then
+    do
+                            /* there is a key available               */
+      thisKey = SysGetKey( "NOECHO" )
+      if thisKey = "00"x | thisKey = "E0"x then
+      do
+                            /* function key pressed                   */
+        thisKey = SysGetKey( "NOECHO" )
+        functionKey = 1
+      end /* if thisKey = "00"x | thisKey = "E0"x then */
+      keypressed = 1
+      leave
+    end /* if chars() &lt;&gt; 0 then */
+    else
+    do
+                            /* wait a second                          */
+      call SysSleep 1
+    end /* else */
+  end /* do timeCount = 0 to timeOut */
+
+                            /* set rc to execution is okay            */
+  thisRC = 1
+
+  if inProgressInd &lt;&gt; "" then
+    say ""
+
+GetKeyEnd:
+RETURN thisRC || "," || thisKey || "," || keyPressed || "," || FunctionKey
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="455_L3_SimpleYesNoquestion.html">[Back: Simple Yes/No question]</A> <BR>
+<A HREF="457_L3_sprintfroutineforREX.html">[Next: sprintf routine for REXX]</A> 
+</BODY>
+</HTML>

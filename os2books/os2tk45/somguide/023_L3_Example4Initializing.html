@@ -1,0 +1,136 @@
+<HTML>
+<HEAD>
+<TITLE>Example 4 - Initializing a SOM Object</TITLE>
+</HEAD>
+<BODY>
+<H1>Example 4 - Initializing a SOM Object</H1><!-- entering slot 31 -->
+<P>
+The previous example showed how to override the method<B> somPrintSelf,
+</B>introduced by<B> SOMObject.</B> As mentioned in that example,<B> somPrintSelf
+</B>should generally be overridden when implementing a new class. Another
+method introduced by<B> SOMObject</B>  that should generally be overridden
+is<B> somDefaultInit.</B> The purpose of<B> somDefaultInit</B> is to provide
+a "default" initializer  for the instance variables introduced by a class.
+
+<P>
+This example shows how to override<B> somDefaultInit</B> to give each "Hello"
+object's message an initial value when the object is first created. To learn
+more about initializers than shown in this example (including how to introduce
+new initializers that take arbitrary arguments, and how to explicitly invoke
+initializers) read Section 5.5, "Initializing and Uninitializing Objects,"
+in Chapter 5, "Implementing Classes in SOM."
+<P>
+The overall process of overriding<B> somDefaultInit</B> is similar to that
+of the previous example. First, the IDL for "Hello" is modified. In addition
+to an<B> override</B>  modifier, an init modifier is used to indicate that
+a stub procedure for an initialization method is desired (the stub procedures
+for initializers are different from those of normal methods).
+<P>
+<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Modify the interface declaration in "hello.idl."
+
+<BR>
+
+<PRE>#include &lt;somobj.idl&gt;
+
+interface Hello : SOMObject
+{
+  void sayHello();
+
+  attribute string msg;
+
+#ifdef __SOMIDL__
+implementation
+{
+    //# Method Modifiers:
+    somPrintSelf: override;<B>
+    somDefaultInit: override, init;</B>
+};
+#endif
+
+};
+</PRE>
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Re-run the SOM Compiler on the updated hello.idl
+file, as before. SOM Compiler extends the existing implementation file.
+Below is the initializer stub procedure that the SOM Compiler adds to the
+C language implementation file; C++ implementation files would be similarly
+revised:
+<BR>
+
+<PRE>SOM_Scope void SOMLINK
+     <B>     somDefaultInit</B>(Hello somSelf, somInitCtrl *ctrl)
+{
+  HelloData *somThis; /* set by BeginInitializer */
+  somInitCtrl globalCtrl;
+  somBooleanVector myMask;
+  HelloMethodDebug("Hello", "somDefaultInit");
+  Hello_BeginInitializer_somDefaultInit;
+
+<B>  Hello_Init_SOMObject_somDefaultInit</B>(somSelf, ctrl);
+  /*
+   * local Hello initialization code added by programmer
+   */
+}
+</PRE>
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Customize the implementation.
+<P>
+Here, the "msg" instance variable is set in the implementation template
+(rather than in the client program, as before). Thus, the "msg" is defined
+as part of the "Hello" object's initialization.
+<PRE>SOM_Scope void SOMLINK
+               somDefaultInit(Hello somSelf, somInitCtrl *ctrl)
+{
+  HelloData *somThis; /* set by BeginInitializer */
+  somInitCtrl globalCtrl;
+  somBooleanVector myMask;
+  HelloMethodDebug("Hello", "somDefaultInit");
+  Hello_BeginInitializer_somDefaultInit;
+
+  Hello_Init_SOMObject_somDefaultInit(somSelf, ctrl);
+  /*
+   * local Hello initialization code added by programmer
+   */<B>
+  __set_msg(somSelf, "Initial Message");</B>
+}
+
+</PRE>
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Update the client program to illustrate default
+initialization.
+<BR>
+
+<PRE>#include &lt;hello.h&gt;
+main()
+{
+    Hello h = HelloNew();
+
+    /* Execute the "somPrintSelf" method */<B>
+    _somPrintSelf(h);</B>
+}
+
+</PRE>
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Compile and link the client program, as before.
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Execute the client program.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>&gt; hello-- a Hello object at 200633A8 with msg: Initial Message
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="022_L3_Example3Overridingan.html">[Back: Example 3-Overriding an Inherited Method]</A> <BR>
+<A HREF="024_L3_Example5UsingMultipl.html">[Next: Example 5-Using Multiple Inheritance]</A> 
+</BODY>
+</HTML>

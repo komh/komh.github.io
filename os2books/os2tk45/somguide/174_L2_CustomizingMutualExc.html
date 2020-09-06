@@ -1,0 +1,134 @@
+<HTML>
+<HEAD>
+<TITLE>Customizing Mutual Exclusion Services (Thread Safety)</TITLE>
+</HEAD>
+<BODY>
+<H1>Customizing Mutual Exclusion Services (Thread Safety)</H1><!-- entering slot 209 -->
+<P>
+The SOM kernel and the other SOMobjects frameworks (DSOM, Persistence, Replication,
+and so on), have been made thread safe with respect to multi-threaded processes.
+As used here, "thread safe" means that the SOMobjects run time has been
+implemented using<I> mutual exclusion semaphores</I> to protect sections
+of the code which must only be executed by a single thread in a multi-threaded
+application process at one time.
+<P>
+Some operating systems provide native multi-threading (for example, OS/2.)
+On other operating systems that do not support native multi-threading (such
+as, AIX 3.2), thread support may be provided as part of particular programming
+environments (like DCE) or libraries.
+<P>
+It is vital that SOM employ the mutex services that are provided by the
+thread package used by the application. Consequently, SOM provides a mechanism
+for defining and customizing mutex services.
+<P>
+Five mutex service functions are used to implement mutual exclusion in SOM.
+These functions are called indirectly via the global pointer variables defined
+below. A<B> somToken</B> parameter (called "sem" below) is used as a generic
+"handle to refer to a mutex semaphore - usually it is a pointer to a mutex
+semaphore variable or data structure. The actual representation of the mutex
+semaphore is hidden by the functions.
+<PRE>unsigned long <B>(*SOMCreateMutexSem)</B>(somToken *sem);
+</PRE>
+<!-- lm: 0x2 6 -->
+<UL>
+<P>
+The referenced function creates a mutex semaphore, whose handle is returned
+as an output parameter in the<B> somToken</B> variable identified by  "sem".
+<BR>
+<!-- lm: 0x2 6 -->
+<P>
+If the call succeeds, a 0 is returned.  Otherwise, a non-zero error code
+is returned.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>unsigned long <B>(*SOMRequestMutexSem)</B>(somToken sem);</PRE>
+<!-- lm: 0x2 6 -->
+<UL>
+<P>
+The referenced function requests ownership of the mutex semaphore identified
+by the parameter,<I> sem.</I> If the semaphore is not currently owned by
+another thread, ownership is assigned to the calling thread. Otherwise,
+the calling thread is blocked until the semaphore is released by the current
+owner.<!-- lm: 0x2 6 -->
+<P>
+<I>Important:</I> If the same thread calls<B> SOMRequestMutexSem</B> multiple
+times, a reference count must be kept, so that the semaphore is released
+only after the same number of calls to<B> SOMReleaseMutexSem.</B> Some,
+but not all, thread packages provide reference counting automatically, via
+"counting semaphores."<!-- lm: 0x2 6 -->
+<P>
+If the call succeeds, a 0 is returned. Otherwise,  a non-zero error code
+is returned.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>unsigned long<B>(*SOMReleaseMutexSem)</B>(somToken sem);</PRE>
+<!-- lm: 0x2 6 -->
+<UL>
+<P>
+The referenced function releases ownership of the mutex semaphore identified
+by the parameter,<I> sem.</I><!-- lm: 0x2 6 -->
+<P>
+
+<P>
+<I>Important:</I> If the same thread calls<B> SOMRequestMutexSem</B> multiple
+times, a reference count must be kept, so that the semaphore is released
+only after the same number of calls to<B> SOMReleaseMutexSem.</B> Some,
+but not all, thread packages provide reference counting automatically, via
+"counting semaphores."<!-- lm: 0x2 6 -->
+<P>
+If the call succeeds, a 0 is returned.  Otherwise, a non-zero error code
+is returned.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>unsigned long <B>(*SOMDestroyMutexSem)</B>(somToken sem);</PRE>
+<!-- lm: 0x2 6 -->
+<UL>
+<P>
+The referenced function destroys the a mutex semaphore identified by the
+parameter,<I> sem.</I><!-- lm: 0x2 6 -->
+<P>
+If the call succeeds, a 0 is returned. Otherwise, a non-zero error code
+is returned.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>unsigned long <B>(*SOMGetThreadId)</B>();</PRE>
+<!-- lm: 0x2 6 -->
+<UL>
+<P>
+The referenced function returns a small integer identifier for the calling
+thread. The ID cannot be associated with any other thread in the process.
+The ID is used as an index for table lookups.<!-- lm: 0x2 6 -->
+<P>
+If threads are not supported, the function must return 0.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The actual mutex service function prototypes and global variable declarations
+are found in file "somapi.h".
+<P>
+If the underlying operating system supports native multi-threading (currently,
+only OS/2), SOM provides appropriate default mutex service function implementations.
+On those operating systems that do not support native multi-threading, the
+default mutex service functions have null implementations.
+<P>
+An application may want to use threading services different from those provided
+by the underlying operating system (if any); for example, DCE applications
+will want to use DCE threads. In that case, the default mutex service functions
+can be replaced by application-defined functions.
+<P>
+An application program would use code similar to the following to install
+the replacement routines:
+<PRE>#include &lt;som.h&gt;/* Define a replacement routine: */
+unsigned long myCreateMutexSem (somToken *sem)
+{
+    (Customized code <!-- entering slot 210 -->goes here)
+}
+...      <B>
+SOMCreateMutexSem</B>= myCreateMutexSem;
+</PRE>
+
+<P>
+It is important to install custom mutex service functions before any SOM
+calls are made.
+
+<P><HR>
+
+<A HREF="173_L2_CustomizingErrorHand.html">[Back: Customizing Error Handling]</A> <BR>
+<A HREF="175_L2_CustomizingMultithre.html">[Next: Customizing Multi-threading Services]</A> 
+</BODY>
+</HTML>

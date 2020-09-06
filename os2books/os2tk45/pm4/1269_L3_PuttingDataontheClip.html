@@ -1,0 +1,66 @@
+<HTML>
+<HEAD>
+<TITLE>Putting Data on the Clipboard</TITLE>
+</HEAD>
+<BODY>
+<H1>Putting Data on the Clipboard</H1><!-- entering slot 1290 -->The following code fragment shows how an application
+places text data on the clipboard, how it opens the clipboard, copies the
+text to a shared memory object, empties the clipboard, and passes the pointer
+to the clipboard:
+<P>
+
+<PRE>    #define MAXSTR   1024
+
+    PSZ  pszSrc, pszDest;
+    BOOL fSuccess;
+    CHAR szClipString[MAXSTR];
+    HAB  hab;
+
+        .
+        . /* Get character string (szClipString). */
+        .
+
+    if (WinOpenClipbrd(hab)) {
+
+        /* Allocate a shared memory object for the text data. */
+        if (!(fSuccess = DosAllocSharedMem(
+                (PVOID)&amp;pszDest,       /* Pointer to shared memory object */
+                NULL,                  /* Use unnamed shared memory       */
+                strlen(szClipString)+1,/* Amount of memory to allocate    */
+                PAG_WRITE  |           /* Allow write access              */
+                PAG_COMMIT |           /* Commit the shared memory        */
+                OBJ_GIVEABLE))) {      /* Make pointer giveable           */
+
+            /* Set up the source pointer to point to text. */
+            pszSrc = szClipString;
+
+            /* Copy the string to the allocated memory. */
+            while (*pszDest++ = *pszSrc++);
+
+            /* Clear old data from the clipboard. */
+            WinEmptyClipbrd(hab);
+
+            /*
+             * Pass the pointer to the clipboard in CF_TEXT format. Notice
+             * that the pointer must be a ULONG value.
+             */
+
+            fSuccess = WinSetClipbrdData(hab, /* Anchor-block handle    */
+                (ULONG) pszDest,              /* Pointer to text data   */
+                CF_TEXT,                      /* Data is in text format */
+                CFI_POINTER);                 /* Passing a pointer      */
+
+            /* Close the clipboard. */
+            WinCloseClipbrd(hab);
+        }
+    }
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1268_L2_UsingtheClipboard.html">[Back: Using the Clipboard]</A> <BR>
+<A HREF="1270_L3_RetrievingDatafromth.html">[Next: Retrieving Data from the Clipboard]</A> 
+</BODY>
+</HTML>

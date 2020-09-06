@@ -1,0 +1,310 @@
+<HTML>
+<HEAD>
+<TITLE>Creating an Initialization/Termination Function</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating an Initialization/Termination Function</H1><!-- entering slot 812 -->
+<P>
+It might be necessary for a DLL to perform some tasks before an application
+accesses a DLL or after an application finishes accessing a DLL.  For example,
+the library might need to allocate a heap or open a device prior to using
+a DLL, or deallocate a heap or close a device after using a DLL.  You can
+handle these tasks in an initialization/termination function.  The initialization/termination
+function can be called to perform initialization tasks when the DLL is first
+loaded or each time a new process accesses the DLL, depending on the LIBRARY
+statement in the module-definition file.  If you specify INITGLOBAL in the
+LIBRARY statement, the initialization/termination function is called only
+once, when the DLL is first loaded into memory.  This is the default setting.
+ If you specify INITINSTANCE, the library function is called each time the
+DLL is accessed by a new process.  In the same way, the initialization/termination
+function can be called on to perform termination tasks. If you specify TERMINSTANCE,
+the library function is called each time the DLL is freed for each process
+that accesses the DLL.
+<P>
+When a thread calls DosLoadModule to load a DLL, the initialization routines
+of the loaded DLL (and the initialization routines of the DLLs that it loads)
+will run on the thread that called DosLoadModule. This initialization will
+complete before DosLoadModule returns.
+<P>
+The prototype for the _DLL_InitTerm function is:
+<P>
+
+<PRE>unsigned long _DLL_InitTerm (unsigned long modhandle, unsigned long flag);
+</PRE>
+
+<P>
+If the value of the<I> flag</I> parameter is 0, the DLL environment is initialized.
+ If the value of the<I> flag</I> parameter is 1, the DLL environment is
+ended.  The<I> modhandle</I> parameter is the module handle assigned by
+OS/2 for this DLL.  The module handle can be used as a parameter to various
+OS/2 API calls. For example, DosQueryModuleName can be used to return the
+fully-qualified path name of the DLL, which tells you where the DLL was
+loaded from.
+<P>
+The return code from _DLL_InitTerm tells the loader whether the initialization
+or termination was performed successfully.  If the call was successful,
+_DLL_InitTerm returns a nonzero value.  A return code of 0 indicates that
+the function failed.  If a failure is indicated, the loader will not load
+the program that is accessing the DLL.
+<P>
+Before you can call any C library functions, you must first initialize the
+C run-time environment.  To initialize the environment, use the function
+_CRT_init.  The prototype for this function is:
+<P>
+
+<PRE>int _CRT_init (void);
+</PRE>
+
+<P>
+If the run-time environment is successfully initialized, _CRT_init returns
+0.  A return code of -1 indicates an error.  If an error occurs, an error
+message is written to file handle 2, which is the usual destination of stderr.
+
+<P>
+To properly terminate the C run-time environment, use the function, _CRT_term.
+ The prototype for this function is:
+<P>
+
+<PRE>void _CRT_term (unsigned long)
+</PRE>
+
+<P>
+Because _DLL_InitTerm is called by OS/2, it must be compiled using the system
+linkage.  In the IBM C Set/2 compiler, the following #pragma directive is
+used to specify the system linkage:
+<P>
+
+<PRE>#pragma linkage (_DLL_InitTerm, system)
+</PRE>
+
+<P>
+The initialization/termination function must have a specific entry point.
+ You cannot create a function with a specific entry point in the C programming
+language, so the initialization function must be written in assembly language.
+ However, you can write a very simple initialization function in assembly
+language and have it immediately jump to a C function. The following figure
+shows an Assembler language initialization function entry point.
+<PRE>
+     PAGE     ,132
+     TITLE    DLLSTUB
+     NAME     DLLSTUB
+
+     .386
+     .387
+
+     EXTERN   _DLL_InitTerm:NEAR
+
+     END      _DLL_InitTerm
+
+</PRE>
+
+<P>
+The following figure shows a sample initialization/termination function
+written in C.  This code was written using the IBM C Set/2 compiler.  If
+you use another compiler, some of the #pragmas or keywords might need to
+be changed.
+<PRE>/*+-------------------------------------------------------------------+*/
+/*| Sample Program 03 : INITTERM.C                                    |*/
+/*|                                                                   |*/
+/*| COPYRIGHT:                                                        |*/
+/*| ----------                                                        |*/
+/*| Copyright (C) International Business Machines Corp., 1995         |*/
+/*|                                                                   |*/
+/*+-------------------------------------------------------------------+*/
+
+#include &lt;stdlib.h&gt;
+#include &lt;stdio.h&gt;
+
+/*+-------------------------------------------------------------------+*/
+/*| _CRT_init is the C run-time environment initialization function.  |*/
+/*|It will return 0 to <!-- entering slot 813 -->indicate success and -1 to indicate failure.   |*/
+/*+-------------------------------------------------------------------+*/
+
+int _CRT_init (void);
+
+/*+-------------------------------------------------------------------+*/
+/*| _CRT_term is the C run-time environment termination function.     |*/
+/*+-------------------------------------------------------------------+*/
+
+void _CRT_term (unsigned long);
+
+size_t nSize;
+int *pArray;
+
+/*+-------------------------------------------------------------------+*/
+/*| _DLL_InitTerm is the function that gets called by the operating   |*/
+/*| system loader when it loads and frees this DLL for each process   |*/
+/*| that accesses this DLL.  However, it only gets called the first   |*/
+/*| time the DLL is loaded and the last time it is freed for a        |*/
+/*| particular process.  The system linkage convention must be used   |*/
+/*| because OS/2 loader is calling this function.     |*/
+/*+-------------------------------------------------------------------+*/
+
+#pragma linkage (_DLL_InitTerm, system)
+
+unsigned long _DLL_InitTerm (unsigned long modhandle, unsigned long flag)
+   {
+   size_t i;
+
+   /* If flag is zero then the DLL is being loaded so initialization  */
+   /* should be performed.  If flag is 1 then the DLL is being freed  */
+   /* so termination should be performed.                             */
+
+   switch (flag)
+      {
+      case 0:
+         /* The C run-time environment initialization function must   */
+         /* be called before any calls to C run-time functions that   */
+         /* are not inlined.                                          */
+
+         if (_CRT_init () == -1)
+            return 0UL;
+
+         srand (17);
+
+         nSize = (rand() % 128) + 32;
+
+         printf ("The array size for this process is %u\n",nSize);
+
+         if ((pArray=malloc (nSize * sizeof(int)))==NULL)
+            {
+            printf("Could not allocate space for unsorted array.\n");
+            return 0UL;
+            }
+
+         for (i=0; i&lt;nSize; ++i)
+            pArray[i] = rand();
+
+         break;
+
+      case 1:
+         printf("The array will now be freed.\n");
+
+         free(pArray);
+
+         _CRT_term(0UL);
+
+         break;
+
+      default:
+         printf("flag = %lu\n",flag);
+         return 0UL;
+
+      }
+
+   /* A nonzero value must be returned to indicate success. */
+   return 1UL;
+
+   }
+</PRE>
+
+<P>
+You also can write the initialization/termination function entirely in assembly
+language, without jumping to a C function.  For this case, the library initialization
+registers are defined as follows:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+EIP<!-- lm: 0x2 16 -->
+<UL> Library entry address<!-- lm: 0x2 1 -->
+</UL> ESP
+<!-- lm: 0x2 16 -->
+<UL>User program stack<!-- lm: 0x2 1 -->
+</UL> CS<!-- lm: 0x2 16 -->
+<UL> Code
+selector for base of linear address space<!-- lm: 0x2 1 -->
+</UL> DS=ES=SS
+<!-- lm: 0x2 16 -->
+<UL>Data selector for base of linear address space
+<P>
+<B>Note: </B> All 32-bit protected memory library modules will be given
+a GDT selector in the DS and ES registers (ProtDS) that addresses the full
+linear address space available to an application.  This selector should
+be saved by the initialization routine.  Non-protected memory library modules
+will receive a selector (FlatDS) that addresses the same amount of linear
+address space as an application's EXE file.<!-- lm: 0x2 1 -->
+</UL> FS<!-- lm: 0x2 16 -->
+<UL> Data
+selector of the base of the Thread Information Block (TIB)<!-- lm: 0x2 1 -->
+</UL> GS
+<!-- lm: 0x2 16 -->
+<UL>Is equal to 0<!-- lm: 0x2 1 -->
+</UL> EAX=EBX<!-- lm: 0x2 16 -->
+<UL> Is
+equal to 0<!-- lm: 0x2 1 -->
+</UL> ECX=EDX<!-- lm: 0x2 16 -->
+<UL> Is equal
+to 0<!-- lm: 0x2 1 -->
+</UL> ESI=EDI<!-- lm: 0x2 16 -->
+<UL> Is equal to
+0<!-- lm: 0x2 1 -->
+</UL> EBP<!-- lm: 0x2 16 -->
+<UL> Is equal to 0<!-- lm: 0x2 1 -->
+</UL> [ESP+0]
+<!-- lm: 0x2 16 -->
+<UL>Return address to system, and EAX = return code
+<!-- lm: 0x2 1 -->
+</UL>[ESP+4]<!-- lm: 0x2 16 -->
+<UL> Module handle for
+the library module<!-- lm: 0x2 1 -->
+</UL> [ESP+8]<!-- lm: 0x2 16 -->
+<UL> Is
+equal to 0 (for initialization)<!-- lm: 0x2 1 -->
+</UL>
+<P>
+A 32-bit library can specify that its entry point address is the 16-bit
+object code.  In this case, the entry registers are the same as for entry
+to a library using the segmented EXE format.  This means that a 16-bit library
+can be relinked to take advantage of the benefits of the linear EXE format
+(such as more efficient paging).
+<P>
+The library termination registers are defined as follows:<!-- lm: 0x2 1 -->
+<P>
+EIP<!-- lm: 0x2 16 -->
+<UL> Library entry address<!-- lm: 0x2 1 -->
+</UL> ESP
+<!-- lm: 0x2 16 -->
+<UL>User program stack<!-- lm: 0x2 1 -->
+</UL> CS<!-- lm: 0x2 16 -->
+<UL> Code
+selector for the base of the linear address space<!-- lm: 0x2 1 -->
+</UL> DS=ES=SS
+<!-- lm: 0x2 16 -->
+<UL>Data selector for the base of the linear address
+space<!-- lm: 0x2 1 -->
+</UL> FS<!-- lm: 0x2 16 -->
+<UL> Data selector of
+the base of the Thread Information Block (TIB)<!-- lm: 0x2 1 -->
+</UL> GS
+<!-- lm: 0x2 16 -->
+<UL>Is equal to 0<!-- lm: 0x2 1 -->
+</UL> EAX=EBX<!-- lm: 0x2 16 -->
+<UL> Is
+equal to 0<!-- lm: 0x2 1 -->
+</UL> ECX=EDX<!-- lm: 0x2 16 -->
+<UL> Is equal
+to 0<!-- lm: 0x2 1 -->
+</UL> ESI=EDI<!-- lm: 0x2 16 -->
+<UL> Is equal to
+0<!-- lm: 0x2 1 -->
+</UL> EBP<!-- lm: 0x2 16 -->
+<UL> Is equal to 0<!-- lm: 0x2 1 -->
+</UL> [ESP+0]
+<!-- lm: 0x2 16 -->
+<UL>Return address to the system<!-- lm: 0x2 1 -->
+</UL> [ESP+4]
+<!-- lm: 0x2 16 -->
+<UL>Module handle for the library module<!-- lm: 0x2 1 -->
+</UL> [ESP+8]
+<!-- lm: 0x2 16 -->
+<UL>Is equal to 1 (for termination)<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Note: </B> Library termination is not permitted for libraries<!-- entering slot 814 --> with
+16-bit entries.
+
+<P><HR>
+
+<A HREF="797_L3_UsingSharedandInstan.html">[Back: Using Shared and Instance Data]</A> <BR>
+<A HREF="799_L3_LinkingatRuntime.html">[Next: Linking at Runtime]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,74 @@
+<HTML XPOS=LEFT YPOS=BOTTOM WIDTH=100% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 44 01 00 08 00 11 64 00 64 00 --><TITLE>IP filters for tunnelling</TITLE>
+</HEAD>
+<BODY>
+<H1>IP filters for tunnelling</H1><!-- entering slot 44 -->
+<P>
+Once an IPSec tunnel has been created between two hosts, the appropriate
+IP traffic must be directed through it. This is done by setting up special
+packet filter rules (referred to as<B> tunnel rules</B>) which apply to
+traffic transmitted between the two hosts. 
+<P>
+A tunnel rule uses the same general syntax as a normal 'permit' rule, with
+one additional parameter: the <A HREF="024_L3_tunnel.html">tunnel parameter</A>,
+which must be set to the local ID number of the tunnel being used. 
+<P>
+The typical configuration will simply direct all IP traffic between the
+two hosts through the tunnel.  Note that rules are required for both directions
+of traffic:
+<BR>
+
+<PRE>    permit &lt;local ip&gt; &lt;local mask&gt; &lt;partner ip&gt; &lt;partner mask&gt; all any 0 any 0 &lt;interface&gt; &lt;routing&gt; outbound t=&lt;tunnel&gt;
+    permit &lt;partner ip&gt; &lt;partner mask&gt; &lt;local ip&gt; &lt;local mask&gt; all any 0 any 0 &lt;interface&gt; &lt;routing&gt; inbound  t=&lt;tunnel&gt;
+</PRE>
+ 
+<P>
+Unlike a normal rule, a tunnel rule does not permit or deny traffic, but
+simply directs the matching traffic through the IPSec tunnel with the specified
+ID number. This means that additional rules must also be configured in order
+to permit the necessary IP traffic. 
+<P>
+On a system where all IP traffic is permitted by default, the final rule
+would be:
+<BR>
+
+<PRE>    permit 0.0.0.0 0.0.0.0 0.0.0.0 0.0.0.0 all any 0 any 0 both both both
+</PRE>
+
+<P>
+and no further rules would be required. 
+<P>
+Otherwise, rules such as the following would be specified:
+<BR>
+
+<PRE>    permit &lt;local ip&gt; &lt;local mask&gt; &lt;partner ip&gt; &lt;partner mask&gt; esp any 0 any 0 &lt;interface&gt; &lt;routing&gt; inbound
+    permit &lt;partner ip&gt; &lt;partner mask&gt; &lt;local ip&gt; &lt;local mask&gt; esp any 0 any 0 &lt;interface&gt; &lt;routing&gt; outbound
+    permit &lt;local ip&gt; &lt;local mask&gt; &lt;partner ip&gt; &lt;partner mask&gt; ah  any 0 any 0 &lt;interface&gt; &lt;routing&gt; inbound
+    permit &lt;partner ip&gt; &lt;partner mask&gt; &lt;local ip&gt; &lt;local mask&gt; ah  any 0 any 0 &lt;interface&gt; &lt;routing&gt; outbound
+</PRE>
+
+<P>
+The first two rules permit ESP-encoded traffic to pass between the two systems;
+the last two permit AH-encoded traffic.  Since all traffic which passes
+through the IPSec tunnel will be encoded with one of these two protocols,
+these rules should be sufficient. 
+<P>
+The filter rules must be activated in the normal way, using the <A HREF="048_L2_CFGFILT.html">CFGFILT
+</A>command:
+<BR>
+
+<PRE>    cfgfilt -u
+</PRE>
+ 
+<P>
+As always, compatible configurations must be used on both hosts.
+<P>
+ 
+
+<P><HR>
+
+<A HREF="042_L3_Tunnelpolicies.html">[Back: Tunnel policies]</A> <BR>
+<A HREF="044_L2_Exampletunnel.html">[Next: Example tunnel]</A> 
+</BODY>
+</HTML>

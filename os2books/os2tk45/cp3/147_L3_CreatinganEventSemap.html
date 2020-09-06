@@ -1,0 +1,80 @@
+<HTML>
+<HEAD>
+<TITLE>Creating an Event Semaphore</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating an Event Semaphore</H1><!-- entering slot 155 -->
+<P>
+Processes create an event semaphore by using<A><!-- external link: 1D 6E C3 FC --> DosCreateEventSem</A>.
+The process that controls the event or resource is usually the one that
+creates the semaphore, but it does not have to be.
+<P>
+Threads in the process that creates the semaphore do not have to open the
+semaphore before using it.<A><!-- external link: 1D 6E C3 3F --> DosCreateEventSem
+</A>obtains access to the semaphore for the calling process and its threads.
+Threads in other processes must call<A><!-- external link: 1D A0 C3 40 --> DosOpenEventSem
+</A>to open the semaphore before they can use it.
+<P>
+Event semaphores can be defined as either private or shared:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Private semaphores are always unnamed and are therefore
+always identified by their handles. They can be used only by threads within
+a single process.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Shared semaphores can be either named or unnamed.
+If named, they can be opened using either the name or the handle. The handle
+returned by<A><!-- external link: 1D A0 C3 40 --> DosOpenEventSem</A> is
+then used to identify the semaphore for all other functions. Semaphore names
+must include the prefix \SEM32\ and must conform to file system naming conventions.
+Shared semaphores can be used by threads in multiple processes.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+In the following code fragment, the controlling process creates a named
+event semaphore and posts the semaphore after writing data to a shared file:
+
+<PRE>    #define INCL_DOSSEMAPHORES   /* Semaphore values */    #include &lt;os2.h&gt;
+
+    HEV hevWriteEvent;
+
+    DosCreateEventSem("\\sem32\\wrtevent",          /* Named-shared semaphore */
+                       &amp;hevWriteEvent, 0, FALSE);   /* Initially reset        */
+        .
+        .
+        /* Write data to shared file. */
+        .
+        .
+    DosPostEventSem(hevWriteEvent);                 /* Posts the event        */
+        .
+        .    /* Continue execution. */
+        .
+</PRE>
+
+<P>
+There is a system-wide limit of 65536 (64K) shared semaphores (including
+mutex, event, and muxwait semaphores); in addition, each process can have
+up to 65536 (64K) private semaphores.
+<P>
+When an event semaphore is created, a flag is used to specify the initial
+state of the event semaphore, either reset or posted. If the initial state
+is reset, a thread that calls<A><!-- external link: 1D 0B C4 43 --> DosWaitEventSem
+</A>will be blocked until a process that has access to the semaphore uses
+<A><!-- external link: 1D A9 C3 41 -->DosPostEventSem</A> to post the event
+semaphore. If the initial state is posted, then a thread that calls<A><!-- external link: 1D 0B C4 43 --> DosWaitEventSem
+</A>will return immediately to continue its execution. If the thread calling
+<A><!-- external link: 1D 0B C4 43 -->DosWaitEventSem</A> is not in the
+process that created the semaphore, the thread must open the semaphore with
+<A><!-- external link: 1D A0 C3 40 -->DosOpenEventSem</A> before calling
+<A><!-- external link: 1D 0B C4 FC -->DosWaitEventSem</A>.
+<P>
+OS/2 maintains a usage count for each semaphore.<A><!-- external link: 1D 6E C3 3F --> DosCreateEventSem
+</A>initializes the usage count to 1. Thereafter, each call to<A><!-- external link: 1D A0 C3 40 --> DosOpenEventSem
+</A>increments the count, and each call to<A><!-- external link: 1D 66 C3 3E --> DosCloseEventSem
+</A>decrements it.
+
+<P><HR>
+
+<A HREF="146_L2_UsingEventSemaphores.html">[Back: Using Event Semaphores]</A> <BR>
+<A HREF="148_L3_OpeninganEventSemaph.html">[Next: Opening an Event Semaphore]</A> 
+</BODY>
+</HTML>

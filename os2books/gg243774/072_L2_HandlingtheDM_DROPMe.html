@@ -1,0 +1,70 @@
+<HTML>
+<HEAD>
+<TITLE>Handling the DM_DROP Message</TITLE>
+</HEAD>
+<BODY>
+<H1>Handling the DM_DROP Message</H1><!-- entering slot 74 -->
+<PRE>#define XFERMEM "\\SHAREMEM\\DragXfer.mem"      /* Shared mem obj name   */
+
+PVOID     pCust;                                /* Customer record ptr   */
+
+PDRAGITEM pDItem;                               /* DRAGITEM struct ptr   */
+PDRAGINFO pDInfo;                               /* DRAGINFO struct ptr   */
+  :
+case DM_DROP:
+     pDInfo = (PDRAGINFO)mp1;                   /* Get DRAGINFO pointer  */
+     DrgAccessDraginfo(pDInfo);                 /* Access DRAGINFO       */
+     pDItem = DrgQueryDragitemPtr(pdinfo,       /* Access DRAGITEM       */
+                                  0);           /* Index to DRAGITEM     */
+
+     DosAllocSharedMem(&amp;pCust,                  /* Allocate shared mem   */
+                       XFERMEM,                 /* Named memory object   */
+                       sizeof(CUSTOMER),        /* Size of memory object */
+                       PAG_COMMIT |             /* Commit storage now    */
+                       PAG_WRITE  |             /* Allow write access    */
+                       PAG_READ);               /* Allow read access     */
+
+     pdxfer = DrgAllocDragtransfer(1);          /* Allocate DRAGTRANSFER */
+     pdxfer-&gt;cb = sizeof(DRAGTRANSFER);         /* Init DRAGTRANSFER     */
+     pdxfer-&gt;hwndClient = hWnd;
+     pdxfer-&gt;pditem = pDItem;
+     pdxfer-&gt;hstrSelectedRMF =
+             DrgAddStrHandle("&lt;DRM_CUSTOMER,DRF_TEXT&gt;");
+     pdxfer-&gt;hstrRenderToName =
+             DrgAddStrHandle(XFERMEM);
+     pdxfer-&gt;ulTargetInfo = 0;
+     pdxfer-&gt;usOperation = DO_COPY;
+
+     rc=DrgSendTransferMsg(pDInfo-&gt;hwndSource,  /* Send msg to source    */
+                           DM_RENDER,           /* DM_RENDER message     */
+                           (MPARAM)pdxfer,      /* DRAGTRANSFER pointer  */
+                           NULL);
+     if (rc == TRUE)                            /* If rendered okay      */
+        {
+        strcpy(msgtext, "Dialling number");     /* Build message text    */
+        strncat(msgtext,
+                pxfercust-&gt;phone,
+                30);
+        WinMessageBox(HWND_DESKTOP,             /* Display message box   */
+                      hWnd,                     /* Curr window is owner  */
+                      msgtext,                  /* Message text          */
+                      "Telephone Dialler",      /* Message title         */
+                      0,                        /* No identifier         */
+                      MB_OK);                   /* Include okay button   */
+
+        PhoneDial(pxfercust-&gt;phone);            /* Dial number           */
+        }
+
+     DrgFreeDragInfo(pdinfo);                   /* Release all data      */
+     DrgFreeDragtransfer(pdxfer);               /* structures            */
+     DosFreeMem((PVOID)pxfercust);
+     break;
+</PRE>
+
+
+<P><HR>
+
+<A HREF="071_L2_HandlingtheDM_DRAGOV.html">[Back: Handling the DM_DRAGOVER Message]</A> <BR>
+<A HREF="073_L2_HandlingtheDM_RENDER.html">[Next: Handling the DM_RENDER Message]</A> 
+</BODY>
+</HTML>

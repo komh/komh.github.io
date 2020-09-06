@@ -1,0 +1,342 @@
+<HTML>
+<HEAD>
+<TITLE>Extended Memory Manager</TITLE>
+</HEAD>
+<BODY>
+<H1>Extended Memory Manager</H1><!-- entering slot 212 -->
+<P>
+XMS services are implemented under MVDM using a virtual device driver known
+as the <A HREF="409_L2_ExtendedMemoryManage.html"><B>Virtual Extended Memory
+Manager</B> (<B>VXMM</B>)</A> which is represented by the file VXMS.SYS
+(VXMS). VXMM provides a separate XMS emulation for each VDM by placing most
+VXMS control structures in a per-VDM data area outside the V86 mode address
+space. The amount of memory available to a VDM, the number of handles, and
+the existence of Upper Memory Blocks (UMBs) are all configurable parameters
+which may be altered on a per-VDM basis.
+<P>
+The VXMM hooks interrupt vector 2Fh in order to announce its presence to
+applications. It also provides a V86 stub device driver (XMM 3X device driver),
+which indicates to DOS applications that XMS is available, but more importantly
+acts as a V86 mode interface between the application and the VXMM proper.
+
+<P>
+VXMM depends heavily upon the memory manager.  XMS object allocation reallocation,
+and deallocation are accomplished by requesting corresponding services from
+the memory manager.  When an application requests the allocation of a block
+of extended memory, for example, VXMS asks the memory manager to allocate
+a memory object in linear memory outside any VDM.  Reallocation and deallocation
+are handled similarly.
+<P>
+All EMS functions are executed by calling the XMS Control Function, the
+address of which can be obtained by a call to INT 2Fh. Arguments are passed
+in registers.
+<P>
+<A HREF="035_L2_ExtendedMemoryManage.html">Figure "Extended Memory Manager
+Control Flow"</A>
+<P>
+During the initialization of the VDM the VDM Manager loads and initializes
+the XMM DOS stub device driver into the VDM address space. As soon as there
+is a XMS request the VDM Manager loads the the XMS virtual device driver
+VXMS.<!-- lm: 0x2 3 -->
+<UL>
+<P>
+ a)<!-- lm: 0x2 7 -->
+<UL>The VDM Application issues a INT 15h service request.
+VXMS directly hooks INT 15h for function 87h and 88h. It does not provide
+any services through these calls but makes sure that no program tries to
+use extended memory directly. INT 15h function 88h will respond that no
+normal extended memory is available. Programs that want to use extended
+memory directly by using INT 15 and RAMdisks (electronic disks) using INT
+15 won't work. The MS DOS RAMDRIVE for DOS 5.0 does work because it uses
+XMS instead of INT 15.<!-- lm: 0x2 3 -->
+</UL>  b)<!-- lm: 0x2 7 -->
+<UL>The
+VDM application issues INT 2Fh to determine if an XMS driver is installed.
+<!-- lm: 0x2 3 -->
+</UL> c)<!-- lm: 0x2 7 -->
+<UL>The VDM application issues
+INT 2Fh to determine if an XMS driver is installed.<!-- lm: 0x2 3 -->
+</UL>
+d)<!-- lm: 0x2 7 -->
+<UL>Next the VDM application issues a INT 2Fh to obtain
+the address of the XMS driver's control function.  As soon as the VDM Application
+got the address of the XMS driver's control function it can use any of the
+functions and call the XMM DOS stub device driver directly.<!-- lm: 0x2 3 -->
+</UL>
+e)<!-- lm: 0x2 7 -->
+<UL>The VDM application calls the XMS driver's control
+function to access all of the XMS functions.<!-- lm: 0x2 3 -->
+</UL>  f)<!-- lm: 0x2 7 -->
+<UL>The
+XMM DOS stub device driver calls breakpoint traps by the VXMM Control Function.
+<!-- lm: 0x2 3 -->
+</UL> g)<!-- lm: 0x2 7 -->
+<UL>The VDM Manager initialization,
+creation, termination calls for XMS-Objects. The VDM Manager traps the VDM
+application's INT 15h service request and routes it to VXMS as well as XMS
+control function requests for XMS memory.<!-- lm: 0x2 3 -->
+</UL>  h)<!-- lm: 0x2 7 -->
+<UL>The
+VXMS requests corresponding services from the VDH services:<!-- lm: 0x2 6 -->
+</UL> <!-- lm: 0x2 8 -->
+<UL>Creation/termination
+handler registration<!-- lm: 0x2 6 -->
+</UL> <!-- lm: 0x2 8 -->
+<UL>INT
+67h prehooking<!-- lm: 0x2 6 -->
+</UL> <!-- lm: 0x2 8 -->
+<UL>Linear address
+reservation<!-- lm: 0x2 6 -->
+</UL> <!-- lm: 0x2 8 -->
+<UL>Memory management
+<!-- lm: 0x2 6 -->
+</UL><!-- lm: 0x2 8 -->
+<UL>Obtaining configuration
+information.<!-- lm: 0x2 7 --><!-- lm: 0x2 3 -->
+</UL>  i)<!-- lm: 0x2 7 -->
+<UL>The
+result is returned.<!-- lm: 0x2 0 --><!-- lm: 0x2 0 -->
+</UL>
+<P>
+Like VEMM and unlike most other virtual device drivers, VXMS.SYS does not
+have a corresponding physical device driver.  Instead, it depends heavily
+upon the OS/2 Version 2.0 memory manager.  XMS object allocation, reallocation
+and deallocation are accomplished by requesting corresponding services from
+the operating system's memory manager.  For example, when an application
+requests the allocation of a block of extended memory, VXMM requests the
+memory manager to allocate a memory object in linear memory outside the
+V86 mode address space.  Reallocation and deallocation are handled similarly.
+
+<P>
+<B>Structure</B>
+<P>
+The VXMS.SYS module<!-- entering slot 213 --> consists of:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->An<I> initialization component</I> that initializes
+global structures and reads the global configuration at boot time.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->A<I> creation component</I> that initializes
+per-VDM structures, reads per-VDM configuration values, and installs the
+DOS device driver stub when a VDM is created.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->A<I> router component</I> that receives control
+from the control function contained in the stub device driver, and dispatches
+the call to an appropriate service routine.  In addition, the router function
+hooks interrupt vector 15h upon the first non-version-query call to VXMM,
+as required by the specifications, in order to:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+ a)<!-- lm: 0x2 7 -->
+<UL>Preserve the state of the A20 line across block
+copies (service AH=87h).<!-- lm: 0x2 3 -->
+</UL>  b)<!-- lm: 0x2 7 -->
+<UL>Respond
+to service AH=88h (Query Extended Memory) by reporting that there is no
+extended memory available.<!-- lm: 0x2 4 --><!-- lm: 0x2 0 -->
+</UL>  4.<!-- lm: 0x2 4 -->
+<UL>A
+number of<I> service routines</I>, which perform the required XMS functions.
+<!-- lm: 0x2 0 -->
+</UL>
+<P>
+Applications request XMS services by calling a subroutine contained within
+the VXMM, known as the Control Function.  The VXMS virtual device driver
+hooks interrupt vector 2Fh in  order to announce its presence to applications.
+
+<P>
+<B>Initialization</B>
+<P>
+VXMS.SYS may be loaded at system initialization time by using a DEVICE=
+statement in CONFIG.SYS, as shown below:
+<PRE>DEVICE=C:\OS2\MDOS\VXMS.SYS 8192, 2048</PRE>
+
+<P>
+This statement should be placed in CONFIG.SYS<I> after</I> the DEVICE= statement
+for VEMM.SYS, since VXMM queries VEMM to ensure that no conflicts occur
+in memory allocation.
+<P>
+The DEVICE= statement uses parameters to specify the total amount of available
+XMS memory, and the default limit for each VDM.  In the above example, the
+overall limit is set to 8MB and the limit for each VDM is set to 2MB.
+<P>
+The virtual device driver VXMS.SYS can be configured as follows.
+<PRE>       device = {path} vxms.sys {options}
+</PRE>
+
+<P>
+The options are of the form "/keyword=value":<!-- lm: 0x2 0 -->
+<P>
+<B><LI>XMMLIMIT=g,i</B><!-- lm: 0x12 20 -->
+<UL> Sets the global (system-wide)
+maximum memory usage of the VXMS.SYS driver to g kilobytes, and a per-VDM
+maximum of i kilobytes.  These values should be large enough to accommodate
+an automatic 64KB allocation in each VDM for the HMA.  Values are restricted
+to the range 0..65535 (= 64Meg).
+<P>
+The values of g and i are rounded up to the nearest multiple of 4.
+<P>
+Specifying i = 0 suppresses XMS installation in all VDMs unless specifically
+overridden by a VDM-specific configuration string.  (See below.)
+<P>
+Default:  /XMMLIMIT=4096,1024<!-- lm: 0x2 0 -->
+</UL><B> /HMAMIN=d</B><!-- lm: 0x12 20 -->
+<UL> Sets
+the minimum request size (in kilobytes) for an HMA request to succeed.  Values
+are restricted to the range 0..63.
+<P>
+Default: /HMAMIN=0<!-- lm: 0x2 0 -->
+</UL><B> /NUMHANDLES=n</B><!-- lm: 0x12 20 -->
+<UL> Sets
+the number of handles available in each VDM. Each handle occupies eight
+bytes.  Values are restricted to the range 0..128.
+<P>
+Default: / NUMHANDLES=32<!-- lm: 0x2 0 -->
+</UL><B> /UMB</B><!-- lm: 0x12 20 -->
+<UL> Instructs
+XMM to create Upper Memory Blocks
+<P>
+Default:  off<!-- lm: 0x2 0 -->
+</UL><B> /NOUMB</B><!-- lm: 0x12 20 -->
+<UL> Instructs
+XMM not to create Upper Memory Blocks
+<P>
+Default: /NOUMB
+<P>
+All other keywords are ignored. <!-- entering slot 214 --> Case is ignored.
+<!-- lm: 0x2 0 -->
+</UL>
+<P>
+These options affect all VDMs, but can be overridden by a VDM's configuration
+strings.  The same option names are available to VDMs (without the prefixing
+slash), except that XMMLIMIT only takes one numeric argument, corresponding
+to the value i above.  The value g above cannot be changed once XMM is installed.
+
+<P>
+If a value of i=0 was specified on the DEVICE= line, to create a VDM with
+XMS installed, specify a configuration string "XMMLIMIT" with a non-zero
+value. Conversely, to have no XMS installed, specify a configuration string
+"XMMLIMIT" with a value of zero.
+<P>
+If UMBs are being used, it is crucial that VXMS.SYS be the last device driver
+loaded, for VXMS.SYS reserves all available addresses between 640KB and
+1Meg for use as UMBs.  Hence, any device drivers which reserve pages in
+that region (for example, VEMM) will not be able to install.
+<P>
+VXMS.SYS will fail to install if some other device driver has already reserved
+the region from 1MB to 1MB+64KB.
+<P>
+The overall limit comprises the only relationship between XMS memory objects
+in different VDMs, and is imposed to prevent XMS from acquiring all available
+memory.  The default overall limit is 4MB, and the default limit for each
+VDM is 1MB.  The default limit for each VDM can be overridden by installing
+an application on the desktop and choosing to specify the XMS size with
+the DOS Settings feature (see <A HREF="284_L1_DOSSettings.html">DOS Settings</A>).
+
+<P>
+Setting the overall limit to zero disables XMS in all VDMs regardless of
+the per-VDM value.  Setting the default limit for a particular VDM to zero
+disables XMS in all VDMs unless their start list entries specify a non-zero
+XMS size.  Setting the XMS size to zero for an entry in the start list disables
+XMS for that application's VDM only.  Novice users need never change the
+default values.
+<P>
+In addition to memory sizes, the number of handles and the presence or absence
+of Upper Memory Blocks are all configurable parameters which may be altered
+on a per-VDM basis using the DOS Settings feature.
+<P>
+Upon installation, an initialization routine within VXMS.SYS supplies the
+addresses of the VXMS.SYS VDM-creation and close routines to the Virtual
+DOS Machine Manager.
+<P>
+<B>VDM Creation</B>
+<P>
+Upon creation of a VDM, a VDH service is used to get the maximum XMS size
+for that VDM.  This will return a string if the program's entry on the desktop
+has an associated VXMS size.  If the per-VDM size is not defined, the default
+retrieved from CONFIG.SYS at initialization time will be used. If VXMS size
+is not 0, the following steps are then performed:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Upper Memory Blocks (UMBs) are found and reserved.
+<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The High Memory Area (HMA) is reserved.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The real mode device driver stub is loaded.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The handle table and UMB list are initialized.
+<!-- lm: 0x2 0 -->
+<P>
+To find an available linear region to use for UMBs, VXMS requests VDH services
+to locate the largest free address range in the V86 mode address space above
+640KB. VXMS reserves all the pages returned until the call fails.
+<P>
+VXMS requests the OS/2 Version 2.0 memory manager to allocate the 64KB region
+immediately above 1MB for use as the High Memory Area.  The way in which
+this is<!-- entering slot 215 --> accomplished depends upon a number of
+variables; see <A HREF="193_L3_HighMemoryAreaHMA.html">High Memory Area
+(HMA)</A> for further details.
+<P>
+Waiting until creation time to reserve this memory allows virtual device
+drivers with actual hardware to claim their addresses first, since VXMS's
+UMBs can be placed at any available address.  A consequence is that the
+space is reserved only for the VDM being created; it could be in a different
+location or be a different size for other VDMs.
+<P>
+VXMS then arranges for the loading of a stub device driver in the VDM. This
+driver serves three purposes:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->The device driver header can be read by an application
+searching for the name of the real mode VXMS driver.  It responds to all
+device requests with "done" without actually doing anything.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->The device driver's initialization code attaches VXMS
+to interrupt vector 2Fh.  Attaching to vector 2Fh must be delayed until
+after the virtual DOS environment has completed hooking all of its interrupts.
+<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->The device driver contains the VXMS<I> control function</I>;
+calls to XMS services are not performed by calling a software interrupt,
+but rather by calling a V86 mode<I> far</I> subroutine called the control
+function. Moreover, XMS specifications require the control function to have
+a particular physical layout.  Hence, the control function is placed in
+a DOS device driver so that it may have the layout required by the specifications
+and can transfer control to the virtual device driver code (the router function).
+<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+The stub device driver is used to transfer control to the router function.
+A DOS application invokes XMS functions by calling the control function
+as a<I> far</I> procedure, the address of which can be obtained by a different
+INT 2Fh call.  In response to such a request, the INT 2Fh interrupt handler
+returns the address of the control function in the device driver stub.  The
+Control Function then calls the protected mode VXMS entry point, and the
+router obtains control.
+<P>
+The interrupt hook cannot be performed by the VXMS creation function, since
+the  virtual DOS environment does not establish its interrupt hooks until
+after all virtual device driver creation code has completed.  DOS device
+driver initialization code is called after the interrupt vectors are set;
+therefore delaying the hooking of vector 2Fh until DOS device driver initialization
+time succeeds in hooking the vector.
+<P>
+<B>Routing</B>
+<P>
+The router receives control from the control function within the stub device
+driver, as described above.  After checking that the XMS service request
+is valid, the router calls the appropriate protected mode service routine,
+which in turn requests the OS/2 Version 2.0 memory manager to allocate and
+manipulate XMS objects.
+<P>
+Information calls involve at most a quick search of structures.  The number
+of kilobytes VXMS reports as available is the minimum of the number of kilobytes
+the VDM has left before it hits its per-VDM XMS memory usage limit, the
+number of kilobytes all VDMs have left before hitting the system-wide memory
+usage limit, and the amount the memory manager estimates is available.
+
+<P><HR>
+
+<A HREF="191_L2_ExtendedMemorySuppor.html">[Back: Extended Memory Support]</A> <BR>
+<A HREF="193_L3_HighMemoryAreaHMA.html">[Next: High Memory Area (HMA)]</A> 
+</BODY>
+</HTML>

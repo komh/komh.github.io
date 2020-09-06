@@ -1,0 +1,57 @@
+<HTML>
+<HEAD>
+<TITLE>Interprocess Communication Using Queues (Part 1)</TITLE>
+</HEAD>
+<BODY>
+<H1>Interprocess Communication Using Queues (Part 1)</H1><!-- entering slot 96 -->
+<PRE>#define SRVQUEUENAME = "\\QUEUES\\SRV_QUEUE"    /* Server queue name     */
+#define REQQUEUENAME = "\\QUEUES\\REQ_QUEUE"    /* Requester queue name  */
+
+HQUEUE      hReqQueue, hSrvQueue;               /* Queue handles         */
+REQUESTDATA Server;                             /* Control information   */
+REQUEST     *Request;                           /* Request data buffer   */
+REPLY       *Reply;                             /* Reply data buffer     */
+BYTE        Priority;                           /* Priority information  */
+ULONG       ulBytes;                            /* Bytes read/written    */
+APIRET      rc;                                 /* Return code           */
+
+case WMP_SENDREQUEST:
+     rc = DosCreateQueue(&amp;hReqQueue,            /* Create req queue      */
+                         QUE_FIFO  |            /* First-in, first-out   */
+                         QUE_CONVERT_ADDRESS,   /* Convert addresses     */
+                         REQQUEUENAME);         /* Name of queue         */
+
+     rc = DosOpenQueue(&amp;pidServer,              /* Open srv queue        */
+                       &amp;hSrvQueue,              /* Queue handle          */
+                       SRVQUEUENAME);           /* Server queue name     */
+
+     rc = DosAllocSharedMem(&amp;Request,           /* Allocate shared mem   */
+                            NULL,               /* object for request    */
+                            sizeof(REQUEST),    /* Size of memory object */
+                            PAG_WRITE |         /* Allow write access    */
+                            PAG_READ  |         /* Allow read access     */
+                            PAG_COMMIT);        /* Commit storage now    */
+     rc = DosGiveSharedMem(Request,             /* Give mem to server    */
+                           pidServer,           /* Server process id     */
+                           PAG_READ);           /* Allow read only       */
+
+     rc = DosWriteQueue(hSrvQueue,              /* Add request to queue  */
+                        (ULONG)hWnd,            /* Requester win handle  */
+                        sizeof(REQUEST),        /* Size of request       */
+                        Request,                /* Request buffer        */
+                        0);                     /* No priority           */
+     rc = DosCloseQueue(hSrvQueue);             /* Close srv queue       */
+     DosFreeMem(Request);                       /* Free request buffer   */
+     break;
+</PRE>
+
+<P>
+This example shows elements being added to a queue by a "requester" process.
+
+
+<P><HR>
+
+<A HREF="093_L2_InterprocessCommunic.html">[Back: Interprocess Communication Using Atoms (Part 2)]</A> <BR>
+<A HREF="095_L2_InterprocessCommunic.html">[Next: Interprocess Communication Using Queues (Part 2)]</A> 
+</BODY>
+</HTML>

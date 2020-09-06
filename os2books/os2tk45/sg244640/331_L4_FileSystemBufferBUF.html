@@ -1,0 +1,125 @@
+<HTML>
+<HEAD>
+<TITLE>File System Buffer (BUF)</TITLE>
+</HEAD>
+<BODY>
+<H1>File System Buffer (BUF)</H1><!-- entering slot 479 -->
+<PRE>&gt;&gt; Locate the file system buffer segment
+
+##ln gdt_buffers
+0138:000000a8 os2krnl:DOSGDTDATA:GDT_Buffers
+
+##dw a8:0
+00a8:00000000  ade4 94c4 0000 ff93 005a 0218 bc8b 0000
+00a8:00000010  0664 0200 bc8c 000f 9000 00e5 0234 ade4
+00a8:00000020  0000 0279 e05e 0000 0001 0400 0000 0000
+00a8:00000030  0000 0000 46e5 4e49 3030 3630 4d54 2050
+00a8:00000040  0000 0000 0000 0000 0000 b5cd 1f5e 3251
+00a8:00000050  0400 0000 46e5 4e49 3030 3730 4d54 2050
+00a8:00000060  0000 0000 0000 0000 0000 b5c8 1f5e 0000
+00a8:00000070  0000 0000 4de5 3046 3030 2038 4d54 2050
+
+##.d buf a8:ade4
+   buf_next: 001c            buf_prev: ffff           buf_freeLink: 0000
+  buf_flags: 02              buf_hVPB: 0279           buf_sector: 00000001
+    buf_tid: 00              buf_wrtcnt: 02           buf_wrtcntinc: 0096
+   buf_fill: 0000
+##.d buf a8:234
+   buf_next: 044c            buf_prev: 001c           buf_freeLink: 0000
+  buf_flags: 04              buf_hVPB: 0279           buf_sector: 0000e05d
+    buf_tid: 00              buf_wrtcnt: 01           buf_wrtcntinc: 0000
+   buf_fill: 0000
+##.d buf a8:44c
+   buf_next: 0664            buf_prev: 0234           buf_freeLink: 0000
+  buf_flags: 02              buf_hVPB: 0279           buf_sector: 0000001c
+    buf_tid: 00              buf_wrtcnt: 02           buf_wrtcntinc: 0096
+   buf_fill: 0000
+##.d buf a8:664
+   buf_next: 087c            buf_prev: 044c           buf_freeLink: 0000
+  buf_flags: 04              buf_hVPB: 0279           buf_sector: 0000bcd4
+    buf_tid: 00              buf_wrtcnt: 01           buf_wrtcntinc: 0000
+   buf_fill: 0000
+
+
+
+&gt;&gt; Find the volume these buffers are assigned to.
+
+##ln gdt_vpb
+0138:00000098 os2krnl:DOSGDTDATA:GDT_VPB
+
+##.d vpb 98:279
+        vpb_flink: 01fe                  vpdFAT_cluster_mask: 07
+        vpb_blink: 02f4                 vpdFAT_cluster_shift: 03
+    vpb_ref_count: 004e                     vpdFAT_first_FAT: 0001
+ vpb_search_count: 0000                     vpdFAT_FAT_count: 02
+ vpb_first_access: 09                    vpdFAT_root_entries: 0200
+    vpb_signature: 444a                  vpdFAT_first_sector: 0000014d
+     vpb_flags(2): 02:40                  vpdFAT_max_cluster: 95f5
+          vpb_FSC: #0000:ff40                vpdFAT_FAT_size: 0096
+           vpi_ID: e2ea4414                vpdFAT_dir_sector: 0000012d
+         vpi_pDPB: #04b8:0038                   vpdFAT_media: f8
+     vpi_cbSector: 0200                     vpdFAT_next_free: 0000
+       vpi_totsec: 0004b0f0                  vpdFAT_free_cnt: 63a8
+       vpi_trksec: 003f                  vpdFAT_FATentrysize: 10
+        vpi_nhead: 0010                      vpdFAT_IDsector: 00000000
+         vpi_pDCS: #0000:0000                  vpdFAT_access: 0000
+         vpi_pVCS: #0000:0000                 vpdFAT_accwait: 0000
+        vpi_drive: 02                          vpdFAT_pEASFT: #00d0:23da
+         vpi_unit: 02
+         vpi_text: DOS FAT
+         vpi_flags: 0003
+
+
+&gt;&gt; The file system buffer segment is assigned a unique object owner
+&gt;&gt; id.
+
+##.m 0a8:0
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0003 %feaef04c 00000400 %fe6ef000 001 0002 0023 0000 0000 0003 0000      =0000
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 0003  0003 fec5  0000 ffec 0000  0000 00  01 00 00 vmkrhrw
+   pvmli    cs    eip     phlock   cpg      va    flg  hptda hob sig  csig
+ %fe82e4c4 002d 0a6800a5 %ac22403c 0001 %fe83c000 0005 024b 0003 ea9f ea9f
+##dd %(a8:0)-10 l8
+%fe702ff0  0b0c0001 4d5000a2 fe705854 0000cc99
+%fe703000  94c4ade4 ff930000 0218005a <!-- entering slot 480 -->0000bc8b
+##dd %(a8:0)-10-4+cc98 l8
+%fe70fc84  00000000 00000000 ff9300a8 003ec010
+%fe70fc94  ffa4000c fe80caac 00020100 ff9e0014
+##.mo ff93
+ff93 fsbuf
+##</PRE>
+ 
+<BR>
+File System Buffer (BUF)
+<P>
+<B>Notes: </B><!-- lm: 0x2 6 -->
+<UL>
+<P>
+File system buffers are allocated out of a buffer segment whose selector
+may be located either from the <A HREF="3294_L0_.html">SAS</A> File System
+section, offset<B> +0xa</B> or from symbol<B> GDT_BUFFERS</B>.<!-- lm: 0x2 6 -->
+<P>
+The buffer segment contains a header of length<B> +0x1c</B>.<!-- lm: 0x2 6 -->
+<P>
+Header Offset<B> +0x0</B> gives the offset to the head of the list of most
+recently used buffers.<!-- lm: 0x2 6 -->
+<P>
+Header Offset<B> +0x4</B> gives the offset to the tail of the list of most
+recently used buffers.<!-- lm: 0x2 6 -->
+<P>
+Each buffer contains a<B> 0x18</B> byte header followed by<B> 0x200</B> bytes
+of data. The buffer header is what is formatted by<B> .D BUF</B>.<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+
+<P>
+For a description of the Buffer Header fields, see the <A HREF="3219_L3_FileSystemBufferforO.html">File
+System Buffers</A> in the<B> System Reference</B>. 
+
+<P><HR>
+
+<A HREF="330_L4_MasterFileTableEntry.html">[Back: Master File Table Entry (MFT)]</A> <BR>
+<A HREF="332_L4_BIOSParameterBlockBP.html">[Next: BIOS Parameter Block (BPB)]</A> 
+</BODY>
+</HTML>

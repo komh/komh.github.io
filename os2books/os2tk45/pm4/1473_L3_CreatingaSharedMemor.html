@@ -1,0 +1,61 @@
+<HTML>
+<HEAD>
+<TITLE>Creating a Shared-Memory Object for DDE</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating a Shared-Memory Object for DDE</H1><!-- entering slot 1502 -->
+<P>
+The following code fragment shows how to create a shared-memory object for
+a DDE transaction. The parameters include the destination window for the
+DDE message, item name for the transaction, status word, format of the data,
+actual data to be transferred (if any), and the length of the data. The
+allocated object must be big enough to hold the DDESTRUCT data structure,
+item name, and the actual data to be transferred. The sample returns a pointer
+(PDDESTRUCT) to a shared-memory object that is ready to post as part of
+a DDE message.
+<PRE>/*  Get some sharable memory */
+DosAllocSharedMem((PVOID)&amp;mem,
+                  NULL,
+                  sizeof(DDESTRUCT)+21,
+                  PAG_COMMIT |
+                  PAG_READ |
+                  PAG_WRITE |
+                  OBJ_GIVEABLE);
+
+/*  Get the server's ID and give it access to the */
+/*  shared memory                                 */
+WinQueryWindowProcess(hServerWnd, &amp;pid, &amp;tid);
+DosGiveSharedMem(&amp;mem, pid, PAG_READ | PAG_WRITE);
+
+/*  Setup DDE data structures                                */
+/*  (11 byte name length, 10 plus NULL, 10 byte data length) */
+pDDEdata           = (PDDESTRUCT)mem;
+pDDEdata-&gt;cbData   = 10;              /* Data length         */
+pDDEdata-&gt;fsStatus = 0;               /* Status              */
+pDDEdata-&gt;usFormat = DDEFMT_TEXT;     /* Text format         */
+
+/*  Go past end of data structure for the name  */
+pDDEdata-&gt;offszItemName = sizeof(DDESTRUCT);
+
+/*  Go past end of structure (plus past the name)  */
+/*  for the data                                   */
+pDDEdata-&gt;offabData = sizeof(DDESTRUCT)+11;
+strcpy((BYTE *)(pDDEdata+(pDDEdata-&gt;offszItemName)),
+                "STATUS");
+
+/* Post our request to the server program */
+WinDdePostMsg(hServerWnd,
+              hwnd,
+              WM_DDE_REQUEST,
+              pDDEdata,
+              DDEPM_RETRY);
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1472_L3_InitiatingaDDEConver.html">[Back: Initiating a DDE Conversation]</A> <BR>
+<A HREF="1474_L3_SendingaPositiveAckn.html">[Next: Sending a Positive Acknowledgment]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,103 @@
+<HTML>
+<HEAD>
+<TITLE>How do I start another session?</TITLE>
+</HEAD>
+<BODY>
+<H1>How do I start another session?</H1><!-- entering slot 112 -->
+<P>
+This small program will start any program synchronously using DosStartSession().
+The important thing is the queue. When you specify SSF_RELATED_CHILD and
+a TermQ name, OS/2 will write the return code to the specified queue when
+the session terminates. I use this in an event scheduler by creating a separate
+thread that does reads from the queue but you can just as easily block on
+the main thread to catch the return code. That will, in effect, provide
+for synchronous execution. Note that one problem with SSF_RELATED_CHILD
+is that if the program that started the child dies, so does the child.
+<PRE> #define  INCL_DOSERRORS
+ #define  INCL_DOSPROCESS
+ #define  INCL_DOSQUEUES
+ #define  INCL_DOSSESMGR
+ #include &lt;os2.h&gt;
+ #include &lt;stdio.h&gt;
+ #include &lt;stdlib.h&gt;
+ #include &lt;string.h&gt;
+
+ #define QUEUE_NAME    "\\QUEUES\\STRTSYNC.QUE"
+
+ int main( int argc, char *argv[] );
+
+ int main( int argc, char *argv[] )
+ {
+     APIRET rc;
+     HQUEUE hque;
+
+     if( argc &lt; 2 )
+         return 1;
+
+     rc = DosCreateQueue( &amp;hque, QUE_FIFO | QUE_CONVERT_ADDRESS, QUEUE_NAME );
+     if( !rc )
+     {
+         STARTDATA   stdata;
+         PID         pidSession;
+         CHAR        szObjFail[ 50 ];
+         ULONG       ulLength, idSession;
+         REQUESTDATA rd;
+         PUSHORT     pusInfo = NULL;
+         BYTE        bPriority;
+
+         (void) memset( &amp;stdata, 0, sizeof( stdata ) );
+
+         stdata.Length       = sizeof( STARTDATA );
+         stdata.FgBg         = SSF_FGBG_FORE;
+         stdata.TraceOpt     = SSF_TRACEOPT_NONE;
+         stdata.PgmTitle     = "Rick's Program";
+         stdata.InheritOpt   = SSF_INHERTOPT_SHELL;
+         stdata.SessionType  = SSF_TYPE_DEFAULT;
+         stdata.PgmControl   = SSF_CONTROL_VISIBLE;
+         stdata.ObjectBuffer = szObjFail;
+         stdata.ObjectBuffLen= sizeof( szObjFail );
+         stdata.Related      = SSF_RELATED_CHILD;
+         stdata.TermQ        = QUEUE_NAME;
+         stdata.PgmName      = argv[ 1 ];
+
+         rc = DosStartSession( &amp;stdata, &amp;idSession, &amp;pidSession );
+
+         if( rc &amp;&amp; rc != ERROR_SMG_START_IN_BACKGROUND )
+         {
+             printf( "DosStartSession RC(%u)\n", rc );
+             return (INT) rc;
+         }
+
+         rc = DosReadQueue( hque, &amp;rd, &amp;ulLength, (PPVOID) &amp;pusInfo, 0,
+                            DCWW_WAIT, &amp;bPriority, 0 );
+
+         if( rc &amp;&amp; rc != ERROR_QUE_EMPTY )
+         {
+             printf( "DosReadQueue RC(%u)\n", rc );
+             return (INT) rc;
+         }
+
+         printf( "RetCode from Session %u: %u\n",
+                  pusInfo[ 0 ], pusInfo[ 1 ]);
+
+         DosCloseQueue( hque );
+     }
+     else
+     {
+         printf( "DosCreateQueue RC(%u)\n", rc );
+         return (INT) rc;
+     }
+
+     return 0;
+ }
+</PRE>
+
+<P>
+Credit:  Rick Fishman 
+
+<P><HR>
+
+<A HREF="093_L2_ExplaintheSYS_DLLSke.html">[Back: Explain the SYS_DLLS keywords.]</A> <BR>
+<A HREF="095_L2_HowdoIcheckifafilena.html">[Next: How do I check if a filename is valid?]</A> 
+</BODY>
+</HTML>

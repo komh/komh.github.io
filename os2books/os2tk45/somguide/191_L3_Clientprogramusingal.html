@@ -1,0 +1,107 @@
+<HTML>
+<HEAD>
+<TITLE>Client program using a local stack</TITLE>
+</HEAD>
+<BODY>
+<H1>Client program using a local stack</H1><!-- entering slot 227 -->
+<P>
+A simple client program written to use a local "Stack" object is displayed
+below. This C program is shown so that the differences between a local and
+remote client program can be highlighted.
+<PRE>#include &lt;stack.h&gt;
+
+boolean OperationOK(Environment *ev);
+
+int main(int argc, char *argv[])
+{
+  Environment ev;
+  Stack stk;
+  long num = 100;
+</PRE>
+
+<PRE>  SOM_InitEnvironment(&amp;ev);
+
+  /* The StackNewClass invocation is optional and unnecessary
+   * in the client program when the class object is created in
+   * the SOMInitModule function that is invoked during DLL
+   * initialization.
+   */
+  StackNewClass(Stack_MajorVersion, Stack_MinorVersion);
+  stk = StackNew();
+
+  /* Verify successful object creation */
+  if ( stk != NULL )
+  {
+     while ( !_full(stk, &amp;ev) )
+     {
+        _push(stk, &amp;ev, num);
+        somPrintf("Top: %d\n", _top(stk, &amp;ev));
+        num += 100;
+     }
+
+     /* Test stack overflow exception */
+     _push(stk, &amp;ev, num);
+     OperationOK(&amp;ev);
+
+     while ( !_empty(stk, &amp;ev) )
+     {
+        somPrintf("Pop: %d\n", _pop(stk, &amp;ev));
+     }
+</PRE>
+
+<PRE>     /* Test stack underflow exception */
+     somPrintf("Top Underflow: %d\n", _top(stk, &amp;ev));
+     OperationOK(&amp;ev);
+     somPrintf("Pop Underflow: %d\n", _pop(stk, &amp;ev));
+     OperationOK(&amp;ev);
+
+     _push(stk, &amp;ev, -10000);
+     somPrintf("Top: %d\n", _top(stk, &amp;ev));
+     somPrintf("Pop: %d\n", _top(stk, &amp;ev));
+
+     _somFree(stk);
+  }
+</PRE>
+
+<PRE>  SOM_UninitEnvironment(&amp;ev);
+
+  return(0);
+}
+
+boolean OperationOK(Environment *ev)
+{
+   char *exID;
+
+   switch (ev-&gt;_major)
+   {
+     case SYSTEM_EXCEPTION:
+       exID = somExceptionId(ev);
+       somPrintf("System exception: %s\n", exID);
+       somdExceptionFree(ev);
+       return (FALSE);
+
+     case USER_EXCEPTION:
+       exID = somExceptionId(ev);
+       somPrintf("User exception: %s\n", exID);
+       somdExceptionFree(ev);
+       return (FALSE);
+
+     case NO_EXCEPTION:
+       return (TRUE);
+
+     default:
+       somPrintf("Invalid exception type in Environment.\n");
+       somdExceptionFree(ev);
+       return (FALSE);
+   }
+}
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="190_L3_TheStackclassimpleme.html">[Back: The "Stack" class implementation]</A> <BR>
+<A HREF="192_L3_Clientprogramusingar.html">[Next: Client program using a remote stack]</A> 
+</BODY>
+</HTML>

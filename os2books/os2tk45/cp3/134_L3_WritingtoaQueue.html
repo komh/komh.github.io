@@ -1,0 +1,78 @@
+<HTML>
+<HEAD>
+<TITLE>Writing to a Queue</TITLE>
+</HEAD>
+<BODY>
+<H1>Writing to a Queue</H1><!-- entering slot 140 -->
+<P>
+The server process and any of its threads can add an element to a queue
+simply by calling<A><!-- external link: 1D 10 C4 FC --> DosWriteQueue</A>.
+A client process, however, must first request access to the queue by calling
+<A><!-- external link: 1D A3 C3 FC -->DosOpenQueue</A>.
+<P>
+Processes that communicate by passing the addresses of shared memory objects
+through the queue must have a shared memory object that they each have access
+to. Once a process opens the queue, it can allocate shared memory by using
+<A><!-- external link: 1D 5E C3 42 -->DosAllocMem</A> with the OBJ_GIVEABLE
+attribute and then give the shared memory to the queue owner with<A><!-- external link: 1D 98 C3 FC --> DosGiveSharedMem</A>.
+
+<P>
+A process that has opened a queue can write to the queue by using<A><!-- external link: 1D 10 C4 FC --> DosWriteQueue</A>.
+The writing process must create elements in a form that the queue owner
+can read.
+<P>
+The following code fragment adds an element to a queue. Assume that the
+caller has placed the handle of the queue into<I> QueueHandle</I> already.
+Assume also that<I> DataBuffer</I> has been set to point to a data element
+in shared memory, and that<I> DataLength</I> has been set to contain the
+length of the data element in shared memory.
+<PRE>    #define INCL_DOSQUEUES   /* Queue values */
+    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+
+    HQUEUE   hqQueueHandle;   /* Queue handle                         */
+    ULONG    ulRequest;       /* Request-identification data          */
+    ULONG    ulDataLength;    /* Length of element being added        */
+    PVOID    pDataBuffer;     /* Element being added                  */
+    ULONG    ulElemPriority;  /* Priority of element being added      */
+    APIRET   ulrc;            /* Return code                          */
+
+    ulRequest = 0;            /* Assume that no special data is being */
+                              /* sent along with this write request   */
+
+    ulElemPriority = 0;       /* For priority-based queues: add the   */
+                              /* new queue element at the logical end */
+                              /* of the queue                         */
+
+    ulrc = DosWriteQueue(hqQueueHandle,
+                         ulRequest,
+                         ulDataLength,
+                         pDataBuffer,
+                         ulElemPriority);
+
+    if (ulrc != 0) {
+        printf("DosWriteQueue error: return code = %ld",
+               ulrc);
+        return;
+    }
+
+</PRE>
+
+<P>
+Once the process has written to the queue, it frees the shared memory. However,
+the memory will not be freed until the queue owner also frees it.
+<P>
+If the queue was created as a priority-based queue (as specified in the
+<I>QueueFlags</I> parameter of<A><!-- external link: 1D 73 C3 FC --> DosCreateQueue</A>),
+then the priority of the element that is being added must be specified.
+
+<P>
+If the server process has ended, or if it has closed the queue before<A><!-- external link: 1D 10 C4 47 --> DosWriteQueue
+</A>is called, then ERROR_QUE_INVALID_HANDLE is returned.
+
+<P><HR>
+
+<A HREF="133_L3_OpeningaQueue.html">[Back: Opening a Queue]</A> <BR>
+<A HREF="135_L3_ReadingfromaQueue.html">[Next: Reading from a Queue]</A> 
+</BODY>
+</HTML>

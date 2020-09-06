@@ -1,0 +1,162 @@
+<HTML>
+<HEAD>
+<TITLE>NetBiosSubmit or NetBios32Submit</TITLE>
+</HEAD>
+<BODY>
+<H1>NetBiosSubmit or NetBios32Submit</H1><!-- entering slot 319 -->NetBiosSubmit or NetBios32Submit
+<P>
+The NetBiosSubmit API passes a network control block (NCB) packet to a network
+device driver.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Restrictions
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+A call to this API must be issued locally. This API can be called only from
+an OS/2 workstation.<!-- lm: 0x2 1 -->
+</UL> Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>#include &lt;netcons.h&gt;
+#include &lt;ncb.h&gt;
+#include &lt;netbios.h&gt;
+ 
+NetBiosSubmit(<I>handle</I>, <I>ncbopt</I>,
+              <I>ncb</I>);            /* 16 bit */
+ 
+NetBios32Submit(<I>handle</I>, <I>ncbopt</I>,
+              <I>ncb</I>);            /* 32 bit */
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Parameters
+<P>
+<!-- lm: 0x2 10 -->
+<UL><!-- lm: 0x2 10 -->
+<P>
+<I>handle</I><!-- lm: 0x12 20 -->
+<UL> (16-bit unsigned short or 32-bit
+unsigned long) specifies the handle of the network device driver.
+<P>
+If an application needs to submit only a few NCBs and does not require a
+particular device driver, the application can use the reserved<I> handle
+</I>value 0. The 0 handle causes the API to pass an NCB to the first network
+device driver installed on the local computer. The first driver is processed
+automatically by the NetBiosOpen API in regular mode, if necessary. (Implicit
+calls are made to open and close the device driver.)<!-- lm: 0x2 10 -->
+</UL><I> ncbopt
+</I><!-- lm: 0x12 20 -->
+<UL>(16-bit unsigned short or 32-bit unsigned long)
+specifies the chaining option flags for the submitted NCB. This parameter
+is defined as follows: ÚÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+<BR>
+³ VALUE ³ MEANING                                ³
+<BR>
+ÃÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 0   ³ A single NCB is being passed.                     ³
+<BR>
+ÃÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 1   ³ A single NCB with error retry is being passed.            ³
+<BR>
+ÃÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 2   ³ An NCB chain with proceed-on-error is being passed.          ³
+<BR>
+ÃÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 3   ³ An NCB chain with stop-on-error is being passed.           ³
+<BR>
+ÀÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+<!-- lm: 0x2 10 -->
+</UL><I>ncb</I><!-- lm: 0x12 20 -->
+<UL> (struct ncb
+LSFAR *) points to an NCB data structure containing either the NCB to be
+run (the unchained NCB) or the link word preceding the NCB (the chained
+NCB).  (For more information about the use of network device drivers on
+a LAN, refer to the<I> LAN Server Network Administrator Reference Volume 2:
+Performance Tuning</I>.)<!-- lm: 0x2 10 -->
+</UL><!-- lm: 0x2 1 -->
+</UL>Return Codes
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+The following table lists the return codes most significant to this API.
+ (See <A HREF="462_L1_APIReturnCodes.html">API Return Codes</A> for a complete
+list of return codes.) ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³SYMBOLICCONSTANT
+    ³VALUE³MEANING                ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_Success         ³ 0   ³ No errors were encountered.       ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_INVALID_HANDLE     ³ 6   ³ The specified handle is not valid.   ³
+
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_INVALID_PARAMETER   ³ 87   ³ At least one parameter value is not
+  ³
+<BR>
+³               ³    ³ valid.                 ³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+<!-- lm: 0x2 1 -->
+</UL>Remarks
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+Chained NCBs must be in the same memory segment so they can be linked by
+a 16-bit offset pointer that precedes each NCB. An offset of 0xFFFF specifies
+the end of the chain.
+<P>
+In a proceed-on-error chain of NCBs, each NCB is run independently, regardless
+of any errors that might occur. Errors are returned by the last NCB in the
+chain.
+<P>
+A stop-on-error chain is ended by the LAN Server software when an NCB in
+the chain causes an error. The NCB's command components are set to 0xB (Command
+Canceled) for NCBs not processed because of an error.
+<P>
+For an asynchronous NCB, the value of the NCB's<I> ncb_post</I> parameter
+must be either 0 or the handle to a system semaphore that will be cleared
+upon completion of the NCB. The semaphore must not be exclusive.
+<P>
+The chaining option specifies whether a single NCB or an NCB chain is being
+passed. A single NCB can be run with<!-- entering slot 320 --> optional
+error retry, in which case the LAN Server software reissues the NCB a set
+number of times in response to the following errors: ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+<BR>
+³ SYMBOLIC CONSTANT ³ VALUE  ³ MEANING                     ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NCB_ERR_NR     ³ 9    ³ Resource available.               ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NCB_ERR_SOR    ³ 12    ³ Session open rejected.             ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NCB_ERR_BUSY    ³ 21    ³ Interface busy.                 ³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+<!-- lm: 0x2 1 -->
+
+<P><HR>
+
+<A HREF="243_L2_NetBiosOpenorNetBios.html">[Back: NetBiosOpen or NetBios32Open]</A> <BR>
+<A HREF="245_L1_PrintDestinationCate.html">[Next: Print Destination Category]</A> 
+</BODY>
+</HTML>

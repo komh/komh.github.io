@@ -1,0 +1,164 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Convert Microsoft/IEEE Float binary into a string in Object REXX</TITLE>
+</HEAD>
+<BODY>
+<H1>Convert Microsoft/IEEE Float binary into a string in Object REXX</H1><!-- entering slot 470 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+(see also <A HREF="450_L3_ConvertMicrosoftIEEE.html">Convert Microsoft/IEEE
+Float binary into a string in Classic REXX</A>; especially the addendum)
+
+<PRE> 
+/**********************************************************************/
+/* These routines are the original work of Thos Davis                 */
+/* (see <A HREF="946_L2H_EMailaddressesD.html">EMail Addresses</A>)                                              */
+/* and to the best of his knowledge do not include any copyrighted    */
+/* materials.                                                         */
+/*                                                                    */
+/* These routines are hereby released into the Public Domain          */
+/**********************************************************************/
+/* Microsoft/IEEE Float binary:                                       *
+ +--------------------------------------------------------------------+
+ |bit |0 1 2 3 4 5 6 7 8 9 A B C D E F 0 1 2 3 4 5 6 7 8 9 A B C D E F|
+ +====+=============================================+=+===============+
+ |MKS |              mantissa                       |s|   exponent    |
+ +----+---------------------------------------------+-+-------------+-|
+ |IEEE|              mantissa                       |    exponent   |s|
+ +--------------------------------------------------+---------------+-+
+                                                                      */
+/* In both cases, the mantissa is the lower (least significant)       */
+/* 23 bits (plus an implied value of 1 for bit 24, the most           */
+/* significant bit of the mantissa), the sign is one bit, and         */
+/* the exponent is 8 bits.                                            */
+/*                                                                    */
+/* Because the mantissa has a 'virtual bit' whose value is always 1,  */
+/* the exponent is used to determine if the value is 0.               */
+/*                                                                    */
+/* IEEE Double Float binary is the same format as the single Float    */
+/* but the mantissa is 52 bits long (for 53 bits of significant       */
+/* binary digits [is that bigits?] after including the 'virtual 1'    */
+/* most significant bit) and the exponent is 11 bits long.            */
+/*                                                                    */
+/* !!! I M P O R T A N T !!!                                          */
+/*                                                                    */
+/* NUMERIC DIGITS should be set to about 16 to get the full value of  */
+/* Doubles                                                            */
+/*                                                                    */
+/* !!! A L S O   I M P O R T A N T !!!                                */
+/*                                                                    */
+/* These functions may not correctly recognize the special values     */
+/*    +INF    plus infinity                                           */
+/*    -INF    minus infinity                                          */
+/*    +NAN    not a number                                            */
+/*    -NAN    not a number                                            */
+/*                                                                    */
+
+::ROUTINE mksToString PUBLIC
+  use arg TheFloat
+
+                    /* mks is the format used in older versions of    */
+                    /* MicroSoft BASIC and is, for some bizarre       */
+                    /* reason, used as the index value in the QWK     */
+                    /* BBS message packing scheme                     */
+
+  if TheFloat~Length \= 4 then
+    return 'NOT-A-FLOAT'
+
+    bFloat = TheFloat~Reverse~c2x~x2b~Right(32,'0')
+    fMantissa = '1' || bFloat~Right(23)
+    fExponent = bFloat~Left( 8 )
+    fSign = bFloat~SubStr( 9, 1 )
+    magicNumber = 152
+    return GeneralFloat( fSign, fMantissa, fExponent, magicNumber, Digits() )
+
+
+::ROUTINE FloatToString PUBLIC
+  use arg TheFloat
+
+  if TheFloat~Length \= 4 then
+    return 'NOT-A-FLOAT'
+
+    bFloat = TheFloat~Reverse~c2x~x2b~Right(32,'0')
+    fMantissa = '1' || bFloat~Right(23)
+    fExponent = bFloat~SubStr( 2, 8 )
+    fSign = bFloat~Left(1)
+    magicNumber = 150
+
+                    /* IS SPECIAL VALUE                               */
+    if fExponent = '11111111' then
+      return SpecialFloat( fSign, fMantissa, 'S' )
+    else
+      return GeneralFloat( fSign, fMantissa, fExponent, magicNumber, Digits() )
+
+
+::ROUTINE DoubleToString PUBLIC
+  use arg TheDouble
+  NUMERIC DIGITS 16
+
+  if TheFloat~Length \= 8 then
+    return 'NOT-A-FLOAT'
+
+    bDouble = TheDouble~Reverse~c2x~x2b~Right(64,'0')
+    dMantissa = '1' || bDouble~Right(52)
+    dExponent = bDouble~SubStr( 2, 11 )
+    dSign = bDouble~Left(1)
+    magicNumber = 1075
+
+                    /* IS SPECIAL VALUE                               */
+    if dExponent = '11111111111' then
+      return SpecialFloat( dSign, dMantissa, 'D' )
+    else
+      return GeneralFloat( dSign, dMantissa, dExponent, magicNumber, Digits() )
+
+
+::ROUTINE GeneralFloat
+  use arg theSign, theMantissa, theExponent, magicNumber, numdigits
+  NUMERIC DIGITS numdigits
+
+    if theExponent = 0 then
+        ascFloat = 0
+    else
+        ascFloat = (theMantissa~b2x~x2d) * ( 2 ** ( (theExponent~b2x~x2d) - magicNumber ))
+
+    if theSign then
+        ascFloat = '-'ascFloat
+
+    return ascFloat
+
+
+::ROUTINE SpecialFloat
+  use arg theSign, theMantissa, theType
+
+    SELECT
+      WHEN theType = 'S' then lenMantissa = 24
+      WHEN theType = 'D' then lenMantissa = 53
+    END
+
+    SELECT
+      WHEN theMantissa = '1'~Left( lenMantissa, '0' ) THEN
+        ieeeSpecial = 'INFINITY'
+      WHEN theMantissa = '11'~Left( lenMantissa, '0' ) THEN
+        ieeeSpecial = 'NOT-A-NUMBER'
+      OTHERWISE
+        ieeeSpecial = 'UNKNOWN-MEANING'
+    END /* SELECT */
+
+    if theSign then
+      ieeeSpecial = '-'ieeeSpecial
+    else
+      ieeeSpecial = '+'ieeeSpecial
+
+    return 'IEEE:' ieeeSpecial
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="450_L3_ConvertMicrosoftIEEE.html">[Back: Convert Microsoft/IEEE Float binary into a string in Classic REXX]</A> <BR>
+<A HREF="452_L3_Determinewhatdayofth.html">[Next: Determine what day of the week a date falls on]</A> 
+</BODY>
+</HTML>

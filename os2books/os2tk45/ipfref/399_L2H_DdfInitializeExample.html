@@ -1,0 +1,138 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DdfInitialize - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DdfInitialize - Example Code</H1><!-- entering slot 416 -->
+<P>
+This example shows how to initialize and use the Dynamic Data Facility for
+displaying an online document. Two functions are defined: the first, SampleObj,
+creates a window that will display the online information and specifies
+the second function, SampleWindowProc, as the corresponding window procedure.
+These two functions are compiled into a DLL and exported, so that IPF can
+invoke them when it encounters the :ddf and :acviewport tags during execution.
+The :acviewport tag will specify the DLL name and the SampleObj function;
+when IPF calls SampleObj, it initializes an application-controlled window
+with SampleWindowProc as the window procedure and returns the window handle.
+Later, when IPF encounters the :ddf tag, it will send SampleWindowProc an
+HM_QUERY_DDF_DATA message. At this point, before calling any of the DDF
+API, DdfInitialize must first be called to initiate a DDF buffer, after
+which the other DDF API can be called to display the online information.
+
+<PRE>#define INCL_WINWINDOWMGR       /* General window management    */
+#define INCL_WINMESSAGEMGR      /* Message management           */
+#define INCL_WINDIALOGS         /* Dialog boxes                 */
+#define INCL_DDF                /* Dynamic Data Facility        */
+#define INCL_32
+#include &lt;os2.h&gt;
+#include &lt;pmhelp.h&gt;
+
+#define COM_HWND 4                /* window word offsets        */
+#define PAGE_HWND 8
+#define ACVP_HAB  12
+
+USHORT DdfClass = FALSE;
+
+MRESULT EXPENTRY SampleWindowProc(HWND hWnd, ULONG Message,
+                                 MPARAM lParam1, MPARAM lParam2);
+
+USHORT APIENTRY SampleObj(PACVP pACVP, PCH Parameter)
+{
+HWND DdfHwnd;           /* Client window handle                  */
+HWND DdfCHwnd;          /* Child window handle                   */
+HWND PreviousHwnd;      /* Handle for setting comm window active */
+
+    /* register DDF Base class if not registered already */
+    if (!DdfClass)
+    {
+         if (!WinRegisterClass(
+                   pACVP-&gt;hAB,        /* Anchor block handle           */
+                   "CLASS_Ddf",       /* Application window class name */
+                   SampleWindowProc,  /* Address of window procedure   */
+                   CS_SYNCPAINT |     /* Window class style            */
+                   CS_SIZEREDRAW |
+                   CS_MOVENOTIFY,
+                   20))               /* Extra storage                 */
+        {
+            return TRUE;
+        }
+        DdfClass = TRUE;
+    }
+
+    /*  create standard window  */
+    if (!(DdfHwnd = WinCreateStdWindow(
+                      pACVP-&gt;hWndParent, /* ACVP is parent       */
+                      0L,                /* No class style       */
+                      NULL,              /* Frame control flag   */
+                      "CLASS_Ddf",       /* Window class name    */
+                      NULL,              /* No title bar         */
+                      0L,                /* No special style     */
+                      0L,                /* Resource in .EXE     */
+                      0,                 /* No window identifier */
+                      &amp;DdfCHwnd )))      /* Client window handle */
+    {
+        return FALSE;
+    }
+
+    /* store the frame window handle in ACVP data structure */
+    pACVP-&gt;hWndACVP = DdfHwnd;
+
+    /* set this window as active communication window */
+    PreviousHwnd = (HWND)WinSendMsg(pACVP-&gt;hWndParent,
+                           HM_SET_OBJCOM_WINDOW,
+                           MPFROMHWND(DdfHwnd), NULL);
+
+    /* save returned communication hwnd in reserved word */
+    WinSetWindowULong(DdfCHwnd, COM_HWND, (ULONG)PreviousHwnd);
+
+    /* save anchor block handle in reserved word */
+    WinSetWindowULong (DdfCHwnd, ACVP_HAB, (ULONG)pACVP-&gt;hAB);
+
+    return FALSE;
+} /* SampleObj */
+
+MRESULT EXPENTRY SampleWindowProc(HWND hWnd, ULONG Message,
+                                 MPARAM lParam1, MPARAM lParam2)
+{
+    HWND   hwndParent;       /* parent window                        */
+    HWND   hwndHelpInstance; /* help instance window                 */
+    HDDF   hDdf;             /* DDF handle                           */
+    ULONG  DdfID;            /* DDF resource id                      */
+
+    switch (Message)
+    {
+    case HM_QUERY_DDF_DATA:
+        WinSetWindowULong(hWnd, PAGE_HWND, <!-- entering slot 417 -->LONGFROMMP(lParam1));
+        DdfID = LONGFROMMP(lParam2);
+        hwndParent = WinQueryWindow(hWnd, QW_PARENT);
+        hwndParent = WinQueryWindow(hwndParent, QW_PARENT);
+        hwndHelpInstance = (HWND)WinSendMsg(hwndParent, HM_QUERY,
+                                  MPFROMSHORT(HMQW_INSTANCE), NULL);
+
+        /* Allocate 1K Buffer (default)  */
+        hDdf = DdfInitialize(
+                        hwndHelpInstance, /* Handle of help instance */
+                        0L,               /* Default buffer size     */
+                        0L                /* Default increment       */
+                        );
+
+        if (hDdf == NULLHANDLE)       /* Check return code       */
+        {
+            return (MRESULT)FALSE;
+        }
+
+        return (MRESULT)hDdf;
+
+    default:
+        return (WinDefWindowProc(hWnd, Message, lParam1, lParam2));
+    }
+} /* SampleWindowProc */
+</PRE>
+
+
+<P><HR>
+
+<A HREF="398_L2H_DdfInitializeRelated.html">[Back: DdfInitialize - Related Functions]</A> <BR>
+<A HREF="400_L2H_DdfInitializeTopics.html">[Next: DdfInitialize - Topics]</A> 
+</BODY>
+</HTML>

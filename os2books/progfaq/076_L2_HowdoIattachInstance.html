@@ -1,0 +1,96 @@
+<HTML>
+<HEAD>
+<TITLE>How do I attach Instance data to window created with WinCreateStdWindow?</TITLE>
+</HEAD>
+<BODY>
+<H1>How do I attach Instance data to window created with WinCreateStdWindow?</H1><!-- entering slot 90 -->
+<P>
+I always use the two call to WinCreateWindow() method,	instead of the WinCreateStdWindow()
+method,  because the latter does not allow you to set instance data before
+your winproc is called for the first time.
+<P>
+Here's a cset/2 program (icc /Ss+ /W3 /Se /B"/pm:pm" foo.c):
+<PRE> #define INCL_PM
+ #include &lt;os2.h&gt;
+
+ typedef struct _mydata {
+     HWND hwndFrame;
+     HWND hwndClient;
+     char whatever[100];
+ }MYDATA;
+
+ static MRESULT EXPENTRY WinProc(HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2)
+ {
+     MYDATA *mine;
+
+    mine = (MYDATA *)WinQueryWindowPtr(hwnd, 0);  // will be null for WM_CREATE
+     switch(msg){
+         case WM_CREATE:
+             mine = (MYDATA *)mp1;
+             WinSetWindowPtr(hwnd, 0, mine);
+             break;
+         case WM_ERASEBACKGROUND:
+             return (MRESULT)TRUE;
+         default:
+            return WinDefWindowProc(hwnd, msg, mp1, mp2);
+     }
+     return 0;
+ }
+
+ void main(void)
+ {
+     HAB hab;
+     HMQ hmq;
+     QMSG qmsg;
+     char *class = "foo";
+     FRAMECDATA fcdata;  /* frame creation data */
+     MYDATA mydat;
+
+     hab = WinInitialize(0);
+     hmq = WinCreateMsgQueue(hab, hmq);
+
+     WinRegisterClass(hab, class, WinProc, 0, sizeof(MYDATA *));
+
+     /* create frame window (WC_FRAME) */
+     fcdata.cb = sizeof(FRAMECDATA);
+     fcdata.flCreateFlags = FCF_TITLEBAR | FCF_SYSMENU |
+                            FCF_SHELLPOSITION | FCF_TASKLIST |
+                            FCF_SIZEBORDER | FCF_MINMAX ;
+
+     fcdata.hmodResources = 0;
+     fcdata.idResources   = 1;	     /* resource id */
+     mydat.hwndFrame = WinCreateWindow(HWND_DESKTOP, WC_FRAME, "Title",
+                                       0, 0, 0, 0, 0,
+                                       0,  /* no owner */
+                                       HWND_TOP,fcdata.idResources,&amp;fcdata,NULL);
+
+     if(!mydat.hwndFrame)
+         exit(3);
+
+     /* WinProc() has not been called yet */
+
+     /* Create Client window: */
+     mydat.hwndClient = WinCreateWindow(mydat.hwndFrame, class, "text",
+                         0, 0, 0, 0, 0,
+                         mydat.hwndFrame,    /* frame is owner */
+                         HWND_TOP, FID_CLIENT,
+                         &amp;mydat, /* passed as mp1 to wm_create */
+                         NULL);
+
+     WinShowWindow(mydat.hwndFrame, TRUE);
+
+     while(WinGetMsg(hab, &amp;qmsg, (HWND) NULL, 0, 0))
+         WinDispatchMsg(hab, &amp;qmsg);
+
+ }
+</PRE>
+
+<P>
+Credit:  Peter Fitzsimmons 
+
+<P><HR>
+
+<A HREF="075_L2_HowdoIgetPMscreensiz.html">[Back: How do I get PM screen size?]</A> <BR>
+<A HREF="077_L2_HowdoIgetalistoffont.html">[Next: How do I get a list of fonts?]</A> 
+</BODY>
+</HTML>

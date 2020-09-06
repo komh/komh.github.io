@@ -1,0 +1,160 @@
+<HTML>
+<HEAD>
+<TITLE>32-Bit Error Log Entry Formatting DLL Routines</TITLE>
+</HEAD>
+<BODY>
+<H1>32-Bit Error Log Entry Formatting DLL Routines</H1><!-- entering slot 3347 -->
+<P>
+Each Error Log record within an Error Log file can contain the name of a
+formatting DLL module.  A formatting DLL module ise invoked by the SYSLOG
+utility when SYSLOG encounters an Error Log record that contains the name
+of the DLL module.
+<P>
+Each formatting module contains a single formatting routine that can be
+identified by an ordinal value of 1. The formatting routine can be designed
+to handle a single type of Error Log entry or to handle multiple types of
+Error Log entries.  When SYSLOG passes control to a formatting routine,
+it passes the entire Error Log record (both header portion and data portion)
+to the formatting routine.  The formatting routine has the complete flexibility
+to format an Error Log entry as it deems appropriate.
+<P>
+SYSLOG uses the<B> DosLoadModule</B> API to create a run-time link to the
+specified formatting DLL module.  It also uses the<B> DosFreeModule</B> API
+to free the DLL module after it receives its response from the formatting
+routine.
+<P>
+There are no specific rules that govern the naming of a formatting DLL module.
+ However, since it is desirable to reduce the possibility of "colliding"
+with another DLL module of the same name, it is suggested that a formatting
+DLL module be labeled with a name that adheres to the following standard
+form:
+<PRE>
+        ELGxxxxx.DLL    (where "xxxxx" corresponds to the Error
+                           Log record I.D. (in ecimal) of any one
+                           of the types of records that the formatting
+                           routine is designed to handle)
+
+
+        e.g. "ELG00127.DLL" is a standardized name for a formatting
+                DDL module that recognizes (among other things) Error
+                Log records with I.D. of 127 (decimal)
+
+</PRE>
+
+<P>
+This standard naming convention is suggested because it is assumed that
+the Error Log records of any one I.D. will only be recognized by a single
+formatting routine.  Therefore the use of the "xxxxx" suffix (based on record
+I.D.) should assure uniqueness for the formatting module name.
+<P>
+The static Error Log record I.D. registration mechanism that is enforced
+by the OS/2 RAS development group will attempt to keep a list not only of
+the Error Log record I.D.'s in use, but also the names of the formatting
+DLL modules that correspond to each record I.D..  This may also help to
+reduce the possibility of formatting DLL module names "colliding".
+<P>
+In addition to its single formatting routine, each formatting DLL module
+must contain a global variable named "ELOG_FORMAT". This exported global
+variable must be set to a value of 1. When SYSLOG loads a prospective formatting
+DLL module it will attempt to access this global variable and check whether
+it has the expected value of 1. If the global variable check fails, then
+SYSLOG can conclude that it has accidentally loaded another DLL module with
+the same name as the formatting module that is mentioned in the Error Log
+entry.  This check is intended as a form of protective validation for SYSLOG.
+ The variable may in future releases be used a sort of revision level for
+the SYSLOG/formatting DLL module interface specification.  That is why it
+will initially be forced to a value of 1.
+<P>
+When a user constructs a Error Log entry formatting DLL module, care should
+be taken not to export the names of its constituent formatting routine (though
+the required ELOG_FORMAT global variable must be exported).  Not exporting
+the module name will save storage space within the OS/2 kernel.
+<P>
+Error Log record formatting DLL routines must be written as 32-bit procedures.
+ A typical Error Log record formatting DLL routine will have to accept the
+parameters: 
+<PRE>
+        APIRET APIENTRY ELGxxxxx(PVOID Log_Record,
+                                 PVOID String_Buffer,
+                                 ULONG Buffer_<!-- entering slot 3348 -->Length,
+                                 PULONG String_Length);
+
+
+</PRE>
+
+<P>
+<U><I>Parameters</I></U><!-- lm: 0x2 1 -->
+<UL>
+<P>
+Log_Record<!-- lm: 0x11 11 -->
+<UL>is a linear pointer to an Error Log record
+that is being passed from SYSLOG to the formatting routine.  The Error Log
+record adheres to the format that is described in the section that follows
+entitled "Error Log File Entry Format", except that the linear pointer points
+to the "TOT_LENGTH" field (since the "PREV_PTR" and "PREV_SIZE" fields are
+of no interest to a formatting routine).<!-- lm: 0x2 1 -->
+</UL> String_Buffer<!-- lm: 0x11 11 -->
+<UL>is
+a linear pointer to a buffer provided by SYSLOG so that the formatting routine
+can return a series of ASCIIZ strings to SYSLOG. Each ASCIIZ string should
+correspond to a line of formatted display.  Each ASCIIZ string should be
+limited to a maximum of 80 characters.  SYSLOG will paint each string "line"
+within its client window.  The strings should not contain NEWLINE characters.
+ SYSLOG will automatically format the header portion of the Error Log entry.
+ The formatted output prepared by this routine will follow the formatted
+header display.<!-- lm: 0x2 1 -->
+</UL> Buffer_Length<!-- lm: 0x11 11 -->
+<UL>is
+a 32 bit integer that contains the maximum size of the the 'String_Buffer'.
+<!-- lm: 0x2 1 -->
+</UL>String_Length<!-- lm: 0x11 11 -->
+<UL>is a pointer
+to a 32 bit integer that is set by the formatting routine to the total length
+of the ASCIIZ strings that have been placed in 'String_Buffer'.<!-- lm: 0x2 1 -->
+</UL> 
+<P>
+<U><I>Returns</I></U>
+<P>
+<B>ELGxxxxx</B> returns the following:<!-- lm: 0x2 1 -->
+<P>
+<B><LI></B><!-- lm: 0x11 11 -->indicating success.<!-- lm: 0x2 1 -->
+<P>
+<B><LI><LI></B><!-- lm: 0x11 11 -->indicates insufficient space in 'String_Buffer'
+positive values indicate formatting routine errors.<!-- lm: 0x2 1 -->  
+<P>
+<U><I>Remarks</I></U>
+<P>
+If a formatting DLL routine returns a positive error code to SYSLOG, SYSLOG
+will format the header portion of the Error Log record in the standard manner,
+display the returned formatting routine error code (as a line within the
+formatted display), and then format the data portion of the Error Log record
+as a hexadecimal dump.
+<P>
+If an Error Log record fails to point to a formatting DLL module, or if
+the formatting DLL module cannot be successfully loaded and validated, then
+SYSLOG will format the header portion of the Error Log record in the standard
+manner, display a message that a formatting routine was not specified or
+could not be successfuly invoked (as a line within the formatted display),
+and then format the data portion of the Error Log record as a hexadecimal
+dump.
+<P>
+If there is insufficient space in the 'String_Buffer', then the formatting
+routine will return a -1 status code, and will place the required length
+of the formatted display string in the caller's output length variable.
+ SYSLOG can react to this error by recalling the formatting routine with
+a larger 'String_Buffer'.
+<P>
+SYSLOG contains logic to format the standard SNA Generic Alert entry (i.e.
+Error Log record I.D. of 2).  This is necessary since most of the existing
+Error Log calls are used to pass generic alerts (and the existing calls
+can not pass in formatting DLL routine names).  This design choice does
+not prevent future Error Log callers to specify a record I.D.  of 2 and
+also to pass in the name of a formatting DLL routine that knows how to specially
+format that Generic Alert entry. 
+
+<P><HR>
+
+<A HREF="3108_L3_LogAddEntries.html">[Back: LogAddEntries]</A> <BR>
+<A HREF="3110_L3_DevHlp_LogEntryDevic.html">[Next: DevHlp_LogEntry Device Driver Interface]</A> 
+</BODY>
+</HTML>

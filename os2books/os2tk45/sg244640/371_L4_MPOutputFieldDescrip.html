@@ -1,0 +1,165 @@
+<HTML>
+<HEAD>
+<TITLE>.MP Output Field Descriptions</TITLE>
+</HEAD>
+<BODY>
+<H1>.MP Output Field Descriptions</H1><!-- entering slot 532 -->
+<P>
+Output from<B> .MP</B> appears in one of is of the following forms:
+<PRE>
+ffdf500c InUse: pVP=ff1df060 RefCnt=0001 Flg=0 ll=00 sl=00 Blk=00000 Frame=00001
+
+ffdfcdac Idle:  pVP=ff1e6ba8 Blink=01261 Flg=0 Flink=0127a Blk=0004b Frame=01279
+
+ffdf50b4 Free:               BLink=001f1 Flg=4 FLink=0000d Blk=00001 Frame=0000f
+
+</PRE>
+
+<P>
+Each of the fields has the following meaning:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B><I>address</B></I><!-- lm: 0x11 11 -->
+<UL> The linear address of the
+PF structure is given to the left of each display line.<!-- lm: 0x2 1 -->
+</UL><B><I> type
+</B></I><!-- lm: 0x11 11 -->
+<UL>The type of PF is displayed in the second
+column. Three types are possible:<B> Free</B><B> Idle</B> and<B> InUse</B>.
+<!-- lm: 0x2 1 -->
+</UL><B>pVP=</B><!-- lm: 0x11 11 -->
+<UL> The linear
+address of the associated <A HREF="3329_L0_.html">Virtual Page Structure</A>.
+See <A HREF="372_L3_MVFormatMemoryVirtua.html">.MV Command</A> for information
+on displaying Virtual Page Structures.<!-- lm: 0x2 1 -->
+</UL><B> RefCnt
+</B><!-- lm: 0x11 11 -->
+<UL>The number of <A HREF="3327_L0_.html">PTEs
+</A>that reference the frame of physical storage represented by this PF.
+A reference count greater than 1 indicates shared memory, some instances
+of which will be represented by <A HREF="3333_L0_.html">VMCOs</A> (see <A HREF="351_L3_MCFormatMemoryContex.html">.MC
+command</A>).
+<P>
+When a PTE is attached to an existing PF then the<B> Refcnt</B> is incremented.
+
+<P>
+When a page of memory is freed, the<B> Refcnt</B> is decremented. If it
+becomes zero the PF may be eligible for putting on the Idle list.
+<P>
+PFs corresponding to <A HREF="3328_L0_.html">UVIRT</A> storage are zeroed
+unless aliased by non-UVIRT storage. In either case no reference accounting
+is performed for UVIRT mappings. <!-- lm: 0x2 1 -->
+</UL><B> Blink=</B><!-- lm: 0x11 11 -->
+<UL> The
+backward or right link to the previous Idle or Free PF.<!-- lm: 0x2 1 -->
+</UL><B> Flink=
+</B><!-- lm: 0x11 11 -->
+<UL>The forward or left link to the next Idle or
+Free PF.<!-- lm: 0x2 1 -->
+</UL><B> Flg=</B><!-- lm: 0x11 11 -->
+<UL> PF
+flags.
+<P>
+The following flags are defined:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³<I>name</I>        ³<I>bit mask</I>  ³<I>description</I>                   ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³PF_FAST     ³0x1       ³frame is fast memory          ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³PF_BUSY     ³0x2       ³frame is busy                 ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³PF_FREE     ³0x4       ³frame is free                 ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³PF_RES      ³0x8       ³reserved                      ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+<B>Notes: </B><B> PF_FAST</B> flag is set for some  physical storage frames
+below 640K.
+<P>
+<B>PF_BUSY</B> signifies that access to the PF is being serialised by the
+page frame manager. This is normally followed by setting the<B> VP_BUSY
+</B>flag in the associated VP, if reset or setting the<B> VP_WANTED</B> flag
+and waiting on the the <A HREF="3351_L0_.html">Block Id</A> of the VP address.
+Under the debug kernel the thread slot of the VP semaphore owner is saved
+in<B> vp_semowner</B> (VP+0x0a) See <A HREF="380_L3_PBDisplayBlockedThre.html">.PB
+command</A> for information on thread slots waiting on Block Ids.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL><B> ll=
+</B><!-- lm: 0x11 11 -->
+<UL>Count of number of long-term lock requests
+active against this page frame. This is incremented when a request to lock
+a range of pages of a memory object is made. It is also,<!-- entering slot 533 --> but
+rarely, set to 1 to isolate page frames that have caused trap 2 errors from
+which the system has recovered. See also <A HREF="366_L4_MOOutputFieldDescrip.html">.MO
+command output</A> for flags relating to memory object locking.<!-- lm: 0x2 1 -->
+</UL><B> sl=
+</B><!-- lm: 0x11 11 -->
+<UL>Count of number of short-term lock requests
+active against this page frame. This is incremented when a request to lock
+a range of pages of a memory object is made. For related information, see
+<A HREF="366_L4_MOOutputFieldDescrip.html">.MO command output</A> for flags
+relating to memory object locking.<!-- lm: 0x2 1 -->
+</UL><B> Blk=</B><!-- lm: 0x11 11 -->
+<UL> Specifies
+the swap disk frame, loader block number or diagnostic flag depending on
+the flag settings of the corresponding Virtual Page Structure pointed to
+by the<B> pVP=</B> field.
+<P>
+When<B> VP_DF</B> is set and<B> VP_DISCARDABLE</B> is reset then<B> Blk=
+</B>is the swap disk frame number that contains a copy of the page frame.
+
+<P>
+When<B> VP_DISCARDABLE</B> is set and<B> VP_RESIDENT</B> is reset then the
+<B>Blk=</B> field is the Loader block Id. Except for a special case noted
+below, this is a page index, starting from 1, into the objects of the module
+as an aggregated whole, with the size of each object rounded up to a page
+boundary. The special case occurs when the memory object that owes this
+page frame has an<B> hmte</B> set to <A HREF="3239_L2_VMSystemObjectOwnerI.html">system
+object id</A> 0xffc0,<B> Discard Owner</B>. When this occurs the following
+special block numbers may be used:<!-- lm: 0x2 11 -->
+<P>
+0x0fffe<!-- lm: 0x2 26 -->
+<UL> System Infoseg<!-- lm: 0x2 11 -->
+</UL>0x0fffd<!-- lm: 0x2 26 -->
+<UL> Local Infoseg<!-- lm: 0x2 11 -->
+</UL>0x0fffc<!-- lm: 0x2 26 -->
+<UL> invalid LDT pages<!-- lm: 0x2 11 -->
+</UL> When
+<B>VP_DF</B> and<B> VP_DISCARDABLE</B> are reset the<B> Blk=</B> usually
+indicates the last cross-linked swapper disk frame (unless its zero), however
+under the debug kernel negative values are used to indicate errors or instances
+where swapper frames have been freed because the corresponding <A HREF="3327_L0_.html">PTE
+</A>for the frame was found to be dirty. The following error indicators
+are possible:<!-- lm: 0x2 11 -->
+<P>
+<LI><LI><!-- lm: 0x2 26 -->When also<B> Flg=9</B> then the physical frame
+caused a Trap 2 error, but the system was able to recover the data. The
+frame is isolated from further use by setting<B> ll=</B>1,<B> refcnt=</B>1
+and<B> PF_FREE</B> flags are reset and<B> pVP=pgVPBasePg</B><!-- lm: 0x2 11 --> -3
+<!-- lm: 0x2 26 -->
+<UL>A page-in operation failed with ERROR_SWAP_IO_PROBLEMS
+<!-- lm: 0x2 11 -->
+</UL>-4<!-- lm: 0x2 26 -->
+<UL> A page_out operation failed with PGPO_FAILED
+<!-- lm: 0x2 11 -->
+</UL>-5<!-- lm: 0x2 26 -->
+<UL>A page_out operation failed with ERROR_SWAP_FILE_FULL
+<!-- lm: 0x2 11 -->
+</UL>Otherwise disk frame reclamation is indicated by
+<B>Blk=</B> values of: -1, -2, -7, -9 and 0xfff0.
+<P>
+For related <A HREF="3329_L0_.html">VP</A> information, see <A HREF="372_L3_MVFormatMemoryVirtua.html">.MV
+command</A>.<!-- lm: 0x2 1 -->
+</UL><B> Frame=</B><!-- lm: 0x11 11 -->
+<UL> This
+is the physical page frame number that this Page Frame Structure represents.
+<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="370_L4_InusePageFrameStruct.html">[Back: In-use Page Frame Structures]</A> <BR>
+<A HREF="372_L3_MVFormatMemoryVirtua.html">[Next: .MV - Format Memory Virtual Page Structures (VPs)]</A> 
+</BODY>
+</HTML>

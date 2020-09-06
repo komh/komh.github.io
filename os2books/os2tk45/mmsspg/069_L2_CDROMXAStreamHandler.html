@@ -1,0 +1,60 @@
+<HTML>
+<HEAD>
+<TITLE>CD-ROM XA Stream Handler</TITLE>
+</HEAD>
+<BODY>
+<H1>CD-ROM XA Stream Handler</H1><!-- entering slot 86 -->
+<P>
+The Sync/Stream Manager provides a mechanism to allow one data stream source
+and multiple targets, called<I> split streams</I>. For example, CD-ROM XA
+can interleave waveform audio, video, and text data within the same data
+buffer. The CD-ROM XA Stream Handler splits the data into multiple streams
+for CD-ROM XA devices. It is more efficient for the stream handler to read
+the combined data into one buffer and then insert the video data into a
+video stream and the waveform audio data into a waveform audio stream without
+copying the data. The waveform audio data stream is then consumed by a waveform
+audio stream handler and the video stream by a video stream handler. The
+waveform audio stream handler sees only the audio portions of the data stream
+and the video stream handler sees only the video portions of the stream.
+
+<P>
+A data stream can be split into multiple split streams. The number is limited
+only by the resources of the system. Each separate split of the stream is
+a separate stream. The work of parsing and determining the different data
+is the job of the source stream handler, which actually fills an empty buffer
+from the Sync/Stream Manager with data from the source device.
+<P>
+The source stream handler must determine which data goes in which stream.
+It must then return to the Sync/Stream Manager pointers to the individual
+records of the buffer. Each record is a portion of the buffer filled with
+data specific to one of the split streams. These records are returned to
+the Sync/Stream Manager indicating which stream they should go to. The Sync/Stream
+Manager will then queue these records in the respective buffer or record
+queue for one of the split streams sharing the buffer.
+<P>
+You can set up this type of split stream as follows. Multiple streams must
+be created, each with a call to the<I> SpiCreateStream</I> function to the
+Sync/Stream Manager. The first of these functions is a normal stream creation
+call with the<I> hstreamBuf</I> parameter set to NULL. Every other subsequent
+<I>SpiCreateStream</I> call that needs to share the buffers of the first
+stream must pass that stream's handle in the<I> hstreamBuf</I> parameter.
+This is the mechanism used by the Sync/Stream Manager to allow these split
+streams to share the buffers of the first stream.
+<P>
+The source stream handler will also receive this parameter on an<I> SHC_CREATE
+</I>call and need to support this kind of streaming. The SPCBBUF_INTERLEAVED
+flag in the SPCB that is set by the source stream handler to indicate whether
+it can do split streaming. If it cannot, any<I> SpiCreateStream</I> attempting
+to use its buffers will be rejected.  Any stream sharing buffers will be
+negotiated to use the same size buffers and number of buffers as the stream
+that allocated the buffers.
+<P>
+The split-stream mechanism only works for one source and multiple targets.
+
+
+<P><HR>
+
+<A HREF="068_L2_CuepointEventSupport.html">[Back: Cuepoint Event Support]</A> <BR>
+<A HREF="070_L2_StreamingScenarios.html">[Next: Streaming Scenarios]</A> 
+</BODY>
+</HTML>

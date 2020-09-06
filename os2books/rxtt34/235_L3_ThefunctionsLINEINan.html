@@ -1,0 +1,110 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>The functions LINEIN() and PULL()</TITLE>
+</HEAD>
+<BODY>
+<H1>The functions LINEIN() and PULL()</H1><!-- entering slot 232 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+If you've activated the trap of the<B> NOTREADY</B> condition, you got a
+<B>NOTREADY</B> condition in the following case:
+<P>
+ Use the function  LINEIN</A> to read from STDIN
+<P>
+ Call the program with a redirection for STDIN
+<P>
+ LINEIN</A> tries to read the end of the file
+<P>
+You cannot prevent this error by using LINES</A>.
+<P>
+If you're using PULL</A> to read from STDIN you won't get an error. Instead
+PULL</A> won't detect the end of the file and will read empty lines forever.
+
+<P>
+This behavior is independent of the last byte in the input file (CTRL-Z
+or other).
+<P>
+<!--0xfb-->---------- * ----------
+<BR>
+
+<P>
+There's a bug in the CTRL-C handling of the LINEIN</A> function:
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* sample code to show a bug in the CTRL-C handling of Classic REXX   */
+/*                                                                    */
+
+  parse version interpreterType .
+  if interpreterType = 'OBJREXX' then
+  do
+                    /* Object REXX running                            */
+    say 'This bug will only occur in Classic REXX'
+    exit 0
+  end /* if */
+
+                    /* install an error handler for CTRL-C/BREAK      */
+  call on halt
+
+
+  call LineOut , "Enter a string (press CTRl-C to see the bug):"
+  UserResponse = lineIn();
+
+  say 'UserResponse is "' || userResponse || '"'
+
+/* -------- uncomment the next statement for a workaround  ---------- */
+/*                                                                    */
+/*                     close STDIN to avoid a bug in the CTRL-C       */
+/*                     handling                                       */
+/*                     Note that the next LineIn call reopens STDIN.  */
+/*  call stream 'STDIN', 'c', 'close'                                 */
+/* ------------------------------------------------------------------ */
+
+  say 'Now executing the statement: userResponse1 = lineIn()'
+  UserResponse1 = lineIn()
+
+  say 'UserResponse1 is "' || userResponse1 || '"'
+
+  say 'Now executing the statement: userResponse2 = lineIn()'
+  UserResponse2 = lineIn()
+
+  say 'UserResponse2 is "' || userResponse2 || '"'
+
+EndProgram:
+
+exit
+
+/* ------------------------------------------------------------------ */
+/* error handler                                                      */
+
+Halt:
+
+  say
+  say '*** CTRL-C pressed ***'
+  say '    Note that the next calls of LineIn() will return immediately'
+  say '    without reading any data!'
+  say '*** -------------- ***'
+  say
+return
+
+</PRE>
+
+<P>
+<!--0xfb-->---------- * ----------
+<BR>
+
+<P>
+In Classic REXXX, pressing CTRL-C while the function LINEIN</A> is active
+immediately activates the handler for the HALT signal; pressing CTRL-C while
+the function PULL</A> is active, activates the handler for the HALT signal
+after entering ENTER.
+<P>
+In Object REXX the behaviour for PULL</A> is similar to the behaviour for
+ LINEIN</A> 
+
+<P><HR>
+
+<A HREF="234_L3_ThefunctionFILESPEC.html">[Back: The function FILESPEC()]</A> <BR>
+<A HREF="236_L3_ThefunctionLINEOUT.html">[Next: The function LINEOUT()]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,86 @@
+<HTML>
+<HEAD>
+<TITLE>How do I change the font in an MLE?</TITLE>
+</HEAD>
+<BODY>
+<H1>How do I change the font in an MLE?</H1><!-- entering slot 87 -->
+<P>
+How do I change the font in an MLE?  WinSetPresParms doesn't work.
+<P>
+This is a function I used in 1.x to set the font for an MLE (haven't ported
+it yet but it should be the same). I pass it the parent hwnd of the MLE,
+the MLE's id, a facename, a pointsize, the maximum height for an outline
+font, and fsSelection (FATTR_SEL_BOLD, etc). It first tries to match on
+pointsize and facename. If it can't it uses an outline font with the height
+requested.
+<PRE> VOID EXPENTRY UtlSetMleFont( HWND hwndParent, USHORT usMleId, PSZ szFacename,
+                              USHORT usPointSize, LONG lMaxHeight,
+                              USHORT fsSelection )
+ {
+     PFONTMETRICS pfm;
+     HDC          hdc;
+     HPS          hps;
+     HWND         hwndMle;
+     LONG         lHorzRes, lVertRes, lRequestFonts = 0, lNumberFonts;
+     FATTRS       fat;
+     SHORT        sOutlineIndex = -1;
+     INT          i;
+
+     (void) memset( &amp;fat, 0, sizeof( FATTRS ) );
+     fat.usRecordLength  = sizeof( FATTRS );
+     fat.fsSelection	 = fsSelection;
+     strcpy( fat.szFacename, szFacename );
+     hwndMle = WinWindowFromID( hwndParent, usMleId );
+     hps = WinGetPS( hwndMle );
+     hdc = GpiQueryDevice( hps );
+     DevQueryCaps( hdc, CAPS_HORIZONTAL_FONT_RES, 1L, &amp;lHorzRes );
+     DevQueryCaps( hdc, CAPS_VERTICAL_FONT_RES,   1L, &amp;lVertRes );
+     lNumberFonts = GpiQueryFonts( hps, QF_PUBLIC, szFacename,
+                                   &amp;lRequestFonts, 0L, NULL);
+     pfm = malloc( (SHORT) lNumberFonts * sizeof( FONTMETRICS ) );
+     GpiQueryFonts( hps, QF_PUBLIC, szFacename,
+                    &amp;lNumberFonts, (LONG) sizeof( FONTMETRICS ), pfm );
+     for( i = 0; i &lt; (USHORT) lNumberFonts; i++ )
+     {
+         if( pfm[ i ].fsDefn &amp; 1 )
+         {
+             sOutlineIndex = (SHORT) i;
+             continue;
+         }
+
+         if (pfm[ i ].sXDeviceRes == (SHORT) lHorzRes &amp;&amp;
+             pfm[ i ].sYDeviceRes == (SHORT) lVertRes &amp;&amp;
+             pfm[ i ].sNominalPointSize == (SHORT) (usPointSize * 10) )
+         {
+             fat.lMatch          = pfm[ i ].lMatch;
+             fat.lMaxBaselineExt = pfm[ i ].lMaxBaselineExt;
+             fat.lAveCharWidth   = pfm[ i ].lAveCharWidth;
+             break;
+         }
+     }
+
+     if( i &gt;= (USHORT) lNumberFonts )
+         if( sOutlineIndex &gt;= 0 )
+             if( lMaxHeight )
+             {
+                 fat.fsFontUse = FATTR_FONTUSE_OUTLINE;
+                 if( !(fat.usCodePage = pfm[ sOutlineIndex ].usCodePage) )
+                     fat.usCodePage  = 850;
+                 fat.lMaxBaselineExt = lMaxHeight;
+                 WinSendMsg( hwndMle, MLM_SETFONT, MPFROMP( &amp;fat ), 0 );
+             }
+     WinSendMsg( hwndMle, MLM_SETFONT, MPFROMP( &amp;fat ), 0 );
+     WinReleasePS( hps );
+     free( pfm );
+ }
+</PRE>
+
+<P>
+Credit:  Rick Fishman 
+
+<P><HR>
+
+<A HREF="072_L2_HowdoIcreatemyownMas.html">[Back: How do I create my own Master Help Index?]</A> <BR>
+<A HREF="074_L2_WhycantIimportfilesl.html">[Next: Why can't I import files larger than 64KB into my MLE?]</A> 
+</BODY>
+</HTML>

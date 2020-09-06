@@ -1,0 +1,119 @@
+<HTML>
+<HEAD>
+<TITLE>Print Subsystem Architecture</TITLE>
+</HEAD>
+<BODY>
+<H1>Print Subsystem Architecture</H1><!-- entering slot 269 -->
+<P>
+There are some interesting and significant changes to the OS/2 print subsystem
+architecture which are used to support Windows applications, and which are
+worth noting:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->The print subsystem has been expanded to provide printing
+support for Windows applications running on WIN-OS/2.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->The OS/2 file system now intercepts ALL print jobs
+routed to an LPTx port, even those directed to WIN-OS/2 LPT1 to LPT3 and
+WIN-OS/2 LPT1.OS2 to LPT2.OS2 ports, and routes them to the OS/2 spooler.
+Jobs routed to a COM port are not intercepted by the file system and can
+proceed directly to the physical port via the serial port device driver.
+<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+<A HREF="048_L2_DetailedViewoftheWIN.html">Figure "Detailed View of the
+WIN-OS/2 Data Connections"</A> shows the WIN-OS/2 details of the print subsystem
+architecture in more detail.  The interesting feature to note here is that
+a second spooler is present; that is, the WIN-OS/2 spooler. The WIN-OS/2
+spooler is the OS/2 V2.0 implementation of the Windows spooler. Similarly,
+the WIN-OS/2 Print Manager and WIN-OS/2 Control Panel represent the OS/2
+V2.0 implementation of the Windows Print Manager and Windows Control Panel.
+There are minor user changes apparent in the WIN-OS/2 Control Panel, but
+these provide extra function rather than take it away.
+<P>
+For WIN-OS/2 printing, raw print data is generated via the WIN-OS/2 printer
+driver and GDI (Graphical Device Interface).  The WIN-OS/2 printer driver
+directs the data to the appropriate port but the data route then taken varies
+depending on whether or not the OS/2 spooler is enabled, as shown in <A HREF="049_L2_LowLevelViewoftheWIN.html">Figure
+"Low Level View of the WIN-OS/2 Printing Data Flow"</A>.
+<P>
+If the OS/2 spooler is enabled, an INT21 is issued which provides a direct
+path for the print data to come into the OS/2 V2.0 file system.  Jobs directed
+to LPTx or LPTx.OS2 ports are intercepted by the file system and are sent
+on to the SplQmxxx interface. The print data is then processed by the print
+subsystem as though it was raw data arriving from a PM queued application.
+Note that for this scenario, the print data is processed by the WIN-OS/2
+printer driver and also part 2 of the equivalent OS/2 printer driver.
+<P>
+<B>Note:  </B> It is important to ensure that the WIN-OS/2 and OS/2 printer
+drivers match to avoid conflict between them. If you use a WIN-OS/2 driver
+which has no OS/2 equivalent then use the IBMNULL driver.<!-- lm: 0x2 0 -->
+<P>
+
+<P>
+Print jobs directed to COMx ports are not intercepted by the file system
+as for LPTx/LPTx.OS2 ports. Instead, they are passed directly to the serial
+ kernel device driver.
+<P>
+If the OS/2 spooler is disabled, the print data bypasses many of the print
+subsystem components.  In this scenario, the WIN-OS/2 spooler will be called
+upon to spool the print job, which is actually written to the root directory
+of the fixed disk.  The queued spool files are distinguished by having the
+file extension .TMP. If the WIN-OS/2 spooler is also disabled then the print
+job passes straight through.
+<P>
+With the OS/2 spooler disabled, there are three routes that print jobs can
+take, according to their port destination:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->When it is the turn of a COMx job to be printed,
+the WIN-OS/2 spooler passes the print job to the COM VDD (Virtual Device
+Driver). The reason for this is that the job will ultimately be printed
+through the OS/2 serial KDD (Kernel Device Driver) which is COM.SYS. A VDD
+cannot call upon physical device drivers, such as COM.SYS, directly.  Instead
+it must call on the services of the VDH (Virtual Device Helper) which is
+a programming interface that is able to do this on behalf of the VDD.  Consequently,
+the VDD passes the print data to the serial KDD via the VDH.
+<P>
+<B>Note:  </B> If you are printing to a COMx port, the WIN-OS/2 printer
+device driver needs to initialize that port and know about the handshaking
+protocol. To<!-- entering slot 270 --> specify the correct settings, you
+will have to use the WIN-OS/2 Control Panel and click on the<I> Ports</I> icon.
+
+<P>
+You should also make sure that you have installed the matching PM printer
+device driver under the Workplace Shell. If you don't have a matching version,
+use the IBMNULL printer device driver. This printer object needs to be assigned
+to the same COMx port and the<I> settings</I> must match the settings on
+the WIN-OS/2 side as well as the current printer setup.
+<P>
+If you don't do that, the printing result will be unpredictable, especially
+for large and complex print jobs.<!-- lm: 0x2 4 -->
+<UL>
+<P>
+<!-- lm: 0x2 0 -->
+</UL> <LI><LI><!-- lm: 0x2 4 -->Jobs directed to LPTx
+are routed to the parallel physical device driver, PRINT0x.SYS.SYS, via
+INT21.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Jobs sent to LPTx.OS2 are routed directly to
+the parallel physical device driver from the WIN-OS/2 spooler.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+<B>Recommendation: </B> It is strongly recommended that users operate the
+print subsystem with both spoolers enabled. Otherwise, print data from different
+jobs may become mixed up, and individual applications may have to wait until
+printing is completed before resuming execution.<!-- lm: 0x2 0 -->
+<P>
+
+<P>
+For more details about the entire print subsystem, including DOS and WIN-OS/2
+sessions, readers should refer to<I> OS/2 Version 2.0 - Volume 5:  Print
+Subsystem</I>.
+
+<P><HR>
+
+<A HREF="235_L2_PrintSupportforWindo.html">[Back: Print Support for Windows Applications]</A> <BR>
+<A HREF="237_L2_FontSupport.html">[Next: Font Support]</A> 
+</BODY>
+</HTML>

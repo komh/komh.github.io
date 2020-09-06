@@ -1,0 +1,171 @@
+<HTML>
+<HEAD>
+<TITLE>Device Driver Control Messages</TITLE>
+</HEAD>
+<BODY>
+<H1>Device Driver Control Messages</H1><!-- entering slot 2192 -->
+<P>
+The following are types of device driver control messages:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Balance<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Generic sound selection<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Master volume<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Tempo<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Timing generation<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Volume<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Balance Control</B>
+<P>
+This message sets the balance level for the audio device driver:
+<PRE>  F0  00 00 3A  03  08  <B>bl</B>  <B>dl</B>  <B>dm</B>  F7
+  <B>bb</B> = Balance level (0 = full left, 40 = middle, 7F = full right)
+  <B>dl</B> = Duration LSB
+  <B>dm</B> = Duration MSB
+</PRE>
+
+<P>
+<I>Balance</I> is specified as a relative value from 0 - 7F, where<I> 0
+</I>is full left,<I> 40</I> is middle,<I> 7F</I> is full right.  The duration
+specifies the length of time (in tenths of a second) necessary to gradually
+go from the current level to the target level.  For example, to set the
+balance to full right (7F) with duration set to<I> 10</I> to gradually move
+the new balance to the right over a one-second period, the balance control
+message would be:
+<PRE>  F0  00 00 3A  03 08 7F 0A 00 F7
+</PRE>
+
+<P>
+<B>Generic Sound Selection</B>
+<P>
+This message selects the generic sound for an instrument:
+<PRE>  F0  00 00 3A  03  03  <B>ii</B>  <B>tt</B>  <B>ss</B>  F7
+
+  <B>ii</B> = Instrument number
+  <B>tt</B> = Sound type (0 = Musical instrument, 1 = sound effects)
+  <B>ss</B> = Sound ID
+</PRE>
+
+<P>
+There are 128 generic musical instrument sounds and 128 sound effects types.
+ When a requested sound is not available on a device, the nearest available
+sound is used. It is recommended that general MIDI mode be used instead
+of this message.
+<P>
+<B>Master Volume Control</B>
+<P>
+This message sets the master volume level for the audio device driver:
+<PRE>  F0  00 00 3A  03  09  <B>vl</B>  <B>vm</B>  00  F7
+
+  <B>vl</B> = Master Volume LSB
+  <B>vm</B> = Master Volume MSB
+</PRE>
+
+<P>
+Master volume is intended to permit immediate control of overall volume
+without interfering with the current volume setting as set by the volume
+control message, described in<B> Volume Control</B> below.<I> Volume</I> is
+specified as a relative value from 0 - 3FFF. For example, to set the volume
+to maximum (3FFF) the master volume control message would be:
+<PRE>  F0  00 00 03 03 09 7F 7F 00 F7
+</PRE>
+
+<P>
+This message causes a MIDI volume control change message to be generated.
+ Any subsequent volume control change messages encountered are scaled proportionately.
+ Actual volume is the product of volume and master volume.
+<P>
+<B>Tempo Control</B>
+<P>
+This message sets the tempo for system real-time timing clock generation:
+
+<PRE>  F0  00 00 3A 03  02  <B>tl</B>  <B>tm</B>  <B>dd</B>  F7
+
+  <B>tl</B> = Tempo LSB
+  <B>tm</B> = Tempo MSB
+  <B>dd</B> = Duration
+</PRE>
+
+<P>
+Notice that<I> tempo</I> is expressed as 1/10 beats per minute. The duration
+specifies the length of time (in tenths of a second) necessary to go gradually
+from the current tempo to the specified tempo. For example, to set the tempo
+to 120 beats per minute, with duration set to<I> 0</I> to make the new tempo
+effective immediately, the tempo control message would be:
+<PRE>  120 bpm = 1200 1/10 increments
+            1200 decimal = 00000100 10110000 binary
+            7 bit MSB (tm) = 000100 1        = hex 9
+            7 bit LSB (tl) =         0110000 = hex 30
+
+   F0 00 00 3A 03 02 30 09 00 F7
+</PRE>
+
+<P>
+
+<P>
+<B>Timing Generation Control</B>
+<P>
+This message tells the device driver what timing information to generate:
+
+<PRE>  F0  00 00 3A  03  01  <B>tt</B>  <B>pp</B>  00  F7
+
+  <B>tt</B> = System real-time control flags (default 08H)
+       0x1x xxxx  Output timing clocks to MIDI-Out
+       0x0x xxxx  Do not output timing clocks to MIDI-Out (default)
+       0xx1 xxxx  Merge timing clocks with MIDI-In
+       0xx0 xxxx  Do not pass timing clocks to MIDI-In (default)
+       0xxx 1xxx  Synchronize output to timing clocks (default)
+       0xxx 0xxx  Disable output synchronization
+       0xxx x1xx  Perform timing data compression
+       0xxx x0xx  Disable timing data compression (default)
+       0xxx xxRR  Reserved bits - always 0
+
+  <B>pp</B> = System real-time 24 CPQN rate prescaler
+       00dd dddd  Multiply by dddddd+1 (1-64) for 24 to 1536 ppq
+       01dd dddd  Divide by dddddd+1*<!-- entering slot 2193 -->3 (3-192) for 8 to 1/8 ppq
+</PRE>
+
+<P>
+By default, device drivers utilize real-time messages at a rate of 24 per
+quarter note (beat) and 120 beats per minute internally for performing output
+synchronization.  However, they do not queue timing clocks to either MIDI-Out
+or MIDI-In (Read data).
+<P>
+<B>Volume Control</B>
+<P>
+This message sets the volume level for the audio device driver. Volume is
+specified as a relative value from 0-7F.
+<PRE>  F0  00 00 3A  03  07  <B>vv</B>  <B>dl</B>  <B>dm</B>  F7
+
+  <B>vv</B> = Volume (0-7F)
+  <B>dl</B> = Duration LSB
+  <B>dm</B> = Duration MSB
+</PRE>
+
+<P>
+The duration specifies the length of time (in tenths of a second) necessary
+to gradually go from the current level to the target level. For example,
+to set the volume to maximum (7F) with duration set to<I> 0</I> to make
+the new volume effective immediately, the volume control message would be:
+
+<PRE>  F0  00 00 3A 03 07 7F 00 00 F7
+</PRE>
+
+<P>
+This message causes subsequent MIDI volume control change messages to be
+generated.  Any subsequent volume control change message encountered will
+be scaled proportionately.  Notice that the actual volume is the product
+of volume and master volume.
+
+<P><HR>
+
+<A HREF="2190_L2_GeneralFormatofSyste.html">[Back: General Format of System-Exclusive Messages]</A> <BR>
+<A HREF="2192_L3_DeviceDriverQueryMes.html">[Next: Device Driver Query Messages]</A> 
+</BODY>
+</HTML>

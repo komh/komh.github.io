@@ -1,0 +1,96 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Check if a directory exists</TITLE>
+</HEAD>
+<BODY>
+<H1>Check if a directory exists</H1><!-- entering slot 480 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* sample code to test if a directory exists with restoring all       */
+/* directories                                                        */
+
+  do forever
+    call lineOut , "Enter the name of the directory to test " ,
+                   "(RETURN to end): "
+    thisDir = strip( lineIn() )
+    if thisDir = "" then
+      leave
+
+    if DirExist( thisDir ) &lt;&gt; "" then
+      say "The directory &lt;" || thisDir || "&gt; exist."
+    else
+      say "The directory &lt;" || thisDir || "&gt; does not exist."
+  end /* do forever */
+
+exit 0
+
+/* ------------------------------------------------------------------ */
+/* function: Check if a directory exists                              */
+/*                                                                    */
+/* call:     DirExist( testDir )                                      */
+/*                                                                    */
+/* where:    testDir - name of the directory to test                  */
+/*                                                                    */
+/* returns:  full name of the directory or "" if the directory        */
+/*           don't exist                                              */
+/*                                                                    */
+DirExist: PROCEDURE
+  parse arg testDir .
+
+                        /* init the return code                       */
+  thisRC = ""
+
+                        /* test for missing or invalid parameter      */
+  testDir = strip( testDir )                                 /* v3.20 */
+  if testDir = "" then                                       /* v3.20 */
+    signal DirDoesNotExist                                   /* v3.20 */
+
+  if right( testDir, 1 ) = '\' then                          /* v3.20 */
+    testDir = dbrright( testDir,1 )                          /* v3.20 */
+  testDir = testDir || '\.'                                  /* v3.20 */
+
+                        /* install a temporary error handler to check */
+                        /* if the drive with the directory to test is */
+                        /* ready                                      */
+  SIGNAL ON NOTREADY NAME DirDoesNotExist
+
+                        /* check if the drive is ready                */
+  call stream testDir || "\*", "D"
+
+
+                        /* save the current directory of the current  */
+                        /* drive                                      */
+  curDir = directory()
+
+                        /* save the current directory of the drive    */
+                        /* with the directory to test                 */
+  curDir1 = directory( fileSpec( "drive", testDir ) )
+
+
+                        /* test if the directory exists               */
+  thisRC = directory( testDir )
+
+                        /* restore the current directory of the drive */
+                        /* with the directory to test                 */
+  call directory curDir1
+
+                        /* restore the current directory of the       */
+                        /* current drive                              */
+  call directory curDir
+DirDoesNotExist:
+
+return thisRC
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="461_L3_Getthecurrentfilesys.html">[Back: Get the current filesystem]</A> <BR>
+<A HREF="463_L3_Workondirectorytrees.html">[Next: Work on directory trees]</A> 
+</BODY>
+</HTML>

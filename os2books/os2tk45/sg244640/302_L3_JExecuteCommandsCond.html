@@ -1,0 +1,127 @@
+<HTML>
+<HEAD>
+<TITLE>J - Execute Commands Conditionally</TITLE>
+</HEAD>
+<BODY>
+<H1>J - Execute Commands Conditionally</H1><!-- entering slot 434 --><!-- Unable to decode bitmap format --><IMG SRC="302_L3_JExecuteCommandsCond_86.gif" WIDTH=32 HEIGHT=32>
+<P>
+Conditionally execute one of two lists of commands depending on whether
+an expression evaluates to<B> TRUE</B> (non-zero) or<B> FALSE</B> (zero).
+
+<P>
+<U><I>Syntax:</I></U>
+<PRE>
+ÄÄ   J Ä expression ÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄ
+                       ÃÄÄÄÄÄÄ cmd1 ÄÄÄÄÄÄÄ´ ÀÄÄ ; Ä cmd2 ÄÄÂÄÙ
+                       ÀÄ " ÄÄ cmd1 ÄÂÄ " ÄÙ               ³
+                                    ³         ÀÄÄÄÄÄÄÄÄÄÄÄÄÙ
+                             ÀÄÄ ; ÄÄÙ
+
+</PRE>
+
+<P>
+<U><I>Parameters:</I></U><!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B><I>expression</B></I><!-- lm: 0x11 11 -->
+<UL> An expression that resolves
+to either a simple numeric value or an address using any of the <A HREF="264_L2_TheExpressionEvaluat.html">expression
+evaluation</A> operators. <A HREF="3289_L0_.html">Symbols of addresses</A> and
+<A HREF="3290_L0_.html">symbols of absolute values</A> may be specified.
+<!-- lm: 0x2 1 -->
+</UL><B><I>cmd1</B></I><!-- lm: 0x11 11 -->
+<UL> Specifies
+a command to be executed if the<B><I> expression</B></I> evaluates to<B> TRUE
+</B>(non-zero). More than one command may be specified if each is separated
+by a semi-colon and the entire command list is enclosed in single or double
+quotes.
+<P>
+If<B><I> cmd1</B></I> is omitted, control is returned to the debugging console
+when the<B><I> expression</B></I> is<B> TRUE</B>.<!-- lm: 0x2 1 -->
+</UL><B><I> cmd2
+</B></I><!-- lm: 0x11 11 -->
+<UL>Specifies a command to be executed if the
+<B><I>expression</B></I> evaluates to<B> FALSE</B> (non-zero). More than
+one command may be specified. Each<B><I> cmd2</B></I> must be prefixed by
+a semi-colon, even if only one is specified. Quotes are not required to
+encompass a list of
+<P>
+If<B><I> cmd2</B></I> is omitted, control is returned to the debugging console
+when the<B><I> expression</B></I> is<B> FALSE</B>.<B><I> cmd2</B></I> commands.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<U><I>Results &amp; Notes:</I></U>
+<P>
+If the expression resolves to one of the following forms, it is considered
+to be<B> FALSE</B> false:
+<PRE>00:0
+&amp;0:0
+%0
+%%0
+</PRE>
+
+<P>
+Any other resolution is regarded as<B> TRUE</B>.
+<P>
+The<B> J</B> command is primarily intended to be used with the <A HREF="280_L3_BPSetorAlteraBreakpo.html">BP
+</A>and <A HREF="281_L3_BRSetorAlteraDebugRe.html">BR</A> commands to enable
+conditional <A HREF="3286_L0_.html">breakpoints</A> to be defined.
+<P>
+Examples of this usage are:
+<PRE>-------------------------------------------------------------------------------
+BP #f:12d5 "J ax!=10t,g"
+
+BP #f:12d5 "J ax==10t;g"
+
+BP SchedNextRet "J wo(Tasknumber)==8,'.p*;.r';g"
+
+BP DOSOPEN "J wo(Tasknumber)==32,'da #(wo(ss:sp+20)):(wo(ss:sp+1e));g';g"
+-------------------------------------------------------------------------------
+</PRE>
+
+<P>
+The first example shows a breakpoint set at address<B> #f:12d5</B>. When
+this breakpoint<I> fires</I> the<B> J</B> command tests the condition<B> AX
+</B>register not equal to decimal 10. If this is true, the<B> G</B> command
+is executed. Since no<B><I> cmd2</B></I> is specified the<B> J</B> command
+returns control to the debugging console when the condition is false (<B>AX
+</B>equal to decimal 10).
+<P>
+The second example is has the same effect as the first but is implemented
+by testing the logically opposite condition.
+<P>
+The third example shows one method of stopping the system when a thread
+switch to a particular thread slot has just occurred. In this case the debugging
+console gains control when thread slot 8 is selected, whereupon<B> .p*</B> and
+<B>.r</B> are automatically executed. The breakpoint<B> SchedNextRet</B> is
+one of two exit points from the scheduler (<B>_tkSchedNext</B>). The other,
+<B>SchedNextRet2</B> is taken when the same thread slot is selected for
+re-dispatch. The global variable<B> Tasknumber</B> contains the current
+and therefore out-going slot number on entry to the scheduler; and in-coming
+slot number on exit from the dispatcher.
+<P>
+<B>Note: </B>
+<P>
+The kernel calls one of the<B> KMExitKmode</B> routines before giving control
+to user code. During this kernel exit processing the<B> Resched</B> and
+( <A HREF="3345_L0_.html"><!-- entering slot 435 -->TCB</A> and <A HREF="3335_L0_.html">PTDA</A>)
+force flags are checked again and if set the scheduler/dispatcher sequence
+is invoked. It is possible therefore, that even though a thread is selected
+to run, and achieves<B> run</B> state, it is put back on the ready queue
+before being given any user processing time.<!-- lm: 0x2 1 -->
+<P>
+
+<P>
+The fourth example illustrates a method of tracing resources that are opened
+by a specific thread slot (in this case slot 32) without giving control
+to the debugging console.<B> DOSOPEN</B> is the kernel's entry point for
+open processing. At this point words<B> 0x0f</B> and<B> 0x10</B> contain
+the offset and selector that points to the resource name.
+
+<P><HR>
+
+<A HREF="301_L3_IInputFromanIOPort.html">[Back: I - Input From an I/O Port]</A> <BR>
+<A HREF="303_L3_KDisplayStackTracefr.html">[Next: K - Display Stack Trace from Address]</A> 
+</BODY>
+</HTML>

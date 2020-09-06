@@ -1,0 +1,100 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Read a file into a compound variable</TITLE>
+</HEAD>
+<BODY>
+<H1>Read a file into a compound variable</H1><!-- entering slot 490 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* sample code to read a text file into a compound variable           */
+
+                        /* name of the file to read                   */
+  testFile = "C:\OS2\INISYS.RC"
+
+  if ReadTextFile( testFile  , "testStem" ) = 0 then
+  do
+    say "The file " || testFile || " contains " || ,
+        testStem.0 || " lines."
+  end /* if */
+  else
+    say "Error reading the file " || testFile
+
+exit 0
+
+/* ------------------------------------------------------------------ */
+/* function: Read a text file into a compound variable                */
+/*                                                                    */
+/* call:     ReadTextFile fileName, stem                              */
+/*                                                                    */
+/* where:    fileName - name of the file to read                      */
+/*           stem - stem for the lines of the file                    */
+/*                                                                    */
+/* returns:  0 - okay, file read, the compound variable "stem"        */
+/*                     contains the lines of the file,                */
+/*                     "stem".0 = no. of lines                        */
+/*           else error reading the file                              */
+/*                                                                    */
+ReadTextFile:
+  parse arg rtf.__fileName , rtf.__stemName
+
+                        /* set the return code                        */
+  rc = -1
+
+  rtf.__i = i
+
+  if rtf.__fileName &lt;&gt; "" &amp; rtf.__stemName &lt;&gt; "" then
+  do
+    if right( rtf.__stemName,1 ) &lt;&gt; "." then
+      rtf.__StemName = rtf.__StemName || "."
+
+                        /* init the number of stem elements with 0    */
+    rtf.__iLine = rtf.__StemName || "0 = 0 "
+    interpret rtf.__iLine
+
+                        /* set the return code 2 - file not found     */
+    rc = 2
+
+    if stream( rtf.__fileName, "c", "QUERY EXISTS" ) &lt;&gt; "" then
+    do
+
+                        /* set return code to 0                       */
+      rc = 0
+
+                        /* create the code to read the file           */
+      rtf.__iLine = ,
+       "do i = 1 until lines( """ || rtf.__fileName || """ ) = 0; "  ,
+          rtf.__StemName || "i = lineIn( '" || rtf.__fileName || "');" ,
+       "end;"
+                        /* and now execute the code to read the file  */
+      interpret rtf.__iLine
+
+                        /* close the file                             */
+      call stream rtf.__fileName, "c", "CLOSE"
+
+                        /* correct the no. of lines in stem.0         */
+      rtf.__iLine = rtf.__StemName || "0 = i "
+      interpret rtf.__iLine
+
+    end /* if stream( ... */
+
+  end /* if rtf.__fileName &lt;&gt; "" &amp; ... */
+
+  i = rtf.__i
+  drop rtf.
+
+RETURN rc
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="471_L3_Countlinesinafilequi.html">[Back: Count lines in a file quickly - 2 -]</A> <BR>
+<A HREF="473_L3_ReadatextfileusingCh.html">[Next: Read a textfile using CharIn()]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,131 @@
+<HTML>
+<HEAD>
+<TITLE>Wrapping a printer API</TITLE>
+</HEAD>
+<BODY>
+<H1>Wrapping a printer API</H1><!-- entering slot 302 -->
+<P>
+Presented below is a simple example showing how an existing API could be
+"wrapped" as SOM objects. The API is admittedly trivial, but it is hoped
+that readers understand this simple example well enough to create more sophisticated
+applications of their own.
+<P>
+The "API" wrapped in this example is comprised of two OS/2 system calls.
+The first one asks for a file to be printed on a specific printer:
+<PRE>print /D:&lt;printerName&gt; &lt;filename&gt;
+</PRE>
+
+<P>
+The second one asks for the file currently being printed on device &lt;printerName&gt;
+to be cancelled.
+<PRE>print /D:&lt;printerName&gt; /C
+</PRE>
+
+<P>
+Two IDL interfaces are declared in the module "PrinterModule": "Printer"
+and "PrinterServer". The "Printer" interface wraps the two system calls.
+The "PrinterServer" interface describes a subclass of<B> SOMDServer</B>.
+"PrinterModule::PrinterServer" will be the class of the server object in
+the print-server application.
+<PRE>#include &lt;somdserv.idl&gt;
+
+module <B>PrinterModule</B> {
+  interface <B>Printer</B> : SOMObject {
+    attribute string printerName;
+    void print(in string fname);
+    void cancel();
+    #ifdef __SOMIDL__
+    implementation {
+      printerName: noset;   // memory to be allocated
+      };
+    #endif
+  };
+
+  interface <B>PrinterServer</B> :<B>SOMDServer</B>{
+    #ifdef __SOMIDL__
+    implementation {
+      somdCreateObj: override;
+      somdRefFromSOMObj: override;
+      somdSOMObjFromRef: override;
+      };
+    #endif
+  };
+
+};
+</PRE>
+
+<P>
+Note that the "Printer" interface defines one attribute, "printerName",
+that will be used to identify the printer. It will be set when a "Printer"
+is created. Printer's two operations, "print" and "cancel", correspond to
+the two system commands the interface is encapsulating. The "PrinterServer"
+interface does not introduce any new attributes or operations. It does specify
+that three of<B> SOMDServer's</B> methods will have their implementations
+overridden.
+<P>
+The next three method procedures show how the "Printer" interface is implemented
+for the "_set_printerName", "print", and "cancel" methods. Recall (from
+the earlier topic "Implementation constraints") that "_set" methods for
+attributes must be explicitly implemented in order to allocate their memory,
+if data values need to persist between DSOM requests.
+<PRE>SOM_Scope void  SOMLINK PrinterModule_Printer<B>_set_printerName</B>(
+ PrinterModule_Printer somSelf, Environment *ev, string printerName)
+{
+    PrinterModule_PrinterData *somThis =
+      PrinterModule_PrinterGetData(somSelf);
+
+    if (_printerName) SOMFree(_printerName);
+    _printerName = (string)SOMMalloc(strlen(printerName) + 1);
+    strcpy(_printerName, printerName);
+}
+
+
+SOM_Scope void  SOMLINK PrinterModule_Printer<B>print</B>(
+ PrinterModule_Printer somSelf, Environment *ev, string fname)
+{
+    long rc;
+    PrinterModule_PrinterData *somThis =
+      PrinterModule_PrinterGetData(somSelf);
+    string printCommand = (string)
+      SOMMalloc(strlen(_printerName) + strlen(fname) + 10 + 1);
+
+    sprintf(printCommand,"print /D:%s %s",_printerName,fname);
+    rc = system(printCommand);
+    if (rc) raiseException(ev,rc);
+}
+
+
+SOM_Scope void  SOMLINK PrinterModule_Printer<B>cancel</B>(
+ PrinterModule_Printer somSelf, Environment *ev)
+{
+    long rc;
+    PrinterModule_PrinterData *somThis =
+      PrinterModule_PrinterGetData(somSelf);
+    string printCommand =
+      (string) SOMMalloc(strlen(_printerName) + 12 + 1);
+
+    sprintf(printCommand,"print /D:%s /C",_printerName);
+    rc = system(printCommand);
+    if (rc) raiseExeception(ev,rc);
+}
+</PRE>
+
+<P>
+<B>Note: </B> The implementation of the "raiseException" procedure shown
+in the example above must be provided by the application. However, it is
+not shown in this example.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+The three method procedures that implement the "PrinterServer" interface's
+three overridden methods of<B> SOMServer</B> are very similar to the method
+procedures of the "MyPServer" server-object class presented in the previous
+section (6.4), and therefore have not been shown here.
+
+<P><HR>
+
+<A HREF="262_L3_Usingotherobjectimpl.html">[Back: Using other object implementations]</A> <BR>
+<A HREF="264_L3_Parametermemorymanag.html">[Next: Parameter memory management]</A> 
+</BODY>
+</HTML>

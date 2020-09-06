@@ -1,0 +1,101 @@
+<HTML>
+<HEAD>
+<TITLE>Task Switching</TITLE>
+</HEAD>
+<BODY>
+<H1>Task Switching</H1><!-- entering slot 216 -->
+<P>
+A significant function of the 80386 processor is its ability to support
+a multitasking environment.  While much of the multitasking support in the
+80386 is similar to that provided in the previous 80286 family, multitasking
+will be discussed here for those who may not be familiar with its implementation.
+
+<P>
+In a multitasking system, when one task is suspended and control is passed
+to another, the processor state must be stored so that when the suspended
+task regains control, it may resume normal operation where it left off.
+
+<P>
+The 80386 processor architecture defines a special type of memory structure
+known as a Task State Segment (TSS).  The processor uses a specific fixed
+format to store task-related control information in the TSS, in order to
+provide high-performance task-switching operations with complete isolation
+between tasks.  A separate TSS is maintained for each task in the system.
+ Each TSS contains:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->General registers (EAX, ECX, EDX, EBX, ESP, EBP, ESI,
+and EDI)<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Segment registers (ES, CS, SS, DS, FS, and GS)<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Flags register (EFLAGS)<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Instruction pointer (EIP)<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Selector for the TSS of the previous task<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Selector for the task's LDT (static)<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Logical addresses of the stacks for privilege levels
+0, 1, and 2<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->The T-bit (debug trap bit)<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Base address for the I/O permission bit map.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+A special segment descriptor is used for each TSS, and appears only in the
+system's Global Descriptor Table (GDT), since TSSs are not available to
+applications.  The Task Register always contains a pointer to the TSS for
+the current task.
+<P>
+Task switching may occur as the result of either an interrupt or of executing
+an instruction that explicitly transfers control.  A task switch may be
+achieved in one of four ways:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->The current task executes a JMP or CALL to a TSS descriptor
+<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->The current task executes a JMP or CALL to a task
+gate (a special type of segment descriptor)<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->An interrupt or exception indexes a task gate in the
+IDT (Interrupt Descriptor Table)<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->The current task executes an IRET instruction with
+the NT (next task) flag set.  The selector for the previous task is always
+stored in the current TSS, thus providing the means to return control to
+the previous task.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+During the task switch operation, the processor saves the contents of the
+current registers in the TSS of the current task.  The selector of the next
+TSS is then loaded into the Task Register.  This selector references an
+entry in the GDT, which contains the physical address of the TSS.  The values
+in the TSS are then loaded into the processor's registers, and control information
+is loaded into the segment registers from the GDT and the process's LDT.
+ The processor is then ready to continue execution of the new task.
+<P>
+To create a new task, the operating system initializes a TSS to the appropriate
+initial values.  The operating system then determines when to start the
+task, and accomplishes this by simply switching from the current task to
+the new one.
+<P>
+OS/2 V2.0 only makes minimal use of the TSS mechanism.  The use of the flat
+memory model and the way in which OS/2 V2.0 implements paging makes a large
+part of the data stored in the TSS redundant.  Consequently OS/2 V2.0 implements
+its own task switching model which optimizes switches between<!-- entering slot 217 --> threads
+in the same or different processes.  Also allocating a TSS for each thread
+in the system would use a large amount of storage.  OS/2 V2.0 uses a single
+TSS for effecting transitions between the different privilege levels, at
+which tasks present in the system run. Privilege levels are described in
+<A HREF="198_L3_PrivilegeLevels.html">Privilege Levels</A>.
+
+<P><HR>
+
+<A HREF="193_L2_Paging.html">[Back: Paging]</A> <BR>
+<A HREF="195_L2_Protection.html">[Next: Protection]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,134 @@
+<HTMLHIDDEN>
+<HEAD>
+<TITLE>DosSendSignal</TITLE>
+</HEAD>
+<BODY>
+<H1>DosSendSignal</H1><!-- entering slot 358 -->
+<PRE>#define INCL_DOSSIGNALS
+
+USHORT  rc = DosSendSignal(PID, SigNumber);
+
+USHORT           PID;           /* PID of root of subtree */
+USHORT           SigNumber;     /* Signal Number to send */
+
+USHORT           rc;            /* return code */
+</PRE>
+
+<P>
+<B>Example</B>
+<P>
+The following example illustrates the use of the Ctrl-C (SIGINTR) signal
+to signal time-critical events.  Process1 invokes process2, which establishes
+a signal handler named CtrlC_Handler() and waits, by blocking on a reserved
+RAM semaphore, for a signal from process1. A portion of process2 is immune
+to signalling.
+<PRE>/***** process1.c *****/
+
+#define INCL_DOSPROCESS
+#define INCL_DOSSIGNALS
+
+#include &lt;os2.h&gt;
+
+#define SLEEPTIME       200L              /* Sleep interval */
+#define START_PROGRAM   "process2.exe"    /* Program name */
+
+
+main()
+{
+  CHAR          ObjFail[50];
+  PSZ           Args;
+  PSZ           Envs;
+  RESULTCODES   ReturnCodes;
+  USHORT        rc;
+
+  /* Start process2 and check its PID */
+  if(!(DosExecPgm(ObjFail,               /* Object name buffer */
+                  sizeof(ObjFail),       /* Length of obj. name buffer */
+                  EXEC_ASYNC,            /* Execution flag */
+                  Args,                  /* Ptr. to argument string */
+                  Envs,                  /* Ptr. to environment string */
+                  &amp;ReturnCodes,          /* Ptr. to resultcodes
+                                                 struct. */
+                  START_PROGRAM)))       /* Name of program file */
+    printf("Process2 started.\n");
+  printf("Process2 ID is %d\n", ReturnCodes.codeTerminate);
+
+  /* Sleep to give time slice to process2 */
+  DosSleep(SLEEPTIME);                   /* Sleep interval */
+
+  /*** After process2 sets signal handler, send process2 a signal ***/
+  if(!(rc = DosSendSignal(ReturnCodes.codeTerminate,  /* PID of process2 */
+                          SIG_CTRLC)))                /* Signal to send */
+    printf("Ctrl-C signal sent from Process1 to Process2.\n");
+}
+</PRE>
+
+<PRE>/* ----- process2.c ----- */
+
+#define INCL_DOSPROCESS
+#define INCL_DOSSIGNALS
+#define INCL_DOSERRORS
+
+#include &lt;os2.h&gt;
+
+#define SLEEPTIME         50L
+#define TIMEOUT           5000L
+
+
+VOID APIENTRY CtrlC_Handler(arg1, arg2)    /** Define signal handler **/
+  USHORT      arg1;
+  USHORT      arg2;
+{
+  printf("Handler for Ctrl-C now running.\n");
+  return;
+}
+
+
+main()
+{
+  ULONG            RamSem = 0L;   /* Allocate and initialize Ram Semaphore */
+  ULONG far        *RamSemHandle = &amp;RamSem;  /* Ram Semaphore handle */
+  USHORT           rc;
+
+  /* Establish signal handler */
+  if(!(rc=DosSetSigHandler((PFNSIGHANDLER) CtrlC_Handler,
+                           NULL,          /* Previous handler - ignored */
+                           NULL,          /* Previous action - ignored */
+                           SIGA_ACCEPT,   /* Request type */
+                           SIG_CTRLC)))   /* Signal number */
+    printf("Process2 has set Ctrl-C handler.\n");
+  else
+    /* Error processing on rc */;
+  /* Get semaphore for first time */
+  if(!(rc=DosSemRequest(RamSemHandle,       /* Semaphore handle */
+                        TIMEOUT)))          /* Timeout interval */
+    printf("Semaphore obtained.\n");
+
+  /*** Disable and then enable signal-handling ***/
+  if(!(rc=DosHoldSignal(HLDSIG_DISABLE)))   /** Action code - disable **/
+  {
+    printf("Signalling DISABLED.\n");
+
+    /* Do signal-proof work here */
+    if(!(rc=DosHoldSignal(HLDSIG_ENABLE)))  /** Action code - enable **/
+      printf("Signalling ENABLED.\n");
+  }
+  /* At this point, process1 may have sent a Ctrl-C signal. */
+  /* Try to obtain semaphore again -- resulting in Timeout. */
+  /* The Timeout, however, may be interrupted by the signal. */
+
+  printf("Process2 will now wait on a Ramsem for a while.\n");
+  if((rc=DosSemRequest(RamSemHandle,     /* Semaphore handle */
+                       TIMEOUT))         /* Timeout interval */
+     == ERROR_INTERRUPT)
+  printf("Process2 interrupted while waiting, rc is %d.\n", rc);
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="314_L2H_DosSemWait.html">[Back: DosSemWait]</A> <BR>
+<A HREF="316_L2H_DosSetCp.html">[Next: DosSetCp]</A> 
+</BODY>
+</HTML>

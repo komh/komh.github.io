@@ -1,0 +1,218 @@
+<HTML>
+<HEAD>
+<TITLE>Apply Remote Procedure Call Data Structure</TITLE>
+</HEAD>
+<BODY>
+<H1>Apply Remote Procedure Call Data Structure</H1><!-- entering slot 66 -->
+<PRE>typedef struct {
+        boolean fOldIsLocal;
+        union {
+          sec_id_t           local;      //TRUE
+          sec_id_foreign_t   foreign;    //FALSE
+        } old_id;
+
+        boolean fNewIsLocal;
+        union {
+          sec_id_t           local;      //TRUE
+          sec_id_foreign_t   foreign;    //FALSE
+        } new_id;
+} id_to_replace_t;
+</PRE>
+
+<P>
+where<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 --><I>fOldIsLocal</I> is the discriminator for union
+<I>old_id</I>.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><I>old_id.local</I> is the id of the local user or
+local group that will be renamed.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><I>old_id.foreignl</I> is the id of the foreign user
+or foreign group that will be renamed.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><I>fNewIsLocal</I> is the discriminator for union
+<I>new_id</I>.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><I>new_id.local</I> is the id of the new local user
+or local group.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><I>new_id.foreign</I> is the id of the new foreign
+user or foreign group.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>typedef struct {        unsigned32 action;
+        union {
+          id_to_replace_t user;          //ENTRY_RENAME_USER
+          id_to_replace_t group;         //ENTRY_RENAME_GROUP
+          sec_acl_entry_t sec_acl;       //all other actions
+        } target;
+} ent_entry_to_manipulate_t;
+</PRE>
+
+<P>
+where<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 --><I>action</I> specifies what action to take on the
+<I>target</I>. Valid action codes are: ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+<BR>
+³ SYMBOLIC CONSTANT     ³ MEANING                      ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ENTRY_RENAME_USER     ³ Changes the name of the specified user to a new
+ ³
+<BR>
+³              ³ name.  Only the UUID is required, but if the   ³
+<BR>
+³              ³ UUID is the NIL_UUID, the RPC will resolve the  ³
+<BR>
+³              ³ name to its UUID.                 ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ENTRY_RENAME_GROUP     ³ Same as ENTRY_RENAME_USER except that it works
+ ³
+<BR>
+³              ³ on group entries.                 ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ENTRY_CREATE        ³ Add entry to ACL if it does not exist.  If the  ³
+
+<BR>
+³              ³ entry exists, do nothing (no permission bits   ³
+<BR>
+³              ³ will be modified).                ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ENTRY_DELETE        ³ Delete entry from ACL if it exists.  If the    ³
+<BR>
+³              ³ entry does not exist, do nothing.         ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ENTRY_MODIFY_ADD      ³ If the entry exists in the ACL, this set of per-
+³
+<BR>
+³              ³ mission bits are turned on            ³
+<BR>
+³              ³                          ³
+<BR>
+³              ³  (perm_bits |= specified_perm_bits)       ³
+<BR>
+³              ³                          ³
+<BR>
+³              ³  If the entry does not exist, do nothing.    ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ENTRY_MODIFY_ADD_OR_CREATE³ If the entry exists in the ACL, execute an
+   ³
+<BR>
+³              ³ ENTRY_MODIFY_ADD.  If not, perform an       ³
+<BR>
+³              ³ ENTRY_CREATE.                   ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ENTRY_MODIFY_DELETE    ³ If the entry exists in the ACL, this set of per-
+³
+<BR>
+³              ³ mission bits are turned off            ³
+<BR>
+³              ³                          ³
+<BR>
+³              ³  (perm_bits &amp;= ~specified_perm_bits)       ³
+<BR>
+³              ³                          ³
+<BR>
+³              ³  If the entry does not exist, do nothing.    ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ENTRY_REPLACE       ³ If the entry exists in the ACL, replace the    ³
+<BR>
+³              ³ existing permission bits with the specified set  ³
+<BR>
+³              ³                          ³
+<BR>
+³              ³  (perm_bits = specified_perm_bits)        ³
+<BR>
+³              ³                          ³
+<BR>
+³              ³  If the entry does not exist, do nothing.    ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ENTRY_REPLACE_OR_CREATE  ³ If the entry exists in the ACL, execute an
+   ³
+<BR>
+³              ³ ENTRY_REPLACE.  If not, perform an ENTRY_CREATE. ³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+
+<P>
+<B>Note: </B> If a foreign user is specified, then both parts of the foreign
+id (cell and user) must be in the same format.  Both parts must be in either
+UUID or name form.
+<P>
+It is allowed to have the old name and the new name in different formats.
+<!-- lm: 0x2 6 -->
+<UL><!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL><I>action
+</I>is also the discriminator for union<I> target</I>.<!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL><I>target
+</I>is a union of<I> id_to_replace_t</I> and<I> sec_acl_entry_t</I>.  All
+actions use<I> sec_acl_entry_t</I> except<I> ENTRY_RENAME_USER</I> and<I> ENTRY_RENAME_GROUP</I>.
+<!-- lm: 0x2 1 -->
+</UL>
+<PRE>typedef ent_entry_to_manipulate *ent_entries_to_manipulate_p_t;</PRE>
+
+<PRE>typedef struct {
+        unsigned32               num_entries_to_change;
+        ent_entry_to_manipulate_t entries_to_change_listí1ù;
+} ent_entries_to_manipulate_t;
+</PRE>
+
+<P>
+where<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 --><I>num_entries_to_change</I> specifies how many entries
+are in the array<I> entries_to_change_list</I>.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><I>entries_to_change_list</I> is the first element
+in an array of ent_entry_to_manipulate_t structures.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>typedef struct {        char          *resource_name;
+        error_status_t error_code;
+} error_entry_t;
+</PRE>
+
+<P>
+where<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 --><I>resource name</I> points to the path name of the
+resource being processed when the error occurred during apply.
+<P>
+<B>Note: </B> The client must free the memory sued by calling rpc_sm_free().
+<!-- lm: 0x2 6 -->
+<UL><!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL><I>error_code
+</I>is the error status code.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="057_L2_ApplyAccessControlDa.html">[Back: Apply Access Control Data Structure]</A> <BR>
+<A HREF="059_L2_NetAccessAddorNet32A.html">[Next: NetAccessAdd or Net32AccessAdd]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,160 @@
+<HTML>
+<HEAD>
+<TITLE>DosCancelLockRequestL</TITLE>
+</HEAD>
+<BODY>
+<H1>DosCancelLockRequestL</H1><!-- entering slot 28 -->
+<P>
+<B>Purpose</B>
+<P>
+DosCancelLockRequestL cancels an outstanding DosSetFileLocksL request.
+<P>
+<B>Syntax</B>
+<PRE>#define INCL DOSFILEMGR
+#include  os2.h 
+
+</PRE>
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+APIRET DosCancelLockRequestL<!-- lm: 0x2 11 -->
+<UL><B> (HFILE hFile, PFILELOCKL
+pflLock)</B><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Parameters</B><!-- lm: 0x2 1 -->
+<P>
+hFile  HFILE)  input<!-- lm: 0x11 11 -->
+<UL> File handle used in the DosSetFileLocksL
+function that is to be cancelled.<!-- lm: 0x2 1 -->
+</UL> pflLockL  PFILELOCKL)
+ input<!-- lm: 0x11 11 -->
+<UL> Address of the structure describing the
+lock request to cancel.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Returns</B><!-- lm: 0x2 1 -->
+<P>
+ulrc  APIRET)  returns<!-- lm: 0x11 11 -->
+<UL> Return Code.
+<P>
+DosCancelLockRequestL returns one of the following values <!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->NO_ERROR<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->ERROR_INVALID_HANDLE<!-- lm: 0x2 11 -->
+<P>
+87<!-- lm: 0x2 26 -->
+<UL> ERROR_INVALID_PARAMETER<!-- lm: 0x2 11 -->
+</UL> 173
+<!-- lm: 0x2 26 -->
+<UL>ERROR_CANCEL_VIOLATION<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Remarks</B>
+<P>
+DosCancelLockRequestL allows a process to cancel the lock range request
+of an outstanding DosSetFileLocksL function.
+<P>
+If two threads in a process are waiting on a lock file range, and another
+thread issues DosCancelLockRequestL for that lock file range, then both
+waiting threads are released.
+<P>
+Not all file-system drivers (FSDs) can cancel an outstanding lock request.
+
+<P>
+Local Area Network (LAN) servers cannot cancel an outstanding lock request
+if they use a version of the operating system prior to OS/2 Version 2.00.
+
+<P>
+<B>Related Functions</B><!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->DosSetFileLocksL<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Example Code</B>
+<P>
+This example opens a file named  CANLOCK.DAT , locks a block of the data,
+writes some data to it, and then cancels the lock request.
+<PRE>#define INCL_DOSFILEMGR       /* File Manager values */#define INCL_DOSERRORS        /* DOS Error values    */
+#include  os2.h 
+#include  stdio.h 
+#include  string.h 
+
+int main(VOID)  
+
+HFILE     FileHandle   = NULLHANDLE;  /* File handle */
+ULONG     Action       = 0,           /* Action taken by DosOpenL */
+Wrote        = 0;           /* Number of bytes written by DosWrite */
+CHAR      FileData 40  = "Forty bytes of demonstration text data\r\n";
+APIRET    rc           = NO_ERROR;    /* Return code */
+
+FILELOCKL  LockArea     =  0 ,         /* Area of file to lock */
+UnlockArea   =  0 ;         /* Area of file to unlock */
+
+rc = DosOpenL("canlock.dat",                 /* File to open */
+ FileHandle,                   /* File handle */
+ Action,                       /* Action taken */
+256,                           /* File primary allocation */
+FILE_ARCHIVED,                 /* File attributes */
+FILE_OPEN | FILE_CREATE,       /* Open function type */
+OPEN_ACCESS_READWRITE | OPEN_SHARE_DENYNONE,
+0L);                           /* No extended attributes */
+if (rc != NO_ERROR)                         /* If open failed */
+printf("DosOpenL error  return code = %u\n", rc);
+return 1;  
+
+LockArea.lOffset = 0;               /* Start locking at beginning of file */
+LockArea.lRange =  40;              /* Use a lock range of 40 bytes       */
+UnLockArea.lOffset = 0;             /* Start unlocking at beginning of file */
+UnLockArea.lRange =  0;             /* Use a unlock range of 0 bytes       */
+
+rc = DosSetFileLocksL(FileHandle,        /* File handle   */
+ UnlockArea,       /* No unlock area */
+ LockArea,         /* Lock current record */
+2000L,             /* Lock time-out value of 2 seconds */
+0L);               /* Exclusive lock, not atomic */
+if (rc != NO_ERROR)  
+printf("DosSetFileLocks error  return code = %u\n", rc);
+return 1;
+ 
+
+rc = DosWrite(FileHandle, FileData, sizeof(FileData),  Wrote);
+if (rc != NO_ERROR)  
+printf("DosWrite error  return code = %u\n", rc);
+return 1;
+ 
+/* Should check if (rc != NO_ERROR) here... */
+
+LockArea.lOffset = 0;               /* Start locking at beginning of file */
+LockArea.lRange =  0;               /* Use a lock range of 40 bytes       */
+UnLockArea.lOffset = 0;             /* Start locking at beginning of file */
+UnLockArea.lRange = 40;             /* Use a lock range of 40 bytes       */
+
+rc = DosSetFileLocksL(FileHandle,        /* File handle   */
+ UnlockArea,       /* Unlock area */
+ LockArea,         /* No Lock */
+2000L,             /* Lock time-out value of 2 seconds */
+0L);               /* Exclusive lock, not atomic */
+if (rc != NO_ERROR)  
+printf("DosSetFileLocksL error  return code = %u\n", rc);
+return 1;
+ rc = DosClose(FileHandle);
+/* Should check if (rc != NO_ERROR) here... */
+
+return NO_ERROR;
+ rc = DosClose(FileHandle);
+/* Should check if (rc != NO_ERROR) here... */
+
+return NO_ERROR;
+ 
+</PRE>
+
+
+<P><HR>
+
+<A HREF="022_L2_DosAliasMem.html">[Back: DosAliasMem]</A> <BR>
+<A HREF="024_L2_DosClose.html">[Next: DosClose]</A> 
+</BODY>
+</HTML>

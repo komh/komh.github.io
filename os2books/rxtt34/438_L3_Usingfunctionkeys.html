@@ -1,0 +1,100 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Using function keys</TITLE>
+</HEAD>
+<BODY>
+<H1>Using function keys</H1><!-- entering slot 454 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+To use function keys without the REXXUTIL functions, redefine them with
+a trailing CR (see also <A HREF="895_L2_ANSIESCSequences.html">ANSI ESC
+Sequences</A>, <A HREF="896_L3_KeyCodesforkeyredefi.html">Key codes for
+key redefinitions</A>, and download <A HREF="866_L3_RxLBoxmenuroutineinR.html">RxLBox
+</A>for a working example):
+<PRE> 
+/* sample key redefinitons                                            */
+
+                    /* new definitons for the function keys           */
+  keys.0 = 0
+  i = keys.0
+
+  i=i+1; keys.i.__org = '59'; keys.i.__new = 'F1'
+  i=i+1; keys.i.__org = '60'; keys.i.__new = 'F2'
+  i=i+1; keys.i.__org = '61'; keys.i.__new = 'F3'
+  i=i+1; keys.i.__org = '62'; keys.i.__new = 'F4'
+  i=i+1; keys.i.__org = '63'; keys.i.__new = 'F5'
+  i=i+1; keys.i.__org = '64'; keys.i.__new = 'F6'
+  i=i+1; keys.i.__org = '65'; keys.i.__new = 'F7'
+  i=i+1; keys.i.__org = '66'; keys.i.__new = 'F8'
+  i=i+1; keys.i.__org = '67'; keys.i.__new = 'F9'
+  i=i+1; keys.i.__org = '68'; keys.i.__new = 'F10'
+
+  keys.0 = i
+
+                    /* ANSI esc sequence                              */
+  ansi.__ESC = '1B'x
+
+                    /* special character to detect function keys      */
+  specialChar = 'FE'x
+
+                    /* install error handler for CTRL-BREAK           */
+  signal on halt
+
+                    /* redefine the function keys                     */
+  do i = 1 to keys.0
+    call CharOut , ansi.__ESC || '[0;' || keys.i.__org || ';' || ,
+        '"' || specialChar || keys.i.__New || specialChar || '"' || ,
+        ';13p'
+  end /* do i = 1 to keys.0 */
+
+                    /* test the new key definitons                    */
+  do forever
+    call LineOut, 'Test the function key redefinitions'
+    call CharOut, 'Enter a string (F10 to end): '
+    userInput = lineIn()
+
+                    /* test for function keys                         */
+    parse var UserInput part1 (specialChar) fKey (specialChar) part2
+
+    UserInput = part1 || part2
+
+    say 'Userinput was: "' || UserInput || '"'
+
+    if fkey = '' then
+      say 'No function key pressed.'
+    else
+      say 'Function key "' || fkey || '" pressed.'
+
+    if fkey = 'F10' then
+      leave
+
+  end /* do forever */
+
+ProgramEnd:
+                    /* undo the key redefinitons                      */
+  do i = 1 to keys.0
+    call CharOut , ansi.__ESC || '[0;' || keys.i.__org || ';' || ,
+         '0;' || keys.i.__org || ';p'
+  end /* do i = 1 to keys.0 */
+
+exit
+
+/* error handler for CTRL-BREAK                                       */
+
+Halt:
+  say
+  say 'Program aborted by the user!'
+  signal ProgramEnd
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="437_L3_Redefinesomekeys.html">[Back: Redefine some keys]</A> <BR>
+<A HREF="439_L3_UseANSIforapasswordi.html">[Next: Use ANSI for a password input routine]</A> 
+</BODY>
+</HTML>

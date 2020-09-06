@@ -1,0 +1,139 @@
+<HTML>
+<HEAD>
+<TITLE>"Stack" example run-time scenario</TITLE>
+</HEAD>
+<BODY>
+<H1>"Stack" example run-time scenario</H1><!-- entering slot 239 -->
+<P>
+The following scenario steps through the actions taken by the DSOM run time
+in response to each line of code in the second "Stack" client program presented
+above. The illustration following the scenario shows the processes, and
+the objects within them, that participate in these actions.<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Initialize an environment for error passing:<!-- lm: 0x2 1 -->
+</UL>
+<PRE><!-- lm: 0x2 6 -->
+<UL>
+SOM _ InitEnvironment ( &amp; e ) ;<!-- lm: 0x2 1 -->
+</UL></PRE>
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Initialize DSOM:<!-- lm: 0x2 1 -->
+</UL>
+<PRE><!-- lm: 0x2 6 -->
+<UL>
+SOMD _ Init ( &amp; e ) ;<!-- lm: 0x2 1 -->
+</UL></PRE>
+
+<P>
+This causes the creation of the DSOM Object Manager (with SOMDObjectMgr
+interface). The global variable SOMD_ObjectMgr points to this object.<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Initialize "Stack" class object:<!-- lm: 0x2 1 -->
+</UL>
+<PRE><!-- lm: 0x2 6 -->
+<UL>
+StackNewClass ( Stack _ MajorVersion ,   Stack _ MinorVersion ) ;<!-- lm: 0x2 1 -->
+</UL></PRE>
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Find the "StackServer" implementation and assign its
+proxy to the variable server:<!-- lm: 0x2 1 -->
+</UL>
+<PRE><!-- lm: 0x2 6 -->
+<UL>
+server   =   _ somdFindServerByName ( SOMD _ ObjectMgr ,   &amp; e ,   " StackServer " ) ;<!-- lm: 0x2 1 -->
+</UL></PRE>
+
+<P>
+This causes the creation of the server proxy object in the client process.
+Proxy objects are shown as shaded circles. Note that the "real" server object
+in the server process is not created at this time. In fact, the server process
+has not yet been started.<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Ask the server object to create a "Stack" and assign
+"Stack" proxy to variable stack.<!-- lm: 0x2 1 -->
+</UL>
+<PRE><!-- lm: 0x2 6 -->
+<UL>
+stk   =   _ somdCreateObj ( server ,   &amp; e ,   " Stack " ,   " " ) ;<!-- lm: 0x2 1 -->
+</UL></PRE>
+
+<P>
+This causes<B> somdd</B>, the DSOM daemon (which is already running) to
+activate the stack server process (by starting the "generic" server program).
+The stack server process, upon activation, creates the "real"<B> SOMDServer
+</B>object in the server process. The<B> SOMDServer</B> object works with
+the DSOM run time to create a local "Stack" object and return a "Stack"
+proxy to the client. (The details of this procedure are deferred until section
+6.4, "Basic Server Programming".)<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Ask the "Stack" proxy to push 100 onto the remote
+stack:<!-- lm: 0x2 1 -->
+</UL>
+<PRE><!-- lm: 0x2 6 -->
+<UL>
+_ push ( stk , &amp; e , 100 ) ;<!-- lm: 0x2 1 -->
+</UL></PRE>
+
+<P>
+This causes a message representing the method call to be marshalled and
+sent to the server process. In the server process, DSOM demarshals the message
+and, with the help of the<B> SOMDServer</B>, locates the target "Stack"
+object upon which it invokes the method ("push"). The result (which is void
+in this case) is then passed back to the client process in a message.<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Invoke more "Stack" operations on the remote stack,
+via the proxy:<!-- lm: 0x2 1 -->
+</UL>
+<PRE><!-- lm: 0x2 6 -->
+<UL>
+_ push ( stk , &amp; e , 200 ) ;<!-- lm: 0x2 6 -->
+_ pop ( stk , &amp; e ) ;
+<!-- lm: 0x2 6 -->
+if   ( ! _ empty ( stk , &amp; e ) )   t   =   _ top ( stk , &amp; e ) ;
+<!-- lm: 0x2 1 -->
+</UL></PRE>
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Explicitly destroy both the remote stack, the stack
+proxy, and the server proxy:<!-- lm: 0x2 1 -->
+</UL>
+<PRE><!-- lm: 0x2 6 -->
+<UL>
+_ somdDeleteObj ( server ,   &amp; e ,   stk ) ;<!-- lm: 0x2 6 -->
+_ somdReleaseObject ( SOMD _ ObjectMgr ,   &amp; e ,   stk ) ;
+<!-- lm: 0x2 6 -->
+_ somdReleaseObject ( SOMD _ ObjectMgr ,   &amp; e ,   server ) ;
+<!-- lm: 0x2 1 -->
+</UL></PRE>
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Free the error-passing environment:<!-- lm: 0x2 1 -->
+</UL>
+<PRE><!-- lm: 0x2 6 -->
+<UL>
+SOM _ UninitEnvironment ( &amp; e ) ;<!-- lm: 0x2 1 -->
+</UL></PRE>
+
+<P>
+This scenario has introduced the key processes in a DSOM application: client,
+server, and<B> somdd.</B> Also introduced are the key objects that comprise
+the DSOM run-time environment: the<B> SOMD_ObjectMgr</B> in the client process
+and the<B> SOMD_ServerObject</B> in the server process.
+
+<P><HR>
+
+<A HREF="201_L3_Runningtheapplicatio.html">[Back: Running the application]</A> <BR>
+<A HREF="203_L3_Summary.html">[Next: Summary]</A> 
+</BODY>
+</HTML>

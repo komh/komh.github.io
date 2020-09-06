@@ -1,0 +1,264 @@
+<HTML>
+<HEAD>
+<TITLE>Opening an Image Object</TITLE>
+</HEAD>
+<BODY>
+<H1>Opening an Image Object</H1><!-- entering slot 151 -->
+<P>
+To play back or<I> decompress</I> an image object, you must first open the
+movie file to find the four-character code (FOURCC) of the compression type
+and initiate the track information (as shown in the following example).
+The open routine allows for multiple compression types per stream.
+<PRE>LONG IOProcOpen (PMMIOINFO pmmioinfo, PSZ pszFileName) {
+   LONG            rc = MMIO_SUCCESS;        /* Return code.           */
+   LONG            lFilePosition;            /* Logical file position. */
+   MMIOINFO        Localmmioinfo;            /* For locally used.      */
+   PINSTANCE       pinstance;                /* Local work structure.  */
+
+   if (pmmioinfo == NULL) return MMIO_ERROR;
+
+   if (CheckMem((PVOID)pmmioinfo, sizeof(MMIOINFO), PAG_WRITE))
+      return MMIO_ERROR;
+
+   /********************************************************************/
+   /* Validate the open flags for this File Format IOProc              */
+   /* (INVALID_OPEN_FLAGS should be defined in the ff.h - file format  */
+   /*  specific header file.)                                          */
+   /********************************************************************/
+
+   if (pmmioinfo-&gt;ulFlags  &amp; INVALID_OPEN_FLAGS) {
+       pmmioinfo-&gt;ulErrorRet = MMIOERR_INVALID_ACCESS_FLAG;
+       return(MMIO_ERROR);
+   }
+
+   ENTERCRITX;
+   if ((pinstance = (PINSTANCE)HhpAllocMem(hheap,sizeof(INSTANCE)))
+         == NULL) {
+       EXITCRIT;
+       pmmioinfo-&gt;ulErrorRet = MMIOERR_OUTOFMEMORY;
+       return(MMIO_ERROR);                  /* Allocate work struct. */
+   }
+   EXITCRIT;
+
+   pmmioinfo-&gt;pExtraInfoStruct = (PVOID) pinstance;
+   pmmioinfo-&gt;fccIOProc = HEX_FOURCC_FFIO; /* Set for CODEC loading. */
+   ioInstanceInit(pinstance);
+
+   /* Validate read flags before doing read initialization */
+
+   if (( pmmioinfo-&gt;ulFlags &amp; MMIO_READ ) &amp;&amp;
+                !( pmmioinfo-&gt;ulFlags &amp; INVALID_READ_FLAGS )) {
+
+      /* IOProc identifies Storage System */
+
+      memcpy (&amp;Localmmioinfo, pmmioinfo, sizeof(MMIOINFO));
+      Localmmioinfo.pIOProc = NULL;
+      Localmmioinfo.fccIOProc = pmmioinfo-&gt;fccChildIOProc;
+      Localmmioinfo.ulFlags |= MMIO_NOIDENTIFY; /* Eliminate callbacks */
+      Localmmioinfo.ulFlags &amp;= ~MMIO_ALLOCBUF;  /* Force non-buffered open */
+
+      rc = ioIdentifyStorageSystem(&amp;Localmmioinfo,pszFileName);
+
+      if (rc != MMIO_SUCCESS) {        /* if error,                  */
+         ioCleanUp(pmmioinfo);
+         return(rc);
+      }
+
+      /******************************************************/
+      /* Allocate memory for pTempBuffer which is used when */
+      /* IOProcReadInterLeaved is called.                   */
+      /******************************************************/
+
+      if (ENTERCRIT(rc)) {
+         ioCleanUp(pmmioinfo);
+         return(rc);
+      }
+
+      if ((pinstance-&gt;pTempBuffer = HhpAllocMem(hheap, DEFAULTBUFFERSIZE))
+         == NULL) {
+         EXITCRIT;
+         ioCleanUp(pmmioinfo);
+         return(MMIOERR_OUTOFMEMORY);
+      }
+      EXITCRIT;
+      pinstance-&gt;ulTempBufferSize = DEFAULTBUFFERSIZE;
+
+      /*****************************************************/
+      /* Open Movie file                                   */
+      /*****************************************************/
+
+      if ( pmmioinfo-&gt;fccChildIOProc != FOURCC_MEM ) {
+         Localmmioinfo.cchBuffer = 0;
+         Localmmioinfo.pchBuffer = NULL;
+      }
+      pinstance-&gt;hmmioFileHandle = mmioOpen(pszFileName,
+         &amp;Localmmioinfo,MMIO_NOIDENTIFY);
+           /* Test file open error.*/
+      if (pinstance-&gt;hmmioFileHandle &lt;= (HMMIO)0L) {
+         rc = Localmmioinfo.ulErrorRet;
+      }
+
+      /*****************************************************/
+      /* Call file format specific open routine            */
+      /*****************************************************/
+
+      else if (!(rc = ffOpenRead(pmmioinfo, pinstance))) {
+         if(!(rc = ioAddTracksToMovieHeader(pinstance))) {
+
+            /*********************************************************/
+            /* Set lLogicalFilePos to a position pass the header     */
+            /* block to allow read occurring at the first byte of    */
+            /* non-header data.                                      */
+            /*********************************************************/
+            lFilePosition = ffSeekToDataBegin(pmmioinfo,pinstance);
+            if (lFilePosition &lt; MMIO_SUCCESS)
+               rc = MMIO_ERROR;
+            else
+               pinstance-&gt;lFileCurrentPosition = lFilePosition;
+         }
+      }
+
+      if (rc) {
+         ioCleanUp(pmmioinfo);
+         return(rc);
+      }
+   }
+
+   /* Validate Write flags before doing initialization */
+
+#ifndef WORKSHOP
+
+   if ((pmmioinfo-&gt;ulFlags &amp; (MMIO_READWRITE | MMIO_WRITE)) &amp;&amp;
+                !(pmmioinfo-&gt;ulFlags &amp; INVALID_WRITE_FLAGS)) {
+
+      /* Open the movie file */
+
+      memset (&amp;Localmmioinfo, '\0', sizeof(MMIOINFO));
+      Localmmioinfo.pIOProc   = NULL;
+      Localmmioinfo.fccIOProc = pmmioinfo-&gt;fccChildIOProc;
+
+      if (pmmioinfo-&gt;fccChildIOProc != FOURCC_MEM) {
+         Localmmioinfo.cchBuffer = 0;
+         Localmmioinfo.pchBuffer = NULL;
+      }
+
+      Localmmioinfo.ulFlags |= MMIO_NOIDENTIFY; /* Eliminate callbacks */
+      Localmmioinfo.ulFlags &amp;= ~MMIO_ALLOCBUF;  /* Force non-buffered open. */
+                                                /* MMIO may do buffering. */
+
+      pinstance-&gt;hmmioFileHandle = mmioOpen(pszFileName, &amp;Localmmioinfo,
+                                         MMIO_READWRITE | MMIO_NOIDENTIFY);
+
+      if (pinstance-&gt;hmmioFileHandle &lt;= (HMMIO)0L) /* Test file open error. */
+         rc = Localmmioinfo.ulErrorRet;
+      else
+         /* Call file format specific open routine */
+         rc = ffOpenWrite(pmmioinfo, pinstance);
+
+      if (rc != 0) {
+         ioCleanUp(pmmioinfo);
+         return(rc);
+      }
+   }
+
+#else    /* WORKSHOP next */
+
+   if ((pmmioinfo-&gt;ulFlags &amp; (MMIO_READWRITE | MMIO_WRITE)) &amp;&amp;
+                !(pmmioinfo-&gt;ulFlags &amp; INVALID_WRITE_FLAGS)) {
+
+      /* Open the movie file */
+
+      memset (&amp;Localmmioinfo, '\0', sizeof(MMIOINFO));
+      Localmmioinfo.pIOProc   = NULL;
+      Localmmioinfo.fccIOProc = pmmioinfo-&gt;fccChildIOProc;
+      Localmmioinfo.ulFlags  = pmmioinfo-&gt;ulFlags;
+      Localmmioinfo.ulFlags |= MMIO_NOIDENTIFY; /* Eliminate callbacks */
+      Localmmioinfo.ulFlags &amp;= ~MMIO_ALLOCBUF;  /* Force non-buffered open. */
+                                                /* MMIO may do buffering. */
+
+      if (!(pmmioinfo-&gt;ulFlags &amp; MMIO_CREATE)) {
+         rc = ioIdentifyStorageSystem(&amp;Localmmioinfo, pszFileName);
+
+         if (rc != MMIO_SUCCESS) {        /* if error */
+            pmmioinfo-&gt;ulErrorRet = rc;   /* see IdentifyStorageSystem */
+            ioCleanUp(pmmioinfo);
+            return(MMIO_ERROR);
+         }
+
+         /* Allocate memory for pTempBuffer which is used when */
+         /* IOProcReadInterLeaved is called. */
+
+         if (ENTERCRIT(rc)) {
+            ioCleanUp(pmmioinfo);
+            return MMIO_ERROR;
+         }
+
+         pinstance-&gt;pTempBuffer = HhpAllocMem(hheap, DEFAULTBUFFERSIZE);
+         if (pinstance-&gt;pTempBuffer == NULL) {
+            EXITCRIT;
+            pmmioinfo-&gt;ulErrorRet = MMIOERR_OUTOFMEMORY;
+            ioCleanUp(pmmioinfo);
+            return MMIO_ERROR;
+         }
+         EXITCRIT;
+
+         pinstance-&gt;ulTempBufferSize = DEFAULTBUFFERSIZE;
+      }
+
+      pinstance-&gt;lFileCurrentPosition = 0;
+
+      pinstance-&gt;hmmioFileHandle = mmioOpen(pszFileName, &amp;Localmmioinfo,
+          Localmmioinfo.ulFlags);
+
+      if (pinstance-&gt;hmmioFileHandle &lt;= (HMMIO)0L) /* Test file open error. */
+         rc = Localmmioinfo.ulErrorRet;
+      else {
+              /* Call file format specific open routine */
+         rc = ffOpenWrite(pmmioinfo, pinstance);
+
+         if (rc == 0) {
+            if (!(pmmioinfo-&gt;ulFlags &amp; MMIO_CREATE)) {
+               rc = ioAddTracksToMovieHeader(pinstance);
+
+               if (rc == 0) {
+
+                  /* Set lLogicalFilePos to a position pass the header */
+                  /* block to allow read occurring at the first byte */
+                  /* of non-header data. */
+
+                  lFilePosition = ffSeekToDataBegin(pmmioinfo, pinstance);
+                  if (lFilePosition &lt; MMIO_SUCCESS) rc = MMIO_ERROR;
+                  else pinstance-&gt;lFileCurrentPosition = lFilePosition;
+               }
+            }
+         }
+      }
+
+      if (rc != 0) {
+         pmmioinfo-&gt;ulErrorRet = rc;
+         ioCleanUp(pmmioinfo);
+         return MMIO_ERROR;
+      }
+   }
+
+   /* Set up the pathname in the instance structure */
+
+   if (strlen(pszFileName) &lt; CCHMAXPATH) {
+      strcpy((PSZ)&amp;(pinstance-&gt;szFileName), pszFileName);
+      if ((pinstance-&gt;szFileName)[1] == ':')
+         pinstance-&gt;ulEditFlags |= FULLY_QUALIFIED_PATH;
+   }
+
+#endif
+
+   return MMIO_SUCCESS;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="119_L3_Decompression.html">[Back: Decompression]</A> <BR>
+<A HREF="121_L4_DeterminingtheCODECP.html">[Next: Determining the CODEC Procedure]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,141 @@
+<HTML>
+<HEAD>
+<TITLE>_udefault - Change the Default Heap</TITLE>
+</HEAD>
+<BODY>
+<H1>_udefault - Change the Default Heap</H1><!-- entering slot 331 -->_udefault - Change the Default Heap<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>#include &lt;umalloc.h&gt;
+Heap_t _udefault(Heap_t <I>heap</I>);
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Description
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+<LI>udefault makes the<I> heap</I> you specify become the default heap.
+All calls to memory management functions that do not specify a heap (including
+malloc and calloc) then allocate memory from the<I> heap</I>.
+<P>
+This change affects only the thread where you called _udefault.
+<P>
+The initial default heap is<I> The Developer's Toolkit</I> run-time heap.
+To restore or explicitly set<I> The Developer's Toolkit</I> run-time heap
+as the default, call _udefault with the argument _RUNTIME_HEAP.
+<P>
+You can also use _udefault to find out which heap is being used as the default
+by specifying NULL for the<I> heap</I> parameter. The default heap remains
+the same.
+<P>
+For more information about creating and using heaps, see "Managing Memory"
+in the<I> VisualAge C++ Programming Guide</I>.<!-- lm: 0x2 1 -->
+</UL> Returns
+
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+<LI>udefault returns a pointer to the former default heap. You can save
+this pointer and use it later to restore the original heap. If the call
+is unsuccessful, _udefault returns NULL. Passing _udefault a heap that is
+not valid results in undefined behavior.<!-- lm: 0x2 1 -->
+</UL> Example
+Code
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+This example creates a fixed-size heap myheap and uses _udefault to make
+it the default heap. The call to malloc then allocates memory from myheap.
+The second call to _udefault restores the original default heap.
+<PRE>#define  INCL_DOSMEMMGR             /* Memory Manager values */
+#include &lt;os2.h&gt;
+#include &lt;bsememf.h&gt;                /* Get flags for memory management  */
+#include &lt;stdlib.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;umalloc.h&gt;
+
+int main(void)
+{
+   void    *initial_block;
+   APIRET  rc;
+   Heap_t  myheap, old_heap;
+   char    *p;
+
+   /* Call DosAllocMem to get the initial block of memory */
+   if (0 != (rc = DosAllocMem(&amp;initial_block, 65536,
+                              PAG_WRITE | PAG_READ | PAG_COMMIT))) {
+      printf("DosAllocMem error: return code = %ld\n", rc);
+      exit(EXIT_FAILURE);
+   }
+   /* Create a fixed size heap starting with the block declared earlier */
+   if (NULL == (myheap = _ucreate(initial_block, 65536, _BLOCK_CLEAN,
+                                  _HEAP_REGULAR, NULL, NULL))) {
+      puts("_ucreate failed.");
+      exit(EXIT_FAILURE);
+   }
+   if (0 != _uopen(myheap)) {
+      puts("_uopen failed.");
+      exit(EXIT_FAILURE);
+   }
+
+   /* myheap is used as default heap */
+   old_heap = _udefault(myheap);
+
+   /* malloc will allocate memory from myheap */
+   p = malloc(100);
+   memset(p, 'x', 10);
+
+   /* Restore original default heap */
+   _udefault(old_heap);
+
+   free(p);
+   if (0 != _uclose(myheap)) {
+      puts("_uclose failed");
+      exit(EXIT_FAILURE);
+   }
+   if (0 != (rc = DosFreeMem(initial_block))) {
+      printf("DosFreeMem error: return code = %ld\n", rc);
+      exit(EXIT_FAILURE);
+   }
+   return 0;
+}
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Related Information
+<P>
+<!-- lm: 0x2 10 -->
+<UL><!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 --><A HREF="072_L2_callocReserveandInit.html">calloc
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="185_L2_mallocReserveStorage.html">malloc
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="197_L2__mheapQueryMemoryHea.html"><LI>mheap
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="303_L2__ucreateCreateaMemor.html"><LI>ucreate
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="046_L2_Differentiatingbetwe.html">Differentiating
+between Memory Management Functions</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><LI>Managing Memory" in the<I> VisualAge C++ Programming
+Guide</I><!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="303_L2__ucreateCreateaMemor.html">[Back: _ucreate - Create a Memory Heap]</A> <BR>
+<A HREF="305_L2__udestroyDestroyaHea.html">[Next: _udestroy - Destroy a Heap]</A> 
+</BODY>
+</HTML>

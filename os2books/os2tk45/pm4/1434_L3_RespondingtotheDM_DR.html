@@ -1,0 +1,110 @@
+<HTML>
+<HEAD>
+<TITLE>Responding to the DM_DROP Message</TITLE>
+</HEAD>
+<BODY>
+<H1>Responding to the DM_DROP Message</H1><!-- entering slot 1460 -->
+<P>
+When the user drops the objects, a DM_DROP message is sent to the target,
+providing it with the information necessary to process the objects that
+were dropped. The target application uses the information provided to exchange
+data with the source. The target is responsible for establishing the appropriate
+conversations, and the source must cooperate in establishing the necessary
+conversations to achieve the actual data exchange. After completing the
+direct manipulation operation, including the post-drop conversation with
+the source, the target uses DrgDeleteStrHandle or DrgDeleteDraginfoStrHandles
+to delete the string handles in the DRAGINFO data structure, and DrgFreeDraginfo
+to release the storage. The target should immediately remove any target
+emphasis. The data transfers must not be done before responding to the DM_DROP
+message.
+<P>
+The following sample code shows how a target processes an object that has
+been dropped on it. This code fragment is part of a complete program which
+is illustrated in "Sample Code for Direct Manipulation".
+<PRE>        /* Drop the object on us (receive the object) */
+        case DM_DROP:
+
+         /* Get access to the DRAGINFO data structure */
+         DrgAccessDraginfo(dragInfo);
+
+         /* Can we accept this drop? */
+         switch (dragInfo-&gt;usOperation)
+         {
+
+           /* Return DOR_NODROPOP if current */
+           /* operation is link or unknown.  */
+           case DO_UNKNOWN:
+              DrgFreeDraginfo(dragInfo);
+              return (MRFROM2SHORT (DOR_NODROPOP, 0));
+              break;
+
+           /* Our default operation is Move */
+           case DO_DEFAULT:
+              dragItem = DrgQueryDragitemPtr(dragInfo, 0);
+              ulBytes = DrgQueryStrName(dragItem-&gt;hstrContainerName,
+                                                  sizeof(szDir),
+                                                  szDir);
+              if(!ulBytes)
+                return (MRFROM2SHORT (DOR_NODROPOP, 0));
+              usOp = (USHORT)DO_MOVE;
+              break;
+
+           /* Do the requested specific operation */
+           case DO_MOVE:
+           case DO_COPY:
+              usOp = dragInfo-&gt;usOperation;
+              break;
+          }
+
+          usIndicator = DOR_DROP;
+          cItems = DrgQueryDragitemCount(dragInfo);
+
+          /* Now, we need to look at each item in turn */
+          for (i = 0; i &lt; cItems; i++)
+          {
+            dragItem = DrgQueryDragitemPtr(dragInfo, i);
+
+            /* Make sure we can move for a Move request */
+            /* or copy for a Copy                       */
+            if (((dragItem-&gt;fsSupportedOps &amp; DO_COPYABLE)   &amp;&amp;
+                 (usOp == (USHORT)DO_COPY))                 ||
+                ((dragItem-&gt;fsSupportedOps &amp; DO_MOVEABLE)   &amp;&amp;
+                 (usOp == (USHORT)DO_MOVE)))
+
+            {
+               /* Check the rendering format */
+               if (DrgVerifyRMF(dragItem, "DRM_OS2FILE", "DRF_UNKNOWN"))
+                  usIndicator = DOR_DROP;
+               else
+                  usIndicator = DOR_NEVERDROP;
+            }
+            else
+               usIndicator = DOR_NODROPOP;
+
+/***********************************************************************/
+/*  This is where we would actually move or copy the file,             */
+/*  but we just display the name instead.                              */
+/***********************************************************************/
+            DrgQueryStrName(dragItem-&gt;hstrSourceName, 255, szBuffer);
+            WinMessageBox(HWND_DESKTOP,
+                          HWND_DESKTOP,
+                          szBuffer,
+                          "Dropped",
+                          0,
+                          MB_OK);
+          }
+          /* Release the draginfo data structure */
+          DrgFreeDraginfo(dragInfo);
+
+          return (MRFROM2SHORT(usIndicator, usOp));
+          break;
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1433_L3_RespondingtotheDM_DR.html">[Back: Responding to the DM_DRAGLEAVE Message]</A> <BR>
+<A HREF="1435_L3_ExchangingData.html">[Next: Exchanging Data]</A> 
+</BODY>
+</HTML>

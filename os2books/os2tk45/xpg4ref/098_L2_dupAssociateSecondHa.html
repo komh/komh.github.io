@@ -1,0 +1,146 @@
+<HTML>
+<HEAD>
+<TITLE>dup - Associate Second Handle with Open File</TITLE>
+</HEAD>
+<BODY>
+<H1>dup - Associate Second Handle with Open File</H1><!-- entering slot 101 -->dup - Associate Second Handle with Open File<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>#include &lt;io.h&gt;
+int dup(int <I>handle</I>);
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Description
+<P>
+<!-- lm: 0x2 10 -->
+<UL>dup associates a second file handle with a currently
+open file. You can carry out operations on the file using either file handle
+because all handles associated with a given file use the same file pointer.
+Creation of a new handle does not affect the type of access allowed for
+the file.
+<P>
+For example, given:
+<PRE>   <I>handle2</I> = dup(<I>handle1</I>)
+</PRE>
+
+<P>
+<I>handle2</I> will have the same file access mode (text or binary) as<I> handle1</I>.
+In addition, if<I> handle1</I> was originally opened with the O_APPEND flag
+(described in <A HREF="205_L2_openOpenFile.html">open</A>),<I> handle2</I> will
+also have that attribute.
+<P>
+
+<P>
+<B>Warning:</B> Both handles share a single file pointer. If you reposition
+a file using<I> handle1</I>, the position in the file returned by<I> handle2
+</I>will also change.
+<P>
+If you duplicate a file handle for an open stream, the resulting file handle
+has the same restrictions as the original file handle.
+<P>
+<!-- lm: 0x2 1 -->
+</UL>Returns
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+dup returns the next available file handle for the given file. It returns
+-1 if an error occurs and sets errno to one of the following values:<B><!-- lm: 0x2 10 -->
+<P>
+Value<!-- lm: 0x2 21 -->
+<UL> Meaning</B><!-- lm: 0x2 10 -->
+</UL>EBADF<!-- lm: 0x12 21 -->
+<UL> The file handle is not valid.<!-- lm: 0x2 10 -->
+</UL>EMFILE<!-- lm: 0x12 21 -->
+<UL> No more file handles are available.
+<!-- lm: 0x2 10 -->
+</UL>EOS2ERR<!-- lm: 0x12 21 -->
+<UL> The call to the operating system was
+not successful.<!-- lm: 0x2 10 -->
+</UL><!-- lm: 0x2 1 -->
+</UL>Example Code
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+This example makes a second file handle, fh3, refer to the same file as
+the file handle fh1 using dup. The file handle fh2 is then associated with
+the file edopen.da2, and finally fh2 is forced to associate with edopen.da1
+dup2.
+<PRE>#include &lt;io.h&gt;#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;fcntl.h&gt;
+#include &lt;sys\stat.h&gt;
+
+int main(void)
+{
+   int fh1,fh2,fh3;
+
+   if (-1 == (fh1 = open("edopen.da1", O_CREAT|O_TRUNC|O_RDWR, S_IREAD|S_IWRITE)
+      )) {
+      perror("Unable to open edopen.da1");
+      return EXIT_FAILURE;
+   }
+   if (-1 == (fh3 = dup(fh1))) {     /* fh3 refers to the sample file as fh1  */
+      perror("Unable to dup");
+      close(fh1);
+      return EXIT_FAILURE;
+   }
+   else
+      printf("Successfully performed dup handle.\n");
+   if (-1 == (fh2 = open("edopen.da2", O_CREAT|O_TRUNC|O_RDWR, S_IREAD|S_IWRITE)
+      )) {
+      perror("Unable to open edopen.da2");
+      close(fh1);
+      close(fh3);
+      return EXIT_FAILURE;
+   }
+   if (-1 == dup2(fh1, fh2)) {  /* Force fh2 to the refer to the same file     */
+                                /* as fh1.                                    */
+      perror("Unable to dup2");
+   }
+   else
+      printf("Successfully performed dup2 handle.\n");
+   close(fh1);
+   close(fh2);
+   close(fh3);
+   return 0;
+
+   /****************************************************************************
+      The output should be:
+
+       Successfully performed dup handle.
+       Successfully performed dup2 handle.
+   ****************************************************************************/
+}
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Related Information
+<P>
+<!-- lm: 0x2 10 -->
+<UL><!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 --><A HREF="084_L2_closeCloseFileAssoci.html">close
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="089_L2_creatCreateNewFile.html">creat</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="099_L2_dup2AssociateSecondH.html">dup2</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="205_L2_openOpenFile.html">open</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="243_L2__sopenOpenSharedFile.html"><LI>sopen
+</A><!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="097_L2__DLL_InitTermInitial.html">[Back: _DLL_InitTerm - Initialize and Terminate DLL Environment]</A> <BR>
+<A HREF="099_L2_dup2AssociateSecondH.html">[Next: dup2 - Associate Second Handle with Open File]</A> 
+</BODY>
+</HTML>

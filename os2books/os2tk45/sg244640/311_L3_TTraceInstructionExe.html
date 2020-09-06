@@ -1,0 +1,297 @@
+<HTML>
+<HEAD>
+<TITLE>T - Trace Instruction Execution</TITLE>
+</HEAD>
+<BODY>
+<H1>T - Trace Instruction Execution</H1><!-- entering slot 449 --><!-- Unable to decode bitmap format --><IMG SRC="311_L3_TTraceInstructionExe_99.gif" WIDTH=32 HEIGHT=32>
+<P>
+Trace instruction execution singly or for a specific number or instructions
+or to a specific address.
+<P>
+<U><I>Syntax:</I></U>
+<PRE>ÄÄÄÂÄ  T   ÄÄÂÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÂÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄ
+     ÃÄ  TX  ÄÄ´  ÀÄ = ÄÄ start-addr ÄÄÙ   ÀÄ count ÄÙ
+     ÃÄ  TN  ÄÄ´
+     ÃÄ  TT  ÄÄÙ
+     ³
+     ³
+     ÃÄ  TA  ÄÄÂÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄ break-addr ÄÄÄÄÄÄÄ
+     ÃÄ  TC  ÄÄ´  ÀÄ = ÄÄ start-addr ÄÄÙ
+     ÀÄ  TS  ÄÄÙ
+
+
+</PRE>
+
+<P>
+<U><I>Parameters:</I></U><!-- lm: 0x2 1 -->
+<UL>
+<P>
+<I><LI>Default)</I><!-- lm: 0x11 11 -->
+<UL> Trace one or more instructions,
+excluding known<I> bad</I> areas (see<B> X</B> subcommand below.<!-- lm: 0x2 1 -->
+</UL><B> A
+</B><!-- lm: 0x11 11 -->
+<UL>Trace all instructions to<B><I> break-addr</B></I>.
+
+<P>
+This option requires<B><I> break-addr</B></I> to be specified.<!-- lm: 0x2 1 -->
+</UL><B> C
+</B><!-- lm: 0x11 11 -->
+<UL>Counts all instructions executed until<B><I> break-addr
+</B></I>is reached.
+<P>
+<B>Note: </B> Counting is suspended when the system switches out of the
+current <A HREF="3284_L0_.html">context</A> in which the<B> TC</B> command
+was executed. It is resumed when that context switches back.<!-- lm: 0x2 11 -->
+<P>
+This option requires<B><I> break-addr</B></I> to be specified.<!-- lm: 0x2 1 -->
+</UL><B> N
+</B><!-- lm: 0x11 11 -->
+<UL>Trace instructions but suppress the register
+display after each instruction is executed.<!-- lm: 0x2 1 -->
+</UL><B> S
+</B><!-- lm: 0x11 11 -->
+<UL>The trace<I> special</I> option is similar
+to<B> TC</B> except that an intermediate instruction count is displayed
+before execution of each<B> CALL</B> instruction and after each return.
+
+<P>
+This option requires<B><I> break-addr</B></I> to be specified.
+<P>
+<B>Notes </B>
+<P>
+Counting is suspended when the system switches out of the current <A HREF="3284_L0_.html">context
+</A>in which the<B> TS</B> command was executed. It is resumed when that
+context switches back.
+<P>
+<B>TS</B> does not attempt to match<B> CALL</B> with<B> RET</B> instructions.
+Instead it inserts a temporary <A HREF="3286_L0_.html">breakpoint</A> at
+the instruction address following the<B> CALL</B>. In addition<B> TS</B> maintains
+a 'stack' of return addresses and always checks the most recent two entries,
+as it single-instruction steps through the traced code, for a matching return
+address. This technique enables code that uses<B> JMP</B> instructions to
+return from a call to be better detected. This is not a foolproof technique,
+especially where mutually recursive code is traced.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL><B> T
+</B><!-- lm: 0x11 11 -->
+<UL>This option causes the Kernel Debugger's trap
+vector handlers to be removed temporarily from the <A HREF="3278_L0_.html">IDT
+</A>and the system's re-instated until after then next instruction has executed.
+After execution of the next instruction the the Kernel Debugger's <A HREF="313_L3_VExceptionTrapFaultV.html">V
+commands</A> are re-instated.
+<P>
+This is a convenience option that saves manually unhooking a Kernel Debugger
+trap vector handlers from the <A HREF="3278_L0_.html">IDT</A>. using a command
+sequence similar to:
+<PRE>VC n
+T
+VS n
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL><B>X</B><!-- lm: 0x11 11 -->
+<UL> This option forces
+the Kernel Debugger to trace areas of system code that are known to be unsuitable
+for tracing. Normally, when<B> Trace</B> encounters one of the following
+routines:
+<PRE>
+        _Debug_CtrlC32   through _EndCtrlC32
+        _DebugLoadSymMTE through EndDebugLoadSymMTE
+        _PGSwitchContext through pgSwitchRet
+
+</PRE>
+a temporary breakpoint is inserted at the routine's return address and the
+system is allowed to go to that address uninterruptedly. When<B> TX</B> is
+used the Kernel Debugger will attempt to trace instructions within these
+routines.
+<P>
+The consequence of forcing tracing in these routines may be at worst, the
+system is left in an unrecoverable state, and at best certain Kernel Debugger
+commands will give erroneous information.<!-- lm: 0x2 1 -->
+</UL><B><I> start-addr
+</B></I><!-- lm: 0x11 11 -->
+<UL>The address from which execution is to
+continue. This must be a valid address for the current context. If<B><I> start-addr
+</B></I>is omitted then execution continues from the current<B> CS:EIP</B>,
+as shown by the <A HREF="309_L3_RSetorDisplayCurrent.html">R command</A>.
+
+<P>
+
+<P>
+<B>Warning:</B> Be very careful to ensure that the start address is valid
+for the privileged level and addressability of the code and<!-- entering slot 450 --> data
+selectors in use. If the Kernel Debugger attempts to load a segment register
+that is invalid the system may trap in the debugger code.
+<BR>
+<!-- lm: 0x2 1 -->
+</UL><B><I>break-addr</B></I><!-- lm: 0x11 11 -->
+<UL> The
+address at which tracing will stop and the Kernel Debugger will be re-entered
+unless one of the following conditions is encountered:<!-- lm: 0x2 11 -->
+<P>
+<!-- lm: 0x2 17 -->
+<UL>A fatal exception occurs<!-- lm: 0x2 11 -->
+</UL><!-- lm: 0x2 17 -->
+<UL> An
+Internal Processing Error (IPE) occurs.<!-- lm: 0x2 11 -->
+</UL><!-- lm: 0x2 17 -->
+<UL> A
+'sticky' breakpoint fires<!-- lm: 0x2 11 -->
+</UL><!-- lm: 0x2 17 -->
+<UL> A
+non-maskable interrupt occurs<!-- lm: 0x2 11 -->
+</UL><!-- lm: 0x2 17 -->
+<UL> An
+<B>INT 3</B> instruction is executed<!-- lm: 0x2 11 -->
+</UL><!-- lm: 0x2 17 -->
+<UL> The
+user enters<B> Ctrl-C</B> from the debugging console. The<B> break-addr
+</B>only remains in effect until the Kernel Debugger is next re-entered.
+<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL><B><I>count</B></I><!-- lm: 0x11 11 -->
+<UL> The
+number of instructions to trace before re-entering the Kernel Debugger unless
+one of the following conditions is encountered:<!-- lm: 0x2 11 -->
+<P>
+<!-- lm: 0x2 17 -->
+<UL>A fatal exception occurs<!-- lm: 0x2 11 -->
+</UL><!-- lm: 0x2 17 -->
+<UL> An
+Internal Processing Error (IPE) occurs.<!-- lm: 0x2 11 -->
+</UL><!-- lm: 0x2 17 -->
+<UL> A
+'sticky' breakpoint fires<!-- lm: 0x2 11 -->
+</UL><!-- lm: 0x2 17 -->
+<UL> A
+non-maskable interrupt occurs<!-- lm: 0x2 11 -->
+</UL><!-- lm: 0x2 17 -->
+<UL> An
+<B>INT 3</B> instruction is executed<!-- lm: 0x2 11 -->
+</UL><!-- lm: 0x2 17 -->
+<UL> The
+user enters<B> Ctrl-C</B> from the debugging console.
+<P>
+If omitted then<B><I> count</B></I> defaults to<B> 1</B> instruction.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<U><I>Results &amp; Notes:</I></U>
+<P>
+Except for<B> TN</B>,<B> TC</B> and<B> TS</B> the default command is executed
+when control returns to the debugging console. This defaults to the <A HREF="309_L3_RSetorDisplayCurrent.html">R
+command</A> unless respecified through use of the <A HREF="316_L3_ZSetExecuteorDisplay.html">ZS
+command</A>.
+<P>
+<B>TN</B> suppresses the register display from the automatic <A HREF="309_L3_RSetorDisplayCurrent.html">R
+command</A>, but still displays an <A HREF="312_L3_UUnassemble.html">unassembled
+</A>next instruction for each traced instruction. If the <A HREF="316_L3_ZSetExecuteorDisplay.html">ZS
+command</A> has been used to specify a different default command then<B> TN
+</B>behaves exactly as<B> T</B>.
+<P>
+An example of the output from<B> TN</B> is as follows:
+<PRE>##TN 50170:fff4521f 803d9e53e0ffff cmp     byte ptr [InterruptLevel (ffe0539e)],ff
+0170:fff45226 75b4           jnz     fff451dc
+0170:fff45228 803d9643e0ff00 cmp     byte ptr [_cTKNoBlock (ffe04396)],00
+0170:fff4522f 75be           jnz     fff451ef
+0170:fff45231 0f01e1         smsw    cx
+##
+</PRE>
+
+<P>
+<B>Note: </B> The last traced instruction is the next to be executed.<!-- lm: 0x2 1 -->
+<P>
+
+<P>
+<B>TC</B> displays the total number of instructions trace in the following
+message:
+<PRE>
+
+Total traced instructions: <B><I>nnnn</B></I> (decimal)
+</PRE>
+
+<P>
+where<B><I> nnnn</B></I> is the number of traced instructions.
+<P>
+Following this message the default command is executed. See the <A HREF="316_L3_ZSetExecuteorDisplay.html">Z
+command</A> for details.
+<P>
+<B>TS</B> displays a variety of different messages, examples of which are:
+
+<PRE>----------------------------------------------------------------------
+   Instruction Count: 101
+d0df:0000f319 9a0000c810     call    10c8:0000
+</PRE>
+
+<P>
+Accumulated number of instructions executed before the<B> CALL</B> instruction.
+
+<PRE>----------------------------------------------------------------------
+Exit: 108
+</PRE>
+
+<P>
+Accumulated number of instructions executed when the return address is encountered.
+
+<P>
+<B>Note: </B> This does not include the instruction at the return address.
+<!-- lm: 0x2 1 -->
+<P>
+
+<PRE>----------------------------------------------------------------------
+ ...Special exit follows...
+ Exit: 360
+</PRE>
+
+<P>
+Accumulated number of instructions executed when the second most recent
+return address is encountered. In this case the most recent return addres
+is discarded from the 'stack'.
+<P>
+<B>Note: </B> This does not include the instruction at the return address.
+<!-- lm: 0x2 1 -->
+<P>
+
+<PRE>----------------------------------------------------------------------
+Switching context...
+   ...Back in context
+</PRE>
+
+<P>
+Signifies context switching occurring and the suspension and resumption
+of instruction counting.
+<PRE>----------------------------------------------------------------------
+Total traced instructions: <B><I>nnnn</B></I> (decimal)
+</PRE>
+
+<P>
+The total number of instructions traced when the<B><I> break-addr</B></I> is
+encountered.
+<P>
+<B>Notes </B>
+<P>
+<B>REP</B> and<B> REPNE</B> string instruction prefixes are handled differently
+to other instructions when single stepping. The Kernel Debugger generates
+a temporary break-point following the repeated string instructions (<B>MOVS</B>,
+<B>CMPS</B>,<B> SCAS</B>,<B> LODS</B> and<B> STOS</B>) and returns control
+to the system until the temporary break-point<I> fires.</I>
+<P>
+<B>INT 3</B> instructions encountered when single-stepping are reported
+but in actual fact stepped over, thereby avoiding a double break-point at
+the<!-- entering slot 451 --> same address.<!-- lm: 0x2 1 -->
+<P>
+
+<P>
+<B>Warning:</B>
+<P>
+If any of the<B> Trace</B> commands is interrupted, the Kernel Debugger
+may leave a temporary break-point active. This will result in a<B> Trap
+1</B> when the system is next given control. If this occurs then either
+of the<B> TT</B> or <A HREF="299_L3_GGo.html">GT</A> commands will clear
+this condition.
+<P>
+
+
+<P><HR>
+
+<A HREF="310_L3_SSearchMemoryforData.html">[Back: S - Search Memory for Data]</A> <BR>
+<A HREF="312_L3_UUnassemble.html">[Next: U - Unassemble]</A> 
+</BODY>
+</HTML>

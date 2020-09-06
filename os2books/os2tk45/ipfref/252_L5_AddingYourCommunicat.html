@@ -1,0 +1,157 @@
+<HTML>
+<HEAD>
+<TITLE>Adding Your Communication Object to the Communication Chain</TITLE>
+</HEAD>
+<BODY>
+<H1>Adding Your Communication Object to the Communication Chain</H1><!-- entering slot 264 -->
+<P>
+Even if your communication object is the only one in use, your communication
+object is still part of the communication chain. To add itself to the chain,
+your communication object must:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Send the help manager message HM_SET_OBJCOM_WINDOW
+to the window<I> PACVP-&gt;hWnd Parent</I>.
+<P>
+Your communication object must pass its frame handle as the first parameter.
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Your communication object must receive and<B> store
+</B>the window handle it receives in return.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Your communication object should pass all HM_
+help manager messages to that window handle.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following code fragment illustrates this process.
+<PRE>#define INCL_WIN#define INCL_WINHELP
+#include &lt;os2.h&gt;
+
+#define HM_MSG_MAX (HM_MSG_BASE+0x0024)
+
+USHORT   IPFClassRegistered = 0;         /* IPF class registered flag        */
+
+/* Main Entry point */
+MRESULT EXPENTRY IPFMain (PACVP pACVP, PCH Parameter);
+
+/* Pop up error box */
+VOID Error (PCH str);
+
+
+MRESULT EXPENTRY IPFMain (PACVP pACVP, PCH Parameter)
+/* pACVP contains the following structure:
+
+   typedef struct_ACVP
+   {
+      ULONG  cb;                   length
+      HAB    hAB;                  anchor block handle
+      HMQ    hmq;                  messge queue handle
+      ULONG  ObjectID;             object identifier
+      HWND   hWndParent;           IPF viewport client handle
+      HWND   hWndOwner;            IPF viewport client handle
+      HWND   hWndACVP;             applications frame window hwnd
+   } ACVP, *PACVP;
+
+This structure is prefilled in except for hWndACVP.  You must put your
+window handle there if you are creating an application-controlled viewport.
+If this is just a generic communication object, you do not need to fill it in.
+
+Parameter is the information passed in with the objectinfo tag.
+
+Note: You can use ObjectID to have multiple acviewports and comm objects
+use the same entry point.  Check the ObjectID to find out where you were
+called from in the IPF file. */
+
+{
+    HWND  hwndFrame, hwndPrevious, hwndLatest, hwndClient;
+    ULONG CtrlData = 0;
+
+    Error ( Parameter );
+    /* Check global to see if our window class has been registered. */
+    /* if not, register it.                                         */
+    if (!IPFClassRegistered)
+    {
+        /* We will register our class with 4 extra bytes of information
+           so that we can place the previous object comm window handle there.
+           You might want to create a structure store here instead. */
+        if (!WinRegisterClass( pACVP-&gt;hAB,
+                               "CLASS_IPF",
+                               (PFNWP) IPF_WinProc,
+                               CS_SYNCPAINT | CS_SIZEREDRAW | CS_MOVENOTIFY,
+                               4))
+        {
+            Error ("Can not register class");
+            exit (TRUE);
+        }
+        IPFClassRegistered = 1;
+    }
+
+    /* Create window.  Visibility does not matter, as IPF will take care
+       of it. */
+    if (!(hwndFrame = WinCreateStdWindow (pACVP-&gt;hWndParent,
+                                          WS_VISIBLE,
+                                          &amp;CtrlData,
+                                          "CLASS_IPF",
+                                          "IPF",
+                                          0L,
+                                          0L,
+                                          0L,
+                                          &amp;hwndClient
+                                          )))
+    {
+        Error ("Can not create window");
+        return (MRESULT) TRUE;
+    }
+
+    /* Setup our window in the ACVP structure.  This is only necessary if
+       you are creating an acviewport. */
+    pACVP-&gt;hWndACVP = hwndFrame;
+
+    /* Set the current comm object window to us */
+    hwndPrevious = (HWND) <!-- entering slot 265 -->WinSendMsg (pACVP-&gt;hWndParent,
+                                      HM_SET_OBJCOM_WINDOW,
+                                      (MPARAM) hwndFrame,
+                                      (MPARAM)NULL);
+
+    /* Query back the comm obj window */
+    hwndLatest = (HWND) WinSendMsg (pACVP-&gt;hWndParent,
+                                    HM_QUERY,
+                                    MPFROM2SHORT ((USHORT)0, HMQW_OBJCOM_WINDOW),
+                                    (MPARAM)NULL);
+
+    /* double check to make sure we are in the comm chain */
+    if (hwndFrame != hwndLatest)
+    {
+        Error ("Can not set object communication window");
+        return (MRESULT) TRUE;
+    }
+
+    /* Store the previous commobj handle in window words */
+    if (!WinSetWindowULong (hwndClient, QWL_USER, (ULONG) hwndPrevious))
+    {
+        Error ("Can not save handle into reserved memory");
+        return (MRESULT) TRUE;
+    }
+    return (MRESULT) FALSE;
+}
+
+VOID Error (PCH str)
+
+{
+    WinMessageBox (HWND_DESKTOP,
+                   HWND_DESKTOP,
+                   (PCH)str,
+                   (PCH)"IPF Sample Error Message",
+                   1,
+                   MB_OK | MB_APPLMODAL |
+                   MB_MOVEABLE | MB_ICONASTERISK);
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="251_L4_MakingYourCommunicat.html">[Back: Making Your Communication Objects Function in the Chain]</A> <BR>
+<A HREF="253_L5_RespondingtotheRemov.html">[Next: Responding to the Removal of Another Object in the Chain]</A> 
+</BODY>
+</HTML>

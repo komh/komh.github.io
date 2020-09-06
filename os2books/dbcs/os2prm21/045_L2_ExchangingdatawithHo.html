@@ -1,0 +1,103 @@
+<HTML>
+<HEAD>
+<TITLE>Exchanging data with Host software</TITLE>
+</HEAD>
+<BODY>
+<H1>Exchanging data with Host software</H1><!-- entering slot 52 -->
+<P>
+Because MVS, VM, DOS/VSE and OS/400 use the EBCDIC code scheme and OS/2
+uses the ASCII code scheme, character-data exchange between a host system
+and a PC requires translation of strings from/to EBCDIC codes to/from ASCII
+codes.  DBCS-unique considerations on the code-conversion are:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Change in length of a string
+<P>
+A host system requires that DBCS portions of a mixed string be surrounded
+by Shift-out(SO) and Shift-in(SI) control characters, while a PC doesn't
+require such control characters to denote a mixed string. Because each of
+the SO or SI characters occupies one-byte in a record, the code conversion
+of a mixed string causes change in length of a string. That is, length of
+a mixed string becomes shorter when it is downloaded from a host to a PC
+and becomes longer when uploaded from a PC to a host.  This change may result
+in unintentional truncation or overflow of data at up-loading.
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³ES_MIXED is the entry field style to prevent unintentional truncation ³
+³or overflow of data at up-loading.                                    ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+The Presentation Manager has an enhanced entry-field control to prevent
+unintentional truncation or overflow from happening.<B> ES_MIXED</B> is
+the entry-field control to limit user's input at a PC in order to confine
+a length of a record at a Host to a pre-defined one.  If an entry field
+is defined as ES_MIXED, the Presentation Manager automatically includes
+the number of would-be-inserted SO/SI into record-length calculation and
+prevents a user from typing a string longer than the one specified by<B> EM_SETTEXTLIMIT</B>.
+
+<P>
+SBCS OS/2 ignores<B> ES_MIXED</B>. It doesn't cause any errors on SBCS OS/2,
+if you include it in your program source. That is,<B> ES_DBCS</B>,<B> ES_SBCS
+</B>and<B> ES_DBCS</B> have no meaning on SBCS OS/2.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Choosing a function to perform the code conversion
+
+<P>
+Two different functions,<B> WinCpTranslateString</B> and<B> TrnsDt</B>,
+to perform the code conversion are supported at the PC side. The WinCpTranslateString
+and TrnsDt shows differences between the two functions.
+<P>
+<B>CONVERT</B>, a Communication Manager common service verb, and<B> WinCpTranslateChar
+</B>only serve for SBCS.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³WinCpTranslateString and TrnsDt are for converting from/to ASCII      ³
+³strings to/from EBCDIC strings.                                       ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+ The most noticeable difference between the two conversion services is that
+<B>WinCpTranslateString</B> is a common API across SBCS and DBCS OS/2, while
+<B>TrnsDt</B> is packaged in DBCS OS/2 only. interface on DBCS OS/2. When
+calling TrnsDt from 32-bit code, you need to take problems on linkage conventions,
+16-bit pointer declaration and structure alignment. We are going to show
+a sample program in <A HREF="047_L4_TrnsDt.html">Example of TrnsDt usage
+from 32-bit code (source: MISCWIN.C)</A>.
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³                         ³WinCpTranslateString          ³TrnsDt                        ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Supported code pages     ³between any code pages        ³between PC combined code pages³
+³                         ³                              ³and Host SBCS, DBCS or        ³
+³                         ³                              ³combined code pages           ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Availability             ³a common API across SBCS and  ³available only at DBCS OS/2   ³
+³                         ³DBCS OS/2                     ³                              ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Usage of program types   ³PM applications               ³any type of OS/2 programs     ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Control code conversion  ³converts to substitution      ³maps control codes            ³
+³                         ³characters                    ³                              ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Round-trip conversion    ³Not supported                 ³Supported                     ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Substitution characters  ³x'7F' or x'FF'                ³x'7F' or x'3F'                ³
+³at SBCS code pages       ³                              ³                              ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³<!-- entering slot 53 -->Returned value when a    ³no error codes ( A string is  ³error code 111                ³
+³string overflows at a    ³truncated carefully so as to  ³                              ³
+³target code page         ³keep DBCS string validity)    ³                              ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Options                  ³no options                    ³option to produce pseudo SO/SI³
+³                         ³                              ³code in PC, option to specify ³
+³                         ³                              ³a conversion table            ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+
+<P><HR>
+
+<A HREF="044_L2_Preparingicons.html">[Back: Preparing icons]</A> <BR>
+<A HREF="046_L3_ConvertingASCIIDBCSt.html">[Next: Converting ASCII DBCS to EBCDIC DBCS]</A> 
+</BODY>
+</HTML>

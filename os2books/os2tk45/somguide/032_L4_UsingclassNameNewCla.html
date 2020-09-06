@@ -1,0 +1,212 @@
+<HTML>
+<HEAD>
+<TITLE>Using <className>NewClass</TITLE>
+</HEAD>
+<BODY>
+<H1>Using <className>NewClass</H1><!-- entering slot 41 -->
+<P>
+The C and C++ usage bindings for a SOM class also provide static linkage
+to a &lt;className&gt;<B>NewClass</B> function that can be used to create
+the class object.  This can be useful if the class object is needed before
+its instances are created.
+<P>
+For example, the following C code uses the function<B> HelloNewClass</B> to
+create the "Hello" class object. The arguments to this function are defined
+by the usage bindings, and indicate the version of the class implementation
+that is assumed by the bindings. (For more detail on creation of classes,
+see the later section, "Creating a class object.") Once the class object
+has been created, the example invokes the method<B> somGetInstanceSize</B>
+on this class to determine the size of a "Hello" object, uses<B> SOMMalloc
+</B>to allocate storage, and then uses the<B> HelloRenew</B> macro to create
+ten instances of the "Hello" class:
+<PRE>   #include &lt;hello.h&gt;
+   main()
+   {
+   SOMClass helloCls; /*  A pointer for the Hello class object */
+   Hello objA[10];    /*  an array of Hello instances */
+   unsigned char *buffer;
+   int i;
+   int size;
+
+   /* create the Hello class object:  */
+   helloCls =  <B>HelloNewClass</B>(Hello_MajorVersion, Hello_MinorVersion);
+
+   /* get the amount of space needed for a Hello instance:
+    * (somGetInstanceSize is a method provided by SOM.) */
+   size =  <B>_somGetInstanceSize</B>(helloCls);
+   size = ((size+3)/4)*4;  /* round up to doubleword multiple */
+
+   /* allocate the total space needed for ten instances: */
+   buffer =  <B>SOMMalloc</B>(10*size);
+
+   /* convert the space into ten separate Hello instances: */
+   for (i=0; i&lt;10; i++)
+       objA[i] = <B>HelloRenew</B>(buffer+i*size);
+   ...
+   ...
+   /* Uninitialize the objects and free them */
+   for (i=0; i&lt;10; i++)
+     <B>_somDestruct(objA[i],0,0);</B>
+   <B>SOMFree</B>(buffer);
+   }
+</PRE>
+
+<P>
+When an object created with the &lt;<I>className</I>&gt;<B>Renew</B> macro
+is no longer needed, its storage must be freed using the dual to whatever
+method was originally used to allocate the storage. Two method pairs are
+typical:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->For example, if an object was originally initialized
+using the &lt;<I>className</I>&gt;<B>New</B> macro, then, as discussed previously,
+the client should use the<B> somFree</B>  method on it.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->On the other hand, if the program uses the<B> SOMMalloc
+</B>function to allocate memory, as illustrated in the example above, then
+the<B> SOMFree</B> function must be called to free the objects' storage
+(because<B> SOMFree</B> is the dual to<B> SOMMalloc</B>). Before this is
+done, the objects in the region to be freed should be deinitialized by invoking
+the<B> somDestruct</B> method on them. This allows each object to free any
+memory that may have been allocated without the programmer's knowledge.
+(The<B> somFree</B> method also calls the<B> somDestruct</B> method.)<!-- lm: 0x2 1 -->
+</UL>
+<P>
+
+<P>
+<B>Note: </B> In the<B> somDestruct</B> method call above, the first zero
+indicates that memory should not be freed by the class of the object (that
+is, the programmer will do it explicitly).  The second zero indicates that
+the class of the object is responsible for overall control of object uninitialization.
+ For further discussion, see Section 5.5, "Initializing and Uninitializing
+Objects," in Chapter 5, "Implementing Classes in SOM."<!-- lm: 0x2 1 -->
+<P>
+<U><I>For C++ programmers with usage bindings,</I></U> instances of a class
+&lt;className&gt; can be created with a<B> new</B> operator provided by
+the usage bindings of each SOM class.  The<B> new</B> operator automatically
+creates the class object for &lt;className&gt;, as well as its ancestor
+classes and metaclass,  if they do not yet exist.  After verifying the existence
+of the desired class object, the<B> new</B> operator then invokes the<B> somNewNoInit
+</B> method on the class.  This allocates memory and creates a new instance
+of the class,  but it does not initialize the new object. Initialization
+of the new object is then performed using one of the C++ constructors defined
+by the usage bindings.  (For further discussion, see Section 5.5 "Initializing
+and Uninitializing Objects," in Chapter 5, "Implementing Classes in SOM.")
+Two variations of the<B> new</B> operator require no arguments. When either
+is used, the C++ usage bindings provide a<!-- entering slot 42 --> default
+constructor that invokes the<B> somDefaultInit</B> method on the new object.
+ Thus, a new object initialized by<B> somDefaultInit</B> would be created
+using either of the forms:
+<P>
+<B>new</B> &lt;<I>className</I>&gt;<B> new</B>&lt;<I> classname</I> &gt;
+( )
+<P>
+For example:
+<PRE>   obj = new Hello;
+   obj1 = new Hello();
+</PRE>
+
+<P>
+For convenience, pointers to SOM objects created using the<B> new</B>operator
+can be freed using the<B> delete</B> operator, just as for normal C++ objects
+(or, the<B> somFree</B> method could be used):
+<PRE>  delete obj;
+  obj1-&gt;somFree;
+</PRE>
+
+<P>
+When previously allocated space will be used to hold a new object, C++ programmers
+should use the<B> somRenew</B> method, described below. C++ bindings do
+not provide a macro for this purpose.
+<P>
+<U><I>somNew and somRenew:</I></U> C and C++ programmers, as well programmers
+using other languages, can create instances of a class using the SOM methods
+<B>somNew</B> and<B> somRenew</B>, invoked on the class object. As discussed
+and illustrated above for the C bindings, the class object must first be
+created using the &lt;<I>className</I>&gt;<B>NewClass</B> procedure (or,
+perhaps, using the<B> somFindClass</B> method-see the section "Using class
+objects," to follow later in this chapter).
+<P>
+The<B> somNew</B> method invoked on the class object creates a new instance
+of the class, initializes the object using<B> somDefaultInit,</B> and then
+returns a pointer to the new object. For instance, the following C example
+creates a new object of the "Hello" class.
+<PRE>   #include &lt;hello.h&gt;
+   main()
+   {
+     SOMClass helloCls;   /* a pointer to the Hello class */
+     Hello obj;           /* a pointer to an Hello instance */
+     /* create the Hello class  */
+     helloCls = HelloNewClass(Hello_MajorVersion, Hello_MinorVersion);
+     obj = _somNew(helloCls); /* create the Hello instance */
+   }
+</PRE>
+
+<P>
+An object created using the<B> somNew</B> method should be freed by invoking
+the<B> somFree</B> method on it after the client program is finished using
+the object.
+<P>
+The<B> somRenew</B> method invoked on the class object creates a new instance
+of a class using the given space, rather than allocating new space for the
+object. The method converts the given space into an instance of the class,
+initializes the new object using<B> somDefaultInit,</B> and then returns
+a pointer to it. The argument to<B> somRenew</B> must point to a block of
+storage large enough to hold the new instance. The method<B> somGetInstanceSize
+</B>can be used to determine the amount of memory required. For example,
+the following C++ code creates ten instances of the "Hello" class:
+<PRE>   #include &lt;hello.xh&gt;
+   #include &lt;somcls.xh&gt;
+   main()
+   {
+     SOMClass *helloCls; // a pointer to the Hello class
+     Hello *objA[10]  //  an array of Hello instance pointers
+     unsigned char *buffer;
+     int i;
+     int size;
+
+    // create the Hello class object
+    helloCls =  <B>HelloNewClass</B>(Hello_MajorVersion, Hello_MinorVersion);
+
+    // get the amount of space needed for a Hello instance:
+    size = helloCls-&gt; <B>somGetInstanceSize</B>();
+    size = ((size+3)/4)*4;  // round up to doubleword multiple
+
+    // allocate the total space needed for ten instances
+    buffer =  <B>SOMMalloc</B>(10*size);
+
+    // convert the space into ten separate Hello objects
+    for (i=0; i&lt;10; i++)
+       objA[i] = helloCls-&gt; <B>somRenew</B>(buffer+i*size);
+
+    // Uninitialize the objects and free them
+    for (i=0; i&lt;10; i++)
+       objA[i]-&gt; <B>somDestruct</B>(0,0);
+    <B>SOMFree</B>(buffer);
+   }
+</PRE>
+
+<P>
+The<B> somNew</B>  and<B> somRenew</B> methods are useful for creating instances
+of a class when the header file for the class is not included in the client
+program at compile time. (The name of the class might be specified by user
+input, for example.) However, the &lt;<I>className</I>&gt;<B>New</B> macro
+(for C) and the<B> new</B> operator (for C++) can<I> only</I> be used for
+classes whose header file is included in the client program at compile time.
+
+<P>
+Objects created using the<B> somRenew</B> method should be freed by the
+client program that allocated it, using the dual to whatever allocation
+approach was initially used. If the<B> somFree</B> method is not appropriate
+(because the method<B> somNew</B> was not initially used), then, before
+memory is freed, the object should be explicitly deinitialized by invoking
+the<B> somDestruct</B> method on it. (The<B> somFree</B> method calls the
+<B>somDestruct</B> method.  Refer to the previous C example for<B> Renew
+</B>for an explanation of the arguments to<B> somDestruct.</B>)
+
+<P><HR>
+
+<A HREF="031_L4_UsingclassNameRenew.html">[Back: Using <className>Renew]</A> <BR>
+<A HREF="033_L3_Invokingmethodsonobj.html">[Next: Invoking methods on objects]</A> 
+</BODY>
+</HTML>

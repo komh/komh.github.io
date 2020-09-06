@@ -1,0 +1,78 @@
+<HTML>
+<HEAD>
+<TITLE>Creating a Palette</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating a Palette</H1><!-- entering slot 1211 -->
+<P>
+To create a palette, an application must first call DevQueryCaps with the
+CAPS_ADDITIONAL_GRAPHICS option to determine whether the device supports
+palette functions. Next the application creates an array of RGB values or
+an array of RGB2 structures, then calls<A><!-- external link: 1D 76 C3 FC --> GpiCreatePalette</A>.
+Next the applications calls<A><!-- external link: 1D 1D C4 5B --> GpiSelectPalette
+</A>to select the palette for the presentation space and calls WinRealizePalette
+to map the RGB values to device colors for subsequent drawing. When the
+application is finished drawing, it calls<A><!-- external link: 1D 1D C4 5B --> GpiSelectPalette
+</A>to disassociate the presentation space and the palette. Then it deletes
+the palette by calling<A><!-- external link: 1D 7E C3 FC --> GpiDeletePalette</A>.
+
+<P>
+The following figure demonstrates these steps.
+<PRE>#define INCL_GPILOGCOLORTABLE
+#define INCL_GPIBITMAPS
+#include &lt;os2.h&gt;
+void fncCOLR06(void){
+    COLOR clrCurrent;
+    HPAL hpal;
+    HDC hdc;
+    HPS hps;
+    HAB hab;
+    HWND hwnd;
+    POINTL aptl[2], ptl;
+    LONG cSimulColors, lPalSupport;
+    SHORT j;
+    RGB2 *prgb2ColorData;
+
+    /* Determine how many colors the device can display at once.              */
+    DevQueryCaps(hdc, CAPS_COLORS, 1, &amp;cSimulColors);
+
+    /* Determine if the device supports palette manager functions.            */
+    DevQueryCaps(hdc, CAPS_ADDITIONAL_GRAPHICS, 1, &amp;lPalSupport);
+
+    /* Allocate space for the array of RGB2 structures.                       */
+    DosAllocMem((PPVOID)&amp;prgb2ColorData, cSimulColors * sizeof(RGB2), fALLOC);
+
+    /* Fill the array of RGB2 structures with as many different               */
+    /*    shades of blue as the device will support.                          */
+
+    clrCurrent = 0x000000FF;
+    for (j = 0; j &lt; cSimulColors; j++) {
+        prgb2ColorData[j].bRed = 0;
+        prgb2ColorData[j].bGreen = 0;
+        prgb2ColorData[j].bBlue = clrCurrent;
+        prgb2ColorData[j].fcOptions = 0;
+        clrCurrent = clrCurrent &gt; 0 ? --clrCurrent : 0x000000FF;
+    }
+
+    if (lPalSupport &amp; CAPS_PALETTE_MANAGER) {
+        hpal = GpiCreatePalette(hab,       /* Create palette                  */
+               0L,
+               LCOLF_CONSECRGB,            /* Format of color table entries   */
+               cSimulColors,               /* Number of entries in table      */
+               (PULONG) prgb2ColorData);   /* Pointer to color table          */
+    }
+
+    GpiSelectPalette(hps, hpal);
+    WinRealizePalette(hwnd, hps);
+    GpiSelectPalette(hps, NULLHANDLE);     /* Restore default physical colors */
+    GpiDeletePalette(hpal);                /* Delete palette                  */
+} /* fncCOLR06 */
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1188_L3_SettingthePrimitiveC.html">[Back: Setting the Primitive Color Attributes]</A> <BR>
+</BODY>
+</HTML>

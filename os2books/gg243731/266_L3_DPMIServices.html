@@ -1,0 +1,240 @@
+<HTML>
+<HEAD>
+<TITLE>DPMI Services</TITLE>
+</HEAD>
+<BODY>
+<H1>DPMI Services</H1><!-- entering slot 304 -->
+<P>
+DPMI services are requested using INT 31h requests, which are trapped by
+the DPMI virtual device driver, and either serviced by the VDD itself or
+routed to the operating system kernel.
+<P>
+The DPMI API Layer performs input parameter checking on all service requests,
+to validate requests and to enforce restrictions mandated by the DPMI specification.
+
+<P>
+<B>LDT Descriptor Management</B>
+<P>
+The 8086 Emulation component of MVDM arranges for allocation of a task's
+LDT upon initialization of the VDM.  Under DPMI 0.9, all tasks in a VDM
+share the same LDT.  Applications may modify descriptors only through DPMI
+service calls.
+<P>
+Three types of descriptors must be kept track of:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Per-task DPMI descriptors that the client may
+modify<!-- lm: 0x2 0 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 4 -->V86 segment to selector mappings with descriptors
+that cannot be modified<!-- lm: 0x2 0 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 4 -->Per-task DOS descriptors that the client cannot
+modify.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+Memory used by a DPMI application is allocated by the OS/2 Version 2.0 operating
+system to the parent process of the VDM within which that application executes.
+ Full memory protection is therefore provided for applications using DPMI
+services.
+<P>
+<B>DOS Memory Management</B>
+<P>
+DOS memory management services are implemented under OS/2 Version 2.0 in
+various ways, according to the nature of the service.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><I>Allocate DOS memory and selector set</I>
+<P>
+This service allocates DOS memory along with a set of descriptors to cover
+the allocation.  For 32-bit clients, a single descriptor is set to cover
+the entire allocated region.  For 16-bit clients, this descriptor is followed
+by descriptors to cover the rest of the region in 64KB segments.  This allows
+16-bit applications to refer either through a single large segment or through
+tiled selectors.
+<P>
+A V86 mode DOS call is used to allocate memory from the DOS arena. Therefore,
+after initial setup, the DPMI API Layer switches back into V86 mode to issue
+the DOS call, and then traps the return from DOS in order to finish the
+service.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><I>Free DOS memory and selector set</I>
+<P>
+The allocated list is searched to make sure the region being freed is allocated.
+ The allocation record is moved to the pending list with the request marked
+as free.  A switch is then made to V86 mode and the INT 21h is simulated
+as above with the return trapped.  When the return is trapped, return values
+are set up.  If the call succeeded, the selectors that were allocated are
+freed.  If a selector other than the allocated selector was passed in the
+free call, that selector set is freed as well.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><I>Resize DOS memory and selector set</I>
+<P>
+Resizing is done in the same way as the original allocation.  The allocation
+record is moved to the pending list.  The desired size is listed in the
+allocation record and new selectors are allocated if the size increases
+and new selectors are needed.  Descriptors are allocated before reflection
+so the call can fail before allocating DOS memory in V86 mode if they are
+not available.  The DOS call is then done as above.
+<P>
+If the call failed, the new selectors are freed when the hook regains control.
+ If it succeeded, new descriptors are set up if they were needed or descriptors
+are freed if the resize made some unnecessary. The return values for the
+client are set up and the allocation record is returned to the allocated
+list with its new size noted.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+<B>Extended Memory Management</B>
+<P>
+Extended memory management services are also implemented in a number of
+ways, depending on the service.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><I>Get memory information</I>
+<P>
+This service uses memory management calls to load an application buffer
+with a variety of information about the memory.  A VDH service is used to
+copy the<!-- entering slot 305 --> data to user space, with appropriate
+exception handling.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><I>Allocate</I>
+<P>
+Memory is allocated using a memory management service.  Record of the allocation
+noting the start address, allocated size, and sparse linear address size
+are kept in a hash table.  The allocation records are kept in the DPMI API
+Layer per DPMI task area so that they can be cleaned up when the task terminates.
+<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><I>Free</I>
+<P>
+This function is implemented quite simply; the DPMI API Layer per-task data
+area is checked for the allocation records, and the corresponding memory
+is freed via a call to the operating system kernel.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><I>Resize</I>
+<P>
+DPMI changes a memory object's size in one of two ways:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 5 -->If the size of the object is to be decreased, pages
+at the end of the object are decommitted.<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 5 -->If the size of the object is to be increased, a new
+and larger object is allocated and a kernel worker is used to move the pages
+from the original object to the new one.<!-- lm: 0x2 2 --><!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>Page Locking</B>
+<P>
+Page locking services are necessary on systems which deliver interrupts
+at interrupt time or which use DOS for paging.  On a system that simulates
+interrupts and has its own file system (such as OS/2 Version 2.0)  the calls
+are no-ops.  They will simply return a success indication to the client.
+
+<P>
+<B>Interrupt Hooking</B>
+<P>
+8086 Emulation maintains a table of the current handler for each protect
+mode hook and exception.  These services are implemented by calling 8086
+Emulation to get the current value from this table or to set a new value
+in the table.
+<P>
+8086 Emulation offers a service to change the client's virtual interrupt
+state (the IF flag).
+<P>
+<B>Translation (Protect/V86 Control Transfer)</B>
+<P>
+These services provide cross-mode calls, state saving, and raw mode switching.
+<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><I>Real mode callback</I> (call protected mode from
+real mode)
+<P>
+This service allocates a real mode callback breakpoint.  When this breakpoint
+is called, the DPMI API Layer handler arranges a protect mode call.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><I>Free real mode callback</I>
+<P>
+If a real mode callback is still waiting to be completed, the callback record
+is marked to indicate it is no longer active.  Freeing the callback record
+and the breakpoint are done when no outstanding calls are in progress.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><I>State save/restore for each mode</I>
+<P>
+This service returns a set of addresses, one for V86 mode and one for protect
+mode, which, if called by the client, save or restore the current register
+state for the other mode.  This is necessary for applications which perform
+raw mode switching, to keep them from overwriting the task state for the
+alternate mode.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Raw mode switching
+<P>
+This service returns a set of addresses, one for V86 mode and one for protect
+mode, which, if called by the client, switch to the other mode. The breakpoints
+have the DPMI task identifier in the breakpoint data area.  When the breakpoint
+is reached, if the ID is different from the current one, 8086 Emulation
+is called to report the switch.  A VDH service is then used to do the requested
+mode switch.<!-- lm: 0x2 0 -->
+<P>
+Under OS/2 Version 2.0, an extension to the DPMI specification has been
+implemented, and is known as<B> DOS API</B> services.  Protected mode applications
+issuing DOS or BIOS calls must pass buffers that can be accessed in V86
+mode.  The DOS API services relieve the application from having to do this
+work for DOS calls and some BIOS calls.  This permits protected mode applications
+to use protect mode buffers (referenced by protected mode selectors) in
+DOS service requests.  The translation services perform any necessary buffer
+copying.
+<P>
+Applications detect the<!-- entering slot 306 --> presence of a DOS API
+translator by performing an INT 2Fh multiplex passing the name "MS-DOS"
+as an argument.  The translator responds when it detects this name, indicating
+that translation will be performed.  Applications that do not require translation
+may simply use the INT 31h simulate interrupt function to avoid translation.
+
+<P>
+<B>Debug Registers</B>
+<P>
+The Task Management component of OS/2 Version 2.0 manages watchpoints for
+OS/2 applications, the kernel debugger and VDMs.  Interfaces for allocating,
+setting and freeing watchpoints and getting the Bx bits for allocated watchpoints
+are used by the DPMI API Layer to carry out these services.  The DPMI API
+Layer keeps track of allocated watchpoints in the per DPMI task area so
+that it can clean up at termination and uses the tasking watchpoint services
+to manipulate watchpoints.
+<P>
+<B>Other DPMI Services</B>
+<P>
+A number of other services are provided under the DPMI specification. Their
+implementation under OS/2 Version 2.0 is described below.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><I>Physical Address Mapping</I>
+<P>
+In OS/2 Version 2.0, there is no way of knowing which addresses are used
+by device drivers.  It is therefore not safe to allow direct access to devices
+which do not have VDDs.  However, direct access from within VDMs is allowed.
+
+<P>
+VDH services for reserving linear space, mapping, and page fault handling
+are all restricted to regions below 1MB+64KB.  As such, a VDD with a linear
+address above 1 MB cannot virtualize hardware.  All requests to this service
+will fail.  The DPMI specification allows this so the operating system can
+protect devices.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><I>Get Vendor Specific Entry Point</I>
+<P>
+Vendors that add extensions to DPMI typically look for the name of their
+extension by hooking INT 31h.  If the extension is requested by a DPMI client,
+the vendor-supplied routine issues an IRET instruction without jumping down
+the INT 31h protect mode chain.  If the request is for a DPMI service not
+supplied by the vendor's routine , the routine continues down the INT 31h
+chain.  Since the DPMI API Layer router is called at the end of the chain,
+any unrecognized service requests are signalled to the client by setting
+the carry flag to indicate that the call failed.<!-- lm: 0x2 0 -->
+<BR>
+
+
+<P><HR>
+
+<A HREF="265_L2_DPMIImplementationin.html">[Back: DPMI Implementation in OS/2 Version 2.0]</A> <BR>
+<A HREF="267_L3_KernelSupport.html">[Next: Kernel Support]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,87 @@
+<HTML>
+<HEAD>
+<TITLE>Using the IDL basic type 'any'</TITLE>
+</HEAD>
+<BODY>
+<H1>Using the IDL basic type 'any'</H1><!-- entering slot 380 -->
+<P>
+Some Interface Repository methods and<B> TypeCode</B> functions return information
+typed as the IDL basic type<B> any</B>. Usually this is done when a wide
+variety of different types of data may need to be returned through a common
+interface. The type<B> any</B> actually consists of a structure with two
+fields: a<B> _type</B> field and a<B> _value</B> field. The<B> _value</B> field
+is a pointer to the actual datum that was returned, while the<B> _type</B> field
+holds a<B> TypeCode</B>  that describes the datum.
+<P>
+In many cases, the context in which an operation occurs makes the type of
+the datum apparent.<B></B> If so, there is no need to examine the<B> TypeCode
+</B>unless it is simply as a consistency check. For example, when accessing
+the first parameter of a<B> tk_struct TypeCode</B>, the type of the result
+will always be the name of the structure (a string). Because this is known
+ahead of time, there is no need to examine the returned<B> TypeCode</B> in
+the<B> any_type</B> field to verify that it is a<B> tk_string TypeCode</B>.
+You can just rely on the fact that it is a string; or, you can check the
+<B>TypeCode</B> in the<B> _type</B> field to verify it, if you so choose.
+
+<P>
+An IDL<B> any</B> type can be used in an interface as a way of bypassing
+the strong type checking that occurs in languages like ANSI C and C++. Your
+compiler can only check that the interface returns the<B> any</B> structure;
+it has no way of knowing what type of data will be carried by the<B> any
+</B>during execution of the program. Consequently, in order to write C or
+C++ code that accesses the contents of the<B> any</B> correctly, you must
+always cast the<B> _value</B> field to reflect the actual type of the datum
+at the time of the access.
+<P>
+Here is an example of a code fragment written in C that illustrates how
+the casting must be done to extract various values from an<B> any</B>:
+<PRE>#include &lt;som.h&gt;    /* For "any" &amp; "Environment" typedefs */
+#include &lt;somtc.h&gt;  /* For TypeCode_kind prototype        */
+
+any result;
+Environment *ev;
+
+printf ("result._value = ");
+switch (TypeCode_kind (result._type, ev)) {
+
+    case tk_string:
+        printf ("%s\n", *((string *) result._value));
+        break;
+
+    case tk_long:
+        printf ("%ld\n", *((long *) result._value));
+        break;
+
+    case tk_boolean:
+        printf ("%d\n", *((boolean *) result._value));
+        break;
+
+    case tk_float:
+        printf ("%f\n", *((float *) result._value));
+        break;
+
+    case tk_double:
+        printf ("%f\n", *((double *) result._value));
+        break;
+
+    default:
+        printf ("something else!\n");
+}
+</PRE>
+
+<P>
+Note: Of course, an<B> any</B> has no restriction, per se, on the type of
+datum that it can carry. Frequently, however, methods that return an<B> any
+</B>or that accept an<B> any</B> as an argument do place semantic restrictions
+on the actual type of data they can accept or return. Always consult the
+reference page for a method that uses an<B> any</B> to determine whether
+it limits the range of types that may be acceptable.
+<P>
+
+
+<P><HR>
+
+<A HREF="330_L4_TypeCodeconstants.html">[Back: TypeCode constants]</A> <BR>
+<A HREF="332_L1_TheMetaclassFramewor.html">[Next: The Metaclass Framework]</A> 
+</BODY>
+</HTML>

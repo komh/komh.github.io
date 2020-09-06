@@ -1,0 +1,73 @@
+<HTML>
+<HEAD>
+<TITLE>Using the DevHlp_ABIOSCall to Verify Micro Channel Adapter</TITLE>
+</HEAD>
+<BODY>
+<H1>Using the DevHlp_ABIOSCall to Verify Micro Channel Adapter</H1><!-- entering slot 2324 -->
+<P>
+The following example uses the DevHlp_ABIOSCall to verify the Micro Channel
+POS ID:
+<PRE>컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+</PRE>
+
+<PRE>USHORT FindMyMicroChannelCard(void)
+{
+  USHORT i,rc;             /* Index and return code    */
+  USHORT LID;              /* Logical ID               */
+
+  if (GetLIDEntry(POS,0,1,&amp;LID))
+     return(NOTFOUND);
+
+  /* Get length of RB to use for reading POS data. */
+
+  POSLenRB.rb.RBLen = sizeof(POSLENRB);
+  POSLenRB.rb.Func  = 0x01;
+  POSLenRB.rb.LID   = LID;
+  POSLenRB.rb.Unit  = 0;
+  POSLenRB.rb.Resv1 = 0;
+  POSLenRB.rb.Resv2 = 0;
+  POSLenRB.Rsv1     = 0;
+  POSLenRB.Rsv2     = 0;
+  POSLenRB.Rsv3     = 0;
+  rc = ABIOSCall( LID, &amp;POSLenRB, 0);
+
+  /*Is my request block big enough? */
+
+  if ((rc==0) &amp;&amp; (sizeof(POSRB) &gt;= POSLenRB.RBLen))
+     {
+       RB.rb.RBLen = POSLenRB.RBLen;       /* request block length        */
+       RB.rb.Func  = 0x0b;                 /* read stored POS data to mem */
+       RB.rb.LID   = LID;                  /* Logical ID                  */
+       RB.rb.Unit  = 0;
+       RB.DataBuf  = (ULONG)(FARPOINTER)&amp;POSData;
+
+       for(i=0;i&lt;=CFG_MAX_POS_SLOTS;i++)   /* For each slot, get POS ID   */
+          {
+           RB.Slot = (UCHAR)i;
+           rc = ABIOSCall(LID,&amp;RB,0);
+           if((rc==0)&amp;&amp;(RB.rb.RetCode==0))
+             if (RB.AdapterID == MYCARD)
+                {
+                  FreeLIDEntry(LID);
+                  return(FOUND);
+                }
+          }
+     }
+
+  FreeLIDEntry(LID);             /* Release LID Entry */
+  return(NOTFOUND);
+}
+</PRE>
+
+<PRE>컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+</PRE>
+
+<P>
+
+
+<P><HR>
+
+<A HREF="2278_L3_UsingtheQueryAdapter.html">[Back: Using the Query Adapter ID to Verify EISA Adapter]</A> <BR>
+<A HREF="2280_L3_OEMHLPIOCtlsSummary.html">[Next: OEMHLP IOCtls Summary]</A> 
+</BODY>
+</HTML>

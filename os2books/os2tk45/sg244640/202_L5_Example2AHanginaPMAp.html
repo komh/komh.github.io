@@ -1,0 +1,167 @@
+<HTML>
+<HEAD>
+<TITLE>Example 2 - A Hang in a PM Application</TITLE>
+</HEAD>
+<BODY>
+<H1>Example 2 - A Hang in a PM Application</H1><!-- entering slot 297 -->
+<P>
+<U><I>Steps for analysing hangs in PM applications:</I></U><!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Determine whether there is a general hang in the PM
+environment, or a just in one application. If the latter then proceed with
+normal hang analysis.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Check whether the<B> User_Sem</B> is owned. If it
+is then this may be an indication of a problem. Determine the owner and
+their thread status.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Check<B> pmqsyslock</B> to see if the system queue
+is locked. If it is, then determine the owner of the lock and their thread
+status.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Check<B> pmqfocus</B> if neither of the preceding
+checks reveals anything informative. Determine the thread in focus and its
+status.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If<B> pmqfocus</B> is a shell thread, check<B> fBadAppDialog</B>.
+If it is non-zero then analyse the<B> QHPSTRUCT</B> at label<B> qhpsbadapp</B>.
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If none of the preceding steps yields any results
+then check the shell processes. In particular<B> pmqshell</B> and<B> pmqshell2</B>.
+Most of the time these threads should be waiting for a message to arrive.
+Any other state should be transient.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+This example is of a hang in the WorkPlace caused by a PM application fault.
+
+<P>
+First we check out whether the<B> User_Sem</B> is held, whether the system
+queue is locked and if necessary who has the focus.
+<PRE>##db pmsemaphores+20 l209f3f:0000b4d4 50 4d 53 45 4d 00 00 00-00 00 00 00 00 00 00 00 PMSEM...........
+9f3f:0000b4e4 00 00 00 00 00 00 00 00-03 00 01 80 00 00 00 00 ................
+##dd pmqsyslock l1
+9f3f:0000ed14  12d3128c
+##dd %12d3128c
+%12d3128c  12d31630 00000020 0000000a 12d31334
+%12d3129c  12d31474 12d31334 12d31334 0000a400
+%12d312ac  00000000 0000001a 00000009 00000012
+%12d312bc  80030059 0097ec67 00000048 00000089
+%12d312cc  00000001 12d3ff5c 00000000 00000010
+%12d312dc  00000000 00000000 00000000 00000000
+%12d312ec  00000000 00000000 00000000 00000000
+%12d312fc  00000000 00000000 8000016e 00000000
+##d
+%12d3130c  0fe90000 00005453 00000325 00000000
+%12d3131c  12d31228 0bff0002 00000000 00000000
+%12d3132c  00000001 0000002e 00000000 00000000
+%12d3133c  00000000 00000000 00000000 00000000
+%12d3134c  00000000 00000000 00000000 00000000
+%12d3135c  00000000 00000000 00000000 00000000
+%12d3136c  00000000 00000000 00000000 00000000
+%12d3137c  00000000 00000000 00000000 00000000
+##.p2e
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 002e  001a 0002 001a 0009 blk 0500 ab911000 ab9c9408 ab9bc6c0 1ed0 12 turkey
+##.s 2e
+##.r
+eax=80030059 ebx=00008000 ecx=00090000 edx=00000004 esi=ffffffff edi=12d3128c
+eip=1bd0c8e1 esp=00293ea8 ebp=00090000 iopl=2 -- -- -- nv up ei pl zr na pe nc
+cs=005b ss=0053 ds=0053 es=0053 fs=150b gs=0000  <!-- entering slot 298 -->cr2=12d3028c  cr3=001d4000
+005b:1bd0c8e1 83c40c         add     esp,+0c
+##ln
+005b:1bd0c78c pmmerge:PM32BIT:SleepPmq + 155
+005b:1bd0c940 CalcWakeBits - 5f
+</PRE>
+
+<P>
+No one Owns the<B> User_Sem</B> since words at offsets +0x8 and +0xa are
+both zero.
+<P>
+We see that the system queue is held by slot 2e, who happens to be blocked
+in PMMERGE which is waiting for message activity. We also notice that at
+MQ+44 there is a non-zero value, which indicates that this thread has called
+WinSendMsg and is waiting for a response.
+<P>
+We investigate the WinSendMsg by examining the SMS pointed to by MQ+44
+<PRE>##dd %12d3ff5c
+%12d3ff5c  00000000 12d3ff5c 00000000 00000000
+%12d3ff6c  0097ec67 12d3128c 12d32cb4 00000000
+%12d3ff7c  00000000 12d33168 00000071 00250016
+%12d3ff8c  00000000 12d3ff5c 12d3ff5c 00000000
+%12d3ff9c  00000000 0092e954 12d3910c 12d3ca34
+%12d3ffac  00000000 00000002 12d34fac 00000407
+%12d3ffbc  00000000 00000000 12d3ff90 12d3ff5c
+%12d3ffcc  00000000 00000000 0092834a 12d3910c
+</PRE>
+
+<P>
+The target MQ for the sent message is at offset +18, i.e. %12d32cb4
+<P>
+We find out who this is (the slot number is at MQ+a4).
+<PRE>##dd %12d32cb4
+%12d32cb4  12d34940 00000020 0000000a 12d32d5c
+%12d32cc4  12d32e9c 12d32d5c 12d32d5c 04002fff
+%12d32cd4  04000400 0000001a 00000001 00000012
+%12d32ce4  80030051 0093c378 00000000 00000000
+%12d32cf4  00000000 00000000 00000000 00000010
+%12d32d04  00000000 00000000 00000000 00000000
+%12d32d14  00000000 00000000 00000000 00000000
+%12d32d24  00000000 00000000 8000006c 00000000
+##d
+%12d32d34  0fe90000 00005453 00000325 00000000
+%12d32d44  12d33304 0bff0000 00000000 12d3ff5c
+%12d32d54  00000001 00000028 00000000 00000000
+%12d32d64  00000000 00000000 00000000 00000000
+%12d32d74  00000000 00000000 00000000 00000000
+%12d32d84  00000000 00000000 00000000 00000000
+%12d32d94  00000000 00000000 00000000 00000000
+%12d32da4  00000000 00000000 00000000 00000000
+##.p 28
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 0028  001a 0002 001a 0001 crt 0500 ab905000 ab9c9408 ab9bbaf0 1f10 12 turkey
+</PRE>
+ 
+<P>
+Offset +a4 gives us the slot number which turns out to be another thread
+of the turkey application. The status of this thread is<B> crt</B>! This
+indicates that some other thread in the same process has entered critical
+section, furthermore slot 28 would be ready to run had it not been for the
+critical section thread. Clearly this is why our application has hung the
+PM messaging function. The real culprit is the user of Critical Section,
+who is it?
+<P>
+The PTDA contains the address of the TCB in critical section. The TCB offset
++0 contains the thread id followed by the slot number.
+<PRE>##dd %ab9c9408+ptda_ptcbcritsec-ptda_start l1
+%ab9c96e8  ab9bc6c0
+##dd %ab9bc6c0 l1
+%ab9bc6c0  002e0009
+##.p 2e
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 002e# 001a 0002 001a 0009 blk 0500 <!-- entering slot 299 -->ab911000 ab9c9408 ab9bc6c0 1ed0 12 turkey
+</PRE>
+
+<P>
+Our application has perpetrated one if not two faults:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->First, we are using DosEnterCriticalSection in a PM
+application. This is a very heavy-handed way of serialising and likely to
+impact PM message processing, particularly if one of the other threads in
+the application holds the system queue lock.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Secondly and more seriously, the thread that has entered
+critical section has subsequently called an API. The consequences of this
+are unpredictable and can lead to a hang as illustrated. Furthermore, this
+would apply whether or not the application was running in a PM environment.
+<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="201_L5_Example1ATrapinPMMER.html">[Back: Example 1 - A Trap in PMMERGE.DLL]</A> <BR>
+<A HREF="203_L5_HowtoFindtheMQofAnyT.html">[Next: How to Find the MQ of Any Thread]</A> 
+</BODY>
+</HTML>

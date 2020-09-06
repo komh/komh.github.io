@@ -1,0 +1,68 @@
+<HTML>
+<HEAD>
+<TITLE>Replacing SOM Functions</TITLE>
+</HEAD>
+<BODY>
+<H1>Replacing SOM Functions</H1><!-- entering slot 285 -->
+<P>
+The SOM run-time environment uses SOM functions that perform memory management,
+DLL management, character output, and error handling. These functions are
+replaceable, which means that you can override them by supplying your own
+version of the default SOM functions.
+<P>
+The following sample code shows how a user-defined function can be substituted
+for one of the replaceable SOM functions:
+<PRE>#define INCL_DOS
+#define INCL_WINWORKPLACE
+
+#include &lt;os2.h&gt;
+#include &lt;io.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;fcntl.h&gt;
+#include &lt;sys\stat.h&gt;
+#include &lt;string.h&gt;
+#include &lt;som.h&gt;
+
+static FILE   *ErrorFile;     /* File to contain debugging error information */
+
+/*
+ * This is the replacement for the default SOMOutCharRoutine.
+ * It writes the debugging information to a file on the hard drive.
+ */
+
+#pragma linkage(myCharacterOutputRoutine, system)
+
+int  SOMLINK  myCharacterOutputRoutine (char chOut)
+{
+    fputc ((int) chOut, ErrorFile);
+    fflush(ErrorFile);
+    return 1;   /* Indicate success */
+}
+
+/*
+ *   Enable myCharacterOutputRoutine by opening the output error
+ *   file and then changing the output character routine.
+ */
+
+ErrorFile = fopen ("c:\\error.txt", "a" ;
+
+fprintf (ErrorFile, "\nDebug information from my WPS Object\n");
+fprintf (ErrorFile,   "------------------------------------\n");
+setbuf (ErrorFile, NULL);
+
+SOM_TraceLevel = 2;   /* Request maximum debugging information */
+SOM_WarnLevel  = 2;
+
+/* All output goes to my routine after the next statement */
+
+SOMOutCharRoutine = myCharacterOutputRoutine;
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="265_L4_CompletingtheClassIm.html">[Back: Completing the Class Implementation]</A> <BR>
+<A HREF="267_L3_InvokingMethodsandAc.html">[Next: Invoking Methods and Accessing Object Data]</A> 
+</BODY>
+</HTML>

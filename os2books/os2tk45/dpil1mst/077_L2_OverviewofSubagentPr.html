@@ -1,0 +1,107 @@
+<HTML>
+<HEAD>
+<TITLE>Overview of Subagent Processing</TITLE>
+</HEAD>
+<BODY>
+<H1>Overview of Subagent Processing</H1><!-- entering slot 80 -->
+<P>
+This overview assumes that the subagent communicates with the agent over
+a TCP connection.  Other connection implementations are possible and, in
+that case, the processing approach may be a bit different.
+<P>
+We also take a simplistic approach in the sense that we will request the
+agent to send us at most one varBind per DPI packet, so we do not need to
+loop through a list of varBinds.  Potentially, you may gain performance
+improvements if you allow for multiple varBinds per DPI packet on GET, GETNEXT,
+SET requests, but to do so, your code will have to loop through the varBind
+list and so it becomes somewhat more complicated.  We assume that the DPI
+subagent programmer can handle that once you understand the basics of the
+DPI API.
+<P>
+Here is the dpiSimple MIB definition as it is implemented by the sample
+code, which follows:
+<PRE>DPISimple-MIB DEFINITIONS ::= BEGIN
+
+   IMPORTS
+        MODULE-IDENTITY, OBJECT-TYPE, snmpModules, enterprises
+                   FROM SNMPv2-SMI
+        DisplayString
+                   FROM SNMPv2-TC
+
+   ibm      OBJECT IDENTIFIER ::= { enterprises 2 }
+   ibmDPI   OBJECT IDENTIFIER ::= { ibm 2 }
+   dpi20MIB OBJECT IDENTIFIER ::= { ibmDPI 1 }
+
+
+   dpiSimpleMIB OBJECT IDENTIFIER ::= { dpi20MIB 5 }
+
+   dpiSimpleInteger         OBJECT-TYPE
+        SYNTAX  INTEGER
+        ACCESS  read-only
+        STATUS  mandatory
+        DESCRIPTION
+            "A sample integer32 value"
+        ::= { dpiSimpleMIB 1 }
+
+   dpiSimpleString          OBJECT-TYPE
+        SYNTAX  DisplayString
+        ACCESS  read-write
+        STATUS  mandatory
+        DESCRIPTION
+            "A sample Display String"
+        ::= { dpiSimpleMIB 2 }
+
+   dpiSimpleCounter32       OBJECT-TYPE
+        SYNTAX  Counter     -- Counter32 is SNMPv2
+        ACCESS  read-only
+        STATUS  mandatory
+        DESCRIPTION
+            "A sample 32-bit counter"
+        ::= { dpiSimpleMIB 3 }
+
+   dpiSimpleCounter64       OBJECT-TYPE
+        SYNTAX  Counter64   -- Counter64 is SNMPv2,
+                            -- Not supported by SNMPv1 agents
+        ACCESS  read-only
+        STATUS  mandatory
+        DESCRIPTION
+            "A sample 64-bit counter"
+        ::= { dpiSimpleMIB 4 }
+END
+</PRE>
+
+<P>
+To make the code more readable, we have defined the following names in our
+dpi_samp.c source file.
+<PRE>#define DPI_SIMPLE_SUBAGENT   "1.3.6.1.4.1.2.2.1.5"
+#define DPI_SIMPLE_MIB        "1.3.6.1.4.1.2.2.1.5."
+#define DPI_SIMPLE_INTEGER    "1.0"  /* dpiSimpleInteger.0   */
+#define DPI_SIMPLE_STRING     "2.0"  /* dpiSimpleString.0    */
+#define DPI_SIMPLE_COUNTER32  "3.0"  /* dpiSimpleCounter32.0 */
+#define DPI_SIMPLE_COUNTER64  "4.0"  /* dpiSimpleCounter64.0 */
+</PRE>
+
+<P>
+In addition, we have defined the following variables as global variable
+in our dpi_samp.c source file.
+<PRE>static int handle;                        /* handle has global scope */
+static long int      value1      = 5;
+#define              value2_p      cur_val_p   /* writable object    */
+#define              value2_len    cur_val_len /* writable object    */
+static char         *cur_val_p   = (char *)0;
+static char         *new_val_p   = (char *)0;
+static char         *old_val_p   = (char *)0;
+static unsigned long cur_val_len = 0;
+static unsigned long new_val_len = 0;
+static unsigned long old_val_len = 0;
+static unsigned long value3      = 1;
+static snmp_dpi_u64  value4      = {0x80000000,1L};
+</PRE>
+
+
+<P><HR>
+
+<A HREF="076_L1_ADPISubagentExample.html">[Back: A DPI Subagent Example]</A> <BR>
+<A HREF="078_L2_ConnectingtotheAgent.html">[Next: Connecting to the Agent]</A> 
+</BODY>
+</HTML>

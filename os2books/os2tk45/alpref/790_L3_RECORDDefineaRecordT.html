@@ -1,0 +1,164 @@
+<HTML>
+<HEAD>
+<TITLE>RECORD (Define a Record Type Name)</TITLE>
+</HEAD>
+<BODY>
+<H1>RECORD (Define a Record Type Name)</H1><!-- entering slot 799 -->
+<P>
+A record is a bit pattern you define to format bytes, words, or dwords for
+bit-packing.  The<I> RecordName</I> becomes a <A HREF="178_L5_RecordTypeName.html"><I>Record-TypeName
+</I></A>that can be used create record variables.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B>Syntax</B><!-- lm: 0x2 11 -->
+<UL>
+<P>
+
+<PRE><I>RecordName</I> <B>RECORD</B> <I>FieldDeclaration</I> [<B>,</B> [<I>LineBreak</I>] <I>FieldDeclaration</I> ...]
+</PRE>
+
+<P>
+Where<I> FieldDeclaration</I> has the following form:
+<PRE><I>FieldName:Width</I>[ <B>=</B> <I>InitialValue</I>]
+</PRE>
+
+<P>
+The optional<I> LineBreak</I> entry allows you to end a<I> FieldDeclaration
+</I>with a comma, enter an optional <A HREF="663_L3_Comments.html"><I>EndOfLine-Comment
+</I></A>followed by a physical<I> NewLine</I> character, then continue the
+record definition on the next line.<!-- lm: 0x2 1 -->
+</UL><B> Remarks</B><!-- lm: 0x2 11 -->
+<UL>
+<P>
+The<I> RecordName</I> and<I> FieldName</I> entries are unique globally-scoped
+<A HREF="155_L2_Identifiers.html"><I>Identifier</I></A><I>s</I> that must
+be specified.  Upon successful processing of the<B> RECORD</B> definition,
+the<I> RecordName</I> entry is converted to a <A HREF="178_L5_RecordTypeName.html"><I>Record-TypeName</I></A>,
+and all<I> FieldNames</I> are converted to <A HREF="165_L5_RecordFieldName.html"><I>Record-FieldName</I></A><I>s</I>.
+
+<P>
+Each<I> Width</I> entry in a<I> FieldDeclaration</I> is specified as an
+<A HREF="261_L2_ExpressionSyntax.html"><I>Expression</I></A> which must
+evaluate to an <A HREF="605_L4_AbsoluteExpressionTy.html"><I>Absolute-ExpressionType</I></A>.
+ The cumulative value of all<I> Width</I> entries becomes the total<B><I> RecordWidth
+</B></I>and must not exceed 32, the size of a DWORD, the maximum size for
+a <A HREF="178_L5_RecordTypeName.html"><I>Record-TypeName</I></A>.  The
+<A HREF="593_L4_OperandSize.html"><I>Operand Size</I></A> of the record
+becomes 1 (BYTE) if the<I> RecordWidth</I> is from 1 through 8, 2 (WORD)
+if the<I> RecordWidth</I> is from 9 through 16, and 4 (DWORD) if the<I> RecordWidth
+</I>is from 17 through 32.  Any other value causes an error.  If the total
+number of bits in the<I> RecordWidth</I> is not evenly divisible by the
+<A HREF="593_L4_OperandSize.html"><I>Operand Size</I></A>, the assembler
+right-justifies the fields into the least-significant bit positions of the
+record.
+<P>
+When a <A HREF="165_L5_RecordFieldName.html"><I>Record-FieldName</I></A> is
+referenced in an expression, the value returned is the shift value required
+to access the field.  The <A HREF="569_L4_RecordorFieldWidthWI.html">WIDTH
+</A>operator is used on the <A HREF="165_L5_RecordFieldName.html"><I>Record-FieldName
+</I></A>to return the width of the field in bits, and the <A HREF="554_L4_RecordorFieldBitMask.html">MASK
+</A>operator is used to obtain the value necessary for isolating the field
+within the record.
+<P>
+The<I> InitialValue</I> entry contains the default value to used for the
+field when a record variable is allocated.  If the field is at least 7 bits
+wide, you can initialize it to an ASCII character (for example, FIELD:7='Z').
+
+<P>
+To initialize a record, use the form:
+<PRE>[<A HREF="155_L2_Identifiers.html"><I>Identifier</I></A>] <A HREF="178_L5_RecordTypeName.html"><I>Record-TypeName</I></A> <A HREF="261_L2_ExpressionSyntax.html"><I>Expression</I></A> [, <A HREF="261_L2_ExpressionSyntax.html"><I>Expression</I></A> ...]
+</PRE>
+
+<P>
+The <A HREF="155_L2_Identifiers.html"><I>Identifier</I></A> entry is an
+optional name for the first byte, word, or dword of the reserved memory.
+The <A HREF="178_L5_RecordTypeName.html"><I>Record-TypeName</I></A> defines
+the format and default field values, and is the<I> RecordName</I> you assigned
+to the record in the<B> RECORD</B> directive.
+<P>
+At least one <A HREF="261_L2_ExpressionSyntax.html"><I>Expression</I></A> entry
+must be specified; additional entries are optional.  The <A HREF="261_L2_ExpressionSyntax.html"><I>Expression
+</I></A>must resolve to a <A HREF="615_L4_CompoundExpressionTy.html"><I>Compound-ExpressionType</I></A>,
+which may also be be duplicated by specifying it as a sub-expression of
+a <A HREF="616_L4_DuplicatedExpression.html"><I>Duplicated-ExpressionType</I></A>.
+ Each <A HREF="615_L4_CompoundExpressionTy.html"><I>Compound-ExpressionType
+</I></A>represents a single allocated record entry; each explicit sub-expression
+of the <A HREF="615_L4_CompoundExpressionTy.html"><I>Compound-ExpressionType
+</I></A>represents a field value which overrides the default<I> InitialValue
+</I>for the field given in the record definition.<!-- lm: 0x2 1 -->
+</UL><B> Example
+</B><!-- lm: 0x2 11 -->
+<UL>
+<P>
+Define the record fields; begin with the most significant fields first:
+
+<PRE>MODULE RECORD R:7,     ; First field.  ", LineBreak" syntax
+              E:4,     ; may be used to split RECORD
+              D:5      ; definition across multiple lines
+</PRE>
+
+<P>
+Fields are 7 bits, 4 bits, and 5 bits; the assembler gives no default value.
+Most significant byte first, this looks like:
+<PRE>RRRR RRRE EEED DDDD
+</PRE>
+
+<P>
+To reserve its memory:
+<PRE>STG_FLD   MODULE    &lt;7,,2&gt;   ; Initializer is a <A HREF="615_L4_CompoundExpressionTy.html"><I>Compound-ExpressionType</I></A>
+</PRE>
+
+<P>
+This defines R=7 and D=2 and leaves E unknown; it produces 2 bytes, the
+least significant byte first:
+<PRE><!-- entering slot 800 -->02   0E
+</PRE>
+
+<P>
+Define the record fields:
+<PRE>AREA   RECORD   FLA:8='A',FLB:8='B'
+</PRE>
+
+<P>
+To reserve its memory:
+<PRE>CHAR_FLD   AREA &lt;,'P'&gt;
+</PRE>
+
+<P>
+This defines FLA='A' (the default) and changes FLB='P'.
+<P>
+To use a field in the record:
+<PRE>DEFFIELD   RECORD   X:3,Y:4,Z:9
+           .
+           .
+           .
+TABLE      DEFFIELD 10 DUP(&lt;0,2,255&gt;)
+           .
+           .
+           .
+           MOV DX,TABLE[2]
+; Move data from record to register
+; other than segment register
+           AND DX,MASK Y
+; Mask out fields X and Y
+; to remove unwanted fields
+; The MASK of Y equals 1E00H
+; 00011111000000000B (1E00H) Is the value
+            MOV CL,Y       ; Get shift count
+                           ;   9 is the value
+            SHR DX,CL      ; Field to low-order
+                           ;   bits of register, DX is now
+                           ;   equal to the value of field Y
+            MOV CL,WIDTH Y ; Get number of bits
+                           ;   in field - 4 is the value,
+                           ;   the WIDTH of Y is 4
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="789_L2_TypeDefinition.html">[Back: Type Definition]</A> <BR>
+<A HREF="791_L3_STRUCTSTRUCDefineaSt.html">[Next: STRUCT/STRUC (Define a Structure Type Name)]</A> 
+</BODY>
+</HTML>

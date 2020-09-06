@@ -1,0 +1,137 @@
+<HTML>
+<HEAD>
+<TITLE>readv()</TITLE>
+</HEAD>
+<BODY>
+<H1>readv()</H1><!-- entering slot 213 -->
+<P>
+The readv() socket call receives data on a socket into a set of buffers.
+
+<P>
+<B>Syntax</B>
+<PRE>#include &lt;types.h&gt;
+#include &lt;sys/uio.h&gt;
+int readv(<I>s</I>, <I>iov</I>, <I>iovcnt</I>)
+int <I>s</I>;
+struct iovec *<I>iov</I>;
+int <I>iovcnt</I>;
+</PRE>
+
+<P>
+<B>Parameters</B><!-- lm: 0x2 0 -->
+<P>
+<I>s</I><!-- lm: 0x11 2 -->
+<UL> Socket descriptor.<!-- lm: 0x2 0 -->
+</UL><I> iov
+</I><!-- lm: 0x11 2 -->
+<UL>Pointer to an array of iovec structures.<!-- lm: 0x2 0 -->
+</UL><I> iovcnt
+</I><!-- lm: 0x11 2 -->
+<UL>Number of iovec structures pointed to by the
+<I>iov</I> parameter. The maximum number of iovec structures is 1024.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>Description</B>
+<P>
+This call reads data on a socket with descriptor<I> s</I> and stores it
+in a set of buffers. The data is scattered into the buffers specified by
+<I>iov</I>[0]...<I>iov</I>[<I>iovcnt</I>-1]. The iovec structure is defined
+in &lt;SYS/UIO.H&gt; and contains the following fields:<!-- lm: 0x2 0 -->
+<P>
+<B>Field</B><!-- lm: 0x2 15 -->
+<UL><B>Description</B><!-- lm: 0x2 0 -->
+</UL><I>iov _ base</I><!-- lm: 0x12 15 -->
+<UL>Pointstothebuffer<!-- lm: 0x2 0 -->
+</UL><I>iov _ len</I><!-- lm: 0x12 15 -->
+<UL>Lengthofthebuffer<!-- lm: 0x2 0 -->
+</UL>
+<P>
+The readv() call applies only to connected sockets. For information on how
+to use readv() with datagram and raw sockets, see <A HREF="183_L2_connect.html">Datagram
+or Raw Sockets</A>.
+<P>
+TCP/IP alters<I> iov_base</I> and<I> iov_len</I> for each element in the
+input struct iovec array.<I> iov_base</I> will point to the next character
+of the processed (sent or received) data on the original buffer, and<I> iov_len
+</I>will become (input value - processed length). Thus if only partial data
+has been sent or received and the application expects more data to send
+or receive, it can pass the same iovec structure back in a subsequent call.
+
+<P>
+This call returns up to the number of bytes in the buffers pointed to by
+the<I> iov</I> parameter.  This number is the sum of all<I> iov_len</I> fields.
+If less than the number of bytes requested is available, the call returns
+the number currently available. If data is not available at the socket with
+descriptor<I> s</I>, the readv() call waits for data to arrive and blocks
+the caller, unless the socket is in nonblocking mode. See <A HREF="187_L2_ioctl.html">ioctl()
+</A>for a description of how to set nonblocking mode. The UDP sockets can
+send and receive datagrams as large as 32739 bytes (32 * 1024 -1 - IP header
+(20 bytes) - UDP header (8 bytes)).
+<P>
+<B>Return Values</B>
+<P>
+When successful, the number of bytes of data received into the buffer is
+returned. The value -1 indicates an error. You can get the specific error
+code by calling sock_errno() or psock_errno().<!-- lm: 0x2 0 -->
+<P>
+<B>sock_errno() Value</B><!-- lm: 0x2 25 -->
+<UL><B>Description</B><!-- lm: 0x2 0 -->
+</UL>SOCENOTSOCK<!-- lm: 0x12 25 -->
+<UL>The<I>s</I>parameterisnotavalidsocketdescriptor
+.<!-- lm: 0x2 0 -->
+</UL>SOCEFAULT<!-- lm: 0x12 25 -->
+<UL>Using<I>iov</I>and<I>iovcnt</I>wouldresultinanattempttoaccessmemoryoutsidethecaller
+' saddressspace .<!-- lm: 0x2 0 -->
+</UL>SOCEINTR<!-- lm: 0x12 25 -->
+<UL>Interruptedsystemcall
+.<!-- lm: 0x2 0 -->
+</UL>SOCEINVAL<!-- lm: 0x12 25 -->
+<UL><I>iovcnt</I>wasnotvalid
+,oroneofthefieldsinthe<I>iov</I>arraywasnotvalid .<!-- lm: 0x2 0 -->
+</UL>SOCEWOULDBLOCK<!-- lm: 0x12 25 -->
+<UL>The<I>s</I>parameterisinnonblockingmodeandnodataisavailabletoread
+,<I>or</I>theSO _ RCVTIMEOoptionhasbeensetforsocket<I>s</I>andthetimeoutexpiredbeforeanydataarrivedtoread
+.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>Related Calls</B><!-- lm: 0x2 5 -->
+<UL>
+<P>
+<A HREF="179_L2_accept.html">accept()</A><!-- lm: 0x2 5 --> <A HREF="180_L2_accept_and_recv.html">accept_and_recv()
+</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="183_L2_connect.html">connect()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="186_L2_getsockopt.html">getsockopt()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="187_L2_ioctl.html">ioctl()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="193_L2_recv.html">recv()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="194_L2_recvfrom.html">recvfrom()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="195_L2_recvmsg.html">recvmsg()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="197_L2_select.html">select()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="198_L2_send.html">send()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="201_L2_sendto.html">sendto()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="202_L2_setsockopt.html">setsockopt()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="204_L2_so_cancel.html">so_cancel()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="205_L2_sock_errno.html">sock_errno()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="206_L2_socket.html">socket()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="223_L2_writev.html">writev()</A><!-- lm: 0x2 0 -->
+</UL>
+
+<P><HR>
+
+<A HREF="191_L2_psock_errno.html">[Back: psock_errno()]</A> <BR>
+<A HREF="193_L2_recv.html">[Next: recv()]</A> 
+</BODY>
+</HTML>

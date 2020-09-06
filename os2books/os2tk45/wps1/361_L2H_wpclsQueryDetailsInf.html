@@ -1,0 +1,73 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>wpclsQueryDetailsInfo - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>wpclsQueryDetailsInfo - Example Code</H1><!-- entering slot 376 -->
+<P>
+
+<P>
+This example adds details data for the Car object by appending FIELDINFO
+structures to *ppClassFieldInfo.
+<PRE>SOM_Scope ULONG SOMLINK carM_wpclsQueryDetailsInfo(M_Car *somSelf,
+                PCLASSFIELDINFO *ppClassFieldInfo,
+                PULONG pSize)
+{
+ ULONG           cParentCol;
+ PCLASSFIELDINFO pCFI;
+ ULONG           i;
+
+    /* M_CarData *somThis = M_CarGetData(somSelf); */
+    M_CarMethodDebug("M_Car","carM_wpclsQueryDetailsInfo");
+
+   /*  Always call the parent method first to retrieve the number of
+       details columns and any data already defined in the details buffer. */
+
+   cParentCol = parent_wpclsQueryDetailsInfo(somSelf, ppClassFieldInfo, pSize);
+
+        /* If details columns exist, add the size of ours to it */
+
+   if (pSize)
+      *pSize += sizeof(CARDETAILS);
+
+   /*   If the request was for the chained fieldinfo structures
+    *   (ppClassFieldInfo is non-NULL), link them in
+    *
+    *   eventually the chain will look like
+    *
+    *   Grandad - Dad - Me - Kid - Grandkid
+    *
+    *   I will be getting the pointer to the beginning of the chain
+    *
+    *   If the beginning of the chain is 0, I will assign the address
+    *   of my first CLASSFIELDINFO structure to *ppClassFieldInfo.
+    *   Otherwise *pp points to the first column description in the
+    *   chain.  We need to walk the chain and link our CLASSFIELDINFO
+    *   structures at the end.
+    */
+
+   if (ppClassFieldInfo) {
+
+      if (*ppClassFieldInfo) {
+         pCFI = *ppClassFieldInfo;
+         for (i=0;i&lt;cParentColumns;i++)
+            pCFI = (pCFI-&gt;pNextFieldInfo) ? pCFI-&gt;pNextFieldInfo : pCFI;
+
+         pCFI-&gt;pNextFieldInfo = fieldinfo;
+      } else {
+         *ppClassFieldInfo = fieldinfo;
+      } /* endif */
+
+   } /* endif */
+
+   return ((ULONG) (cParentColumns + NUM_CAR_FIELDS));
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="360_L2H_wpclsQueryDetailsInf.html">[Back: wpclsQueryDetailsInfo - Related Methods]</A> <BR>
+<A HREF="362_L2H_wpclsQueryDetailsInf.html">[Next: wpclsQueryDetailsInfo - Topics]</A> 
+</BODY>
+</HTML>

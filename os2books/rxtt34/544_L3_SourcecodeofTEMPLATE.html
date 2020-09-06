@@ -1,0 +1,801 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Source code of TEMPLATE.CMD - part 1</TITLE>
+</HEAD>
+<BODY>
+<H1>Source code of TEMPLATE.CMD - part 1</H1><!-- entering slot 569 -->
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* TEMPLATE.CMD - Template for a REXX program                         */
+/*                                                                    */
+/* (c) Copyright Bernd Schemmer 1994 - 2001                           */
+/*                                                                    */
+/* Author:                                                            */
+/*   Bernd Schemmer                                                   */
+/*   Stalburgstr. 14                                                  */
+/*   D-60318 Frankfurt am Main                                        */
+/*   Germany                                                          */
+/*   email: Bernd.Schemmer@gmx.de                                     */
+/*                                                                    */
+/* History:                                                           */
+/*   01.07.1994 /bs v1.00                                             */
+/*     - initial release                                              */
+/*                                                                    */
+/*   09.12.1994 /bs v2.51                                             */
+/*     - first public release                                         */
+/*                                                                    */
+/*   01.01.1995 /bs v2.52 (Size of token image: 34.959)               */
+/*     - corrected a bug in the logfile routine                       */
+/*       (no message was written to the logfile)                      */
+/*     - added some more comments (requested by some users)           */
+/*     - converted all esc chars to '1B'x                             */
+/*     - added the environment variable 'SOUND'                       */
+/*     - changed the error handler:                                   */
+/*       Only the error handler for the trapped condition is now      */
+/*       reinstalled. The runtime system does now never change        */
+/*       the error handling if it was changed in MAIN.                */
+/*     - made some optimisations to shrink the needed memory for the  */
+/*       token image                                                  */
+/*                                                                    */
+/*   31.03.1995 /bs v2.53 (Size of token image: 34.508)               */
+/*     - corrected a bug in the error handler                         */
+/*     - added code to turn ANSI word wrap on                         */
+/*     - added the environment variable SILENT                        */
+/*     - added code to save the contents of prog.__STDOUT and         */
+/*       prog.__STDERR before initialising the stem prog.             */
+/*     - corrected a minor bug in the routine INCLUDE                 */
+/*     - added the parameter NOSOUND                                  */
+/*     - added the parameter NOANSI                                   */
+/*     - added code to reset the timer at program start               */
+/*     - corrected some grammatical errors in the comments            */
+/*     - removed the length restriction for the parameter             */
+/*     - now you can also use unbalanced quotes or double quotes in   */
+/*       the parameter                                                */
+/*                                                                    */
+/*   28.04.1995 /bs v2.54 (Size of token image: 34.536)               */
+/*     - changed the internal routine I!.__CallUserProc and changed   */
+/*       the 6th parameter of the LOADDLL call for loading REXXUTIL   */
+/*                                                                    */
+/*   23.05.1995 /bs v2.55 (Size of token image: 34.467)               */
+/*     - corrected a bug in the ShowString routine                    */
+/*     - changed code to be compatible with the new COMPRESS mode     */
+/*       of REXXCC v3.00 (**)                                         */
+/*     - added the program name to the error messages in ShowError    */
+/*     - added some optimizations for size                            */
+/*                                                                    */
+/*   16.07.1995 /bs v3.00 (Size of token image: 36.892)               */
+/*     - added support for an internal or external routine for the    */
+/*       message handling (exception: The messages in case of an      */
+/*       unexpected error are always in English)                      */
+/*     - added the variable prog.__DefParms                           */
+/*                                                                    */
+/*   31.09.1995 /bs v3.01 (Size of token image: 36.879)               */
+/*     - added RxFuncDrop call to LoadDLL routine                     */
+/*     - added the routine GetLineNo                                  */
+/*     - added the debugging routine ShowDefinedVariables             */
+/*     - added the parameter /TRACE, the environment variable         */
+/*       RXTTRACE and the variable PROG.__TRACE                       */
+/*     - added sample code to load the DLL YDBAUTIL (in comments)     */
+/*     - added code to make TEMPLATE OO REXX compatible               */
+/*       (see lines marked with OOREXX)                               */
+/*                                                                    */
+/*   02.12.1995 /bs v3.02 (Size of token image: 37.142)               */
+/*     - added code to use additional defaults values for EXPOSELIST  */
+/*     - the user abort routine displayed the wrong line number.      */
+/*     - added code to use the DLL RXU instead of YDBAUTIL if         */
+/*       YDBAUTIL does not exist (RXU is the new name of YDBAUTIL)    */
+/*                                                                    */
+/*   28.05.1996 /bs v3.03 (Size of token image: 37.142)               */
+/*     - corrected some minor bugs                                    */
+/*                                                                    */
+/*   01.09.1996 /bs v3.04 (Size of token image: 36.652)               */
+/*     - did some optimizations                                       */
+/*                                                                    */
+/*   01.<!-- entering slot 570 -->10.1996 /bs v3.05 (Size of token image: 35.352)               */
+/*     - added some optimizations for size                            */
+/*                                                                    */
+/*   01.11.1996 /bs v3.06 (Size of token image: 35.164)               */
+/*     - added the variable global.__userUsage                        */
+/*     - extended the function ShowDefinedVariables                   */
+/*     - corrected a bug in the routine ConvertNameToOS (filenames in */
+/*       OS/2 can not contain a double quote!)                        */
+/*                                                                    */
+/*   01.12.1997 /bs v3.07 (Size of token image: 35.490)               */
+/*     - added code to handle filenames beginning with '-' to the     */
+/*       routine ConvertNameToOS                                      */
+/*     - added code to handle logfilenames with imbedded blanks       */
+/*                                                                    */
+/*   01.04.2001 /bs v3.08 (Size of token image: 35.657)               */
+/*     - corrected a bug in the error handler                         */
+/*     - added variable prog.__progDir                                */
+/*                                                                    */
+/* Distribution:                                                      */
+/*   This code may be distributed freely and used in other programs.  */
+/*   Please give credit where credit is due.                          */
+/*   If you need further help, feel free to contact me at the address */
+/*   noted above.                                                     */
+/*                                                                    */
+/* Description:                                                       */
+/*   TEMPLATE.CMD is a template for a REXX program containing a       */
+/*   "runtime system" for the REXX program.                           */
+/*   TEMPLATE.CMD ...                                                 */
+/*   - supports INCLUDE() and TRYINCLUDE() (see source)               */
+/*   - contains an extended error handler (much better than the       */
+/*     default error handler, see routine 'I!.__ErrorAbort')          */
+/*   - supports patched version                                       */
+/*   - supports CID conventions                                       */
+/*   - supports colored messages                                      */
+/*   - supports internal and external routines for message handling   */
+/*   - supports execution in the REXX macro space                     */
+/*   - supports executions as "compiled" REXX program (**)            */
+/*   - supports logging of program messages, STDOUT messages and/or   */
+/*     STDERR messages of OS/2 programs                               */
+/*   - contains a debugging mechanism                                 */
+/*   - contains an exit routine handler                               */
+/*   - contains many predefined variables (for example the program    */
+/*     name, drive and path)                                          */
+/*   - contains very useful predefined routines, for example          */
+/*       LoadDll - load a DLL, for example REXXUTIL or VREXX          */
+/*       ShowString - show a string with prefix and word wrapping     */
+/*       Include - execute an include file                            */
+/*       TryInclude - execute an include file only if it exists       */
+/*   and much more.                                                   */
+/*                                                                    */
+/* (**) You may use my program REXXCC to "compile" or "compress" your */
+/*      REXX programs. You can get REXXCC at the same source as this  */
+/*      file. The name of the archiv with REXXCC is "RCnnn.EXE"       */
+/*      where nnn is the version of REXXCC. REXXCC is freeware.       */
+/*                                                                    */
+/* CAUTION: READ THESE COMMENTS CAREFULLY BEFORE (!) USING THIS CODE! */
+/*                                                                    */
+/* Usage:                                                             */
+/*   Copy this file to a new file, example:                           */
+/*     =&gt; COPY TEMPLATE.CMD MYPROG.CMD                                */
+/*   Change the variables after these comments to your need.          */
+/*   Insert your main code after the label                            */
+/*     =&gt; MAIN:                                                       */
+/*   in the new file MYPROG.CMD.                                      */
+/*   Insert your subroutines behind the line saying                   */
+/*     =&gt; INSERT FURTHER SUBROUTINES HERE                             */
+/*   in the new file MYPROG.CMD.                                      */
+/* That's all - but do not forget to read the comments below!!!       */
+/*                                                                    */
+/* Predefined <!-- entering slot 571 -->parameter:                                              */
+/*   TEMPLATE {/L:logfile} {/H} {/Silent} {/NoSound} {/NoAnsi}        */
+/*            {/Trace}                                                */
+/*                                                                    */
+/* where:                                                             */
+/*                                                                    */
+/*   /L:logFile - logfile is the name of the logfile :-)              */
+/*                This parameter is case-sensitive!                   */
+/*                Note: use /L:"logfile" if the name of the logfile   */
+/*                      contains blanks or special chars              */
+/*                def.: do not use a logfile                          */
+/*                                                                    */
+/*   /H         - show usage, you may also use                        */
+/*                /h, /?, /HELP, -h, -H, -HELP or -?                  */
+/*                (MAIN is not called!)                               */
+/*                                                                    */
+/*   /Silent    - suppress all messages (except error messages)       */
+/*                You should also use the parameter /L:logfile if you */
+/*                use this parameter!                                 */
+/*                You may also set the environment variable SILENT to */
+/*                "1" to suppress all messages.                       */
+/*                                                                    */
+/*   /NoSound   - suppress all sounds. You may also set the           */
+/*                environment variable SOUND to "0" to suppress the   */
+/*                sounds.                                             */
+/*                                                                    */
+/*   /NoAnsi    - do not use ANSI codes. You may also set the         */
+/*                environment variable ANSI to "0" to suppress the    */
+/*                use of ANSI codes.                                  */
+/*                                                                    */
+/*   /Trace     - turn TRACE on before calling MAIN. You may also     */
+/*                set the environment variable RXTTRACE to ON to      */
+/*                turn the TRACE mode for MAIN on.                    */
+/*                                                                    */
+/* NOTE:                                                              */
+/*   You must use at least one blank to separate the parameter.       */
+/*   The predefined parameters are interpreted by the runtime system. */
+/*   The procedure MAIN will never see them!                          */
+/*                                                                    */
+/* HINT:                                                              */
+/*   Do not define a parameter beginning with '/Q'! The string '/Q'   */
+/*   in the parameters is always interpreted by the CMD - your        */
+/*   program will never see that part of the parameter!               */
+/*   Do not use parameter beginning with two slashes '//'. These      */
+/*   parameters are reserved for the REXX interpreter.                */
+/*                                                                    */
+/* predefined returncodes:                                            */
+/*      0 - execution okay                                            */
+/*    240 ... 252                                                     */
+/*          reserved for the runtime system                           */
+/*    253 - syntax help called (parameter /h)                         */
+/*    254 - user break (CTRL-C)                                       */
+/*    255 - internal runtime system error                             */
+/*   else - program specific errors                                   */
+/*                                                                    */
+/* Notes:                                                             */
+/*                                                                    */
+/* #======================== !!! IMPORTANT !!! =====================# */
+/* # Do NOT define variables for the stem 'I!.'!                    # */
+/* # Do NOT use any of the variables beginning with 'I!.' in your   # */
+/* # code!                                                          # */
+/* # Do NOT use any of the routines beginning with 'I!.' in your    # */
+/* # code!                                                          # */
+/* # Do NOT define variables which names begin with two underscores # */
+/* # ('__') in your code!                                           # */
+/* #================================================================# */
+/*                                                                    */
+/* #======================== !!! IMPORTANT !!! =====================# */
+/* # Do NOT change, add or delete code between the lines            # */
+/* #                                                                # */
+/* # ...********** DO NOT CHANGE THE FOLLOWING LINES ***********... # */
+/* #                                                                # */
+/* # and                                                            # */
+/* #                                                                # */
+/* # ...********************************************************... # */
+/* #                                                                # */
+/* #================================================================# */
+/*                                                                    */
+/* #======================== !!!   HINT    !!! =====================# */
+/* # Do NOT change, add or delete the lines                         # */
+/* #                                                                # */
+/* # ... start of part n of the source code of TEMPLATE.CMD     ... # */
+/* #                                                                # */
+/* # and                                                            # */
+/* #                                                                # */
+/* # ... end of part n of the source code of TEMPLATE.CMD       ... # */
+/* #                                                                # */
+/* # (where n =1,2,3 or 4) if you want to use MAKECMD.CMD to update # */
+/* # the runtime system of your programs if you get a new version   # */
+/* # of TEMPLATE.CMD.                                               # */
+/* #                                                                # */
+/* #================================================================# */
+/*                                                                    */
+/* predefined variables (All values are in uppercase. IMPORTANT:      */
+/* DO NOT CHANGE THESE VARIABLES!)                                    */
+/*                                                                    */
+/* prog.__drive        = Drive of the program (e.g. "D:").            */
+/*                       This variable is '' if the program is in the */
+/*                       macro space.                                 */
+/* prog.__path         = path of the program (e.g. "\CODESERV\CMD")   */
+/*                       This variable is '' if the program is in the */
+/*                       macro space.                                 */
+/* prog.__progDir      = drive and path of the program                */
+/*                       (e.g. "D:\CODESERV\CMD")                     */
+/* prog.__name         = name of the program (e.g. "MYPROG.CMD")      */
+/* prog.__FullName     = fully qualified name of the program          */
+/*                       (e.g. "D:\CODESERV\CMD\MYPROG.CMD")          */
+/*                       This variable contains only the program name */
+/*                       if the program is in the macro space         */
+/* prog.__env          = OS/2 environment (use for VALUE() commands!) */
+/* prog.__Version      = version of TEMPLATE.CMD (e.g. "V1.00")       */
+/* prog.__QuietMode    = suppress all messages if not 1               */
+/*                       This variable is set to 1, if the parameter  */
+/*                       /SILENT was entered or if the environment    */
+/*                       variable SILENT is set to "1" or "ON".       */
+/* prog.__Trace        = This variable contains 1 if the trace mode   */
+/*                       for the function MAIN is turned on (either   */
+/*                       with the parameter "/TRACE" or if the        */
+/*                       environment variable RXTTRACE is set to      */
+/*                       "MAIN")                                      */
+/* prog.__DefParms     = This variable contains the syntax for the    */
+/*                       default parameters for TEMPLATE.CMD.         */
+/*                       This can be useful for usage routines.       */
+/*                                                                    */
+/* prog.__Logfile      = name of the logfile (or "" if none)          */
+/* prog.__LogSTDERR    = string to direct STDERR into the logfile     */
+/* prog.__LogSTDOUT    = string to direct STDOUT into the logfile     */
+/* prog.__LogALL       = String to direct STDOUT and STDERR into the  */
+/*                       logfile.                                     */
+/* prog.__LogFileParm  = log-Parameter for child <!-- entering slot 572 -->cmds ("" if no       */
+/*                       logfile is defined), usage:                  */
+/*                       =&gt; call child.cmd {...} prog.__LogFileParm   */
+/*                                                                    */
+/* NOTE: If no log file is defined, the output goes to the NUL-Device */
+/*       See below for examples using the logfile variables.          */
+/*                                                                    */
+/* global.__ErrorExitCode                                             */
+/*                     = return code for unknown errors (255)         */
+/* global.__OKExitCode = return code if the execution was ok (0)      */
+/*                                                                    */
+/* CIDRC.              = return codes for the CID process (only       */
+/*                       defined if global.__NeedCID is 1, see        */
+/*                       the procedure I!.__InitCIDVars)              */
+/*                                                                    */
+/* predefined variables (may be changed):                             */
+/*                                                                    */
+/* exposeList          = Name(s) of the the global variables ALL      */
+/*                       procedures must know!                        */
+/*                       You may add further variable names to this   */
+/*                       string but you must NOT delete any name from */
+/*                       this variable! IMPORTANT:                    */
+/*                       DO ONLY ADD STEM VARIABLES TO THIS VARIABLE! */
+/*                                                                    */
+/* prog.__NoSound      = 1 - turn sounds off                          */
+/*                       else: turn sounds on (default)               */
+/*                       TEMPLATE use sounds only in case of an error */
+/*                       You may also set the environment variable    */
+/*                       SOUND to "NO" if you don't want sounds.      */
+/*                                                                    */
+/* prog.__LogExcludeWords =                                           */
+/*                       This variable contains strings, that you     */
+/*                       want to output on the screen but not in      */
+/*                       the logfile (via the procedure LOG). You     */
+/*                       may use this variable for example for color  */
+/*                       codes which you might use in your messages.  */
+/*                       The default for prog.__LogExcludeWords is '' */
+/*                                                                    */
+/* prog.__UserAbort    = 0 - do not permit CTRL-BREAK                 */
+/*                       1 - permit CTRL-BREAK (default)              */
+/*                                                                    */
+/* prog.__ExitCode     = return code of the program                   */
+/*                       Note that 'prog.__ExitCode' should be a      */
+/*                       whole number. (def.: 0)                      */
+/*                       Do not define the return codes 0 and 240     */
+/*                       to 255. These return codes are used by the   */
+/*                       runtime system.                              */
+/*                                                                    */
+/* prog.__ExitRoutines = routines, that should be executed at         */
+/*                       program end (def.: NONE)                     */
+/*                       Usage example: see below                     */
+/*                                                                    */
+/* prog.__STDOUT       = output device for messages (def.: "STDOUT")  */
+/* prog.__STDERR       = output device for error messages             */
+/*                       (def.: "STDOUT")                             */
+/* prog.__CurDir       = working directory at program start           */
+/*                       Note that the working directory at program   */
+/*                       start is restored at program end automaticly */
+/*                       To avoid this use 'drop prog.__CurDir'.      */
+/*                                                                    */
+/* prog.__ScreenCols   = number of screen columns                     */
+/*                       (default: 80, or the real number of colums   */
+/*                       if REXXUTIL is loaded before the program     */
+/*                       starts)                                      */
+/*                                                                    */
+/* prog.__ScreenRows   = number of screen rows                        */
+/*                       (default: 25, or the real number of rows     */
+/*                       if REXXUTIL is loaded before the program     */
+/*                       starts)                                      */
+/*                                                                    */
+/* screen.             = stem variables for foreground and background */
+/*                       colors, some examples:                       */
+/*                                                                    */
+/* screen.__CurColor   = current color for messages                   */
+/* screen.__ErrorColor = color for error and warning messages         */
+/* screen.__NormalColor= color for normal messages                    */
+/* screen.__DebugColor = color for debug messages                     */
+/* screen.__PromptColor= color for input prompts                      */
+/*                       (see also the procedure                      */
+/*                       I!.__InitColorVars for further vars.)        */
+/*                                                                    */
+/* global.__verbose    = show debug messages if this variable is not  */
+/*                       equal ''. You may set the environment        */
+/*                       variable VERBOSE to the value for this       */
+/*                       variable before running the program.         */
+/*                       Note: There is no debug code in the runtime  */
+/*                             system.                                */
+/*                                                                    */
+/* variables for conditional addons (may only be changed in the first */
+/* part of the program!):                                             */
+/*                                                                    */
+/* global.__SignOnMsg  = set to 0 if you do not want a program        */
+/*                       start and end message (def.: 1)              */
+/* global.__Version    = version of the program (e.g. "V1.00")        */
+/* global.__NeedCID    = set to 1 if you need CID support (def.: 0)   */
+/* global.__NeedColors = set to 0 if you do not want colored          */
+/*                       messages (def.: 1)                           */
+/*                       You may also set the environment variable    */
+/*                       <!-- entering slot 573 -->ANSI to "NO" or use the parameter /NOANSI    */
+/*                       if you don't want colors.                    */
+/*                       The environment variable ANSI and the        */
+/*                       parameter /NOANSI overwrite the variable     */
+/*                       global.__NeedColors while running the        */
+/*                       program.                                     */
+/*                       CAUTION: OS/2 ANSI support must be ON to use */
+/*                                colors!                             */
+/* global.__NeedPatchCheck                                            */
+/*                     = set to 0 if you do not want to search        */
+/*                       the program for a patched version of the     */
+/*                       program (def.: 1)                            */
+/*                                                                    */
+/* global.__GetMsg     = set to the name of the routine for           */
+/*                       the message handling if any (see below,      */
+/*                       def.: use hardcoded messages)                */
+/* global.__BaseMsgNo  = base number for the message numbers          */
+/*                       (def.: 1000)                                 */
+/*                                                                    */
+/* global.__userUsage  = string with additional parameters. This      */
+/*                       variable is only used by the routine         */
+/*                       ShowUsage.                                   */
+/*                                                                    */
+/* Routines called by the runtime system                              */
+/*                                                                    */
+/* þ Main                                                             */
+/* function:                                                          */
+/*   This is the main routine of the program.                         */
+/* parameter:                                                         */
+/*   The parameter for this routine are the program parameter         */
+/*   without the parameter handled by the runtime system.             */
+/* returns:                                                           */
+/*   the return code for the program or nothing                       */
+/* YOU MUST FILL THIS ROUTINE WITH CODE!                              */
+/*                                                                    */
+/* þ ShowUsage                                                        */
+/* function:                                                          */
+/*   This routine is called, if the program is invoked with one of    */
+/*   the parameters /H, /h, /?, /HELP, -h, -H, -HELP or -?.           */
+/* parameter:                                                         */
+/*   none                                                             */
+/* returns:                                                           */
+/*   nothing                                                          */
+/* YOU SHOULD FILL THIS ROUTINE WITH CODE!                            */
+/*                                                                    */
+/* Predefined routines (you may use this routines in your code. See   */
+/* the source for the invocation parameters and the return codes):    */
+/*                                                                    */
+/* þ LoadDll parameter                                                */
+/*   - load a dll                                                     */
+/*                                                                    */
+/* þ ConvertNameToOS {fileName|dirName}                               */
+/*   - convert the name of a file or directory to the format of OS/2  */
+/*     by adding a leading and a trailing  double quote to the name.  */
+/*     the name.                                                      */
+/*     Example:                                                       */
+/*        =&gt; my1stFileName="This is a 'valid' HPFS filename"          */
+/*        =&gt; say convertNameToOS( my1stFileName )                     */
+/*      Output:                                                       */
+/*        "This is a 'valid' HPFS filename"                           */
+/*     Hint: You should always save the names of files and directorys */
+/*           without leading and trailing quotes or double quotes     */
+/*           because the REXX functions don't like quotes or double   */
+/*           quotes surrounding file and directory names.             */
+/*                                                                    */
+/* þ ShowString prefix, string                                        */
+/*   - show a string with word wrapping and write it also to the      */
+/*     logfile (if a logfile is defined)                              */
+/*     'prefix' is the prefix for the first line. This can be a       */
+/*     string like '*-* ' or a number. If 'prefix' is a number,       */
+/*     ShowString uses this number of blanks as prefix.               */
+/*     Note: Do not use ShowString for strings with color codes!      */
+/*                                                                    */
+/* þ ShowWarning message                                              */
+/*   - show the warning message 'message' and write it also to the    */
+/*     logfile if defined                                             */
+/*     Note: Do not use color codes in the message!                   */
+/*                                                                    */
+/* þ ShowError exitCode, errorMessage                                 */
+/*   - show the error message 'errorMessage', write it also to the    */
+/*     logfile if defined and exit the program with the return code   */
+/*     'exitCode'                                                     */
+/*     Note: Do not use color codes in the errorMessage!              */
+/*                                                                    */
+/* þ Log message                                                      */
+/*   - show the message 'message' and write the message also to the   */
+/*     logfile if defined                                             */
+/*     You may use colors in the message.                             */
+/*                                                                    */
+/* þ LogDebugMsg message                                              */
+/*   - show the message 'message' in the color for debug messages and */
+/*     write the message also to the logfile if defined (only if the  */
+/*     variable 'global.__verbose' is not equal '')                   */
+/*                                                                    */
+/* þ FlushQueue                                                       */
+/*   - flush the current REXX queue                                   */
+/*                                                                    */
+/* þ GetLineNo                                                        */
+/*   - get the number of a line in the REXX program at runtime        */
+/*     Usage:                                                         */
+/*       =&gt; thisLine = GetLineNo()                                    */
+/*                                                                    */
+/* þ Include fileName                                                 */
+/*   - execute the include file 'fileName'                            */
+/*     Usage:                                                         */
+/*       =&gt; Include( fileName )                                       */
+/*                                                                    */
+/* þ TryInclude fileName                                              */
+/*   - execute the include file 'fileName' if it exists               */
+/*     Usage:                                                         */
+/*       =&gt; TryInclude( fileName )                                    */
+/*                                                                    */
+/* #======================= !!! CAUTION: !!! =======================# */
+/* # Read the part about the 'INTERPRET' command in the Online help # */
+/* # of REXX carefully before writing and using include files!!!    # */
+/* # Hint: You can use multi line statements in include files.      # */
+/* #       (Exception: Multi line comments are not possible.)       # */
+/* # Note: You can NOT define subroutines in an include file        # */
+/* #       because the statements in the include file are executed  # */
+/* #       immediately!                                             # */
+/* #================================================================# */
+/*                                                                    */
+/* <!-- entering slot 574 -->Debugging routines                                                 */
+/*                                                                    */
+/* #======================= !!! CAUTION: !!! =======================# */
+/* # Note: You must delete the lines marked with                    # */
+/* #          **DEBUG**                                             # */
+/* #       before using the debugging routines!                     # */
+/* #================================================================# */
+/*                                                                    */
+/* þ ShowDefinedVariables                                             */
+/*   - shows some or all variables defined in a scope                 */
+/*     (This routine needs the DLL YDBAUTIL or RXU!)                  */
+/*                                                                    */
+/* #================================================================# */
+/*                                                                    */
+/* Do NOT use the following names for functions or routines:          */
+/*                                                                    */
+/*   ShowString     ShowWarning       ShowError     Log               */
+/*   LogDebugMsg    include           TryInclude    LoadDll           */
+/*   FlushQueue     ConvertNameToOS                                   */
+/*                                                                    */
+/* Environment variables used while running the program               */
+/*                                                                    */
+/* þ ANSI                                                             */
+/*   - Set the environment variable 'ANSI' to "0" or "OFF" if you     */
+/*     don't want colors.                                             */
+/*                                                                    */
+/* þ PATCHDRIVE                                                       */
+/*   - Set the environment variable 'PATCHDRIVE' to the drive with    */
+/*     a patched version of your program (if any exist, see the       */
+/*     routine 'I!.__CheckPatch' for the algorithm used ).            */
+/*                                                                    */
+/* þ SILENT                                                           */
+/*   - Set the environment variable 'SILENT' to "1" or "ON" to        */
+/*     suppress all messages.                                         */
+/*                                                                    */
+/* þ SOUND                                                            */
+/*   - Set the environment variable 'SOUND' to "0" or "OFF" if you    */
+/*     don't want sounds.                                             */
+/*                                                                    */
+/* þ RXTTRACE                                                         */
+/*   - Set the environment variable 'RXTTRACE' to "MAIN" to turn the  */
+/*     trace mode for the function MAIN on.                           */
+/*                                                                    */
+/* þ VERBOSE                                                          */
+/*   - Set the environment variable 'VERBOSE' to any value not equal  */
+/*     '' if you want debug information. If the value of the variable */
+/*     is 'DEBUG', the error handler turns interactive trace on if an */
+/*     error occured.                                                 */
+/*     Note that the error handler also turns interactive trace on if */
+/*     the environment variable RXTTRACE is set to 'MAIN' or if the   */
+/*     parameter '/TRACE' is specified.                               */
+/*                                                                    */
+/*-Message handling                                                   */
+/*                                                                    */
+/* TEMPLATE can use an internal or external routine for the message   */
+/* handling.  To activate this feature, you must add the statement    */
+/*                                                                    */
+/*   =&gt; global.__GetMsg = 'GETMSG'                                    */
+/*                                                                    */
+/* to the first part of your program. Replace GETMSG with the name    */
+/* of your message handling routine.                                  */
+/* Note that you can't use a path for the name of the routine. So the */
+/* routine must be an internal routine in your program, an external   */
+/* routine available through the environment variable PATH, a routine */
+/* within a loaded DLL or a routine in the macro space.               */
+/*                                                                    */
+/* The routine is called by TEMPLATE.CMD with:                        */
+/*                                                                    */
+/*   =&gt; call global.__GetMsg  msgNo,, {mP1, mP2, mP3, mP4, ,          */
+/*   =&gt;                                mP5, mP6, mP7, mP8, mP9}       */
+/*                                                                    */
+/* msgNo is the message number and mP1 to mP9 are the parameter for   */
+/* the message. The parameter for the message are optional and depend */
+/* on the message number.                                             */
+/* For example there are messages with 0, 1 or more parameter.        */
+/* The routine must return the message or an empty string.            */
+/*                                                                    */
+/* Note that there is an empty parameter between msgNo and the first  */
+/* message parameter!!!                                               */
+/*                                                                    */
+/* The following message numbers are used by TEMPLATE.CMD:            */
+/*                                                                    */
+/*  MsgNo  example message text                                       */
+/* ------------------------------------------------------------------ */
+/*  b+1    Routine "%1" not found                                     */
+/*  b+2    Can not write to the logfile "%1", the status of the       */
+/*         logfile is "%2". Now using the NUL device for logging      */
+/*  b+3    Include file "%1" not found                                */
+/*  b+4    Unexpected EOF detected while reading the include          */
+/*         file "%1"                                                  */
+/*  b+5    Error loading the DLL "%1"                                 */
+/*  b+6    Invalid call to LOADDLL                                    */
+/*  b+7    Warning:                                                   */
+/*  b+8    %1 - Error %2 detected! The error message is               */
+/*  b+9    Calling the patched version %1 ...                         */
+/*  b+10   ... the patched version endet with RC = %1                 */
+/*  b+11   Program aborted by the user (sigl=%1)                      */
+/*  b+12   %1 %2 started on %3 at %4 ...                              */
+/*  b+<!-- entering slot 575 -->13   %1 %2 ended on %3 at %4 with RC = %5 (='%6'x)              */
+/*  b+14   Usage:                                                     */
+/*                                                                    */
+/* The message numbers b+15 to b+50 are reserved for future use.      */
+/* b is the current value of the variable global.__BaseMsgNo.         */
+/* So, if you use the default value for global.__BaseMsgNo, 1000,     */
+/* TEMPLATE uses the message numbers 1001 to 1014 (and 1015 to 1050   */
+/* are reserved for future use).                                      */
+/*                                                                    */
+/* Parameter for the messages:                                        */
+/*                                                                    */
+/*  MsgNo  parameter description                Parameter             */
+/* ------------------------------------------------------------------ */
+/*  b+1    name of the not found routine           mP1                */
+/*  b+2    name of the log file/device             mP1                */
+/*         status of the logfile/device            mP2                */
+/*  b+3    name of the not found include file      mP1                */
+/*  b+4    name of the include file                mP1                */
+/*  b+5    name of the dll                         mP1                */
+/*  b+6    *** no parameter ***                                       */
+/*  b+7    *** no parameter ***                                       */
+/*  b+8    program name                            mP1                */
+/*         error number                            mP2                */
+/*  b+9    name of the patched version             mP1                */
+/*  b+10   RC of the patched version               mP1                */
+/*  b+11   line number                             mP1                */
+/*  b+12   program name                            mP1                */
+/*         program version                         mP2                */
+/*         start date                              mP3                */
+/*         start time                              mP4                */
+/*  b+13   program name                            mP1                */
+/*         program version                         mP2                */
+/*         end date                                mP3                */
+/*         end time                                mP4                */
+/*         return code                             mP5                */
+/*         return code in hexadecimal format       mP6                */
+/*  b+14   *** no parameter ***                                       */
+/*                                                                    */
+/* Hints:                                                             */
+/*                                                                    */
+/* In the default TEMPLATE catches ALL error conditions (SYNTAX,      */
+/* NOVALUE, HALT, FAILURE, NOTREADY and ERROR). To change this        */
+/* behaviour add one or more 'SIGNAL OFF condition' - statements      */
+/* at the begin of the procedure MAIN.                                */
+/*                                                                    */
+/* All routines declared with 'PROCEDURE' must have an 'EXPOSE' list! */
+/* You MUST add the string '(EXPOSELIST)' to the expose lists of ALL  */
+/* procedures!                                                        */
+/* If you get an internal error in the error routine, check if        */
+/* '(EXPOSELIST)' is included in the expose lists of ALL routines!    */
+/*                                                                    */
+/* Use only                                                           */
+/*   =&gt; call Log message                                              */
+/* to print messages on the screen.                                   */
+/*                                                                    */
+/* Use only                                                           */
+/*   =&gt; call LogDebugMsg message                                      */
+/* to print debugging messages on the screen.                         */
+/*                                                                    */
+/* Define all global variables as 'GLOBAL.__varName'.                 */
+/* Note: If you want to define another stem with global variables     */
+/*       you should add the name of the stem to the expose list of    */
+/*       the routine 'MAIN' or define a  default for the variable     */
+/*       'EXPOSELIST' in the first part of your program!              */
+/*                                                                    */
+/* Append the names of all routines, which should be executed at      */
+/* program end to the variable 'PROG.__EXITROUTINES'.                 */
+/* Example:                                                           */
+/*                                                                    */
+/*   If the program should execute the routine 'DelTempFile'          */
+/*   at program end use the following statement:                      */
+/*                                                                    */
+/*   =&gt; prog.__ExitRoutines = prog.__ExitRoutines ' DelTempFile'      */
+/*                                                                    */
+/*   Note that you can't use parameters for the routines saved in     */
+/*   the variable 'PROG.__EXITROUTINES'!                              */
+/*   Note further that the routines are executed in the order they    */
+/*   are saved in the variable 'PROG.__EXITROUTINES'.                 */
+/*   And last but not least:                                          */
+/*   You can add new entrys to this variable in an exit routine. You  */
+/*   can also change or delete any entry from the variable in an      */
+/*   exit routine.                                                    */
+/*   You may check the variable 'PROG.__EXITCODE' in an exit routine  */
+/*   to determine what caused the program end (see predefined         */
+/*   return codes above)                                              */
+/*                                                                    */
+/* Use the following code sequence to inherit a log file to a         */
+/* child cmd file:                                                    */
+/*                                                                    */
+/*   =&gt; 'cmd /c ' ChildName ChildParameter prog.__logFileParm         */
+/*                                                                    */
+/* Use the variable 'prog.__LogALL' to direct STDOUT and STDERR       */
+/* of an OS/2 program into the logfile.                               */
+/* Example:                                                           */
+/*                                                                    */
+/*   =&gt; '@<!-- entering slot 576 -->attrib ' thisFile  prog.__LogALL                            */
+/*                                                                    */
+/* Use the variable 'prog.__LogSTDERR' to direct only STDERR of an    */
+/* OS/2 program into the logfile.                                     */
+/* Example:                                                           */
+/*                                                                    */
+/*   =&gt; '@attrib ' thisFile  prog.__LogSTDERR                         */
+/*                                                                    */
+/* Use the variable 'PROG.__LogSTDOUT' to direct only STDOUT of an    */
+/* OS/2 program into the logfile.                                     */
+/* Example:                                                           */
+/*                                                                    */
+/*   =&gt; '@attrib ' thisFile  prog.__LogSTDOUT                         */
+/*                                                                    */
+/* Do NOT use 'PROG.__LogSTDERR' and 'PROG.__LogSTDOUT' in the same   */
+/* command (use 'PROG.__LogALL' instead)                              */
+/*                                                                    */
+/* Use the variable 'global.__verbose' if you want to add debug code  */
+/* to your program.                                                   */
+/* Example:                                                           */
+/*                                                                    */
+/*   =&gt; if global.__verbose &lt;&gt; '' then                                */
+/*   =&gt; do                                                            */
+/*   =&gt;    {debug code}                                               */
+/*   =&gt; end                                                           */
+/*                                                                    */
+/* Use the variable 'PROG.__ENV' if you want to set or get an         */
+/* environment variable.                                              */
+/* Example:                                                           */
+/*                                                                    */
+/*   =&gt; MaintDrive = value( 'MaintDrive',, prog.__env )               */
+/*                                                                    */
+/* REPORT ANY ERRORS and SUGGESTIONS to the author of this code.      */
+/*                                                                    */
+/* DELETE THE COMMENTS ABOVE THIS LINE IN YOUR FILES!                 */
+/*                                                                    */
+/* Based on TEMPLATE.CMD v3.08, TEMPLATE is (c) 2001 Bernd Schemmer,  */
+/* Stalburgstr. 14, D-60318 Frankfurt Germany, Bernd.Schemmer@gmx.de  */
+/* ------------------------------------------------------------------ */
+
+  call trace 'off'      /* turn interactive trace off                 */
+                        /* use this statement as the first statement  */
+                        /* in your program, to ignore the value of    */
+                        /* the environment variable RXTRACE.          */
+
+                  global. = ''  /* init the stem global. with ''      */
+
+/*** change the following values to your need                       ***/
+
+                        /* additional parameter                 v3.06 */
+                        /* (string for the usage routine)       v3.06 */
+  global.__userUsage  = ''                                   /* v3.06 */
+
+         global.__Version = 1.0          /* Version of YOUR program   */
+
+       global.__SignOnMsg = 1   /* set to 0 if you do not want the    */
+                                /* program start and end messages     */
+
+         global.__NeedCID = 0   /* set to 1 if you need CID support   */
+
+      global.__NeedColors = 1   /* set to 1 if you want colored msgs  */
+
+  global.__NeedPatchCheck = 1   /* set to 1 if you want the program   */
+                                /* to search for a patched version of */
+                                /* this program                       */
+
+              /* set default values for EXPOSELIST if necessary       */
+/*             exposeList = ''                                        */
+
+              /* name of the routine for the message handling         */
+              /* Note: Use '' for hardcoded messages                  */
+/*          global.__GetMsg = ''                                      */
+
+             /* base number for the message numbers (def.: 1000)      */
+/*          global.__BaseMsgNo = 1000                                 */
+
+             /* note: set the variable prog.__STDOUT to "STDERR:"     */
+             /*       or "NUL" if your program is a filter program!   */
+
+  prog.__STDOUT = 'STDOUT'        /* necessary for Object REXX        */
+  prog.__STDERR = 'STDOUT'        /* necessary for Object REXX        */
+                                                                   /*!*/
+/***                End of variables to change                      ***/
+/*      HINT: The further program code is in the function MAIN        */
+
+/***        End of Part 1 of the source code of TEMPLATE.CMD        ***/
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="543_L3_UsingTEMPLATECMD.html">[Back: Using TEMPLATE.CMD]</A> <BR>
+<A HREF="545_L3_SourcecodeofTEMPLATE.html">[Next: Source code of TEMPLATE.CMD - part 2]</A> 
+</BODY>
+</HTML>

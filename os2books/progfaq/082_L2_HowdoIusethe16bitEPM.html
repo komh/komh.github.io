@@ -1,0 +1,152 @@
+<HTML>
+<HEAD>
+<TITLE>How do I use the 16-bit EPM toolkit?</TITLE>
+</HEAD>
+<BODY>
+<H1>How do I use the 16-bit EPM toolkit?</H1><!-- entering slot 97 -->
+<P>
+Since there were a few requests, here are the changes I made to get the
+ESIMPLE example from the EPM Toolkit to work with the C-Set++ compiler.
+The ETK DLLs are 16-bit and need to be thunked to be called from a 32-bit
+app. Since I was playing around, some of the changes were not necessary
+to get the program to run.  Changes are in DIFF format.
+<PRE>**** Changes to EDLL.H ****
+254a255
+&gt; #pragma pack(2)
+259,263c260,264
+&lt;    PSWP   pswp;         // positioning of edit window
+&lt;    PSZ    filename;     // file to be edited (with wildcard)
+&lt;    PVOID  hEditPtr;     // handle to editor pointer icon.
+&lt;    PVOID  hMarkPtr;     // handle to mark pointer icon.
+&lt;    PVOID  hEditorIcon;  // editor ICON.
+&gt;    PSWP _Seg16   pswp;         // positioning of edit window
+&gt;    PSZ _Seg16    filename;     // file to be edited (with wildcard)
+&gt;    HPOINTER  hEditPtr;  // handle to editor pointer icon.
+&gt;    HPOINTER  hMarkPtr;  // handle to mark pointer icon.
+&gt;    PVOID _Seg16  hEditorIcon;  // editor ICON.
+267,269c268,270
+&lt;    PSZ    exfile;       // pre-compiled macro code file (EPM.EX)
+&lt;    PSZ    topmkr;       // top and bottom of file marker
+&lt;    PSZ    botmkr;       //
+---
+&gt;    PSZ _Seg16    exfile;       // pre-compiled macro code file (EPM.EX)
+&gt;    PSZ _Seg16    topmkr;       // top and bottom of file marker
+&gt;    PSZ _Seg16    botmkr;       //
+271,272c272,273
+&lt;    PSZ    exsearchpath; // a set of paths to search for ex's files
+&lt;    PSZ    exe_path;     // path where the application started
+---
+&gt;    PSZ _Seg16    exsearchpath; // a set of paths to search for ex's files
+&gt;    PSZ _Seg16    exe_path;     // path where the application started
+275c276,277
+&lt; typedef EDITORINFO far *PEDITORINFO;
+---
+&gt; typedef EDITORINFO * PEDITORINFO;
+&gt; #pragma pack()
+280c282
+&lt; #define ETKENTRY _loadds
+---
+&gt; #define ETKENTRY CDECL16
+285,286c287,288
+&lt; PSZ	 ETKENTRY EtkRegister( HAB hab, ULONG class_style );
+&lt; USHORT ETKENTRY EtkCreate( PEDITORINFO epm_p, PHWND hEwnd_p);
+---
+&gt; PSZ _Seg16    ETKENTRY EtkRegister( HAB hab, ULONG class_style );
+&gt; USHORT ETKENTRY EtkCreate( PEDITORINFO _Seg16 epm_p, PHWND _Seg16 hEwnd_p);
+304c306,307
+&lt; SHORT  ETKENTRY EtkSetSelection( HWND  hwndClient, LINE_INDEX_G  firstline,
+---
+&gt; SHORT  ETKENTRY EtkSetSelection( HWND  hwndClient, LINE_INDEX_G  firstline,
+&gt;    FIDType fileid);
+
+**** Changes to ESIMPLE.C ****
+28a29,30
+&gt;
+&gt; #include "thunk.h"
+47a50
+&gt;    HWND hwndEditFrame;
+52c55
+&lt;
+---
+&gt;    swp.fl = SWP_MOVE | SWP_SIZE;
+58c61
+&lt;    epm.filename    = (PSZ)Fname;      // file to be edited (with wildca
+---
+&gt;    epm.filename    = Fname;           // file to be
+&gt; edited (with wildca
+64,65c67,70
+&lt;    epm.editorstyle = EDIT_STYLE_ACTIVATEFOCUS | EDIT_STYLE_DISABLEOWNERAFFECT
+&lt;                      EDIT_STYLE_CURSORON;
+---
+&gt;    epm.editorstyle = EDIT_STYLE_ACTIVATEFOCUS |
+&gt;                      EDIT_STYLE_CURSORON |
+&gt;                      EDIT_STYLE_STATUSLINE |
+&gt;                      EDIT_STYLE_MESSAGELINE;
+67,68c72,73
+&lt;    epm.pmstyle     = FCF_TITLEBAR | FCF_SIZEBORDER | FCF_VERTSCROLL;
+&lt;
+---
+&gt;    epm.pmstyle     = FCF_TITLEBAR | FCF_SIZEBORDER |
+&gt; FCF_VERTSCROLL | FCF_MIN
+&gt;    epm.font = TRUE;  // large font
+70,71c75,76
+&lt;    epm.topmkr      =                        // top and bottom file indicator
+&lt;    epm.botmkr      = (PSZ)" ÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷÷";
+---
+&gt;    epm.topmkr      = (PSZ)"&lt;Top&gt;";
+&gt; // top and bottom fi
+&gt;    epm.botmkr      = (PSZ)"&lt;Bottom&gt;";
+75c80
+&lt;
+---
+&gt;    epm.hini = NULLHANDLE;
+77,79c82,86
+&lt;    EtkCreate( (EDITORINFO far *)&amp;epm, (PHWND)&amp;hwndEdit );
+&lt;
+&lt;    return( (HWND)hwndEdit );
+---
+&gt;    EtkCreate( &amp;epm, &amp;hwndEdit );
+&gt;       hwndEditFrame = WinQueryWindow(hwndEdit, QW_PARENT);
+&gt;       WinSetWindowPos(hwndEditFrame, NULLHANDLE, swp.x, swp.y,
+&gt;           swp.cx, swp.cy, SWP_MOVE | SWP_SIZE);
+&gt;    return( hwndEdit );
+95c102
+&lt; MRESULT FAR PASCAL TestWndProc( HWND hwnd, USHORT <!-- entering slot 98 -->msg, MPARAM mp1, MPARAM mp2
+---
+&gt; MRESULT EXPENTRY TestWndProc( HWND hwnd, USHORT msg,
+&gt; MPARAM mp1, MPARAM mp2 )
+144,146c151,155
+&lt;   case EPM_EDIT_ACTIVEHWND:
+&lt;      WinSetActiveWindow(HWND_DESKTOP,(HWND)mp1 );
+&lt;      break;
+---
+&gt; case EPM_EDIT_ACTIVEHWND:
+&gt;   {
+&gt;      WinSetActiveWindow(HWND_DESKTOP,(HWND)mp1 );
+&gt;   }
+&gt;   break;
+160c169
+&lt;                     (PSZ)mp1,
+---
+&gt;                     (PSZ)_DosSelToFlat(mp1),
+162c171
+&lt;                     NULL,
+---
+&gt;                     NULLHANDLE,
+235c244
+&lt;     hab = WinInitialize(NULL);              // Initialize app as a PM app
+---
+&gt;     hab = WinInitialize(NULLHANDLE);        // Initialize app as a PM app
+247c256
+&lt;
+</PRE>
+
+<P>
+Credit:  Mat Kramer 
+
+<P><HR>
+
+<A HREF="081_L2_HowdoItakecontroloff.html">[Back: How do I take control of frame sizing?]</A> <BR>
+<A HREF="083_L2_HowdoIgeterrorinfoaf.html">[Next: How do I get error info after using WinGetLastError()?]</A> 
+</BODY>
+</HTML>

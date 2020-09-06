@@ -1,0 +1,464 @@
+<HTML>
+<HEAD>
+<TITLE>Finding Files From Handles - Example</TITLE>
+</HEAD>
+<BODY>
+<H1>Finding Files From Handles - Example</H1><!-- entering slot 222 --> 
+<P>
+In the following example we choose to discover all the open file system
+objects in process 19, which happens to be running the IPFC compiler.
+<PRE>&gt;&gt;&gt; List all the thread slots in the system to find IPFC
+# .p
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 0001  0001 0000 0000 0001 blk 0100 ffe3a000 ffe3c7d4 ffe3c61c 1e7c 00 *ager
+ 0002  0001 0000 0000 0002 blk 0200 7b7aa000 ffe3c7d4 7b9a8020 1f3c 00 *tsd
+ 0003  0001 0000 0000 0003 blk 0200 7b7ac000 ffe3c7d4 7b9a81d8 1f50 00 *ctxh
+ 0004  0001 0000 0000 0004 blk 081f 7b7ae000 ffe3c7d4 7b9a8390 1f48 00 *kdb
+ 0005  0001 0000 0000 0005 blk 0800 7b7b0000 ffe3c7d4 7b9a8548 1f20 00 *lazyw
+ 0006  0001 0000 0000 0006 blk 0800 7b7b2000 ffe3c7d4 7b9a8700 1f3c 00 *asyncr
+ 0009  0002 0000 0002 0001 blk 021f 7b7b8000 7b9c4020 7b9a8c28      00 LOGDAEM
+ 0008  0003 0001 0003 0001 rdy 061f 7b7b6000 7b9c484c 7b9a8a70 1eb8 01 PMSHL32
+ 000b  0003 0001 0003 0002 blk 0800 7b7bc000 7b9c484c 7b9a8f98      01 PMSHL32
+ 000c  0003 0001 0003 0003 blk 0800 7b7be000 7b9c484c 7b9a9150      01 PMSHL32
+ 000d  0003 0001 0003 0004 blk 0800 7b7c0000 7b9c484c 7b9a9308      01 PMSHL32
+ 000e  0003 0001 0003 0005 blk 0800 7b7c2000 7b9c484c 7b9a94c0      01 PMSHL32
+ 0007  0003 0001 0003 0006 blk 0200 7b7b4000 7b9c484c 7b9a88b8 1ecc 01 PMSHL32
+ 0011  0003 0001 0003 0007 blk 0200 7b7c8000 7b9c484c 7b9a99e8 1ecc 01 PMSHL32
+ 0012  0003 0001 0003 0008 blk 0200 7b7ca000 7b9c484c 7b9a9ba0      01 PMSHL32
+ 0013  0003 0001 0003 0009 blk 0200 7b7cc000 7b9c484c 7b9a9d58      01 PMSHL32
+ 0014  0003 0001 0003 000a blk 0800 7b7ce000 7b9c484c 7b9a9f10      01 PMSHL32
+ 0015  0003 0001 0003 000b blk 0800 7b7d0000 7b9c484c 7b9aa0c8      01 PMSHL32
+ 0016  0003 0001 0003 000c blk 0800 7b7d2000 7b9c484c 7b9aa280      01 PMSHL32
+ 0017  0003 0001 0003 000d blk 0804 7b7d4000 7b9c484c 7b9aa438 1ea8 01 PMSHL32
+ 0018  0003 0001 0003 000e rdy 0804 7b7d6000 7b9c484c 7b9aa5f0      01 PMSHL32
+ 0019  0003 0001 0003 000f blk 0500 7b7d8000 7b9c484c 7b9aa7a8      01 PMSHL32
+ 001a  0003 0001 0003 0010 rdy 0801 7b7da000 7b9c484c 7b9aa960 1bac 01 PMSHL32
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 001b  0003 0001 0003 0011 blk 0800 7b7dc000 7b9c484c 7b9aab18      01 PMSHL32
+*001c# 0003 0001 0003 0012 run 0800 7b7de000 7b9c484c 7b9aacd0 1b8c 01 PMSHL32
+ 001d  0003 0001 0003 0013 blk 0200 7b7e0000 7b9c484c 7b9aae88      01 PMSHL32
+ 0023  0018 0003 0018 0001 rdy 061f 7b7ec000 7b9c7128 7b9ab8d8 1eb8 13 EPM
+ 0038  0018 0003 0018 0002 blk 0200 7b816000 7b9c7128 7b9adcf0 1ecc 13 EPM
+ 0037  0013 0003 0013 0001 blk 0200 7b814000 7b9c9a04 7b9adb38      19 IBMAVSD
+ 0033  0012 0003 0012 0001 blk 0200 7b80c000 7b9c89ac 7b9ad458 1eb8 17 PMDRAW
+ 0035  0012 0003 0012 0002 blk 0200 7b810000 7b9c89ac 7b9ad7c8 1eb8 17 PMDRAW
+ 0036  0012 0003 0012 0003 blk 0200 7b812000 7b9c89ac 7b9ad980      17 PMDRAW
+ 0034  0010 0003 0010 0001 blk 0400 7b80e000 7b9c91d8 7b9ad610 1ed4 12 CMD
+ 002e  000d 0003 000d 0001 blk 0200 7b802000 7b9c8180 7b9acbc0 1eb8 16 PULSE
+ 0030  000d 0003 000d 0002 rdy 0100 7b806000 7b9c8180 7b9acf30 1f28 16 PULSE
+ 002f  000d 0003 000d 0003 rdy 081f 7b804000 7b9c8180 7b9acd78 1f00 16 PULSE
+ 002d  000c 0003 000c 0001 blk 0200 7b800000 7b9c7954 7b9aca08 1eb8 15 DINFO
+ 0032  000c 0003 000c 0002 rdy 061f 7b80a000 7b9c7954 7b9ad2a0 1f00 15 DINFO
+ 002c  000b 0003 000b 0001 blk 0200 7b7fe000 7b9c58a4 7b9ac850 1eb8 14 MRFILE32
+ 0031  000b 0003 000b 0002 blk 0200 7b808000 7b9c58a4 7b9ad0e8 1ecc 14 MRFILE32
+ 0029  000a 0003 000a 0001 rdy 061f 7b7f8000 7b9c68fc 7b9ac328 1eb8 10 PMDIARY
+ 001f  0006 0003 0006 0001 rdy 062f 7b7e4000 7b9c60d0 7b9ab1f8 1eb8 11 PMSHL32
+ <!-- entering slot 223 -->0021  0006 0003 0006 0002 blk 0200 7b7e8000 7b9c60d0 7b9ab568      11 PMSHL32
+ 0022  0006 0003 0006 0003 blk 0200 7b7ea000 7b9c60d0 7b9ab720 1eb8 11 PMSHL32
+ 0020  0006 0003 0006 0004 blk 0200 7b7e6000 7b9c60d0 7b9ab3b0      11 PMSHL32
+ 001e  0006 0003 0006 0005 blk 0200 7b7e2000 7b9c60d0 7b9ab040 1ecc 11 PMSHL32
+ 0024  0006 0003 0006 0006 blk 0200 7b7ee000 7b9c60d0 7b9aba90      11 PMSHL32
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 0025  0006 0003 0006 0007 blk 0200 7b7f0000 7b9c60d0 7b9abc48      11 PMSHL32
+ 0026  0006 0003 0006 0008 blk 0200 7b7f2000 7b9c60d0 7b9abe00      11 PMSHL32
+ 0027  0006 0003 0006 0009 blk 0200 7b7f4000 7b9c60d0 7b9abfb8      11 PMSHL32
+ 0028  0006 0003 0006 000a blk 0200 7b7f6000 7b9c60d0 7b9ac170      11 PMSHL32
+ 002a  0006 0003 0006 000c blk 021f 7b7fa000 7b9c60d0 7b9ac4e0 1eac 11 PMSHL32
+ 002b  0006 0003 0006 000d blk 0200 7b7fc000 7b9c60d0 7b9ac698 1eb8 11 PMSHL32
+ 000a  0004 0003 0004 0001 blk 0800 7b7ba000 7b9c5078 7b9a8de0      00 HARDERR
+ 000f  0004 0003 0004 0002 blk 0800 7b7c4000 7b9c5078 7b9a9678      00 HARDERR
+ 0010  0004 0003 0004 0003 blk 0800 7b7c6000 7b9c5078 7b9a9830      00 HARDERR
+ 0039  0019 0010 0019 0001 rdy 061f 7b818000 7b9ca230 7b9adea8 1f0c 12 IPFC
+
+&gt;&gt;&gt; IPFC is running in slot 39, but this is not the current system
+&gt;&gt;&gt; slot so we have to refer to PTDA symbols relative to pPTDA
+&gt;&gt;&gt; First establish whether JFN_table has been expanded?
+
+# dw %7b9ca230 + jfn_ptable-ptda_start l2
+%7b9caa18  fd8a 0030
+
+&gt;&gt;&gt; No it hasn't - it's still based on selector 30 and therefore
+&gt;&gt;&gt; still imbedded in the PTDA at label JFN_table.
+&gt;&gt;&gt; Note: we can't display it as 30:fd8a since selector 30
+&gt;&gt;&gt; aliases the current system PTDA, hence:
+
+# dw %7b9ca230 + jfn_table-ptda_start l14
+%7b9ca7e6  0027 0027 0027 0074 002a 0072 0077 0068
+%7b9ca7f6  0015 0041 0069 007f ffff ffff ffff ffff
+%7b9ca806  ffff ffff ffff ffff
+
+&gt;&gt;&gt; These are the SFNs that correspond to JFNs 0000 through 0014.
+&gt;&gt;&gt; In fact the highest JFN currently open in this process is 000b
+&gt;&gt;&gt; which corresponds to SFN 007f
+
+&gt;&gt;&gt; Next we locate the STF. From the SAS we look for the SFT selector:
+
+
+# .a
+--- SAS Base Section ---
+                      SAS signature: SAS
+           offset to tables section: 0016
+      FLAT selector for kernel data: 0168
+    offset to configuration section: 001E
+    offset to device driver section: 0020
+   offset to Virtual Memory section: 002C
+          offset to Tasking section: 005C
+              offset to RAS section: 006E
+      offset to File System section: 0074
+          offset to infoseg section: 0080
+--- SAS Protected Modes Tables Section ---
+                   selector for GDT: 0008
+                   selector for LDT: 0000
+                   selector for IDT: 0018
+               selector for GDTPOOL: 0100
+--- SAS Device Driver Section ---
+    offset for the first <!-- entering slot 224 -->bimodal dd: 0CB9
+  offset for the first real mode dd: 0000
+      sel for Drive Parameter Block: 04C8
+       sel for ABIOS prot. mode CDA: 0000
+        seg for ABIOS real mode CDA: 0000
+                   selector for FSC: 00C8
+--- SAS Task Section ---
+          selector for current PTDA: 0030
+  FLAT offset for process tree head: FFF10910
+ FLAT address for TCB address array: FFF06BB6
+      offset for current TCB number: FFDFFB5E
+             offset for ThreadCount: FFDFFB62
+--- SAS File System Section ---
+                handle to MFT PTree: FE72CFBC
+     selector for System File Table: 00C0
+     sel. for Volume Parameter Bloc: 0788
+   sel. for Current Directory Struc: 07B8
+        selector for buffer segment: 00A8
+--- SAS Information Segment Section ---
+       selector for global info seg: 0428
+   address of curtask local infoseg: 03C80000
+      address of DOS task's infoseg: FFFFFFFF
+         selector for Codepage Data: 07CB
+--- SAS RAS Section ---
+selector for System Trace Data Area: 04B0
+ segment for System Trace Data Area: 04B0
+        offset for trace event mask: 0B28
+--- SAS Configuration Section ---
+    offset for Device Config. Table: 0D50
+--- SAS Virtual Memory Mgt. Section ---
+       Flat offset of arena records: FFF13304
+      Flat offset of object records: FFF1331C
+     Flat offset of context records: FFF1330C
+  Flat offset of kernel mte records: FFF0A891
+     Flat offset of linked mte list: FFF07934
+    Flat offset of page frame table: FFF11A70
+    Flat offset of page range table: FFF111EC
+    Flat offset of swap frame array: FFF03BAC
+           Flat offset of Idle Head: FFF10090
+           Flat offset of Free Head: FFF10080
+          Flat offset of Heap Array: FFF11B78
+     Flat offset of all mte records: FFF12E04
+
+&gt;&gt;&gt; We see this is assigned to selector c0.
+&gt;&gt;&gt; This is not quite the SFT but a table of selectors that point to
+&gt;&gt;&gt; each extent of the SFT. Each extent holds up to 500 STF entries.
+&gt;&gt;&gt; All the SFN's we're interested in are less than 500 so occupy the
+&gt;&gt;&gt; first extent. Note: we could have obtained the SFT selector from:
+
+# ln GDT_SFT
+138:000000c0 os2krnl DOSGDTDATA:GDT_SFT
+#
+
+&gt;&gt;&gt; List the table of extents:
+
+# dw c0:0
+00c0:00000000  0438 0000 0000 0000 0000 0000 0000 0000
+00c0:00000010  0000 0000 0000 0000 0000 0000 0000 0000
+00c0:00000020  0000 0000 0000 0000 0000 0000 0000 0000
+00c0:00000030  0000 0000 0000 0000 0000 0000 0000 0000
+00c0:00000040  0000 0000 0000 0000 0000 0000 0000 0000
+00c0:00000050  0000 0000 0000 0000 0000 0000 0000 0000
+00c0:00000060  0000 0000 0000 0000 0000 0000 0000 0000
+00c0:00000070  0000 0000 0000 0000 0000 0000 0000 0000
+
+&gt;&gt;&gt; Now list the first extent:
+
+# dw 438:0
+0438:00000000  0000 0000 0000 0000 0001 0000 0000 0001
+0438:00000010  0000 0000 0800 c800 0000 0000 0000 0000
+0438:00000020  7000 860e c6fe 6821 0008 0000 0000 0000
+0438:00000030  0000 0000 0000 0000 0000 0000 0000 0000
+0438:00000040  0000 0000 0000 0000 0000 8a30 007a 0000
+0438:00000050  0000 0000 0000 a000 0000 1200 0000 0000
+0438:00000060  0000 0000 0000 0000 e700 0110 6000 00ee
+0438:00000070  0000 0000 0000 0000 0000 0000 0000 0000
+
+&gt;&gt;&gt; There is an 8 byte header to each extent. It followed by one or
+&gt;&gt;&gt; more 131 (hex 83) byte SFT entries. The first word of the header
+&gt;&gt;&gt; contains the selector for the next extent.  In this case there
+&gt;&gt;&gt; isn't one.
+
+&gt;&gt;&gt; To locate the SFT <!-- entering slot 225 -->entry corresponding to SFN we use the formula
+&gt;&gt;&gt; 438:(8+(83*SFN))
+&gt;&gt;&gt; We can dump this out directly or by using the .D SFT command:
+&gt;&gt;&gt; Start by examining SFN 0077 (JFN 0006 for slot 39)
+
+# .d sft 438:(8+(83*77))
+      sf_ref_count: 0001                        sfi_mode: 20a2
+        sf_usercnt: 0000                        sfi_hVPB: 0012
+          reserved: 00                         sfi_ctime: 0000
+       sf_flags(2): 0000:0000                  sfi_cdate: 0000
+         sf_devptr: #0000:0000                 sfi_atime: 0000
+            sf_FSC: #00c8:0008                 sfi_adate: 0000
+          sf_chain: #0000:0000                 sfi_mtime: 6000
+            sf_MFT: fe87ebf0                   sfi_mdate: 1b0b
+sfdFAT_firFILEclus: 57e4                        sfi_size: 00000000
+    sfdFAT_cluspos: 0ff8                    sfi_position: 00000000
+    sfdFAT_lstclus: 0038                         sfi_UID: 0000
+     sfdFAT_dirsec: 00002cad                     sfi_PID: 0019
+     sfdFAT_dirpos: 09                           sfi_PDB: 0000
+       sfdFAT_name: FCLDLGP DLL                      sfi_selfsfn: 0077
+   sfdFAT_EAHandle: 0000                      sfi_tstamp: 00
+          sf_plock: 0000                     sfi_DOSattr: 20
+      sf_NmPipeSfn: 0000
+       sf_codepage: 0000
+
+&gt;&gt;&gt; Fully qualified file system names are maintained in the Master
+&gt;&gt;&gt; File Table entries. Lets check out the MFT for this SFT, which
+&gt;&gt;&gt; is pointed to by sf_MFT.
+&gt;&gt;&gt; Under the Kernel debugger we could use .D MFT to format an MFT
+&gt;&gt;&gt; entry. Under the dump formatter .D MFT does not work correctly:
+
+
+# db %fe87ebf0
+%fe87ebf0 4b 53 45 4d 01 02 00 00-00 00 00 00 00 00 00 00 KSEM............
+%fe87ec00 00 00 ed 3c 38 04 00 00-00 00 4b 53 45 4d 01 02 ..m&lt;8.....KSEM..
+%fe87ec10 00 00 00 00 00 00 00 00-00 00 00 00 1c 0e 00 00 ................
+%fe87ec20 6d 46 12 00 43 3a 5c 24-30 30 30 30 24 00 87 fe mF..C:\$0000$..~
+%fe87ec30 14 00 9e ff 29 00 0b 00-dc eb 87 fe 08 43 83 fe ....)...\k.~.C.~
+%fe87ec40 f0 eb 87 fe 48 00 9e ff-4b 53 45 4d 01 02 00 00 pk.~H...KSEM....
+%fe87ec50 00 00 00 00 00 00 00 00-00 00 5e 3a 38 04 00 00 ..........^:8...
+%fe87ec60 00 00 4b 53 45 4d 01 02-00 00 00 00 00 00 00 00 ..KSEM..........
+
+&gt;&gt;&gt; The file name is at MFT+34 in the ALLSTRICT kernel and 2a in the
+&gt;&gt;&gt; RETAIL kernel. There are two imbedded KSEMs, which only only
+&gt;&gt;&gt; contain the signature KSEM in the ALLSTRICT kernel, also the MFT
+&gt;&gt;&gt; contains the signature mF at +30 in the ALLSTRICT kernel.
+&gt;&gt;&gt; The first KSEM used for serialising read/single write access to
+&gt;&gt;&gt; the file. The second KSEM is used for updating the cluster map.
+
+&gt;&gt;&gt; These KSEMs can be formatted using .d KSEM
+
+# .d ksem %fe87ebf0
+Signature     : KSEM                        Nest: 0000
+Type          : SHARE                    Readers: 0000
+Flags         : 01                PendingReaders: 0000
+Owner         : 0000              PendingWriters: 0000
+# .d ksem %fe87ebf0+1a
+Signature     : KSEM                        Nest: 0000
+Type          : SHARE                    Readers: 0000
+Flags         : 01                PendingReaders: 0000
+Owner         : 0000              PendingWriters: 0000
+#
+&gt;&gt;&gt; In this case they are unowned.
+
+&gt;&gt;&gt; The file name in the MFT does not agree with the sfdFAT_name.
+&gt;&gt;&gt; We <!-- entering slot 226 -->suspect that this is not a FAT file. This can be verified by
+&gt;&gt;&gt; examining the file system control block entry for the FSD that's
+&gt;&gt;&gt; managing this file. The FSC entry address appears in the SFT at
+&gt;&gt;&gt; sf_FSC. In this case it is 00c8:0008.
+
+# dw c8:8
+00c8:00000008  0b68 0840 0b6c 0840 0000 0828 01fc 0828
+00c8:00000018  0010 0828 05b4 0820 0570 0828 0580 0828
+00c8:00000028  0634 0828 0640 0828 0e3c 0828 1120 0828
+00c8:00000038  0834 0828 090c 0828 09f8 0820 1130 0828
+00c8:00000048  1f24 0828 1f6e 0828 2122 0828 16e4 0828
+00c8:00000058  1b10 0828 1b38 0828 1bec 0828 1dc8 0828
+00c8:00000068  0c60 0820 0d70 0820 1f14 0828 215c 0828
+00c8:00000078  22a0 0828 2294 0828 111c 0820 25fc 0828
+
+&gt;&gt;&gt; Each FSC enrty is a table of far16 pointers. The first points the
+&gt;&gt;&gt; The FSD attributes, the second to the name and the remainder are
+&gt;&gt;&gt; standard FSD entry points. (See OEMI IFS Documentation).
+&gt;&gt;&gt; the name of this FSD is....
+
+# da 840:b6c
+0840:00000b6c HPFS
+
+&gt;&gt;&gt; The word prefixing the file name in the MFT is the handle to the
+&gt;&gt;&gt; Volume Parameter Block (hVPB). This also appears in the SFT under
+&gt;&gt;&gt; sfi_hVPB. In this instance the hVPB is 0012.
+&gt;&gt;&gt; To format the VPB we need to obtain the selector for the VPB
+&gt;&gt;&gt; segment. N.B. this is not stored in the SAS under Volume Parameter
+&gt;&gt;&gt; Block. We have to locate this using:
+
+# ln GDT_VPB
+138:00000098 os2krnl DOSGDTDATA:GDT_VPB
+#
+
+&gt;&gt;&gt; The hVPB is an offset into the VPB segment. Format a VPB
+&gt;&gt;&gt; using .D VPB
+
+# .d vpb 98:12
+        vpb_flink: 0000                  vpdFAT_cluster_mask: 02
+        vpb_blink: 008d                 vpdFAT_cluster_shift: 00
+    vpb_ref_count: 0057                     vpdFAT_first_FAT: 0000
+ vpb_search_count: 0004                     vpdFAT_FAT_count: 00
+ vpb_first_access: 00                    vpdFAT_root_entries: 0030
+    vpb_signature: 444a                  vpdFAT_first_sector: 06001100
+     vpb_flags(2): 02:00                  vpdFAT_max_cluster: 7d5c
+          vpb_FSC: #00c8:0008                vpdFAT_FAT_size: b213
+           vpi_ID: 25be2014                vpdFAT_dir_sector: fc04b800
+         vpi_pDPB: #04c8:0038                   vpdFAT_media: 0a
+     vpi_cbSector: 0200                     vpdFAT_next_free: 00b2
+       vpi_totsec: 00049020                  vpdFAT_free_cnt: 04b8
+       vpi_trksec: 0023                  vpdFAT_FATentrysize: b2
+        vpi_nhead: 000c                      vpdFAT_IDsector: 00000000
+         vpi_pDCS: #0000:0000                  vpdFAT_access: 0000
+         vpi_pVCS: #0000:0000                 vpdFAT_accwait: 0000
+        vpi_drive: 02                          vpdFAT_pEASFT: #0000:0000
+         vpi_unit: 02
+         vpi_text: UNLABELED
+         vpi_flags: 0003
+#
+&gt;&gt;&gt; Two important pieces of information in the VPB: vpi_drive and
+&gt;&gt;&gt; vpi_text. The drive number is the logical drive, numbering from
+&gt;&gt;&gt; 0, Thus 02 is drive C:
+&gt;&gt;&gt; vpi_text is the volume <!-- entering slot 227 -->label. in this case UNLABELED.
+&gt;&gt;&gt; The VPB contains a signature which when dumped as bytes appears as
+&gt;&gt;&gt; JD. Each VPB is 7b bytes, the first starts at +12. Each VPB can
+&gt;&gt;&gt; be dumped using the formula: 98:(12+(7b*entry))
+
+
+# db 98:12+(7b*0) l7b
+0098:00000012 00 00 8d 00 57 00 04 00-00 4a 44 02 00 08 00 c8 ....W....JD....H
+0098:00000022 00 02 00 00 00 00 30 00-00 11 00 06 5c 7d 13 b2 ......0.....\}.2
+0098:00000032 00 b8 04 fc 0a b2 00 b8-04 b2 00 00 00 00 0a 11 .8.|.2.8.2......
+0098:00000042 00 00 00 00 00 00 00 00-00 00 00 00 00 00 00 00 ................
+0098:00000052 00 00 00 00 00 00 00 00-00 00 00 9a 7b 4c 5c 00 ............{L\.
+0098:00000062 00 14 20 be 25 38 00 c8-04 00 02 20 90 04 00 23 .. &gt;%8.H... ...#
+0098:00000072 00 0c 00 55 4e 4c 41 42-45 4c 45 44 00 00 00 00 ...UNLABELED....
+0098:00000082 00 00 00 00 00 00 00 02-02 03 00                ...........
+
+&gt;&gt;&gt; The word at +2 is a chain pointer offset to the next VPB. In this case
+&gt;&gt;&gt; 008d (=7b+12)
+
+&gt;&gt;&gt; We can also obtain a link to disk device driver information from
+&gt;&gt;&gt; the VPB via vpi_pDPB (the disk parameter block). Under the
+&gt;&gt;&gt; kernel debugger this may be formatted using .D DPB, but gives
+&gt;&gt;&gt; erroneous results under DF.
+
+##.d dpb 4c8:38
+        dpb_drive: 02
+         dpb_unit: 02
+  dpb_driver_addr: #0738:0000
+     dpb_next_dpb: #04c8:0054
+     dpb_cbSector: 0200
+    dpb_first_FAT: 0001
+  dpb_toggle_time: 00000000
+         dpb_hVPB: 0012
+        dpb_media: f8
+        dpb_flags: 20
+   dpb_drive_lock: 0000
+    dpb_strategy2: #0740:135e
+
+&gt;&gt;&gt; From here we can locate the device driver header, but note that the
+&gt;&gt;&gt; strategy2 routine address is located from the DPB.
+
+##.d dev 738:0
+          DevNext: 0588:0000
+          DevAttr: 2880
+         DevStrat: 0d7e
+           DevInt: 0000
+         NumUnits: 08
+        DevProtCS: 0740
+        DevProtDS: 0738
+        DevRealCS: 0000
+        DevRealDS: 0000
+
+&gt;&gt;&gt; Returning to the JFN_table for slot 36. We now examine JFN 0004
+&gt;&gt;&gt; which correlates with SFN 002a
+&gt;&gt;&gt; Dump the SFT as before:
+
+
+# .d sft 438:(8+(83*2a))
+      sf_ref_count: 000c                        sfi_mode: 0042
+        sf_usercnt: 0000                        sfi_hVPB: 0000
+          reserved: 00                         sfi_ctime: 0000
+       sf_flags(2): 00c1:0000                  sfi_cdate: 0000
+         sf_devptr: #04f8:0000                 sfi_atime: 0000
+            sf_FSC: #00c8:ff40                 sfi_adate: 0000
+          sf_chain: #0438:0f62                 sfi_mtime: 3c83
+            sf_MFT: fe73ecfc                   sfi_mdate: 1d62
+sfdFAT_firFILEclus: 0000                        sfi_size: 00000000
+    sfdFAT_cluspos: 0000                    sfi_<!-- entering slot 228 -->position: 00000000
+    sfdFAT_lstclus: 0000                         sfi_UID: 0000
+     sfdFAT_dirsec: 00000000                     sfi_PID: 0003
+     sfdFAT_dirpos: 00                           sfi_PDB: 0000
+       sfdFAT_name: KBD$                      sfi_selfsfn: 002a
+   sfdFAT_EAHandle: 0000                      sfi_tstamp: 00
+          sf_plock: 0000                     sfi_DOSattr: 00
+      sf_NmPipeSfn: 0000
+       sf_codepage: 0000
+
+
+&gt;&gt;&gt; The first flag word is 00c1 = 0000 0000 1100 0001
+&gt;&gt;&gt;                                         .      ..
+&gt;&gt;&gt;                                         .      ..
+&gt;&gt;&gt;                                         Device ..
+&gt;&gt;&gt;                                                ..
+&gt;&gt;&gt;                                                .console input dev
+&gt;&gt;&gt;                                                .
+&gt;&gt;&gt;                                                not console output dev
+&gt;&gt;&gt; Note: the hVPB is 0000 but sf_devptr is not and points to the
+&gt;&gt;&gt; device driver header for KDB$ thus:
+
+##.d dev 4f8:0
+          DevNext: 04e8:0000
+          DevAttr: c981
+         DevStrat: 0000
+           DevInt: 2a29
+          DevName: KBD$
+        DevProtCS: 0500
+        DevProtDS: 04f8
+        DevRealCS: 0000
+        DevRealDS: 0000
+
+&gt;&gt;&gt; The MFT entry for this device is:
+# db %fe73ecfc
+%fe73ecfc 4b 53 45 4d 01 02 00 00-00 00 00 00 00 00 00 00 KSEM............
+%fe73ed0c 00 00 33 1d 38 04 00 00-00 00 4b 53 45 4d 01 02 ..3.8.....KSEM..
+%fe73ed1c 00 00 00 00 00 00 00 00-00 00 00 00 2a 00 00 00 ............*...
+%fe73ed2c 6d 46 00 00 5c 44 45 56-5c 4b 42 44 24 00 73 fe mF..\DEV\KBD$.s~
+%fe73ed3c 30 00 a6 ff 02 00 f9 00-48 2f 1c fd 60 ed 73 fe 0.&amp;...y.H/.}`ms~
+%fe73ed4c 94 ed 73 fe 88 b1 98 04-01 00 00 00 1f 00 00 00 .ms~.1..........
+%fe73ed5c a4 dc 72 fe 08 42 4d 53-43 41 4c 4c 53 ec 73 fe $\r~.BMSCALLSls~
+%fe73ed6c 18 00 9e ff 3c 00 0b 00-d4 ef 73 fe cc 14 86 fe ....&lt;...Tos~L..~
+#
+&gt;&gt;&gt; Note: the name of the KBD$ device driver known to the file system is
+&gt;&gt;&gt; \DEV\KDB$
+
+
+&gt;&gt;&gt; Finally, using the .D MFT command (under the KDB) this MFT formats as:
+
+
+##.d mft %fe73ecfc
+     mft_ksem:
+Signature     : KSEM                        Nest: 0000
+Type          : SHARE                    Readers: 0000
+Flags         : 01                PendingReaders: 0000
+Owner         : 0000              PendingWriters: 0000
+     mft_lptr: 0000                    mft_sptr: 0438:1586
+    mft_pCMap: 00000000                mft_serl: 002c       mft_signature: 466d
+ mft_CMapKSem:
+     mft_hvpb: 0000                 mft_opflags: 0000           mft_flags: 0000
+     mft_name: \DEV\KBD$
+
+&gt;&gt;&gt; Note: mft_sptr points to the associated SFT
+
+</PRE>
+ 
+
+<P><HR>
+
+<A HREF="170_L5_FileSystemControlBlo.html">[Back: File System Control Block Relationships]</A> <BR>
+<A HREF="172_L5_FindingFilesFromHand.html">[Next: Finding Files From Handles in a VDM]</A> 
+</BODY>
+</HTML>

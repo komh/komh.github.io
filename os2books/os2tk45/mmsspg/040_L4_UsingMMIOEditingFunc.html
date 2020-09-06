@@ -1,0 +1,116 @@
+<HTML>
+<HEAD>
+<TITLE>Using MMIO Editing Functions</TITLE>
+</HEAD>
+<BODY>
+<H1>Using MMIO Editing Functions</H1><!-- entering slot 45 -->
+<P>
+This section shows the MMIO editing functions used by an MCD to implement
+media control interface editing functions. The MMIO functions and their
+media control interface equivalents are shown in the following table:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³MMIO Functions                ³MCI Equivalents               ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³MMIOM_DELETE                  ³MCI_CUT                       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³MMIOM_READ                    ³MCI_COPY                      ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³MMIOM_DELETE                  ³MCI_DELETE                    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³MMIOM_UNDO                    ³MCI_UNDO                      ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³MMIOM_REDO                    ³MCI_REDO                      ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³MMIOM_DELETE,                 ³MCI_PASTE                     ³
+³MMIOM_BEGININSERT, and        ³                              ³
+³MMIOM_ENDINSERT               ³                              ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+The following example shows how to use MMIO functions to paste data into
+a file.
+<PRE>/*******************************************
+* Remove the information in the file if
+* from/to are specified.
+********************************************/
+
+if ( ulParam1 &amp; MCI_FROM || ulParam1 &amp; MCI_TO )
+   {
+   lReturnCode = mmioSendMessage( pInstance-&gt;hmmio,
+                                  MMIOM_DELETE,
+                                  pEditParms-&gt;ulFrom,
+                                  ulPasteLen );
+
+   if ( lReturnCode != MMIO_SUCCESS )
+      {
+      ulrc = mmioGetLastError( pInstance-&gt;hmmio );
+      PasteNotify( &amp;FuncBlock, ulParam1, ulrc );
+      return ( ulrc );
+      }
+   }
+
+
+
+if ( !( ulParam1 &amp; MCI_TO_BUFFER ) )
+   {
+   /*******************************************
+   * Let the IOProc know that the information is
+   * about to be inserted into the file
+   ********************************************/
+
+   lReturnCode = mmioSendMessage( pInstance-&gt;hmmio,
+                                  MMIOM_BEGININSERT,
+                                  0,
+                                  0 );
+
+   if ( lReturnCode != MMIO_SUCCESS )
+      {
+      ulrc = mmioGetLastError( pInstance-&gt;hmmio );
+      PasteNotify( &amp;FuncBlock, ulParam1, ulrc );
+      return ( ulrc );
+      }
+
+   /*******************************************
+   * Write the information that we received from
+   * the clipboard
+   *******************************************/
+
+
+   lReturnCode = mmioWrite( pInstance-&gt;hmmio,
+                            ( PSZ ) pBuffer,
+                            ulBuffLen );
+
+   if ( lReturnCode == MMIO_ERROR )
+      {
+      ulrc = mmioGetLastError( pInstance-&gt;hmmio );
+      PasteNotify( &amp;FuncBlock, ulParam1, ulrc );
+      return ( ulrc );
+      }
+
+   /*******************************************
+   * We have finished inserting the information
+   * the paste is complete
+   ********************************************/
+
+
+  lReturnCode = mmioSendMessage( pInstance-&gt;hmmio,
+                                 MMIOM_ENDINSERT,
+                                 0,
+                                 0 );
+
+  if ( lReturnCode != MMIO_SUCCESS )
+     {
+     ulrc = mmioGetLastError( pInstance-&gt;hmmio );
+     PasteNotify( &amp;FuncBlock, ulParam1, ulrc );
+     return ( ulrc );
+     }
+</PRE>
+
+
+<P><HR>
+
+<A HREF="039_L4_NetworkingFunctions.html">[Back: Networking Functions]</A> <BR>
+<A HREF="041_L3_SyncStreamOperations.html">[Next: Sync/Stream Operations]</A> 
+</BODY>
+</HTML>

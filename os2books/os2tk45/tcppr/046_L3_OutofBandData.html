@@ -1,0 +1,70 @@
+<HTML>
+<HEAD>
+<TITLE>Out-of-Band Data</TITLE>
+</HEAD>
+<BODY>
+<H1>Out-of-Band Data</H1><!-- entering slot 50 -->
+<P>
+The stream socket abstraction includes the concept of out-of-band data.
+<I>Out-of-band</I> data is a logically independent transmission channel
+associated with each pair of connected stream sockets. Out-of-band data
+can be delivered to the socket independently of the normal receive queue
+or within the receive queue depending upon the status of the SO_OOBINLINE
+socket-level option. The abstraction defines that the out-of-band data facilities
+must support the reliable delivery of at least one out-of-band message at
+a time. This message must contain at least one byte of data, and at least
+one message can be pending delivery to the user at any one time.
+<P>
+For communication protocols that support only in-band signaling (that is,
+the urgent data is delivered in sequence with the normal data), the operating
+system normally extracts the data from the normal data stream and stores
+it separately. This allows users to choose between receiving the urgent
+data in order and receiving it out of sequence without having to buffer
+all the intervening data.
+<P>
+If multiple sockets have out-of-band data awaiting delivery, an application
+program can use a select() call for exceptional conditions to determine
+those sockets with such data pending. The select() call does not indicate
+the actual arrival of the out-of-band data, but only notification that it
+is pending.
+<P>
+In addition to the information passed, a logical mark is placed in the data
+stream to indicate the point at which the out-of-band data was sent. When
+a signal flushes any pending output, all data up to the mark in the data
+stream is discarded.
+<P>
+To send an out-of-band message, the MSG_OOB flag is supplied to a send()
+or sendto() call. To receive out-of-band data, an application program must
+set the MSG_OOB flag when performing a recvfrom() or recv() call.
+<P>
+An application program can determine if the read pointer is currently pointing
+at the logical mark in the data stream, by using the SIOCATMARK ioctl()
+call.
+<P>
+A process can also read or peek at the out-of-band data without first reading
+up to the logical mark. This is more difficult when the underlying protocol
+delivers the urgent data in-band with the normal data, and only sends notification
+of its presence ahead of time (that is, the TCP protocol used to implement
+streams in the internet domain). With such protocols, the out-of-band byte
+may not have arrived when a recv() call is performed with the MSG_OOB flag.
+In that case, the call will return an SOCEWOULDBLOCK error code. There may
+be enough in-band data in the input buffer for normal flow control to prevent
+the peer from sending the urgent data until the buffer is cleared. The process
+must then read enough of the queued data so that the urgent data can be
+delivered.
+<P>
+Certain programs that use multiple bytes of urgent data, and that must handle
+multiple urgent signals, need to retain the position of urgent data within
+the stream. The socket-level option, SO_OOBINLINE provides the capability.
+With this option, the position of the urgent data (the logical mark) is
+retained. The urgent data immediately follows the mark within the normal
+data stream that is returned without the MSG_OOB flag. Reception of multiple
+urgent indications causes the mark to move, but no out-of-band data is lost.
+
+
+<P><HR>
+
+<A HREF="045_L3_SendingandReceivingD.html">[Back: Sending and Receiving Data]</A> <BR>
+<A HREF="047_L3_SocketIOModes.html">[Next: Socket I/O Modes]</A> 
+</BODY>
+</HTML>

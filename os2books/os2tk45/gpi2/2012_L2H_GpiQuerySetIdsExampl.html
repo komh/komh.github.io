@@ -1,0 +1,88 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>GpiQuerySetIds - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>GpiQuerySetIds - Example Code</H1><!-- entering slot 2023 -->
+<P>
+This example uses the GpiQuerySetIds function to retrieve the local identifier
+for all logical fonts. It then uses the identifiers to delete the logical
+fonts.
+<PRE>#define  INCL_DOSMEMMGR
+#define  INCL_GPILCIDS
+#include &lt;OS2.H&gt;
+#define  TOTALMEM 200
+
+HPS    hps;      /* Presentation-space handle.           */
+LONG   lCount;   /* The number of objects to be queried. */
+PLONG  alTypes;  /* Object types.                        */
+ULONG  rc;       /* Return code.                         */
+PSTR8  aNames;   /* font names.                          */
+PLONG  allcids;  /* local identifiers.                   */
+PLONG  pBase;
+USHORT i;
+
+rc = DosAllocMem((PPVOID)pBase,
+                 (ULONG)TOTALMEM*sizeof(LONG),
+                          /* space is needed for an array of  */
+                          /* lCount longs.                    */
+                  PAG_READ |
+                  PAG_WRITE |
+                  PAG_COMMIT);
+
+lCount =  GpiQueryNumberSetIds(hps);
+                         /*  The number of local identifiers  */
+                         /*  (lcids) currently in use, and    */
+                         /*  therefore the maximum number     */
+                         /*  of objects for which information */
+                         /*  can be returned.                 */
+
+rc = DosSubAllocMem((PVOID)pBase,
+                   (PPVOID)aNames,
+                    (ULONG)(lCount*(ULONG)sizeof(STR8)));
+                         /* space is needed for an array of   */
+                         /* lCount longs.                     */
+rc = DosSubAllocMem((PVOID)pBase,
+                    (PPVOID)allcids,
+                    (ULONG)lCount*sizeof(LONG));
+                         /* space is needed for an array of   */
+                         /* lCount longs.                     */
+rc = DosSubAllocMem((PVOID)pBase,
+                    (PPVOID)alTypes,
+                    (ULONG)lCount*sizeof(LONG));
+                         /* space is needed for an array of   */
+                         /* lCount longs.                     */
+
+           GpiQuerySetIds(hps,
+                          lCount,
+                          alTypes,
+                          aNames, /*  An array of lCount         */
+                                  /*  consecutive 8-byte fields, */
+                                  /*  in which the 8-character   */
+                                  /*  names associated with      */
+                                  /*  the logical fonts are      */
+                                  /*  returned. For bit maps,    */
+                                  /*  the whole field is set to  */
+                                  /*  zeros.                     */
+                         allcids);/*  An array in which the      */
+                                  /*  local identifier (lcid)    */
+                                  /*  values are returned.       */
+                                  /*  LCID_DEFAULT is         */
+                                  /*  included if the default    */
+                                  /*  font has been changed      */
+                                  /*  (see GpiCreateLogFont).    */
+
+for (i = 1; i &lt; lCount; i++)
+{
+ if (allcids[i] == LCIDT_FONT)
+  GpiDeleteSetId(hps,allcids[i]);
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="2011_L2H_GpiQuerySetIdsErrors.html">[Back: GpiQuerySetIds - Errors]</A> <BR>
+<A HREF="2013_L2H_GpiQuerySetIdsTopics.html">[Next: GpiQuerySetIds - Topics]</A> 
+</BODY>
+</HTML>

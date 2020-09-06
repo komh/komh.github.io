@@ -1,0 +1,232 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Flexible Quick sort</TITLE>
+</HEAD>
+<BODY>
+<H1>Flexible Quick sort</H1><!-- entering slot 540 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* modul    : qsort.cmd                                               */
+/* project  : OS/2-Rexx                                               */
+/* date     : 20 Dez 1994 21.35.15                                    */
+/* (c)author: Andreas Pohlmann                                        */
+/*            (see <A HREF="958_L2H_EMailaddressesP.html">EMail Addresses</A>)                                   */
+/*                                                                    */
+/* func/ret :                                                         */
+/*                                                                    */
+/* use ext. :                                                         */
+/*                                                                    */
+/* LastDo   :10 Nov 1995 19.30.10 ( qsCompFunc )                      */
+/* ToDo     :                                                         */
+/*                                                                    */
+/* Note     : This is a quick sort with a variable compare function   */
+/* ------------------------------------------------------------------ */
+
+  call RxFuncAdd 'SysLoadFuncs', 'RexxUtil', 'SysLoadFuncs'
+  call SysLoadFuncs
+
+                    /* init test data                                 */
+  i = 0
+  atmp.0 = 611
+
+  do while ( i &lt; atmp.0 )
+    i = i+1
+    atmp.i = random( 0,999,i )
+  end /* do */
+
+  call LineOut , 'Flexible Quicksort test program'
+  call LineOut , ''
+
+  call charout , '*Start Timer... '
+  nTime = time( 'E' )
+  call quicksort 1, atmp.0
+  call LineOut , '*QuickSort elapsed:' ( time( 'E' )-nTime )
+
+/*
+  call ShowArray 1, atmp.0
+*/
+
+                    /* Test sorted Array                              */
+  call CharOut, 'Testing the result '
+  ErrorFound = 0
+  do i=1 to atmp.0
+    if i // 10 = 0 then
+      call CharOut , '.'
+    j = i+1
+    if ( atmp.i &gt;&gt; atmp.j ) then                             /* v2.80 */
+    do
+      errorFound = 1
+      call LineOut , "Error on position" i j
+    end /* if */
+  end /* do */
+
+  call LineOut , ''
+  if errorFound = 0 then
+    call LineOut , 'No errors found.'
+  else
+    call LineOut , 'One or more errors found.'
+
+exit
+
+/* ------------------------------------------------------------------ */
+/* sample routine to print the contents of the array                  */
+
+ShowArray: PROCEDURE expose atmp.
+  parse arg first, last
+  do i=first to last
+    call charout , format( atmp.i,4 )
+  end /* do */
+
+  call LineOut, ''
+return
+
+/* ------------------------------------------------------------------ */
+/* func/ret : qsCompFunc( &lt;a&gt;, &lt;b&gt; )                                  */
+/*     ---&gt; like ANSI-C 'strcmp'-Func                                 */
+/*          ( a &lt; b ) --&gt; -1                                          */
+/*          ( a &gt; b ) --&gt;  1                                          */
+/*          ( a  b ) --&gt;  0                                           */
+/*          ( rc*-1 ) for descending order                            */
+/* use ext. :                                                         */
+/*           called from QuickSort                                    */
+/* ToDo     :                                                         */
+/*                                                                    */
+/* Note     : This is the compare function used by the QuickSort      */
+/*            routine.                                                */
+/* ------------------------------------------------------------------ */
+
+qsCompFunc: PROCEDURE
+  parse arg a, b
+
+  select
+
+    when ( a &lt;&lt; b ) then                                     /* v2.80 */
+      rc = -1
+
+    when ( a &gt;&gt; b ) then                                     /* v2.80 */
+      rc = 1
+
+    otherwise
+      rc = 0
+
+  end  /* select */
+
+                    /* use 'return ( rc*-1 )' for descending order    */
+return ( rc )
+
+/* ------------------------------------------------------------------ */
+/* func/ret : QuickSort &lt;StartPos&gt;, &lt;EndPos&gt;                          */
+/*           ---&gt; nix                                                 */
+/*           call QuickSort 1, atmp.                                  */
+/*                                                                    */
+/* use ext. : need the func 'qsCompFunc' for comparing two elements   */
+/*                                                                    */
+/*            sort the global Array 'atmp.' recursive, not stable     */
+/*            faster ( ca.3x ) replace the 'qsCompFunc' with direct-  */
+/*            compare-calls                                           */
+/* ToDo     : Median-of-3                                             */
+/* ------------------------------------------------------------------ */
+QuickSort: PROCEDURE EXPOSE atmp.
+  parse arg top, down
+
+  if ( ( down-top ) &lt; 2 ) then
+  do
+                    /* sort short subarrays,                          */
+                    /* here only tow elements                         */
+
+    if ( ( down - top ) &gt; 0 ) then
+      /* if ( atmp.top &gt; atmp.down ) then */            /* fast or    */
+      if ( qsCompFunc( atmp.top, atmp.down ) &gt; 0 ) then /* flexible   */
+      do
+        tmpval      = atmp.top
+        atmp.top    = atmp.down
+        atmp.down   = tmpval
+      end /* ( qsCompFunc( atmp.top, atmp.down ) &gt; 0 ) */
+  end
+  else
+  do
+                    /* sorting large subarrays                        */
+    l = top         /* pointer left                                   */
+    r = down        /* pointer right                                  */
+    m = top + trunc( ( down-top )/2 )   /* pointer median,            */
+                                        /* better Median-of-3         */
+    do while ( l&lt;r )
+      m_val = atmp.m
+
+                    /* seek from left and right                       */
+      /* do while ( atmp.l &lt; m_val ) */                 /* fast or    */
+      do while ( qsCompFunc( atmp.l, m_val ) &lt; 0 )      /* fexible    */
+        if  ( l &lt; m ) then
+          l=l+1
+        else
+          leave
+      end /* while ( qsCompFunc( atmp.l, m_val ) &lt; 0 ) */
+
+      /* do while ( atmp.r &gt; m_val ) */                  /* fast or    */
+      do while ( qsCompFunc( atmp.r, m_val ) &gt; 0 )       /* flexible   */
+        if  ( m &lt; r ) then
+          r=r-1
+        else
+          leave
+      end /* while ( qsCompFunc( atmp.r, m_val ) &gt; 0 ) */
+
+      if ( l &lt; r ) then
+      do
+        tmpval = atmp.l
+        atmp.l = atmp.r
+        atmp.r = tmpval
+        select
+
+          when ( m=r ) then
+          do
+            r = r-1
+            m = l
+          end /* when ( m=r ) */
+
+          when ( m=l ) then
+          do
+            l = l+1
+            m = r
+          end /* when ( m=l ) */
+
+          otherwise
+          do
+            l = l+1
+            r = r-1
+          end /* otherwise */
+
+        end /* select */
+      end /* if ( ( l &lt; m ) | ( m &lt; r ) ) then do */
+
+    end /* do while ( l&lt;r ) */
+
+                    /* median is on the correct position              */
+                    /* start recursion with smallest part             */
+    if ( ( r-top ) &lt; ( down-l ) ) then
+    do
+      call quicksort top, m-1
+      call quicksort m+1, down
+    end /* do */
+    else
+    do
+      call quicksort m+1, down
+      call quicksort top, m-1
+    end /* do */
+
+  end /* else  sorting large subarrays */
+return
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="519_L3_FastQuicksort.html">[Back: Fast Quick sort]</A> <BR>
+<A HREF="521_L3_Heapsortroutine.html">[Next: Heapsort routine]</A> 
+</BODY>
+</HTML>

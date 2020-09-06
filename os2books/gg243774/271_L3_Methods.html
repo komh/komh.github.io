@@ -1,0 +1,333 @@
+<HTML>
+<HEAD>
+<TITLE>Methods</TITLE>
+</HEAD>
+<BODY>
+<H1>Methods</H1><!-- entering slot 291 -->
+<P>
+In a Presentation Manager application, a window procedure receives messages
+from Presentation Manager, determines the type of message and invokes a
+series of program statements (which effectively constitute a method) as
+a result of that message.  A Workplace Shell object operates in a similar
+fashion, except that the Workplace Shell itself determines the type of message
+and invokes the corresponding method, without any explicit action on the
+part of the object.
+<P>
+Therefore, whereas the Presentation Manager window procedure comprises a
+<I>case</I> statement with each case being a method, the Workplace Shell
+object eliminates the need for the<I> case</I> statement and allows the
+Workplace Shell to invoke the methods directly.  The syntax for invoking
+a method from within an object or application is hence very similar to that
+for invoking a subroutine;  the only real difference is that a method may
+be accessed from outside the object itself (that is, from another object
+or from an application), while a subroutine is normally private to the object.
+
+<P>
+Many methods are defined by the<I> WPObject</I> class, from which application-defined
+classes are typically descended.  When creating a new object class, a programmer
+may override the methods already defined by the class's ancestors, and/or
+include new methods specific to the class being created.  The methods defined
+by the<I> WPObject</I> class are described in the<I> IBM OS/2 Version 2.0
+Presentation Manager Reference</I>.  Programmers who wish to create new
+object classes descended from this case should read the descriptions of
+these methods to determine the extent of the modifications necessary.
+<P>
+<B>Invoking a Method</B>
+<P>
+As mentioned in <A HREF="205_L1_ThePresentationManag.html">The Presentation
+Manager Application Model</A>, methods within an object are invoked as a
+result of messages that communicate events to the object.  These events
+may be initiated by the user (for example, as a result of clicking the mouse
+on an object's context menu), by the object itself or another object, or
+by the system to indicate a system event such as opening or closing a view
+of the object.
+<P>
+The syntax for invoking a method is similar to that for invoking a subroutine,
+with the exception that since a method is invoked by the Workplace Shell,
+the first parameter passed in the call is therefore not a parameter used
+by the method, but a pointer to an object that is capable of invoking the
+method; this is typically a pointer to the object itself.  This is illustrated
+in <A HREF="044_L2_InvokingaMethod.html">Figure "Invoking a Method"</A>,
+where a sample invocation of a method named<I> _wpSetTitle</I> is shown.
+
+<P>
+The<I> _wpSetTitle</I> method is defined by the<I> WPObject</I> class, and
+is inherited by all classes descended from the class.  The method accepts
+a title string and sets the title of the object; that is, the text that
+appears below the object's icon on the Workplace Shell desktop.
+<P>
+The pointer<I> somSelf</I> is defined by the SOM Precompiler when it creates
+the "C" source code from the class definition file.  In the example above,
+<I>somSelf</I> is defined as a pointer to an object of class<I> PWFolder
+</I>and within a method, allows the method to access the instance data of
+the object to which it belongs.  The need to pass this pointer arises from
+the limitations of the "C" language syntax under which the current implementation
+of the Workplace Shell operates; other languages such as C++ may be able
+to invoke methods in a more elegant manner.
+<P>
+<B>Method Processing and Instance Data</B>
+<P>
+Within a method, the<I> somSelf</I> pointer, passed as the first parameter
+in the call to the method, acts as a pointer to the method's own object,
+and allows the method to access its instance data.  The SOM Precompiler
+automatically provides a base pointer named<I> somThis</I> that references
+the instance data, and includes a call to a method that initializes this
+pointer from the object pointer:
+<PRE>PWFolderData *somThis = PWFolderGetData(somSelf);
+</PRE>
+
+<P>
+When this statement has successfully executed upon entry to the method,
+the method has access to the object's instance data.  For example, the password-<!-- entering slot 292 -->protectedfolderhasapasswordstring
+,whichmaybeaccessedbyamethodusingthefollowingname :
+<PRE>somThis-&gt;szPassword
+</PRE>
+
+<P>
+To make things simpler, the SOM Precompiler generates a macro for each instance
+variable, in a manner similar to that used for function names:
+<PRE>   #define _szPassword (somThis-&gt;szPassword)
+   #define _szCurrentPassword (somThis-&gt;szCurrentPassword)
+   #define _szUserid (somThis-&gt;szUserid)
+</PRE>
+
+<P>
+This macro is included in a header file for the object class, and avoids
+the need for the programmer to type the complete name throughout the source
+code.
+<P>
+Once the instance data is available to the method, any application logic
+may be performed, including the use of OS/2 and Presentation Manager resources.
+ See <A HREF="282_L3_AccessingPresentatio.html">Accessing Presentation Manager
+Resources From a Workplace Shell Object</A> for additional considerations
+on the use of Presentation Manag er resources from within a Workplace Shell
+object.
+<P>
+<B>Returning from a Method</B>
+<P>
+In order to return control to its calling routine, a method simply uses
+the<I> return</I> statement.  Any valid form of return code may be passed
+to the calling routine as a parameter to this statement, provided that the
+data type of the return code is consistent with the declaration of the method.
+The data type of the return code is typically set by the SOM Precompiler,
+and a default<I> return</I> statement provided, based on information supplied
+by the programmer when the method is defined in the<I> Methods</I> section
+of the class definition file (see <A HREF="275_L3_ClassDefinitionFile.html">Class
+Definition File</A>).
+<P>
+<B>Overriding Existing Methods</B>
+<P>
+A new object class may override one or more of the existing methods defined
+by its parent class, either to completely replace the processing performed
+by these methods, or to add its own processing to that already performed
+by the parent.  An example of an object class overriding the<I> _wpSetTitle
+</I>method is shown in <A HREF="045_L2_OverridinganExisting.html">Figure
+"Overriding an Existing Method"</A>.
+<P>
+The example given in <A HREF="045_L2_OverridinganExisting.html">Figure "Overriding
+an Existing Method"</A> shows the use of class-specific processing to modify
+the title of a password-protected folder.  The inclusion of the string "&lt;LOCKED&gt;"
+at the end of the user-specified title provides a visual indication to the
+user that the folder is locked.  Additional visual indication is provided
+by modifying the icon when the folder is in the locked state; the code that
+carries out this operation is included in the<I> _LockFolder</I> method
+shown in <A HREF="046_L2_AddingaNewMethod.html">Figure "Adding a New Method"</A>.
+
+<P>
+The strings<I> _szCurrentPassword</I> and<I> _szPassword</I> are instance
+data items defined by the new object class.  These data items are actually
+accessed using the<I> somThis</I> pointer; however, the SOM Precompiler
+defines a macro for each instance data item, as described in Method Processing
+and Instance Data above.
+<P>
+Note that the default processing supplied by the parent class is invoked
+at the end of the class-specific processing.  For all but the most exceptional
+circumstances, default processing should be allowed to occur in order to
+ensure that the normal behavior of the object class is preserved.
+<P>
+<B>Adding New Methods</B>
+<P>
+In addition to overriding existing methods defined by the parent class,
+an object class may also add new methods to carry out processing for events
+not handled by the parent class.  For example, the password-protected folder
+example must have a mechanism to lock the folder.  This is implemented as
+a new method named<I> _LockFolder</I>, as shown in <A HREF="046_L2_AddingaNewMethod.html">Figure
+"Adding a New Method"</A>.
+<P>
+This method simply copies a default string to the variable<I> _szCurrentPassword
+</I>that contains the last supplied password entry from the user, so that
+when a comparison is made between this variable and the folder's password,
+the two do not match.  This<!-- entering slot 293 --> effectively locks
+the folder and prevents any view of it being opened.  To provide a visual
+indication to the end user that the folder is locked, a "locked" icon is
+loaded using the Presentation Manager<B> WinLoadPointer()</B> function,
+and the<I> _wpSetIcon</I> method is invoked to set this as the folder's
+new icon on the desktop.
+<P>
+Note that the definition for adding a new method is very similar to that
+for overriding an existing method.  The primary difference is that, since
+the new method is specific to the object class and is not defined by the
+parent class, there is no need to invoke the parent class's method to perform
+default processing for the method.
+<P>
+<B>Attaching a Method to the Context Menu</B>
+<P>
+A method may be invoked as a result of the user selecting an item from the
+object's context menu.  In order to allow this, an item must be added to
+the context menu, and an appropriate action must be taken by the object
+when that item is selected by the user.
+<P>
+An item can be added to the context menu for an object class by overriding
+the<I> _wpModifyPopupMenu</I> method defined by the<I> WPObject</I> class,
+and including a call to the<I> _wpInsertPopupMenuItems</I> method to insert
+the item.  This technique is shown in <A HREF="047_L2_AddinganItemtoaConte.html">Figure
+"Adding an Item to a Context Menu"</A>.
+<P>
+The example shown in <A HREF="047_L2_AddinganItemtoaConte.html">Figure "Adding
+an Item to a Context Menu"</A> adds a<I> Lock</I> item to the context menu
+for the password-protected folder object.  This allows the folder to be
+locked by the user at any time, irrespective of whether a view of the folder
+is currently open.
+<P>
+The<I> _wpInsertPopupMenuItems</I> method adds a menu item or a submenu
+to the existing context menu for the object.  The item identifier for the
+menu item or submenu (MI_LOCK in the above example) is an integer constant
+that is typically defined in the header file.  Note that the value of this
+constant should be specified as an offset from the system-defined constant
+WPMENUID_USER, rather than an absolute integer value.  Following this convention
+will avoid any clashes with item identifiers defined by the Workplace Shell
+for default context menu items.
+<P>
+Since the password-protected folder is a descendant of the<I> WPFolder</I> class
+defined by the Workplace Shell, the default context menu items for the<I> WPFolder
+</I>class should also appear.  The default processing for the parent class
+is therefore invoked as part of the<I> _wpModifyPopupMenu</I> processing
+for the new object class.
+<P>
+Once the required item is added to the context menu, the object must be
+able to detect when the item is selected in order to invoke the appropriate
+method.  By default, the<I> _wpMenuItemSelected</I> method is invoked by
+the system whenever the user selects an item from the context menu.  This
+method, which is defined by the<I> WPObject</I> class, may be overridden
+by a new object class in order to check for the presence of a new item and
+invoke the appropriate method.  The item identifier of the selected item
+is passed as a parameter to the<I> _wpMenuItemSelected</I> method, and is
+normally interrogated using a<I> case</I> statement, as shown in <A HREF="048_L2_InvokingaMethodviaaC.html">Figure
+"Invoking a Method via a Context Menu Item"</A>.
+<P>
+The<I> _wpMenuItemSelected</I> method consists of a<I> case</I> statement
+that determines the item selected from the context menu.  In the above example,
+an explicit case is included only for the MI_LOCK item defined by this class.
+ All other menu items are defined by the parent class, and their selection
+is therefore handled by allowing the parent class's default processing to
+occur.
+<P>
+<B>Class Methods</B>
+<P>
+Most object methods are instance methods; that is, they act upon one particular
+instance of an object class, rather than upon all instances of the class.
+
+<P>
+However, there are times when it is useful to have methods that operate
+on the object class itself.  These methods may operate on class data rather
+than instance data, thereby affecting the entire class rather than a single
+instance of the class.  Such methods are known as class methods.  The class
+method<I> _wpclsQueryTitle</I> is defined by the<I> WPObject</I> class,
+and is overridden in the password-protected folder example.  An example
+of the overridden<I> _wpclsQueryTitle</I> method is given in <A HREF="049_L2_ClassMethodExample.html">Figure
+"Class Method Example"</A>.
+<P>
+The purpose of this class method is to provide the password-protected folder
+with a default title.  This is the title that will appear with the folder's
+template icon in the<I> Templates</I> folder, and which is given to any
+instances of the class that are instantiated without a title.  Since the
+default title applies to all instances of the class, it is implemented in
+a class method rather than an instance method.
+<P>
+The prefix "M_" denotes the metaclass in the SOM-generated "C" source.  As
+already mentioned, the<!-- entering slot 294 --> first parameter passed
+to a method is a pointer to a type of object that can invoke that method;
+this is true for both instance methods and class methods; for a class method
+the first parameter contains a pointer to an instance of the metaclass.
+
+<PRE>            Pointer to instance of metaclass
+            which is a class object ÄÄÄÄÄÄÄÄÄ¿
+                                             
+   pwfoldercls_wpclsQueryTitle(M_PWFolder *somSelf)
+                                  
+        Type is Metaclass ÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+Since a class is also an object, it follows that the class itself has its
+own "instance data"; hence the next line of code appears as follows:
+<PRE>    /* M_PWFolderData *somThis = M_PWFolderGetData(somSelf); */
+</PRE>
+
+<P>
+This statement would access the SOM object's class data.  However, since
+no class data is specified in the .CSC file, there is nothing to access
+and so the SOM Precompiler has commented the line out to reflect this.
+<P>
+For simple examples, it is easier to use global variables in the DLL for
+class data.  This technique has been used in <A HREF="049_L2_ClassMethodExample.html">Figure
+"Class Method Example"</A>; the default title string is stored at the beginning
+of the program into the global variable<I> szDefaultTitle</I>.  However,
+using this technique means that class data can be accessed by instance methods,
+which is never desirable, and may have adverse consequences, although these
+may generally be avoided by sound programming techniques.
+<P>
+<B>Invoking Another Object's Methods</B>
+<P>
+An object may invoke a method in another object class.  This technique is
+useful in a client-server situation, where one object creates another object
+of a different class and then wishes to have that object perform certain
+actions.  The system object model provides programming functions that can
+be used to determine the necessary information and invoke the method.  An
+example is given in <A HREF="050_L2_InvokingaMethodinAno.html">Figure "Invoking
+a Method in Another Object Class"</A>.
+<P>
+The example given in <A HREF="050_L2_InvokingaMethodinAno.html">Figure "Invoking
+a Method in Another Object Class"</A> shows part of a "database client"
+object that sends a database query to a "database server" object.  The client
+first allocates a shared memory object into which it loads the query.  The
+client then uses the<I> _somFindClass</I> method and the<I> SOM_IdFromString
+</I>macro to determine the object pointer for the object, and the method
+identifier for the required method. The<I> _somDispatchL</I> method is then
+used to invoke the method.
+<P>
+It is also possible to invoke a class method using the object pointer to
+that class, obtained using the<I> _somFindClass</I> method shown in <A HREF="050_L2_InvokingaMethodinAno.html">Figure
+"Invoking a Method in Another Object Class"</A>.  This requires the header
+file for the class to be included in the source code for the class that
+will invoke the method, using a<I> #include</I> statement.  In the module
+definition file for the invoking class, the following IMPORT statements
+must be provided:
+<PRE>        IMPORTS
+           record.RecordCClassData
+           record.RecordClassData
+           record.RecordNewClass
+           record.M_RecordCClassData
+           record.M_RecordClassData
+           record.M_RecordNewClass
+</PRE>
+
+<P>
+When these steps have been carried out, a method in the other class may
+be invoked directly, as follows:
+<PRE>_clsQueryDatabase(RecordClass,         /* Invoke class method   */
+                  pQuery,              /* Method specific       */
+                  Folder);             /* parameters            */
+</PRE>
+
+<P>
+While this technique is less clean than the previous approach since it requires
+the inclusion of the header file and import statements, it provides better
+performance.
+
+<P><HR>
+
+<A HREF="270_L2_ObjectStructure.html">[Back: Object Structure]</A> <BR>
+<A HREF="272_L3_Subroutines.html">[Next: Subroutines]</A> 
+</BODY>
+</HTML>

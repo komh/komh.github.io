@@ -1,0 +1,96 @@
+<HTML>
+<HEAD>
+<TITLE>Searching for Files</TITLE>
+</HEAD>
+<BODY>
+<H1>Searching for Files</H1><!-- entering slot 945 -->
+<P>
+You can locate files with names that match a given pattern by using metacharacters
+in<A><!-- external link: 1D 89 C3 4D --> DosFindFirst</A> and<A><!-- external link: 1D 8A C3 4E --> DosFindNext
+</A>.
+<P>
+<A><!-- external link: 1D 89 C3 4D -->DosFindFirst</A> searches the current
+directory  and locates the first file name that matches the given pattern.
+<A><!-- external link: 1D 8A C3 4E -->DosFindNext</A> locates the next matching
+file  name and continues to find additional matches on each subsequent call
+until all matching names are found. The functions copy the file statistics
+on each file located to a data structure that you supply. The file information
+returned by a search includes file dates and times, length of data in the
+file, file size, file attributes, and file name.
+<P>
+To find all files that match the file specification, call DosFindNext repeatedly
+until the message ERROR_NO_MORE_FILES is returned. Then call<A><!-- external link: 1D 88 C3 4C --> DosFindClose
+</A>to close the directory handle.
+<P>
+
+<P>
+The following code fragment shows how to find all file names that have the
+extension ".C":
+<PRE>    #define INCL_DOSFILEMGR   /* File system values */
+    #include &lt;os2.h&gt;
+
+    HDIR         hdHdir;
+    ULONG        ulFilenames;
+    FILEFINDBUF3 ffbFindBuf;
+    APIRET       ulrc;
+
+    ulFilenames = 1;
+    hdHdir = HDIR_SYSTEM;
+
+    ulrc = DosFindFirst("*.C",
+                        &amp;hdHdir,            /* Directory handle                     */
+                        FILE_NORMAL,        /* File attribute to look for           */
+                        &amp;ffbFindBuf,        /* Result buffer                        */
+                        sizeof(ffbFindBuf), /* Size of result buffer                */
+                        &amp;ulFilenames,       /* Number of matching names to look for */
+                        FIL_STANDARD);      /* Standard level of information        */
+
+    if (!ulrc) {
+        do {
+            .
+            .     /* Use file name in findbuf.achName */
+            .
+            ulrc = DosFindNext(hdHdir,
+                               &amp;ffbFindBuf,
+                               sizeof(ffbFindBuf),
+                               &amp;ulFilenames);
+
+        } while (!ulrc);
+    }
+    DosFindClose(hdHdir);
+
+</PRE>
+
+<P>
+In this example,<A><!-- external link: 1D 8A C3 4E --> DosFindNext</A> continues
+to retrieve matching file names until it returns an error value (it returns
+ERROR_NO_MORE_FILES when it cannot find any more matching files).
+<P>
+To keep track of which files have already been found, both functions use
+the directory handle,<I> hdir</I>.
+<P>
+This directory handle must be set to HDIR_SYSTEM or HDIR_CREATE before the
+call to DosFindFirst. HDIR_SYSTEM (00000001H) tells OS/2 to use the system
+handle for standard output, which is always available to the requesting
+process. HDIR_CREATE (FFFFFFFFH) tells OS/2 to allocate a new, unused handle.
+
+<P>
+The directory handle returned by<A><!-- external link: 1D 89 C3 4D --> DosFindFirst
+</A>must be used in subsequent calls to<A><!-- external link: 1D 8A C3 4E --> DosFindNext
+</A>; it identifies for DosFindNext the name of the file being sought and
+the current position in the directory.
+<P>
+An attribute parameter for DosFindFirst allows hidden and system files,
+as well as normal files, to be included in searches.
+<P>
+After locating the files you need, use DosFindClose to close the directory
+handle. This ensures that when you search for the same files again, you
+will start at the beginning of the directory. After DosFindClose is called,
+a subsequent DosFindNext fails.
+
+<P><HR>
+
+<A HREF="921_L3_DeterminingtheHandle.html">[Back: Determining the Handle Type]</A> <BR>
+<A HREF="923_L3_SearchingPathsforFil.html">[Next: Searching Paths for Files]</A> 
+</BODY>
+</HTML>

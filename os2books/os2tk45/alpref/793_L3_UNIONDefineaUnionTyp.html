@@ -1,0 +1,146 @@
+<HTML>
+<HEAD>
+<TITLE>UNION (Define a Union Type Name)</TITLE>
+</HEAD>
+<BODY>
+<H1>UNION (Define a Union Type Name)</H1><!-- entering slot 803 -->
+<P>
+Defines a <A HREF="181_L5_UnionTypeName.html"><I>Union-TypeName</I></A> that
+represents an <A HREF="717_L3_InitializationofAggr.html">aggregate</A> data
+type containing one or more fields.  All of the fields occupy the same physical
+position in storage.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B>Syntax</B><!-- lm: 0x2 11 -->
+<UL>
+<P>
+
+<PRE><I>Union-Name</I> <B>UNION</B>
+  <I>FieldDeclaration</I>
+   .
+   .
+   .
+<I>Union-Name</I> <B>ENDS</B>
+</PRE>
+
+<P>
+Where<I> FieldDeclaration</I> has the following form:
+<PRE>[<I>FieldName</I>] <A HREF="715_L2_DataAllocation.html"><I>Allocation-TypeName</I></A> <I>InitialValue</I> [, <I>InitialValue</I> ...]
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL><B>Remarks</B><!-- lm: 0x2 11 -->
+<UL>
+<P>
+This directive is not available in <A HREF="111_L5_SvSetVersionBehavior.html">M510
+</A>mode.
+<P>
+The syntax for the<I> FieldDeclaration</I> is that of a normal data allocation
+statement.  See the section on <A HREF="715_L2_DataAllocation.html">Data
+Allocation</A> for a full description of this syntax.
+<P>
+The various parts of the<I> FieldDeclaration</I> are described as follows:
+<!-- lm: 0x2 11 -->
+<P>
+<B><I>FieldName</B></I><!-- lm: 0x12 40 -->
+<UL> Each<I> FieldName</I> entry
+is converted to <A HREF="167_L5_UnionFieldName.html"><I>Union-FieldName
+</I></A>when processing of the union definition is complete.  If this field
+is omitted and the<B><I> Allocation-TypeName</B></I> resolves to a <A HREF="179_L5_StructureTypeName.html"><I>Structure-TypeName
+</I></A>or <A HREF="181_L5_UnionTypeName.html"><I>Union-TypeName</I></A>,
+then all of the fields defined within the imbedded structure or union are
+<B><I>promoted</B></I> to be visible at the same level as other<I> FieldName
+</I>entries in the current union given by the<I> Union-Name</I>.<!-- lm: 0x2 11 -->
+</UL> <A HREF="715_L2_DataAllocation.html"><I>Allocation-TypeName
+</I></A><!-- lm: 0x12 40 -->
+<UL>The allowable values for this field are
+described in detail in the <A HREF="715_L2_DataAllocation.html">Data Allocation
+</A>section.  The assembler accepts imbedded occurrences of other structures
+or unions by specifying an identifier that resolves to a <A HREF="179_L5_StructureTypeName.html"><I>Structure-TypeName
+</I></A>or <A HREF="181_L5_UnionTypeName.html"><I>Union-TypeName</I></A> in
+this field.<!-- lm: 0x2 11 -->
+</UL><B><I> InitialValue</B></I><!-- lm: 0x12 40 -->
+<UL> The
+<I>InitialValue</I> field must be an <A HREF="261_L2_ExpressionSyntax.html"><I>Expression
+</I></A>that resolves to an <A HREF="602_L3_ExpressionTypes.html"><I>ExpressionType
+</I></A>appropriate for the <A HREF="715_L2_DataAllocation.html"><I>Allocation-TypeName
+</I></A>utilized in the<I> FieldDeclaration</I>.  Only the<I> InitialValue
+</I>expression for the first field becomes part of the union type definition;
+expressions specified for the remaining fields are ignored.  This value
+is used as the default initializer when an instance of the union is allocated
+and no explict override value is specified for the field.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL><B> Example
+</B><!-- lm: 0x2 11 -->
+<UL>
+<PRE>          .386
+IS_sint32  equ -4
+IS_sint16  equ -2
+IS_sint8   equ -1
+NO_TYPE    equ  0
+IS_uint8   equ  1
+IS_uint16  equ  2
+IS_uint32  equ  4
+
+TYPE_T     typedef SBYTE
+
+DATA_T     union
+  uint8    BYTE   ?
+  sint8    SBYTE  ?
+  uint16   WORD   ?
+  sint16   SWORD  ?
+  uint32   DWORD  ?
+  sint32   SDWORD ?
+DATA_T     ends
+
+VALUE_T    struct
+  DataType  TYPE_T NO_TYPE
+  DataValue DATA_T {}
+VALUE_T    ends
+
+           .data
+Value      VALUE_T { IS_uint8, { 1 } }           ; unsigned 8-bit value of 1
+
+          .code
+
+; Procedure:  IsNegative
+; Returns  :  1 in EAX if Value.DataValue holds a negative number
+;             0 in EAX if Value.DataValue holds a positive number
+
+IsNegative proc
+           cmp   Value.DataType, NO_TYPE         ; check sign of TYPE_T
+           jns   short Positive                  ; if positive, so is value
+
+; check for signed 8-bit integer
+           cmp   Value.DataType, IS_sint8
+           jne   short @F                        ; not 8, check for 16
+           movsx EAX, Value.DataValue.sint8      ; convert 8 bits to 32
+           jmp   short Check                     ; and check the value
+
+; check for signed 16-bit integer
+@@:        cmp   Value.DataType, IS_sint16
+           jne   short @F                        ; not 16, check for 32
+           movsx EAX, Value.DataValue.sint16     ; convert 16 bits to 32
+           jmp   short Check                     ; and check the value
+
+; check for signed 32-bit integer
+@@:        cmp   Value.DataType, IS_sint32
+           jne   short Positive                  ; unknown, assume positive
+           mov   EAX, Value.DataValue.sint32     ; get full 32 bit number
+
+Check:     or    EAX,EAX                         ; check for negative value
+           jns   short Positive                  ; no sign bit, positive
+           mov   EAX, 1                          ; indicate negative
+           ret                                   ; and return
+Positive:  mov   EAX, 0                          ; indicate positive
+           ret                                   ; and return
+IsNegative endp
+end
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL> 
+
+<P><HR>
+
+<A HREF="792_L3_TYPEDEFCreateaUserDe.html">[Back: TYPEDEF (Create a User-Defined Type Name)]</A> <BR>
+<A HREF="794_L2_Miscellaneous.html">[Next: Miscellaneous]</A> 
+</BODY>
+</HTML>

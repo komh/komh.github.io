@@ -1,0 +1,90 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DdfMetafile - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DdfMetafile - Example Code</H1><!-- entering slot 441 -->
+<P>
+After initializing a DDF buffer with <A HREF="390_L2_DdfInitialize.html">DdfInitialize</A>,
+and loading a metafile with GpiLoadMetaFile, the example uses DdfMetafile
+to place a reference to the metafile in the DDF buffer.  For a more detailed
+example and discussion of initializing DDF, see the <A HREF="390_L2_DdfInitialize.html">DdfInitialize
+</A>sample.
+<PRE>#define INCL_WINWINDOWMGR       /* General window management    */
+#define INCL_WINMESSAGEMGR      /* Message management           */
+#define INCL_DDF                /* Dynamic Data Facility        */
+#define INCL_GPIMETAFILES       /* MetaFiles                    */
+#include &lt;os2.h&gt;
+#include &lt;pmhelp.h&gt;
+
+#define MF_HWND   0
+#define ACVP_HAB  4
+
+MRESULT WindowProc( HWND hwnd, ULONG ulMsg, MPARAM mp1, MPARAM mp2 )
+{
+    HWND   hwndParent;
+    HAB    hab;
+    HWND   hwndInstance;    /* help instance window                 */
+    HDDF   hDdf;            /* DDF handle                           */
+    HMF    hwndMetaFile;    /* metafile handle                      */
+
+    switch( ulMsg )
+    {
+    case HM_QUERY_DDF_DATA:
+        /* get the help instance */
+        hwndParent = WinQueryWindow( hwnd, QW_PARENT );
+        hwndParent = WinQueryWindow( hwndParent, QW_PARENT );
+        hwndInstance = (HWND)WinSendMsg( hwndParent, HM_QUERY,
+                                 MPFROMSHORT( HMQW_INSTANCE ), NULL );
+
+        /* Allocate 1K Buffer (default)  */
+        hDdf = DdfInitialize(
+                    hwndInstance,  /* Handle of help instance */
+                    0L,            /* Default buffer size     */
+                    0L             /* Default increment       */
+                    );
+
+        if (hDdf == NULLHANDLE)       /* Check return code       */
+        {
+            return (MRESULT)FALSE;
+        }
+
+        /* get hab for this window */
+        if ((hab = (HAB)WinQueryWindowULong(hwnd, ACVP_HAB)) == NULLHANDLE)
+        {
+           return (MRESULT)FALSE;
+        }
+
+        /* Load the Metafile to display */
+        if ((hwndMetaFile = GpiLoadMetaFile(hab, "SAMP.MET")) == NULLHANDLE)
+        {
+            return (MRESULT)FALSE;
+        }
+
+        /* Save MetaFile hwnd in reserved word */
+        WinSetWindowULong(hwnd, MF_HWND, hwndMetaFile);
+
+        if (!DdfMetafile(hDdf, hwndMetaFile, NULL))
+        {
+            return (MRESULT)FALSE;
+        }
+
+        return (hDdf);
+
+    case WM_CLOSE:
+        GpiDeleteMetaFile((HMF)WinQueryWindowULong(hwnd, MF_HWND));
+        WinDestroyWindow(WinQueryWindow(hwnd, QW_PARENT));
+
+        return (MRESULT)TRUE;
+    }
+    return WinDefWindowProc( hwnd, ulMsg, mp1, mp2 );
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="422_L2H_DdfMetafileRelatedFu.html">[Back: DdfMetafile - Related Functions]</A> <BR>
+<A HREF="424_L2H_DdfMetafileTopics.html">[Next: DdfMetafile - Topics]</A> 
+</BODY>
+</HTML>

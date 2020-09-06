@@ -1,0 +1,77 @@
+<HTML>
+<HEAD>
+<TITLE>Opening a Queue</TITLE>
+</HEAD>
+<BODY>
+<H1>Opening a Queue</H1><!-- entering slot 139 -->
+<P>
+Once the queue is created, the server process of the queue and the threads
+of the server process have immediate access to the queue and can proceed
+to access the queue. A client process must request access to a queue by
+calling<A><!-- external link: 1D A3 C3 FC --> DosOpenQueue</A>. Once the
+queue is open, the client process can add an element to the queue with<A><!-- external link: 1D 10 C4 FC --> DosWriteQueue</A>,
+and it can query the number of elements in the queue with<A><!-- external link: 1D D2 C3 FC --> DosQueryQueue</A>.
+
+<P>
+<A><!-- external link: 1D A3 C3 3F -->DosOpenQueue</A> retrieves the queue
+handle and the process identifier of the queue owner. The function also
+increments the queue's access count.
+<P>
+The following code fragment shows how another process would open the queue
+created with<A><!-- external link: 1D 73 C3 FC --> DosCreateQueue</A>.
+<PRE>    #define INCL_DOSQUEUES
+    #include&lt;os2.h&gt;
+
+    #define HF_STDOUT 1    /* Standard output handle */
+
+    HQUEUE  hq;
+    PID     pidOwner;
+    ULONG   ulWritten;
+    APIRET  ulrc;
+
+    ulrc = DosOpenQueue(&amp;pidOwner,
+                        &amp;hq,
+                        "\\queues\\sample.que");
+
+    if (ulrc) {
+        DosWrite(HF_STDOUT,
+                 "\r\n Queue open failed. \r\n",
+                 24,
+                 &amp;ulWritten);
+
+        DosExit(EXIT_PROCESS,
+                1);
+    }
+    else {
+        DosWrite(HF_STDOUT,
+                 "\r\n Queue opened. \r\n",
+                 19,
+                 &amp;ulWritten);
+    }
+
+</PRE>
+
+<P>
+When it is finished with the queue, a thread in the client process ends
+its access by calling<A><!-- external link: 1D 69 C3 FC --> DosCloseQueue</A>.
+<A><!-- external link: 1D 69 C3 3C -->DosCloseQueue</A> decrements the access
+count for the process each time it is called. When the access count reaches
+0, the connection between the client process and the queue is terminated.
+
+<P>
+After a process has opened a queue, any thread in that process can access
+the queue with equal authority.
+<P>
+<B>Note: </B> If a queue was created by a call to the 16-bit<A><!-- external link: 1D 73 C3 FC --> DosCreateQueue</A>,
+then it is not accessible to 32-bit<A><!-- external link: 1D A3 C3 3F --> DosOpenQueue
+</A>requests, and ERROR_QUE_PROC_NO_ACCESS will be returned.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+
+<P><HR>
+
+<A HREF="132_L4_UnnamedSharedMemoryO.html">[Back: Unnamed Shared Memory Objects]</A> <BR>
+<A HREF="134_L3_WritingtoaQueue.html">[Next: Writing to a Queue]</A> 
+</BODY>
+</HTML>

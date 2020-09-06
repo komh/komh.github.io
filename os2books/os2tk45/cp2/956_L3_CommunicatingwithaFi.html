@@ -1,0 +1,96 @@
+<HTML>
+<HEAD>
+<TITLE>Communicating with a File System</TITLE>
+</HEAD>
+<BODY>
+<H1>Communicating with a File System</H1><!-- entering slot 980 -->
+<P>
+An extended standard interface between an application and a file system
+driver is provided by<A><!-- external link: 1D 91 C3 FC --> DosFSCtl</A>.
+This function is similar to DosDevIOCtl, which provides a standard interface
+between an application and a device driver. An application sends a request
+to the file system driver by specifying a particular function code. Data
+is exchanged through data areas and parameter lists.
+<P>
+<A><!-- external link: 1D 91 C3 4C -->DosFSCtl</A> can be used to establish
+open connections to file system drivers that are not attached to a name
+in the operating system's name space. (A name space is a set of names that
+are known to the file system. For example, CON and PRN are always in the
+OS/2 file system's name space.)
+<P>
+The following code fragment demonstrates how a process can communicate with
+a file system driver (FSD). Assume that the calling process has placed an
+appropriate file handle into<I> FileHandle</I>. Assume that the specified
+file system recognizes a function code of hex 8100, and that the function
+code accepts an ASCII string as input, requires no specific command parameter
+list, and returns a string of ASCII characters to the caller.
+<PRE>    #define INCL_DOSFILEMGR   /* File System values */
+    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+    #include &lt;string.h&gt;
+
+    UCHAR   ucDataArea[100];    /* Data area                         */
+    ULONG   ulDataLengthMax;    /* Max. length of Data area          */
+    ULONG   ulDataLengthInOut;  /* Data area length, in and out      */
+    PVOID   pParmList;          /* Parameter list                    */
+    ULONG   ulParmLengthMax;    /* Max. length of Parameter list     */
+    ULONG   ulParmLengthInOut;  /* Parameter list length, in and out */
+    ULONG   ulFunctionCode;     /* Function code                     */
+    PSZ     pszRouteName;       /* Path or FSD name                  */
+    HFILE   hfFileHandle;       /* File handle                       */
+    ULONG   ulRouteMethod;      /* Method for routing                */
+    APIRET  ulrc;               /* Return code                       */
+
+    ulFunctionCode = 0x8100;    /* Indicate the function to request  */
+                                /* of the file system                */
+
+    strcpy(ucDataArea,
+           "PARM1: 98"); /* ASCII string to pass to file system */
+
+    ulDataLengthMax = 100;      /* Tell the file system the maximum  */
+                                /* amount of data it can return      */
+
+    ulDataLengthInOut = strlen(ucDataArea);
+                              /* On input, this is the number of   */
+                              /* bytes sent to the file system     */
+
+    pParmList = 0;              /* In this example, assume that no   */
+    ulParmLengthMax = 0;        /* specific command parameter list   */
+    ulParmLengthInOut = 0;      /* is required by the file system    */
+                              /* for this function code            */
+
+    ulRouteMethod = 1;          /* Indicate that the file handle     */
+    pszRouteName = 0;           /* directs routing (this implies     */
+                                /* that the RouteName variable is    */
+                                /* unused in this example)           */
+
+    ulrc = DosFSCtl(ucDataArea,
+                    ulDataLengthMax,
+                    &amp;ulDataLengthInOut,
+                    pParmList,
+                    ulParmLengthMax,
+                    &amp;ulParmLengthInOut,
+                    ulFunctionCode,
+                    pszRouteName,
+                    hfFileHandle,
+                    ulRouteMethod);
+
+    if (ulrc != 0) {
+        printf("DosFSCtl error: return code = %ld", ulrc);
+        return;
+    }
+
+</PRE>
+
+<P>
+In this example, the the<I> DataArea</I> buffer is used to store the ASCII
+string sent by the file system in response to the function request, and
+the<I> DataLengthInOut</I> variable is used to store the number of bytes
+placed in the buffer by the file system.
+
+<P><HR>
+
+<A HREF="955_L3_ObtainingInformation.html">[Back: Obtaining Information about a File]</A> <BR>
+<A HREF="957_L3_PreparingFileSystems.html">[Next: Preparing File Systems for System Shutdown]</A> 
+</BODY>
+</HTML>

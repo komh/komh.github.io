@@ -1,0 +1,92 @@
+<HTML>
+<HEAD>
+<TITLE>How do I create a status bar at the bottom of my window?</TITLE>
+</HEAD>
+<BODY>
+<H1>How do I create a status bar at the bottom of my window?</H1><!-- entering slot 71 -->
+<P>
+You need to intercept several frame messages:
+<P>
+WM_CALCFRAMERECT to calculate the new location of the client.  You should
+send it to the frame superclass then modify the result.  This message is
+invoked during frame formatting and whenever WinCalcFrameRect is called
+against your frame window handle.
+<P>
+WM_FRAMECTLCOUNT to tell the frame superclass the number of frame controls
+you expect to format.  If you're adding a status line as a child of the
+frame (below the client, I suspect), you would add 1 to the result returned
+by your frame superclass.
+<P>
+WM_FORMATFRAME is where you actually position/size the frame controls. The
+message gives you an array of SWP's.  Call your frame superclass and modify
+the result (in your case, I would expect only FID_CLIENT and your status
+line).
+<P>
+Sample follows...
+<PRE>    /*
+     * FYI, WinDefFrameProc is just a macro I defined to
+     * call my superclass frame window procedure, ie,
+     *    (*vpfnFrameWndProc) (h,m,p1,p2).
+     *
+     * This example splits the client area space 1/3
+     * and 2/3 horizontally with the old client area
+     * and a new sibling.
+     */
+
+    case WM_CALCFRAMERECT:
+      mr = WinDefFrameProc(hwnd, msg, mp1, mp2);
+
+      /*
+       * Calculate the position of the client rectangle
+       * Otherwise,  we'll see a lot of redraw when we move the
+       * client during WM_FORMATFRAME.
+       */
+
+      if (mr &amp;&amp; mp2)
+      {
+         prectl = (PRECTL) mp1;
+         prectl-&gt;xLeft += ((prectl-&gt;xRight - prectl-&gt;xLeft) / 3);
+      }
+      break;
+
+    case WM_FORMATFRAME:
+      sCount = (SHORT) WinDefFrameProc(hwnd, msg, mp1, mp2);
+
+      /*
+       * Reformat the frame to move the client
+       * over and make room for the his/her sibling.
+       */
+
+      pswp = (PSWP) mp1;
+      pswpClient = pswp + sCount - 1;
+      pswpNew = pswpClient + 1;
+
+      *pswpNew = *pswpClient;
+      swpClient = *pswpClient;
+
+      pswpNew-&gt;hwnd = WinWindowFromID(hwnd, ID_SIBLING);
+      pswpNew-&gt;cx = pswpClient-&gt;cx / 3;
+
+      pswpClient-&gt;x = pswpNew-&gt;x + pswpNew-&gt;cx - 1;
+      pswpClient-&gt;cx = swpClient.cx - pswpNew-&gt;cx + 1;
+
+      sCount++;
+      mr = MRFROMSHORT(sCount);
+      break;
+
+    case WM_QUERYFRAMECTLCOUNT:
+      sCount = (SHORT) WinDefFrameProc(hwnd, msg, mp1, mp2);
+      sCount++;
+      mr = MRFROMSHORT(sCount);
+      break;
+</PRE>
+
+<P>
+Credit:  Dan Kehn 
+
+<P><HR>
+
+<A HREF="059_L2_HowcanIgettransparen.html">[Back: How can I get transparent regions in bitmaps?]</A> <BR>
+<A HREF="061_L2_Howtohaveaframeclien.html">[Next: How to have a frame/client and still have a std window?]</A> 
+</BODY>
+</HTML>

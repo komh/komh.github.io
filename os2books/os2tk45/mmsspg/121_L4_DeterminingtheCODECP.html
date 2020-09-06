@@ -1,0 +1,202 @@
+<HTML>
+<HEAD>
+<TITLE>Determining the CODEC Procedure</TITLE>
+</HEAD>
+<BODY>
+<H1>Determining the CODEC Procedure</H1><!-- entering slot 152 -->
+<P>
+Once the FOURCC is obtained, the appropriate CODEC procedure is determined
+and loaded. The following example illustrates the ioDetermineCodec routine,
+which determines which CODEC procedure to load.  This routine first queries
+the hardware to determine what CODEC mode the hardware requires. Next, it
+queries the MMPMMMIO.INI file to determine if there is a CODEC procedure
+that matches the FOURCC, compression type, and capability flags received
+from the open routine.  If no default CODEC is found, this routine queries
+the MMPMMMIO.INI file to find a compression type that works for this particular
+hardware.  If there is no CODEC procedure known to the INI file that will
+match the FOURCC, the code searches internal CODEC tables for the necessary
+CODEC to load.  The ULIOT sample provides an internal CODEC table located
+in the ULGDAT.C file (shown in the following example). This table is hard
+coded in the IOProc to specify what CODEC procedure to call.
+<PRE>LONG ioDetermineCodec ( PINSTANCE pinstance,
+                        ULONG ulSearchFlags,
+                        PCODECINIFILEINFO pcifi )
+
+{
+   LONG              rc = MMIO_SUCCESS; /* Return code of IOProcs call */
+   USHORT            i;                 /* Loop index                   */
+   ULONG             ulFlags;
+   HPS               hps;               /* Use to query color support   */
+   HAB               hab;               /* anchor block                 */
+   HMQ               hmq;               /* anchor block                 */
+
+
+   if (pcifi-&gt;ulCapsFlags &amp; CODEC_DECOMPRESS) {
+      /* Query the display mode */
+      if (ulNumColors == 0) {       /* Get this info once per process */
+         hab  = WinInitialize(0);
+//       hmq  = WinCreateMsgQueue( hab, 0L );
+
+         hps  = WinGetPS(HWND_DESKTOP);
+         DevQueryCaps ( GpiQueryDevice(hps),
+                        CAPS_COLORS,
+                        1L,
+                        (PLONG)&amp;ulNumColors);
+
+         WinReleasePS (hps);
+//       WinDestroyMsgQueue( hmq );
+         WinTerminate (hab);
+         }
+
+      /* Set the color depth for the CODEC we want */
+      if (ulNumColors == 16)
+         pcifi-&gt;ulCapsFlags |= CODEC_4_BIT_COLOR;
+      else if (ulNumColors &gt; 256)
+         pcifi-&gt;ulCapsFlags |= CODEC_16_BIT_COLOR;
+      else  /* 256 and anything else */
+         pcifi-&gt;ulCapsFlags |= CODEC_8_BIT_COLOR;
+      }
+
+   /********************************************************************/
+   /* Search for the DEFAULT CODEC of this type from the MMIO INI file */
+   /********************************************************************/
+   pcifi-&gt;ulCapsFlags |= CODEC_DEFAULT;   /* Pick default */
+   ulFlags = ulSearchFlags |
+             MMIO_MATCHFOURCC |
+             MMIO_MATCHCOMPRESSTYPE |
+             MMIO_MATCHCAPSFLAGS |
+             MMIO_MATCHFIRST |
+             MMIO_FINDPROC;
+
+   if (!(rc = mmioIniFileCODEC(pcifi,ulFlags))) {
+      return(MMIO_SUCCESS);
+      }
+
+   /********************************************************************/
+   /* If no default, find first one and use it from the MMIO INI file  */
+   /********************************************************************/
+   pcifi-&gt;ulCapsFlags &amp;= ~CODEC_DEFAULT;
+   ulFlags = ulSearchFlags |
+             MMIO_MATCHFOURCC |
+             MMIO_MATCHCOMPRESSTYPE |
+             MMIO_MATCHCAPSFLAGS |
+             MMIO_MATCHFIRST |
+             MMIO_FINDPROC;
+
+   /* Match the fourcc, compress type, caps flags */
+   if (!(rc = mmioIniFileCODEC(pcifi,ulFlags))) {
+      return(MMIO_SUCCESS);
+      }
+
+   /*********************************************************************/
+   /* Search any internal CODEC tables for the necessary CODEC to load. */
+   /* Note: This is used for debugging new CODECs that have not been    */
+   /* added to the MMPMMMIO.INI file.                                   */
+   /*********************************************************************/
+   for (i = 0; i &lt; NUMBER_CODEC_TABLE; i++) {
+
+      if ((acifiTable[i].ulCompressType == pcifi-&gt;ulCompressType) &amp;&amp;
+          ((acifiTable[i].ulCapsFlags &amp; pcifi-&gt;ulCapsFlags)
+              == pcifi-&gt;ulCapsFlags)) {
+
+         *pcifi = acifiTable[i];         /* Copy contents */
+         return(MMIO_SUCCESS);
+         }
+      }
+
+
+   return(MMIOERR_CODEC_NOT_SUPPORTED);
+}
+</PRE>
+
+<P>
+The following example illustrates how to hardcode a CODEC INI file information
+structure in an IOProc if the table is not represented in the MMPMMMIO.INI
+file.
+<PRE>CODECINIFILEINFO acifiTable[] = {
+   {
+      sizeof(CODECINIFILEINFO),
+      FOURCC_FFIO,
+      "ULBDC4",
+       /* szDCIODLLName[]-Decompression IOProc DLL name */
+      "CodecEntry",
+       /* szDCIOProcName[]-Decomp IOProc entry pt proc name */
+      UM_VIDEO_COMPRESSION_TYPE_BH146,
+       /* ulDecompressionType - ID of each decompression type */
+      0L,
+      MMIO_MEDIATYPE_DIGITALVIDEO,
+      CODEC_DECOMPRESS+           /* ulCapsFlags - Capabilities Flag */
+         CODEC_<!-- entering slot 153 -->SELFHEAL+          /* ulCapsFlags - Capabilities Flag */
+         CODEC_ORIGIN_UPPERLEFT+  /* ulCapsFlags - Capabilities Flag */
+         CODEC_4_BIT_COLOR,       /* ulCapsFlags - Capabilities Flag */
+      0,
+      0,
+      0,
+      0,
+      0,
+      8,
+      8,
+      0,
+   },
+   {
+      sizeof(CODECINIFILEINFO),
+      FOURCC_FFIO,
+      "ULBDC8",
+        /* szDCIODLLName[]-Decompression IOProc DLL name */
+      "CodecEntry",
+        /* szDCIOProcName[]-Decomp IOProc entry pt proc name */
+      UM_VIDEO_COMPRESSION_TYPE_BH146,
+        /* ulDecompressionType - ID of each decompression type */
+      0L,
+      MMIO_MEDIATYPE_DIGITALVIDEO,
+      CODEC_DECOMPRESS+              /* ulCapsFlags - Capabilities Flag */
+         CODEC_SELFHEAL+             /* ulCapsFlags - Capabilities Flag */
+         CODEC_ORIGIN_UPPERLEFT+     /* ulCapsFlags - Capabilities Flag */
+         CODEC_MULAPERTURE+          /* ulCapsFlags - Capabilities Flag */
+         CODEC_DIRECT_DISPLAY+       /* ulCapsFlags - Capabilities Flag */
+         CODEC_8_BIT_COLOR,          /* ulCapsFlags - Capabilities Flag */
+      0,
+      0,
+      0,
+      0,
+      0,
+      8,
+      8,
+      0,
+   },
+
+   {
+      sizeof(CODECINIFILEINFO),
+      FOURCC_FFIO,
+      "ULBDC16",
+          /* szDCIODLLName[]-Decompression IOProc DLL name */
+      "CodecEntry",
+          /* szDCIOProcName[]-Decomp IOProc entry point proc name */
+      UM_VIDEO_COMPRESSION_TYPE_BH146,
+          /* ulDecompressionType - ID of each decompression type */
+      0L,
+      MMIO_MEDIATYPE_DIGITALVIDEO,
+      CODEC_DECOMPRESS+              /* ulCapsFlags - Capabilities Flag */
+         CODEC_SELFHEAL+             /* ulCapsFlags - Capabilities Flag */
+         CODEC_ORIGIN_UPPERLEFT+     /* ulCapsFlags - Capabilities Flag */
+         CODEC_DIRECT_DISPLAY+       /* ulCapsFlags - Capabilities Flag */
+         CODEC_16_BIT_COLOR,         /* ulCapsFlags - Capabilities Flag */
+      0,
+      0,
+      0,
+      0,
+      0,
+      8,
+      8,
+      0,
+   },
+};
+</PRE>
+
+
+<P><HR>
+
+<A HREF="120_L4_OpeninganImageObject.html">[Back: Opening an Image Object]</A> <BR>
+<A HREF="122_L4_LoadingtheCODECProce.html">[Next: Loading the CODEC Procedure]</A> 
+</BODY>
+</HTML>

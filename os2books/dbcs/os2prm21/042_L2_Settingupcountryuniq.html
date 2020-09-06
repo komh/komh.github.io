@@ -1,0 +1,222 @@
+<HTML>
+<HEAD>
+<TITLE>Setting up country-unique formats for output</TITLE>
+</HEAD>
+<BODY>
+<H1>Setting up country-unique formats for output</H1><!-- entering slot 48 -->
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³OS/2 PrfQueryProfileInt is used to find out a local time format, a    ³
+³country currency sign and format, a numeric format, and the current   ³
+³country code from the system profile. This information is used to show³
+³results of the data process.                                          ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+Notations for presenting time, numeric figures and monetary value are not
+the same to all countries. Its example is demonstrated in Examples of local
+formats.
+<P>
+An application program needs to show date, time and numbers in local notations
+so that they are conventional to users. It must also adopt a local currency
+sign and format print monetary quantities.
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Country   ³Date and Time            ³Monetary    ³Numeric     ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄ´
+³USA       ³MM-DD-YY HH:MM:SS AM     ³$999.99     ³999,999.99  ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Japan     ³YY-MM-DD HH:MM:SS        ³¾999        ³999,999.99  ³
+ÀÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+Consult<I> National Language Design Guide Vol.2 NLS Reference (SE09-8002)
+</I>for notations of other countries.
+<P>
+The current setting of the above formats are stored in<B> C:\OS2\OS2.INI
+</B>for a PM application program.<B> PrfQueryProfileInt</B> is used to find
+them from a PM program. The application name specified is "<B>PM_National</B>".
+The key names related to such local data format are as follows:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Key name       ³Type      ³Description                             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³iCountry       ³integer   ³Country code                            ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³iDate          ³integer   ³Date format. 0=MDY, 1=DMY, 2=YMD.       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³iCurrency      ³integer   ³Currency sign. 0=Preceding currency     ³
+³               ³          ³simbol, no space separator, 1=Succeeding³
+³               ³          ³currency symbol, no space separator,    ³
+³               ³          ³2=Preceding currency symbol with a space³
+³               ³          ³separator, 3=Succeeding currency symbol,³
+³               ³          ³no space separator.                     ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³iTime          ³integer   ³Time format. 0=12-hour clock, 1=24-hour ³
+³               ³          ³clock.                                  ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³s1159          ³string    ³String representing <I>before noon</I> e.g."am"³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³s2359          ³string    ³String representing <I>after noon</I> e.g."pm" ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³sCurrency      ³string    ³Currency sign. e.g."$"                  ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³sThousand      ³string    ³Thousand separator. e.g."."             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³sDecimal       ³string    ³Decimal separator. e.g."."              ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³sDate          ³string    ³Date separator. e.g."/"                 ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³sTime          ³string    ³Time separator. e.g.":"                 ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<BR>
+Obtaining a country code and presentation formats (source: NLSSUB.C)
+<BR>
+
+<PRE>...
+COUNTRYINFO ctryInfo;
+
+/**********************************************************************/
+/*   Fill out a structure "ctryInfo" with items of country information*/
+/*   specified in a profile and/or returned from a system call        */
+/*   DosGetCtryInfo. When the same item is available from both        */
+/*   sources, the profile takes the precedence.                       */
+/**********************************************************************/
+SHORT InitCtryInfo(void)
+{
+  COUNTRYCODE ctryCode;
+  ULONG       ulCInfLength;
+  CHAR        strBuf[20];
+  LONG        intBuf;
+
+  /*------ Initialize variables for a system call --------------*/
+  ctryCode.country = 0;
+  ctryCode.codepage = 0;
+
+  /*------ System call to get country information ------------*/
+  DosQueryCtryInfo(sizeof(ctryInfo), &amp;ctryCode, &amp;ctryInfo, &amp;ulCInfLength);
+
+  /*------------------------------------------------------------*/
+  /*  Query a profile about a country code, a date format,      */
+  /*  a date/time separator, a currecy format/symbol, a decimal */
+  /*  place/charcter, a thousand separator and a data separator,*/
+  /*  and if available, those override DosGetCtryInfo data.     */
+ /*------------------------------------------------------------*/
+  if (<!-- entering slot 49 -->0L != (intBuf=PrfQueryProfileInt(HINI_PROFILE, "PM_National",
+                                       "iCountry", 0L )))
+     ctryInfo.country = (ULONG)intBuf;
+  if (0L != (intBuf=PrfQueryProfileInt(HINI_PROFILE, "PM_National",
+                                       "iDate", 0L)))
+     ctryInfo.fsDateFmt = (ULONG)intBuf;
+  if (0L != (intBuf=PrfQueryProfileInt(HINI_PROFILE, "PM_National",
+                                       "iCurrency", 0L)))
+     ctryInfo.fsCurrencyFmt = (UCHAR)((ctryInfo.fsCurrencyFmt &amp;&amp; 0x00FE) ||
+                                      (intBuf &amp;&amp; 0x0001));
+  if (0L != (intBuf=PrfQueryProfileInt(HINI_PROFILE, "PM_National",
+                                       "iDigits", 0L)))
+     ctryInfo.cDecimalPlace = (UCHAR)intBuf;
+  PrfQueryProfileString(HINI_PROFILE, "PM_National", "sCurrency",
+                        NULL, strBuf, (ULONG)sizeof(strBuf));
+  if (strBuf[0] != '\0') strcpy(ctryInfo.szCurrency, strBuf);
+  PrfQueryProfileString(HINI_PROFILE, "PM_National", "sThousand",
+                        NULL, strBuf, (ULONG)sizeof(strBuf));
+  if (strBuf[0] != '\0') strcpy(ctryInfo.szThousandsSeparator, strBuf);
+  PrfQueryProfileString(HINI_PROFILE, "PM_National", "sDecimal",
+                        NULL, strBuf, (ULONG)sizeof(strBuf));
+  if (strBuf[0] != '\0') strcpy(ctryInfo.szDecimal, strBuf);
+  PrfQueryProfileString(HINI_PROFILE, "PM_National", "sDate",
+                        NULL, strBuf, (ULONG)sizeof(strBuf));
+  if (strBuf[0] != '\0') strcpy(ctryInfo.szDateSeparator, strBuf);
+  PrfQueryProfileString(HINI_PROFILE, "PM_National", "sTime",
+                        NULL, strBuf, (ULONG)sizeof(strBuf));
+  if (strBuf[0] != '\0') strcpy(ctryInfo.szTimeSeparator, strBuf);
+  PrfQueryProfileString(HINI_PROFILE, "PM_National", "sList",
+                        NULL, strBuf, (ULONG)sizeof(strBuf));
+  if (strBuf[0] != '\0') strcpy(ctryInfo.szDataSeparator, strBuf);
+
+  return SUCCESS;
+}
+...
+/**********************************************************************/
+/*   Check the language ID with the current code page                 */
+/**********************************************************************/
+USHORT CheckCodepage(CHAR LangID[])
+{
+  USHORT CpList[20], i, c;
+  ULONG  dataLength, CurrentCpList[4];
+  CHAR   strCp[6];
+  FILE   *stream;
+
+  /*--- Get CPs available for the Language ID ----------------*/
+  GetCpList(LangID, CpList);
+  DosQueryCp(sizeof(CurrentCpList), CurrentCpList, &amp;dataLength);
+  i=0;
+  while (CpList[i] != 0) {
+    if (CpList[i] == (USHORT)CurrentCpList[0])
+       /*-------- If the current CP matches ------------------*/
+       return SUCCESS;
+    i++;
+  }
+  /*----------------------------------------------------------*/
+  /*   If the current CP does not match any CPs available     */
+  /*   for the Language ID, try to determin Language ID       */
+  /*   based on the current code page.                        */
+  /*   The format of DefCp.TBL is xxxxx,yyy // any comment    */
+  /*      where xxxxx is a 5-digit number of code page ID and */
+  /*            yyy is a 3-char string of Language ID         */
+  /*----------------------------------------------------------*/
+  stream = fopen("DefCp.TBL","r");
+  while (fscanf(stream, "%5s,", strCp) != EOF) {
+    if (CurrentCpList[0] == atoi(strCp)) {
+      fscanf(stream, "%3s", LangID);
+      fclose(stream);
+      return SUCCESS;
+      break;
+    } else {
+      while (c = fgetc(stream) != '\n');
+    }
+  }
+  fclose(stream);
+  return FAIL;
+}
+
+
+/**********************************************************************/
+/*   Get CPs availabe to a language ID from the "LangCp.TBL"          */
+/*   The format of LangCp.TBL is xxx(aaaaa,bbbbb, .....,ccccc)        */
+/*      where xxx is a 3-char string of a Language ID and             */
+/*            aaaaa, bbbbb,..., ccccc are 5-digit numbers of          */
+/*            code page IDs available to the language ID xxxxx        */
+/**********************************************************************/
+USHORT GetCpList(CHAR LangID[], USHORT CpList[])
+{
+  FILE   *stream;
+  CHAR   strCp[6], Lang[4];
+  USHORT i, c;
+
+  stream = fopen("LangCp.TBL","r");
+  while(fscanf(stream, "%3s", Lang) != EOF) {
+    if (strcmp(Lang, LangID) == 0) {
+      i = 0;
+      while (fgetc(stream) != ')') {
+        fscanf(stream, "%5s", strCp);
+        CpList[i] = atoi(strCp);
+        i++;
+      }
+      CpList[i] = 0;
+      fclose(stream);
+      return SUCCESS;
+    }
+    while (c = fgetc(stream) != '\n');
+  }
+  fclose(stream);
+  return FAIL;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="041_L3_Usingcommongraphical.html">[Back: Using common graphical characters in the country/language]</A> <BR>
+<A HREF="043_L2_Preparinghelptext.html">[Next: Preparing help text]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,107 @@
+<HTML>
+<HEAD>
+<TITLE>Setting Up the Mixer</TITLE>
+</HEAD>
+<BODY>
+<H1>Setting Up the Mixer</H1><!-- entering slot 66 -->
+<P>
+The application sends the MCI_MIX_SETUP message to the amp mixer to initialize
+the device for direct reading and writing of audio data in the correct mode
+and format-for example, PCM, MIDI, or MPEG audio.
+<P>
+If waveform audio data will be played or recorded, the application fills
+in the<I> ulDeviceType</I> field with MCI_DEVICETYPE_WAVEFORM_AUDIO. It
+must also provide values for the following digital-audio-specific fields:
+ format tag, bits per sample, number of samples per second, and number of
+channels.
+<P>
+If MIDI data will be played, the application fills in the<I> ulDeviceType
+</I>field with a value of MCI_DEVICETYPE_SEQUENCER and places zeroes in
+the format specifications fields.
+<PRE>typedef struct_MCI_MIXSETUP_PARMS
+  {
+  HWND        hwndCallback;    /* IN  Window for notifications */
+  ULONG       ulBitsPerSample; /* IN  Number of bits per sample */
+  ULONG       ulFormatTag;     /* IN  Format tag */
+  ULONG       ulSamplesPerSec  /* IN  Sampling rate */
+  ULONG       ulChannels;      /* IN  Number of channels */
+  ULONG       ulFormatMode;    /* IN  MCI_RECORD or MCI_PLAY */
+  ULONG       ulDeviceType;    /* IN  MCI_DEVTYPE */
+  ULONG       ulMixHandle;     /* OUT Read/Write handle */
+  PMIXERPROC  pmixWrite;       /* OUT Write routine entry point */
+  PMIXERPROC  pmixRead;        /* OUT Read routine entry point */
+  PMIXEREVENT pmixEvent;       /* IN  Event routine entry point */
+  PVOID       pExtendedInfo;   /* IN  Media-specific info */
+  ULONG       ulBufferSize;    /* OUT Recommended buffer size */
+  ULONG       ulNumBuffers;    /* OUT Recommended num buffers */
+  } MCI_MIXSETUP_PARMS;
+</PRE>
+
+<P>
+The application must also fill in the<I> pmixEvent</I> field of the MCI_MIXSETUP_PARMS
+structure with a function pointer for the mixer to use for event notification,
+such as a full buffer, empty buffer, or an error condition. If the call
+to the mixer is successful, it returns two function pointers to the application-one
+for reading data (mixRead) and the other for writing data (mixWrite) to
+the audio device.
+<P>
+An application can use the MCI_MIXSETUP_QUERYMODE flag to query a device
+to see if a particular mode is supported. The following example illustrates
+using MCI_MIXSETUP to query and prepare the audio device for playing 16-bit,
+22050 KHz stereo mode.
+<PRE>
+   // MCI_MIXSETUP informs the mixer device of the entry point
+   // to report buffers being read or written.
+   // We will also need to tell the mixer which media type
+   // we will be streaming.  In this case, we'll use
+   // MCI_DEVTYPE_WAVEFORM_AUDIO.
+
+    memset( &amp;MixSetupParms, '\0', sizeof( MCI_MIXSETUP_PARMS ) );
+
+   MixSetupParms.ulBitsPerSample = 16;
+   MixSetupParms.ulFormatTag     = MCI_WAVE_FORMAT_PCM;
+   MixSetupParms.ulSamplesPerSec = 22050;
+   MixSetupParms.ulChannels = 2;    /* Stereo */
+   MixSetupParms.ulFormatMode = MCI_PLAY;
+   MixSetupParms.ulDeviceType = MCI_DEVTYPE_WAVEFORM_AUDIO;
+
+
+    rc = mciSendCommand( usDeviceID,
+                         MCI_MIXSETUP,
+                         MCI_WAIT | MCI_MIXSETUP_QUERYMODE,
+                         ( PVOID ) &amp;MixSetupParms,
+                         0 );
+
+
+    if ( ULONG_LOWD( rc ) != MCIERR_SUCCESS )
+           {
+           CHAR  szError[255];
+             // The device can't handle this format
+             // get an English error message for the caller.
+           mciGetErrorString( ULONG_LOWD( rc ), szError, 255 );
+           printf("Can't play because of %s", szError );
+           exit( 1 );
+           }
+
+   // The mixer will inform us of entry points to
+   // read/write buffers to and also give us a
+   // handle to use with these entry points.
+
+   MixSetupParms.pmixEvent = MyEvent;
+
+
+    rc = mciSendCommand( usDeviceID,
+                         MCI_MIXSETUP,
+                         MCI_WAIT | MCI_MIXSETUP_INIT,
+                         ( PVOID ) &amp;MixSetupParms,
+                         0 );
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="057_L2_UsingtheDARTInterfac.html">[Back: Using the DART Interface]</A> <BR>
+<A HREF="059_L3_AllocatingMemoryBuff.html">[Next: Allocating Memory Buffers]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,104 @@
+<HTML>
+<HEAD>
+<TITLE>The lookup_host() Function</TITLE>
+</HEAD>
+<BODY>
+<H1>The lookup_host() Function</H1><!-- entering slot 54 -->
+<P>
+<B>Syntax</B>
+<PRE>#include &lt;snmp_dpi.h&gt;
+
+unsigned long    lookup_host(   /* find IP address in network */
+  char            *hostname_p); /* byte order for this host   */
+</PRE>
+
+<P>
+<B>Parameters</B><!-- lm: 0x2 1 -->
+<UL>
+<P>
+hostname_p<!-- lm: 0x11 3 -->
+<UL> A pointer to a NULL terminated character
+string representing the host name or IP address in dot notation of the host
+where the DPI capable SNMP agent is running.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Return Values</B><!-- lm: 0x2 6 -->
+<UL>
+<P>
+If successful, the IP address is returned in network byte order, so it is
+ready to be used in a sockaddr_in structure.<!-- lm: 0x2 6 -->
+<P>
+If failure, a value of 0 is returned.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Description</B>
+<P>
+The lookup_host() function is used to obtain the IP address in network byte
+order of a host or IP address in dot notation.
+<P>
+The DPI subagent programmer only needs to use this function to code the
+connection setup and send or await the packet.  The programmer then obtains
+the DPI port number, finds the IP address of the agent with the lookup_host()
+function and then sets up a socket for communication.
+<P>
+This function is implicitly executed by the DPIconnect_to_agent_TCP() function,
+which is the function that the DPI subagent programmer would normally use.
+ So the lookup_host() function is normally not used by the DPI subagent
+programmer.
+<P>
+<B>Examples</B>
+<PRE>#include &lt;snmp_dpi.h&gt;#include /* other include files for BSD sockets and such */
+int                  handle;
+unsigned char       *pack_p;
+long int             dpi_port;
+int                  fd;
+struct sockaddr_in   s,t;              /* source and target   */
+
+dpi_port = query_DPI_port("localhost", /* get DPI port number */
+                  "public",            /* for TCP, local host */
+                  dpiPortForTCP);
+if (dpi_port &lt; 0) exit(1);             /* error if negative   */
+
+host_addr = lookup_host("localhost");  /* find target IP addr */
+if (host_addr == 0) exit(1);           /* unknown, that's it  */
+
+fd = socket(AF_INET,SOCK_STREAM,0);    /* create a TCP socket */
+if (fd &lt; 0) exit(1);                   /* failure to do so    */
+
+memset(&amp;s,0,sizeof(s));
+s.sin_family      = AF_INET;           /* set AF_INET family  */
+s.sin_port        = 0;                 /* give us any port,   */
+s.sin_addr.s_addr = htonl(INADDR_ANY); /* any local IPaddress */
+
+rc = bind(fd,(struct sockaddr *)s,     /* bind our socket(fd) */
+          sizeof(s_sock));             /* defined in s socket */
+if (rc &lt; 0) exit(1);                   /* failure, so exit    */
+
+memset(&amp;d,0,sizeof(d));
+d.sin_family      = AF_INET;           /* set AF_INET family  */
+d.sin_port        = htons(dpi_port);   /* set requested port  */
+d.sin_addr.s_addr = host_addr;         /* destination IP addr */
+                                       /* network byte order  */
+rc = connect(fd,(struct sockaddr *)d,  /* connect to target   */
+             sizeof(d));               /* based on d sock     */
+if (rc &lt; 0) exit(1);                   /* failed, exit        */
+/* now we have a socket on which to send/receive DPI packets  */
+</PRE>
+
+<P>
+<B>Related Information</B><!-- lm: 0x2 6 -->
+<UL>
+<P>
+<A HREF="052_L2_Thequery_DPI_portFun.html">The query_DPI_port() Function
+</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="047_L2_TheDPIconnect_to_age.html">The DPIconnect_to_agent_TCP()
+Function</A><!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="050_L2_TheDPIsend_packet_to.html">[Back: The DPIsend_packet_to_agent() Function]</A> <BR>
+<A HREF="052_L2_Thequery_DPI_portFun.html">[Next: The query_DPI_port() Function]</A> 
+</BODY>
+</HTML>

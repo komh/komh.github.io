@@ -1,0 +1,98 @@
+<HTML>
+<HEAD>
+<TITLE>Parameter list</TITLE>
+</HEAD>
+<BODY>
+<H1>Parameter list</H1><!-- entering slot 111 -->
+<P>
+The "parameter-list" contains zero or more parameter declarations for the
+method, delimited by commas. (The target object for the method is not explicitly
+specified as a method parameter in IDL, nor are the<B> Environment</B> or
+<B>Context</B> parameters.)  If there are no explicit parameters, the syntax
+"( )" must be used, rather than "(void)". A parameter declaration has the
+following syntax:
+<P>
+{<B> in</B> ’<B> out</B> ’<B> inout</B> } <I> type-spec  declarator</I>
+<P>
+where "type-spec" is any valid IDL type and "declarator" is an identifier,
+array declarator, or pointer declarator.
+<P>
+<U><I>In, out, inout</I></U> parameters:  The required<B> in</B>’<B>out</B>’<B>inout
+</B>directional attribute indicates whether the parameter is to be passed
+from client to server (<B>in</B>), from server to client (<B>out</B>), or
+in both directions (<B>inout</B>). A method must not modify an<B> in</B>
+parameter. If a method raises an exception, the values of the return result
+and the values of the<B> out</B> and<B> inout</B> parameters (if any) are
+undefined. When an unbounded<B> string</B> or<B> sequence</B> is passed
+as an<B> inout</B> parameter, the returned value must be no longer than
+the input value.
+<P>
+The following are examples of valid method declarations in SOM IDL:
+<PRE>   short meth1(in char c, out float f);
+   oneway void meth2(in char c);
+   float meth3();
+</PRE>
+
+<P>
+Classes derived from<B> SOMObject</B> can declare methods that take a pointer
+to a block of memory containing a variable number of arguments, using a
+final parameter of type<B> va_list</B>. The<B> va_list</B> must use the
+parameter name "ap", as in the following example:
+<PRE>   void MyMethod(in short numArgs, in va_list ap);
+</PRE>
+
+<P>
+For<B> in</B> parameters of type<B> array</B>, C and C++ clients must pass
+the address of the first element of the array. For<B> in</B> parameters
+of type<B> struct</B>,<B>  union, sequence</B> or<B> any,</B> C/C++ clients
+must pass the address of a variable of that type, rather than the variable
+itself.
+<P>
+For all IDL types except<B> arrays</B>, if a parameter of a method is<B> out
+</B>or<B> inout</B>, then C/C++ clients must pass the address of a variable
+of that type (or the value of a pointer to that variable) rather than the
+variable itself. (For example, to invoke method "meth1" above, a pointer
+to a variable of type<B> float</B> must be passed in place of parameter
+"f".) For<B> arrays</B>, C/C++ clients must pass the address of the first
+element of the<B> array</B>.
+<P>
+If the return type of a method is a<B> struct, union, sequence</B>, or<B> any
+</B>type, then for C/C++ clients, the method returns the value of the C/C++
+struct representing the IDL<B> struct, union, sequence</B>, or<B> any</B>.
+If the return type is<B> string,</B> then the method returns a pointer to
+the first character of the<B> string</B>. If the return type is<B> array</B>,
+then the method returns a pointer to the first element of the<B> array</B>.
+
+<P>
+The pointers implicit in the parameter types and return types for IDL method
+declarations are made explicit in SOM's C and C++ bindings. Thus, the stub
+procedure that the SOM Compiler generates for method "meth1", above, has
+the following signature:
+<PRE>   SOM_Scope short  SOMLINK meth1(char c, float *f)
+</PRE>
+
+<P>
+For C and C++ clients, if a method has an<B> out</B> parameter of type<B>
+string</B><B> sequence</B>, or<B> any</B>, then the method must allocate
+the storage for the<B> string,</B> for the "_buffer" member of the struct
+that represents the<B> sequence,</B> or for the "_value" member of the struct
+that represents the<B> any</B>. It is then the responsibility of the client
+program to free the storage when it is no longer needed. Similarly, if the
+return type of a method is<B> string</B>,<B> sequence</B>,<B> array</B>,
+or<B> any</B>, then storage must be allocated by the method, and it will
+be the responsibility of the client program to subsequently free it.
+<P>
+Note: The foregoing description also applies for the<B> _get_</B> &lt;<I>attributeName</I>&gt;
+method associated with an attribute of type<B> string, sequence, any,</B> or
+<B>array.</B>  Hence, the attribute should be specified with a "noget" modifier
+to override automatic implementation of the attribute's "get" method.  Then,
+needed memory can be allocated by the developer's "get" method implementation
+and subsequently deallocated by the caller.  (The "noget" modifier is described
+under the topic "Modifier statements" later in this section.)
+
+<P><HR>
+
+<A HREF="091_L4_Onewaykeyword.html">[Back: Oneway keyword]</A> <BR>
+<A HREF="093_L4_Raisesexpression.html">[Next: Raises expression]</A> 
+</BODY>
+</HTML>

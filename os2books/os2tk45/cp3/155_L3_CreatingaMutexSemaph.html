@@ -1,0 +1,74 @@
+<HTML>
+<HEAD>
+<TITLE>Creating a Mutex Semaphore</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating a Mutex Semaphore</H1><!-- entering slot 163 -->
+<P>
+Mutex semaphores are created by calling<A><!-- external link: 1D 6F C3 FC --> DosCreateMutexSem</A>.
+This function also opens the semaphore for the calling process and its threads.
+
+<P>
+When a mutex semaphore is created, a flag is set to specify the initial
+state of the semaphore, owned or unowned. If the semaphore is owned by a
+thread, other threads requesting the semaphore are blocked. If the semaphore
+is unowned-not owned by any thread- then any thread requesting ownership
+will be granted ownership immediately.
+<P>
+If the calling thread sets the initial state to owned, it owns the semaphore
+as soon as OS/2 creates the semaphore and can proceed to access the resource
+that the semaphore was created to protect.
+<P>
+If the semaphore is unowned, any thread in the creating process can subsequently
+request ownership of the semaphore by calling<A><!-- external link: 1D DA C3 FC --> DosRequestMutexSem</A>.
+Threads in other processes can gain ownership of the semaphore, but they
+must call<A><!-- external link: 1D A1 C3 3A --> DosOpenMutexSem</A> to acquire
+access to the semaphore before they can call<A><!-- external link: 1D DA C3 FC --> DosRequestMutexSem</A>.
+
+<P>
+Mutex semaphores can be defined as either private or shared.<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Private semaphores are always unnamed and are therefore
+identified by their handles. They can be used only by threads within a single
+process.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Shared semaphores can be either named or unnamed.
+If named, they can be opened using either the name or the handle. The handle
+returned by<A><!-- external link: 1D A1 C3 3A --> DosOpenMutexSem</A> is
+then used to identify the semaphore for all other functions. Semaphore names
+must include the prefix \SEM32\ and must conform to file system naming conventions.
+Shared semaphores can be used by threads in multiple processes.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following code fragment creates a mutex semaphore:
+<PRE>    #define INCL_DOSSEMAPHORES   /* Semaphore values */    #include &lt;os2.h&gt;
+
+    HMTX hmtxProtFile;
+
+    DosCreateMutexSem("\\sem32\\ProtFile",          /* Named-shared semaphore */
+                      &amp;hmtxProtFile,
+                      0,
+                      FALSE);                       /* Initially unowned      */
+        .
+        .    /* Get data to write to shared file. */
+        .
+
+</PRE>
+
+<P>
+There is a system-wide limit of 65536 shared semaphores (including mutex,
+event, and muxwait semaphores); in addition, each process can have up to
+65536 private semaphores.
+<P>
+OS/2 maintains a usage count for each semaphore.<A><!-- external link: 1D 6F C3 39 --> DosCreateMutexSem
+</A>initializes the usage count to 1. Thereafter, each call to<A><!-- external link: 1D A1 C3 3A --> DosOpenMutexSem
+</A>increments the count, and each call to<A><!-- external link: 1D 67 C3 38 --> DosCloseMutexSem
+</A>decrements it.
+
+<P><HR>
+
+<A HREF="154_L2_UsingMutexSemaphores.html">[Back: Using Mutex Semaphores]</A> <BR>
+<A HREF="156_L3_OpeningaMutexSemapho.html">[Next: Opening a Mutex Semaphore]</A> 
+</BODY>
+</HTML>

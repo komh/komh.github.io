@@ -1,0 +1,57 @@
+<HTML>
+<HEAD>
+<TITLE>Closing Sockets</TITLE>
+</HEAD>
+<BODY>
+<H1>Closing Sockets</H1><!-- entering slot 53 -->
+<P>
+Closing a socket and reclaiming its resources is not always a straightforward
+operation. In certain situations, such as when a process exits, a soclose()
+call is expected to be successful. However, when a socket promising reliable
+delivery of data is closed with data still queued for transmission or awaiting
+acknowledgment of reception, the socket must attempt to transmit the data.
+If the socket discards the queued data to allow the soclose() call to complete
+successfully, it violates its promise to deliver data reliably. Discarding
+data can cause naive processes, which depend upon the implicit semantics
+of the soclose() call, to work unreliably in a network environment. However,
+if sockets block until all data has been transmitted successfully, in some
+communication domains a soclose() call may never complete.
+<P>
+The sockets layer compromises in an effort to address this problem and maintain
+the semantics of the soclose() call. In normal operation, closing a socket
+causes any queued but unaccepted connections to be discarded. If the socket
+is in a connected state, a disconnect is initiated. When the disconnect
+request completes, the network support notifies the sockets layer, and the
+socket resources are reclaimed. The network layer may then attempt to transmit
+any data queued in the socket's send buffer, although this is not guaranteed.
+
+<P>
+Alternatively, a socket may be marked explicitly to force the application
+program to linger when closing until pending data are flushed and the connection
+has shut down. This option is marked in the socket data structure using
+the setsockopt() call with the SO_LINGER option. The setsockopt() call,
+using the linger option, takes a linger structure. When an application program
+indicates that a socket is to linger, it also specifies a duration for the
+lingering period. If the lingering period expires before the disconnect
+is completed, the socket layer forcibly shuts down the socket, discarding
+any data still pending.
+<P>
+An example of deallocating the socket descriptor s using the soclose() call
+is:
+<BR>
+An Application Using the soclose() Call
+<BR>
+
+<PRE>...
+/* close the socket */
+soclose(s);
+...
+</PRE>
+
+
+<P><HR>
+
+<A HREF="048_L2_SocketShutdown.html">[Back: Socket Shutdown]</A> <BR>
+<A HREF="050_L2_TypicalSocketSession.html">[Next: Typical Socket Session Diagram]</A> 
+</BODY>
+</HTML>

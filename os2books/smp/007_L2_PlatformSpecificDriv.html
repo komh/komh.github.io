@@ -1,0 +1,134 @@
+<HTML>
+<HEAD>
+<TITLE>Platform Specific Driver Architecture and Structure</TITLE>
+</HEAD>
+<BODY>
+<H1>Platform Specific Driver Architecture and Structure</H1><!-- entering slot 7 -->
+<P>
+The PSD operates in three contexts (modes): Kernel, Interrupt, and Init.
+<!-- lm: 0x2 0 -->
+<P>
+o<!-- lm: 0x2 2 -->
+<UL><B>Kernel Mode</B>
+<P>
+The OS/2 kernel calls the PSD for task-time operations, that is, it will
+execute as a thread within a process. Kernel mode is also referred to as
+the task context.<!-- lm: 0x2 0 -->
+</UL> o<!-- lm: 0x2 2 -->
+<UL><B>Interrupt
+Mode</B>
+<P>
+The OS/2 kernel calls the PSD for interrupt-time operations. Interrupt time
+is a generic term that refers to executing code as a result of a hardware
+interrupt. The code does not execute as a thread belonging to a process.
+<!-- lm: 0x2 0 -->
+</UL>o<!-- lm: 0x2 2 -->
+<UL><B>Init Mode</B>
+<P>
+The PSD is currently being used for system initialization. A limited set
+of PSD helps are available for use.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+PSDs may contain multiple code and data objects. All objects will be fixed
+(not-swappable or movable) in low physical memory, with virtual addresses
+in the system arena. Objects are loaded in low physical memory to facilitate
+the use of real mode or bi-modal code. All objects default to permanent,
+which means that they remain in the system after initialization is completed.
+The SEGMENTS directive and the IOPL option in the linker DEF file should
+be used to mark those objects that are not to be kept after initialization.
+
+<P>
+The multitasking/multiprocessing environment of OS/2 for SMP V2.11 dictates
+that the PSD must be capable of handling multiple requests simultaneously.
+This means that global variables should be used sparingly. Upon PSD installation,
+the kernel passes a pointer to a small area of processor local memory (PLMA)
+which the PSD developer can use to store variables. PSD developers must
+be aware of the effects of the calls they make, because there is no guarantee
+that if an operation is started on a processor, and execution blocks, that
+the operation will continue on the same processor. OS/2 does not preempt
+a thread in the PSD, but it may block as a result of using a PSD help, or
+it may be interrupted by a hardware interrupt.
+<P>
+PSDs can register an interrupt handler for any given IRQ level using the
+SET_IRQ PSD help. These interrupt handlers are guaranteed to be called before
+any device driver's interrupt handler. If the PSD's interrupt handler returns
+NO_ERROR, the interrupt manager will assume the interrupt has been handled,
+it will end the interrupt. If a -1 is returned, the interrupt manager will
+assume that the interrupt has not been handled, and will call each device
+driver which has a registered interrupt handler for that particular level
+until one claims the interrupt. If the interrupt is unclaimed, the IRQ level
+will be masked off.
+<P>
+All PSDs must use the SET_IRQ PSD help to indicate which IRQ level they
+will be using for inter-processor interrupts (IPI). If the PSD's IPI IRQ
+level is shared, it must register a handler which detects if the IRQ is
+an IPI or another interrupt. The handler must return NO_ERROR if the interrupt
+was caused by an IPI, otherwise it returns a -1. If the IPI IRQ level is
+unique, an interrupt handler need not be installed but SET_IRQ must still
+be used to indicate which is the IPI IRQ level.
+<P>
+The kernel will save the state of all the registers (except EAX) around
+calls to the PSD functions. All the functions will run at Ring 0. Upon invocation,
+SS, DS, and ES will be flat. The PSD functions must conform to the C calling
+convention. They receive parameters on the stack (4 bytes<!-- entering slot 8 --> per
+parameter), and must return a return code in EAX.
+<P>
+The PSD functions have been split into three categories:<!-- lm: 0x2 0 -->
+<P>
+o<!-- lm: 0x2 2 -->
+<UL> Functions that the PSD must have for OS/2 to operate
+(required functions)<!-- lm: 0x2 0 -->
+</UL>o<!-- lm: 0x2 2 -->
+<UL> Functions that the PSD does not need to have
+(optional functions)<!-- lm: 0x2 0 -->
+</UL>o<!-- lm: 0x2 2 -->
+<UL> Functions that the PSD must have for OS/2
+to use multiple processors (MP functions).<!-- lm: 0x2 0 -->
+</UL>
+<P>
+The kernel provides default handling for some of the PSD functions. PSD
+functions can also chain to a kernel default handler by returning a -1 return
+code. If a return code other than -1 is returned by a PSD function, the
+default handler will not get called. The PSD function glossary later in
+this chapter details the categories of all the functions, as well as any
+default handlers they may have.
+<P>
+The PSD developer makes functions available to OS/2 by using the EXPORTS
+statement in the module definition (DEF) file. All functions should be exported
+using upper case with no leading underscores (_). An example is shown below.
+
+<PRE>  LIBRARY TESTPSD
+
+  EXPORTS
+
+     PSD_INSTALL   = _Install
+     PSD_DEINSTALL = _DeInstall
+
+</PRE>
+
+<P>
+The initial CS and EIP in the PSD's executable image is ignored. The image
+should also not contain a stack object. OS/2 allocates a per-processor PSD
+stack and sets SS and ESP correctly before invoking any of the PSD functions.
+
+<P>
+PSDs should be written in flat 32-bit code, using C, and must be linked
+as a LIBRARY.
+<P>
+OS/2 invokes all PSD functions in protect mode, but there is also a PSD
+help which allows the PSD developer to call a PSD function in real mode.
+
+<P>
+OS/2 services are provided through the PSD help interface. Access to these
+services are obtained upon PSD installation. PSD helpers preserve all registers
+except EAX.
+<P>
+All the definitions (e.g. defines, structures, etc.) that are required for
+building a PSD are in the header file PSD.H.
+
+<P><HR>
+
+<A HREF="006_L1_PlatformSpecificDriv.html">[Back: Platform Specific Drivers (PSDs)]</A> <BR>
+<A HREF="008_L2_OS2Initialization.html">[Next: OS/2 Initialization]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,103 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Parameters for a REXX program</TITLE>
+</HEAD>
+<BODY>
+<H1>Parameters for a REXX program</H1><!-- entering slot 176 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+There's a difference in the way REXX programs handle parameters when they're
+called from the command line (e.g. you enter<B><I> erexxtry</B></I> in an
+OS/2 window) and when they're called from another REXX program (e.g. you
+write<B><I> myRC = rexxtry()</B></I> in your REXX program):
+<P>
+In the first case (when called from the command line), the REXX program
+always retrieves the parameters given on the command line as single string.
+Thus, the programmer must include code in the REXX program to parse the
+string into individual parameters. In the second case (when called from
+within a REXX program), the REXX interpreter itself splits the parameter
+string into its parts, much as if it has been called by a REXX routine (see
+also <A HREF="263_L4_Howtouseparsearg.html">How to use parse arg</A>).
+<P>
+To get around the differences in these behaviors, you can check the "call
+type", returned by <A HREF="255_L3_PARSESOURCE.html">PARSE SOURCE</A> (see
+also <A HREF="534_L3_Simpleparameterparsi.html">Simple parameter parsing
+routine</A>). Then, having identified the type of call that was used, your
+program can branch to code based on the identified call type:
+<PRE> 
+/* simple example code to handle parameters to a REXX program         */
+/* in a manner equivalent to the handling of parameters for a         */
+/* REXX routine                                                       */
+/*                                                                    */
+
+                    /* get the call type of this routine              */
+                    /* DO NOT turn NOVALUE on at this time!           */
+  parse source . callType .
+  if callType &lt;&gt; "COMMAND" then
+    signal Main     /* called as function or procedure                */
+  else
+  do
+                    /* called from the command line                   */
+    args = ""
+    if pos( ",", arg(1)) = 0 then
+    do
+                    /* no comma found in the parameters -- use blanks */
+                    /* as argument delimiter                          */
+
+                    /* split argument in multiple arguments using     */
+                    /* blanks as argument separator                   */
+      do i = 1 to words( arg(1) )
+        args = args "'" || word( arg(1),i ) || "'"
+        args = args ","
+      end /* do i = 1 to words( arg(1) ) */
+    end /* if pos( ... */
+    else
+    do
+                    /* at least one comma found in the parameters --  */
+                    /* assume commas are used to separate the         */
+                    /* parameters                                     */
+
+                    /* split argument in multiple arguments using     */
+                    /* commas as argument separator                   */
+      argT = strip( arg(1) )
+      do while argT &lt;&gt; ""
+        parse var argT argC "," argT
+        argC = strip( argC )
+        args = args || "'" || argC || "'"
+        args = args ","
+      end /* while argT &lt;&gt; "" */
+    end /* else */
+
+    drop argT argC
+    interpret "call Main " || args
+
+    if symbol( "RESULT" ) = "VAR" then
+    do
+                    /* return the return code to the caller           */
+      return result
+    end /* if symbol( "RESULT" ) = "VAR" then */
+    else
+      return
+  end /* else */
+
+/* main function entry point                                          */
+/* Note: Do not use PROCEDURE for this routine                        */
+
+Main:
+  say "Main called with " || arg() || " arguments:"
+  do i = 1 to arg()
+    say "  Argument " || i || " is &lt;" || arg(i) || "&gt;"
+  end  /* do i = 1 to arg() */
+return arg(1)
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="174_L3_Using%0%9withOS2comm.html">[Back: Using %0 ... %9 with OS/2 commands]</A> <BR>
+<A HREF="176_L3_Parameterseatenbythe.html">[Next: Parameters eaten by the CMD.EXE]</A> 
+</BODY>
+</HTML>

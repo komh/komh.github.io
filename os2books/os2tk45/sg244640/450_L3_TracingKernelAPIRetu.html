@@ -1,0 +1,106 @@
+<HTML>
+<HEAD>
+<TITLE>Tracing Kernel API Return Information</TITLE>
+</HEAD>
+<BODY>
+<H1>Tracing Kernel API Return Information</H1><!-- entering slot 634 -->
+<P>
+<U><I>Kernel APIs</I></U>
+<P>
+There three schemes that operate when kernel API is called: 
+<PRE>
+
+     Direct call:
+
+             APPL ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ&gt; KERNEL
+                  &lt;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     Indirect call, direct return:
+
+             APPL ÄÄÄÄ&gt; DOSCALL1 ÄÄÄÄÄ&gt; KERNEL
+                  &lt;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     Indirect call, indirect return:
+
+             APPL ÄÄÄÄ&gt; DOSCALL1 ÄÄÄÄÄ&gt; KERNEL
+                  &lt;ÄÄÄÄ DOSCALL1 &lt;ÄÄÄÄÄ
+
+
+</PRE>
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Direct Calls:<!-- lm: 0x11 11 -->
+<UL>
+<P>
+Kernel APIs are entered directly from the application. Return information
+is logged in the following format:
+<PRE>
+    32-bit API:
+
+             Return EIP=%F CS=%W
+
+    16-bit API:
+
+             Return IP=%W CS=%W
+
+</PRE>
+
+<P>
+CS, EIP and IP refer to the return address in the application.
+<P>
+Use TRACE ON KERNEL(....) to trace these APIs.<!-- lm: 0x2 1 -->
+</UL> Indirect
+call, direct return:<!-- lm: 0x11 11 -->
+<UL>
+<P>
+32-bit Kernel APIs are preprocessed by DOSCALL1 but are returned to directly
+from the KERNEL. Return information is logged in the following format:
+<PRE>
+    32-bit API:
+
+             Return EIP=%F CS=%W, Thunk EIP=%F
+
+</PRE>
+
+<P>
+Thunk EIP refers to the return address in to the application. Return EIP
+and CS refer to the return back to DOSCALL1. In most cases the pre-invocation
+tracepoint is recoded after the kernel has updated the Return EIP  with
+the Thunk EIP value and they will have the same value.
+<P>
+Use TRACE ON KERNEL(....) to trace these APIs.<!-- lm: 0x2 1 -->
+</UL> Indirect
+call, Indirect return:<!-- lm: 0x11 11 -->
+<UL>
+<P>
+32-bit APIs are pre- and post-processed by DOSCALL1. Parameters are logged
+by the kernel tracepoint, but the return address will only show the direct
+return back to DOSCALL1. For each API of this form a pre-invocation API
+in DOSCALL1 has been defined that logs just the return address back to the
+application. For example, the following shows DosSleep entry to the Kernel,
+preceded by Dos32Sleep entry to DOSCALL1:
+<PRE>
+(OS) DosSleep Pre-Invocation
+Event [10]  Major [5/0x0005]  Minor [307/0x0133]  PID [38/0x0026]  Length [18]  Time [18:07:32.05]
+Return EIP=0000C361  CS=DFD7
+Timeout Interval = 0000 0000
+
+(OS) Dos32Sleep Pre-Invocation
+Event [11]  Major [16/0x0010]  Minor [267/0x010b]  PID [38/0x0026]  Length [7]  Time [18:07:32.05]
+Return address = 1BDFAA63
+</PRE>
+
+<P>
+For a list of kernel APIs indirected through DOSCALL1 see: <A HREF="1258_L4_KernelAPITracepoints.html">Kernel
+API Tracepoints Indirected Via DOSCALL1</A>.<!-- lm: 0x2 1 -->
+</UL> 
+
+<P><HR>
+
+<A HREF="449_L2_DosXxxxAPIPreinvocat.html">[Back: DosXxxx API Pre-invocation Tracepoints.]</A> <BR>
+<A HREF="451_L3_TracingSessionManage.html">[Next: Tracing Session Manager API return information]</A> 
+</BODY>
+</HTML>

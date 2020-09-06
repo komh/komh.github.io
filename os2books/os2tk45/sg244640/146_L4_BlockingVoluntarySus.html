@@ -1,0 +1,158 @@
+<HTML>
+<HEAD>
+<TITLE>Blocking - Voluntary Suspension</TITLE>
+</HEAD>
+<BODY>
+<H1>Blocking - Voluntary Suspension</H1><!-- entering slot 178 -->
+<P>
+We now turn our attention to<I> blocking</I>, which the is mechanism that
+threads use to give up processor time voluntarily to wait for an event to
+occur or a resource to become available.
+<P>
+The term voluntary is chosen from the perspective of the scheduler and not
+necessarily from the application's perspective.  In this context voluntary
+suspension refers to an action taken by a thread to give up its time-slice.
+ This will include direct actions such as waiting on semaphores as well
+as calling APIs, which for internal reasons need to wait for a resource
+or an event.
+<P>
+PROCBLOCK and its counterpart PROCRUN are the two kernel routines at the
+heart of the block/run mechanism. These are callable directly by kernel
+component and also by Device Drivers and File System Drivers through a small
+interface layer. Application code only gets to call PROCBLOCK and PROCRUN
+indirectly through system APIs and in particular through the semaphore APIs.
+
+<P>
+The block/run mechanism is designed with the following criteria:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+A thread should be able to block without the waking thread having to know
+whether anyone, or who, had blocked on a resource<!-- lm: 0x2 6 -->
+<P>
+Multiple threads should be able to wake when an event or resource becomes
+available.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+This is achieved by having an abstract token, known as the<B> Block ID</B>,
+associated with the resource or event. The BlockId is passed to PROCBLOCK
+when a thread blocks. Similarly when another thread wishes to wake threads
+waiting for a resource or event the BlockId that represents the resource
+or event is passed to PROCRUN.
+<P>
+In addition to the BlockId, callers of PROCRUN receive a flag that indicates
+whether all or just the highest priority thread waiting on the BlockId should
+wake.
+<P>
+This mechanism has shortcomings unless certain constraints are applied:
+<!-- lm: 0x2 6 -->
+<UL>
+<P>
+BlockIds need to be subject to a convention that gives uniqueness otherwise
+it is possible that threads will incorrectly block and run. A solution is
+to use the address of a control block memory object that relates uniquely
+to the resource or event.<!-- lm: 0x2 6 -->
+<P>
+If addresses are to be used for BlockIds then they must point to global
+data for reasons of uniqueness. Furthermore, if they are to be reference
+by disabled code then the storage needs to be in resident memory. This more
+or less implies that addresses must be taken from within the System Arena.
+<!-- lm: 0x2 6 -->
+<P>
+If BlockIds are in use that do not represent addresses then they must not
+conflict with any potential addresses used as BlockIds.<!-- lm: 0x2 6 -->
+<P>
+Even if addresses are use there is no accounting information that says who
+owns the related resource.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+A workable scheme is implemented by limiting the direct use of PROCBLOCK
+and PROCRUN to system code, device drivers and file system drivers, all
+of which have access to the System Arena.
+<P>
+Apart from three special conventions the system and most device drivers
+use addresses as BlockIds. There are three system defined conventional BlockIds
+are:<!-- lm: 0x2 1 -->
+<P>
+fffe....<!-- lm: 0x11 11 -->
+<UL> results from a RAMSEM wait.<!-- lm: 0x2 1 -->
+</UL> fffd....
+<!-- lm: 0x11 11 -->
+<UL>results from a MUXWAIT.<!-- lm: 0x2 1 -->
+</UL> ffca....
+<!-- lm: 0x11 11 -->
+<UL>results from a Child Wait<!-- lm: 0x2 1 -->
+</UL> x.......
+(x=a - f)<!-- lm: 0x11 11 -->
+<UL> Linear address of the memory object of
+control block that relates to the resource.<!-- lm: 0x2 1 -->
+</UL> ........
+<!-- lm: 0x11 11 -->
+<UL>Probably selector:offset address of the memory
+object or control block that relates to the resource.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+This scheme could be subverted by device drivers,<!-- entering slot 179 --> but
+in general they will choose to block on addresses of resources they own,
+which are usually allocated out of the system arena and addressed using
+a GDT select:offset.
+<P>
+Accountability remains an exposure. For BlockIds that are addresses the
+owner of the memory that the BlockId points to gives a big clue. For conventional
+BlockIds we have to do more work. These are discussed in detail later. We
+will first we look at an example of a BlockId that is an address.
+<P>
+<U><I>Basic Technique:</I></U>
+<P>
+The technique for analysing blocked threads is two-pronged:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->We can look at the wait from the application
+perspective by examining the current user registers and by trying to identify
+the API issued. This is usually relatively easy but often gives no clue
+as to the underlying wait since any single API may block on many occasions
+for many reasons.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Examine the problem from the Internal, or Kernel
+perspective to determine what an API might be waiting for. This process
+starts with finding the associated BlockId.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+When a thread blocks its BlockId is stored in the TCB TCBSleepId field.
+Conveniently, this is formatted by using the<B> .PB</B> KDB and DF command.
+
+<P>
+<B>Note: </B>
+<P>
+.PB under DF lists non-blocked threads. BlockIds are irrelevant for such
+threads.<!-- lm: 0x2 1 -->
+<P>
+
+<P>
+<LI>PB also attempts to interpret the BlockId. The full details of these
+are given in the <A HREF="262_L1_KernelDebuggerandDum.html">Kernel Debugger
+and Dump Formatter Command Reference</A>. In addition to classifying the
+BlockId, .PB examines TCB_SemInfo and TCB_SemDebugAddr.
+<P>
+For many semaphore originated BlockIds TCB_SemInfo is used to store the
+address or handle of the user's semaphore that lead to the thread blocking.
+.PB will attempt to locate a near symbol to the semaphore address and display
+it.
+<P>
+Under the kernel Debugger, TCB_SemDebugAddr is used to store the address
+of the caller to the Semaphore API when the thread blocked. If this field
+is not 0xffffffff .PB attempts to locate a near symbol to the caller and
+display it.
+<P>
+Once we have the BlockId, TCB_SemInfo, and TCB_SemDebugAddr we are able
+to begin searching for information associated with reason for blocking.
+
+<P>
+The next step is to decide whether the BlockId is one of the three special
+categories or to be treated as an address. 
+
+<P><HR>
+
+<A HREF="145_L3_ThreadSchedulingandD.html">[Back: Thread Scheduling and Dispatching Topics]</A> <BR>
+<A HREF="147_L5_BlockingontheAddress.html">[Next: Blocking on the Address of a Resource]</A> 
+</BODY>
+</HTML>

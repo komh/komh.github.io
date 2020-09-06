@@ -1,0 +1,104 @@
+<HTML>
+<HEAD>
+<TITLE>Scheduler Priority Queues</TITLE>
+</HEAD>
+<BODY>
+<H1>Scheduler Priority Queues</H1><!-- entering slot 553 -->
+<P>
+Threads are linked in structures call<B> Priority Queues</B> or<B> PriQ</B>s.
+
+<P>
+Priority queues are a double-linked list of thread priority groups. Each
+group is a double-linked list of threads of the same priority.
+<P>
+Six chain pointers are used for the links of a<B> PriQ</B>:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+<B>TCBpTCBPriHigher</B> (<B>TCB</B> + 0x178)<!-- lm: 0x2 6 -->
+<P>
+<B>TCBpTCBPriLower</B> (<B>TCB</B> + 0x17c)<!-- lm: 0x2 6 -->
+<P>
+<B>TCBpTCBPriNext</B> (<B>TCB</B> + 0x180)<!-- lm: 0x2 6 -->
+<P>
+<B>TCBpTCBPriPrev</B> (<B>TCB</B> + 0x184)<!-- lm: 0x2 1 -->
+</UL>
+<P>
+By default these chain pointers are set to point to their own TCB.
+<P>
+<B>TCBpTCBPriHigher</B> and<B> TCBpTCBPriLower</B> link the heads of each
+priority group.
+<P>
+<B>TCBpTCBNext</B> and<B> TCBpTCBPrev</B> link the TCBs within each priority
+group.
+<P>
+A number of<B> PriQs</B> are defined. Each is anchored from a global symbol
+pointer:<!-- lm: 0x2 1 -->
+<P>
+<B><LI>ptcbPriQTSD</B><!-- lm: 0x11 11 -->
+<UL> Anchor for all threads in
+<B>tsd</B> state.<!-- lm: 0x2 1 -->
+</UL><B> _ptcbPriQRunner</B><!-- lm: 0x11 11 -->
+<UL> Anchor
+for all threads in<B> run</B> state. At most this contains one TCB.<!-- lm: 0x2 1 -->
+</UL><B> _ptcbPriQReady
+</B><!-- lm: 0x11 11 -->
+<UL>Anchor for all threads in<B> rdy</B> state.
+<!-- lm: 0x2 1 -->
+</UL><B>_ptcbPriQGetStack</B><!-- lm: 0x11 11 -->
+<UL> Anchor
+for all threads in<B> gsk</B> state.<!-- lm: 0x2 1 -->
+</UL><B> _ptcbPriQBadStack
+</B><!-- lm: 0x11 11 -->
+<UL>Anchor for all threads in<B> bad</B> state.
+<!-- lm: 0x2 1 -->
+</UL><B>ptda_pTCBPriQCritSec</B><!-- lm: 0x11 11 -->
+<UL> Anchor
+per-process for all threads within a process in<B> crt</B> state.
+<P>
+<B>Notes: </B>
+<P>
+For the current process<B> ptda_pTCBPriQCritSec</B> (<B>PTDA</B> +0x2e4)
+is a also a global symbol. Out of current context it can be located relative
+to the process'<B> PTDA</B> address.
+<P>
+The<B> TCB</B> address of the thread that has entered critical section is
+saved in<B> ptda_pTCBCritSec</B> (<B>PTDA</B> +0x2e0)<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+Sleeping threads are queued on priority queues but in a manner to favour
+wake-up processing. The <A HREF="3351_L0_.html">Block-Id</A> is hashed to
+form an index into a table of<B> PriQ</B> anchors. The table is located
+at global symbol:
+<PRE><B>_aptcbSleep</B></PRE>
+
+<P>
+Each anchor points to a chain of<B> PriQs</B> of threads sleeping on the
+same Block-Id. The head TCB of each<B> PriQ</B> within a hashed chain is
+doubly linked from:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+<B>TCBpTCBPriNextQ</B> (<B>TCB</B> + 0x170)<!-- lm: 0x2 6 -->
+<P>
+<B>TCBpTCBPriPrevQ</B> (<B>TCB</B> + 0x174)<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Threads that happen to sleep on the same Block-Id as a multi-wake-up block-id
+are guaranteed not to be put in the same chain as the multi-wake-up threads.
+
+<P>
+When multi-wake-up threads wake their entire sleeping<B> PriQ</B> is moved
+to a chain of<B> PriQs</B> for threads in<B> dly</B> state. The delayed
+thread<B> PriQ</B> is anchored from global symbol:
+<PRE><B>_ptcbPriQDelayed</B></PRE>
+
+<P>
+Since<B> ptcbPriQDelayed</B> anchors a chain of<B> PriQs</B>, the head of
+each<B> PriQ</B> is doubly-linked using<B> TCBpTCBPriQNextQ</B> and<B> TCBpTCBPriQPrevQ</B>.
+
+
+<P><HR>
+
+<A HREF="381_L3_PQDisplaySchedulerQu.html">[Back: .PQ - Display Scheduler Queue Information]</A> <BR>
+<A HREF="383_L3_PUDisplayThreadUserS.html">[Next: .PU - Display Thread User Space Information]</A> 
+</BODY>
+</HTML>

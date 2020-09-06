@@ -1,0 +1,53 @@
+<HTML>
+<HEAD>
+<TITLE>Creating a Window</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating a Window</H1><!-- entering slot 420 -->
+<P>
+When a 32-bit application module creates a window, and the window procedure
+for that window resides in a 16-bit module (either statically linked or
+in a DLL), the calling routine must explicitly declare the 16-bit nature
+of the window procedure's entry point when registering the window class.
+ This may become rather complex, since it involves invoking a 32-bit entry
+point from a 32-bit module, but passing a 16-bit entry point as a parameter.
+
+<P>
+A simpler solution is to build a registration routine within the 16-bit
+module, which registers the window class and creates the window.  The 32-bit
+module then need only invoke this routine, and allow for the resulting 16-bit
+window handle.  This technique has the added advantage that Presentation
+Manager records the fact that the window was registered from a 16-bit module,
+and will automatically perform thunking for system-defined message classes.
+ The technique is illustrated in <A HREF="114_L2_Creatinga16bitWindow.html">Figure
+"Creating a 16-bit Window From Within a 32-bit Module"</A>.
+<P>
+Since the 16-bit module would typically be a DLL, the registration routine
+is declared in the 16-bit module as an exportable entry point using the
+EXPENTRY keyword.
+<P>
+The 32-bit module declares the registration routine<I> MakeMyWindow()</I> as
+a 16-bit function using the<I> #pragma linkage</I> directive with the<I> far16
+</I>keyword. Since in 16-bit code, the EXPENTRY keyword forces use of the
+<I>pascal</I> calling convention, the directive also specifies this calling
+convention.  Note that if the registration routine and the window procedure
+were to reside in a DLL, this declaration would typically take place within
+a header file provided by the developer of the DLL.
+<P>
+The 32-bit module invokes the registration routine that registers the window
+class and creates the window.  The registration routine then returns the
+window handle to the 32-bit module, which stores it in 16:16 format. Note
+that the registration routine in the 16-bit module is not aware that it
+is being called from a 32-bit module.
+<P>
+This approach allows the same DLL to be accessed by both 16-bit and 32-bit
+applications concurrently.  The developer of the DLL simply provides two
+separate header files containing declarations of the DLL's entry points,
+in the appropriate format for each programming environment.
+
+<P><HR>
+
+<A HREF="377_L2_Using16BitWindowProc.html">[Back: Using 16-Bit Window Procedures]</A> <BR>
+<A HREF="379_L3_PassingMessagesto16B.html">[Next: Passing Messages to 16-Bit Windows]</A> 
+</BODY>
+</HTML>

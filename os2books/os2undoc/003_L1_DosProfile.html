@@ -1,0 +1,221 @@
+<HTML>
+<HEAD>
+<TITLE>DosProfile</TITLE>
+</HEAD>
+<BODY>
+<H1>DosProfile</H1><!-- entering slot 3 --><!-- lm: 0x2 1 -->
+<UL>Prototype:
+<P>
+<!-- lm: 0x2 6 -->
+<UL> APIRET APIENTRY Dos32Profile ( ULONG func, PID pid,
+PRFCMD *profcmd, PRFRET *profret ) ;<!-- lm: 0x2 1 -->
+</UL> Linkage Definition:
+<P>
+<!-- lm: 0x2 6 -->
+<UL> IMPORTS Dos32Profile = DOSCALLS.377<!-- lm: 0x2 1 -->
+</UL> Parameters:
+<!-- lm: 0x2 6 -->
+<UL><!-- lm: 0x2 11 -->
+<UL>
+<P>
+ULONG func    Function to perform.  See notes.<!-- lm: 0x2 11 -->
+<BR>
+PID pid      Process ID to be profiled.  Zero selects the kernel.<!-- lm: 0x2 11 -->
+<BR>
+PRFCMD *profcmd  Address of command buffer.  See notes.<!-- lm: 0x2 11 -->
+<BR>
+PRFRET *profret  Address of results buffer.  See notes.<!-- lm: 0x2 6 -->
+</UL><!-- lm: 0x2 1 -->
+</UL>Return Codes:<!-- lm: 0x2 6 -->
+<UL><!-- lm: 0x2 11 -->
+<UL>
+<P>
+ <LI> NO ERROR - Ok.<!-- lm: 0x2 11 -->  8  NOT_ENOUGH_MEMORY - Couldn't
+allocate profile structures.<!-- lm: 0x2 11 -->
+<BR>
+ 87  INVALID_PARAMETER - Some parameter not ok.<!-- lm: 0x2 11 -->
+<BR>
+111  BUFFER_OVERFLOW - Not enough size in return buffer.<!-- lm: 0x2 11 -->
+<BR>
+115  PROTECTION_VIOLATION - Invalid return buffer data.<!-- lm: 0x2 11 -->
+<BR>
+126  MOD_NOT_FOUND - Requested module data not available.<!-- lm: 0x2 11 -->
+<BR>
+303  INVALID_PROCID - Parameter 2 is not a valid PID.<!-- lm: 0x2 11 -->
+<BR>
+328  SYS_INTERNAL - Profile data structure corrupted.<!-- lm: 0x2 11 -->
+<BR>
+543  PRF_NOT_INITIALIZED - Profiling was not initialized.<!-- lm: 0x2 11 -->
+<BR>
+544  PRF_ALREADY_INITIALIZED - Profiling is already initialized.<!-- lm: 0x2 11 -->
+<BR>
+545  PRF_NOT_STARTED - Cannot stop profiling without start.<!-- lm: 0x2 11 -->
+<BR>
+546  PRF_ALREADY_STARTED - Profiling is already started.<!-- lm: 0x2 11 -->
+<BR>
+547  PRF_TIMER_OUT_OF_RANGE - Invalid timer frequency.<!-- lm: 0x2 11 -->
+<BR>
+548  PRF_TIMER_RESET - Re-initialized with different timer.<!-- lm: 0x2 6 -->
+</UL><!-- lm: 0x2 1 -->
+</UL>Notes:
+<P>
+ (1) The<B> func</B> parameter can have the following values:<!-- lm: 0x2 6 -->
+<UL><!-- lm: 0x2 11 -->
+<UL>
+<P>
+PRF_CM_INIT  (0)  Initialize. <B> pid</B> and<B> profcmd</B> must be specified.
+<!-- lm: 0x2 11 -->PRF_CM_START (1)  Start profiling. <B> pid</B> must be
+specified.<!-- lm: 0x2 11 -->
+<BR>
+PRF_CM_STOP  (2)  Stop profiling. <B> pid</B> must be specified.<!-- lm: 0x2 11 -->
+<BR>
+PRF_CM_CLEAR (3)  Clear profile counters. <B> pid</B> must be specified.
+<!-- lm: 0x2 11 -->
+<BR>
+PRF_CM_DUMP  (4)  Read out profile data. <B> pid</B> and<B> profret</B> must
+be specified.<!-- lm: 0x2 11 -->
+<BR>
+PRF_CM_EXIT  (5)  Exit profiling.  Discard profiling structures.<!-- lm: 0x2 6 -->
+</UL><!-- lm: 0x2 1 -->
+</UL>(2) The<B> profcmd</B> structure is as follows:
+<!-- lm: 0x2 4 -->
+<UL>
+<PRE>struct {
+   PRFSLOT *cm_slots ;              /* Virtual address slots */
+   USHORT   cm_nslots ;             /* # of VA slots &lt; 256 (!) */
+   USHORT   cm_flags ;              /* command */
+      #define PRF_PROCESS_MT 0      /* profile proc+threads */
+      #define PRF_PROCESS_ST 1      /* profile proc only */
+      #define PRF_KERNEL     2      /* profile kernel */
+      #define PRF_VADETAIL   0      /* create detailed page counters */
+      #define PRF_VAHIT      4      /* create hit table */
+      #define PRF_VATOTAL    8      /* create total count for VA only */
+      #define PRF_FLGBITS    0x40   /*  has a flgbits structure (?) */
+      #define PRF_WRAP       0x80   /* don't use: if hit table full, wrap */
+                                    /* there is a bug in kernel, which */
+                                    /* prevents this from correct working! */
+      /* status bits, don't ever set these (won't work, not masked, bug!) */
+      #define PRFS_RUNNING   0x100  /* profiling is active */
+      #define PRFS_THRDS     0x200  /* also profiling threads */
+      #define PRFS_HITOVFL   0x800  /* overflow in hit buffer */
+      #define PRFS_HEADER    <!-- entering slot 4 -->0x1000 /* internally used */
+
+   ULONG    cm_bufsz ;              /* reserve # of bytes for buffers */
+                                    /* e.g. for hit buffer or detailed */
+                                    /* counters */
+   USHORT   cm_timval ;             /* timer resolution */
+                                    /* if 0, use default == 1000 */
+   /* valid if PRF_FLAGBITS set */
+   PUCHAR   cm_flgbits ;            /* vector of flag bits (?) */
+   UCHAR    cm_nflgs ;              /* # of flag bits &gt;= 2 if present */
+} PRFCMD; /* 19 bytes */
+
+typedef struct {
+   ULONG sl_vaddr; /* start of VA segment to profile */
+   ULONG sl_size;  /* length of VA segment */
+   ULONG sl_mode;  /* !=0 use PRF_VA* flags, */
+                   /* =0, simple count */
+} PRFSLOT;
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>(3) The<B> profret</B> structure is as follows:
+<!-- lm: 0x2 4 -->
+<UL>
+<PRE>
+typedef struct {
+   UCHAR us_cmd ;                /* command */
+      #define PRF_RET_GLOBAL   0 /* return global data */
+                                 /* set us_thrdno for specific thread */
+                                 /* us_buf = struct PRFRET0 */
+      #define PRF_RET_VASLOTS  1 /* return VA slot data (PRFRET1) */
+      #define PRF_RET_VAHITS   2 /* return hit table (PRFRET2) */
+      #define PRF_RET_VADETAIL 3 /* return detailed counters (PRFRET3) */
+                                 /* specify us_vaddr */
+   USHORT us_thrdno ;            /* thread requested for cmd=0 */
+   ULONG us_vaddr ;              /* VA for cmd=3*/
+   ULONG us_bufsz ;              /* length of return buffer */
+   VOID *us_buf ;                /* return buffer */
+} PRFRET ; /* 15 bytes */
+
+typedef struct {
+   USHORT r0_flags ;             /* profile flags */
+                                 /* see PRF_* defines */
+   USHORT r0_shift ;             /* shift factor */
+                                 /* 2^N = length of a segment for */
+                                 /* detailed counters */
+   ULONG  r0_idle ;              /* count if process is idle */
+   ULONG  r0_vm86 ;              /* count if process is in VM mode */
+   ULONG  r0_kernel ;            /* count if process is in kernel */
+   ULONG  r0_shrmem ;            /* count if process is in shr mem */
+   ULONG  r0_unknown ;           /* count if process is elsewhere */
+   ULONG  r0_nhitbufs ;          /* # of dwords in hitbufs */
+   ULONG  r0_hitbufcnt ;         /* # of entries in hit table */
+   ULONG  r0_reserved1 ;         /* internally used */
+   ULONG  r0_reserved2 ;         /* internally used */
+   USHORT r0_timval ;            /* timer resolution */
+   UCHAR  r0_errcnt ;            /* error count */
+   USHORT r0_nstruc1 ;           /* # of add structures 1 (?) */
+   USHORT r0_nstruc2 ;           /* # of add structures 2 (?) */
+} PRFRET0 ;
+
+typedef struct {
+   UCHAR r1_nslots ;             /* # of slots (bug: prevents */
+                                 /* correct # if #slots &gt;255) */
+   PRFVA r1_slots[1] ;           /* slots */
+} PRFRET1 ;
+
+typedef struct {
+   ULONG r2_nhits ;              /* # of entries in table */
+   ULONG r2_hits[1] ;            /* hit table */
+} PRFRET2 ;
+
+typedef struct {
+   ULONG r3_size ;               /* size of segment */
+   ULONG r3_ncnts ;              /* # of entries in table */
+   ULONG r3_cnts[1] ;            /* counters */
+} PRFRET3;
+
+typedef struct {
+   ULONG va_vaddr ;              /* virtual address of segment */
+   ULONG va_size ;               /* length of segment */
+   ULONG va_flags ;              /* == 8, va_cnt is valid */
+   ULONG va_reserved ;           /* internally used */
+   ULONG va_cnt ;                /* profile count */
+} PRFVA;
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>(4) Profiling is based on VA (virtual address) segments.
+The profiler can operate in the following modes:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+<LI>Simple counting: will increment a counter if a VA range is found.<!-- lm: 0x2 6 -->
+<BR>
+<LI>Hit tracing: will store the detailed VA in the hit buffer if an address
+is found in a range to be profiled. If the buffer is full with VAs, this
+type of logging stops, since the wrap function has a bug.<!-- lm: 0x2 6 -->
+<BR>
+<LI>Detailed counting: first all segments are added. Assuming cm_bufsz/4
+ULONGs are available, calculate the finest page granularity that will use
+most space of the counter buffer. Allocate sufficient counters for each
+VA range. If a page is hit, increment the corresponding counter.<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+<LI><LI><LI>All structures are byte aligned and packed.
+<P>
+ (6) Several bugs in the logic seem to prevent certain functions.
+<P>
+ (7) Apparently only one process<!-- entering slot 5 --> may be profiled
+at a time, due to a difficulty of sharing the global internal _pmb structure.
+<P>
+ (8) The flgbits structure seems to be a strange kind of clock divider:
+if there are flgbits, the profiling routine is only called from the profile
+interrupt, if the one of the bytes decrements to 0, e.g. flgbits[] = { 5,6,7,8
+} profiling data will be accumulated after tick 8, 15, 21, 26, 34, 41, 47,
+52,... I have no idea why this is available. 
+
+<P><HR>
+
+<A HREF="002_L1_DosForceSystemDump.html">[Back: DosForceSystemDump]</A> <BR>
+<A HREF="004_L1_DosQProcStat.html">[Next: DosQProcStat]</A> 
+</BODY>
+</HTML>

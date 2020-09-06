@@ -1,0 +1,174 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>General routines for the samples</TITLE>
+</HEAD>
+<BODY>
+<H1>General routines for the samples</H1><!-- entering slot 368 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+
+/* ================================================================== */
+/*    This chapter contains various routines needed by the samples    */
+/*                        from the WPS section                        */
+/* ================================================================== */
+
+/* ------------------------------------------------------------------ */
+/* function: show the data of an object                               */
+/*                                                                    */
+/* usage:    ShowObjectData [objectID | objectHandle] ,,              */
+/*                          indent, indent1                           */
+/*                                                                    */
+/* where:    objectID - object ID (e.g. "&lt;WP_DESKTOP&gt;"                */
+/*           objectHandle - object Handle (e.g. "#340056")            */
+/*           indent - indent for all lines except the first           */
+/*           indent1 - indent for the first line                      */
+/*                                                                    */
+/* returns:  1 - ok                                                   */
+/*           0 - object not found                                     */
+/*          -1 - parameter missing                                    */
+/*                                                                    */
+/* Note:  This routine needs Henk Kelders excellent DLL <A HREF="663_L3_WPTOOLS.html">WPTOOLS.DLL</A>!  */
+/*                                                                    */
+/*              This routine only retrieves the setup strings         */
+/*              supported by the DLL WPTOOLS.DLL (see the file        */
+/*              WPTOOLS.TXT from the WPTOOLS package)!!!              */
+/*                                                                    */
+/*                                                                    */
+ShowObjectData: PROCEDURE
+  parse arg curObjectHandle , indent , indent1
+
+  if rxFuncQuery( "WPToolsQueryObject" ) then
+  do
+                    /*  load WPTOOLS functions                        */
+    call RxFuncAdd "WPToolsLoadFuncs", "WPTOOLS", "WPToolsLoadFuncs"
+    call WPToolsLoadFuncs
+  end /* if rxFuncQuery( ... */
+
+  iRetCo = -1
+  if curObjectHandle &lt;&gt; 0 then
+  do
+    iRetco = WPToolsQueryObject( curObjectHandle,,
+                                 "szClass",,
+                                 "szTitle",,
+                                 "szSetupString",,
+                                 "szLocation" )
+    if iRetco then
+    do
+                /* get the object ID of this object (if it exists)    */
+      parse value ( szSetupString || ";" ) WITH  "OBJECTID=" objectID ";"
+      if objectID = "" then
+        objectID = "[no object ID, the object handle is " || ,
+                   curObjectHandle || "]"
+      call lineOut, copies( " " ,indent1 ) || objectID
+
+      call lineOut, copies( " ", indent  ) || "Classname   : " || szClass
+      call lineOut, copies( " ", indent  ) || "Title       : " || szTitle
+      call lineOut, copies( " ", indent  ) || "Location    : " || szLocation
+
+                    /* use formatted output for the setup string      */
+      call SplitSetupString 80 - ( indent + 15 ) , szSetupString
+
+      call LineOut , copies( " ", indent ) || "Setupstring : " || ,
+                     SetupStrStem.1
+
+      do n = 2 to SetupStrStem.0
+        if n &lt;&gt; SetupStrStem.0 then
+          call LineOut , copies( " " ,indent + 14 ) || SetupStrStem.n
+      end /* do n = 2 to SetupStrStem.0 */
+
+    end /* if iRetCo then */
+    else
+      call lineOut, copies( " ", indent1 ) || "Error: Object " || ,
+                    curObjectHandle || " not found!"
+
+  end /* if curObjectHandle &lt;&gt; 0 then */
+
+RETURN iRetCo
+
+/* ------------------------------------------------------------------ */
+/* Function: split a setup string into parts with a maximum length    */
+/*                                                                    */
+/* call:     SplitSetupString length , setupString                    */
+/*                                                                    */
+/* where:    length - max. length for the parts                       */
+/*           setupString - setup String                               */
+/*                                                                    */
+/* returns:  1                                                        */
+/*                                                                    */
+/*           SetupStrStem.0 - no. of parts                            */
+/*           SetupStrStem.# - part 1 to n                             */
+/*                                                                    */
+/* Note:     The setup string is split at semicolons (;). If a        */
+/*           part of the setup string is too long, it is split at     */
+/*           commas (,).                                              */
+/*           Setupstrings (and parts of them) without a semicolon and */
+/*           a comma are not split.                                   */
+/*                                                                    */
+SplitSetupString: PROCEDURE expose setupStrStem.
+  parse arg thisLength, setupString
+
+  SetupStrStem. = ""
+  SetupStrStem.0 = 0
+  j = 1
+
+  do until setupString = ""
+
+    parse var setupString curPart ";" setupString
+
+    select
+      when length( curPart ) &gt;= thisLength then
+      do
+
+        if length( SetupStrStem.j ) &lt;&gt; 0 then
+          j = j + 1
+
+        curPart = curPart || ";"
+
+        do until curPart = ""
+          parse var curPart curTPart "," curPart
+
+          if ( length( SetupStrStem.j ) + length( curTPart ) + 1 &gt;= thisLength ) &amp; ,
+             length( SetupStrStem.j ) &lt;&gt; 0 then
+            j = j +1
+
+          if curPart = "" then
+            SetupStrStem.j = SetupStrStem.j || curTPart
+          else
+            SetupStrStem.j = SetupStrStem.j || curTPart || ","
+
+        end /* until curPart = "" */
+
+      end /* when */
+
+      when length( SetupStrStem.j ) + 1 + length( curPart ) &gt; thisLength then
+      do
+        j = j + 1
+        SetupStrStem.j = curPart || ";"
+      end /* when */
+
+      otherwise
+      do
+        SetupStrStem.j = SetupStrStem.j || curPart || ";"
+      end /* otherwise */
+
+    end /* select */
+  end /* do until setupString = "" */
+
+  setupStrStem.0 = j
+
+RETURN 1
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="356_L4_DefaultSettingsforWP.html">[Back: Default Settings for WPUrl Objects]</A> <BR>
+<A HREF="358_L3_OS2SYSINI.html">[Next: OS2SYS.INI]</A> 
+</BODY>
+</HTML>

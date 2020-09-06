@@ -1,0 +1,61 @@
+<HTML>
+<HEAD>
+<TITLE>Guard Page Technique</TITLE>
+</HEAD>
+<BODY>
+<H1>Guard Page Technique</H1><!-- entering slot 84 -->
+<P>
+When the amount of real storage reserved for a memory object is increased
+dynamically by progressive commitment of pages, the application is<I> not
+</I>required to explicitly determine whether the next write operation will
+exceed the limit of the storage already reserved.  When such a write operation
+occurs, the operating system may notify the application, by raising a <A HREF="300_L2_guardpageexception.html"><B>guard
+page fault</B></A> exception.
+<P>
+This technique is useful for situations where storage requirements grow
+linearly.  OS/2 V2.0 implements automatic stack growth by using guard pages.
+When wishing to limit physical storage requirements but at the same time
+allow for situations where large data areas might be needed, an application
+should consider using guard pages.  A memory object is allocated with the
+largest possible size that might be required. The application then commits
+the minimum number of pages, that are required. Usually this would start
+at the lowest address in the memory object and proceed upwards.  The application
+then marks the next highest page as a <A HREF="299_L2_guardpage.html"><B>guard
+page</B></A>. The guard page is also a committed page.
+<P>
+The application must also register an exception handler.  Exception handlers
+are described in <A HREF="098_L2_SignalandExceptionHa.html">Signal and Exception
+Handling</A>. When the application tries to write data into the guard page,
+a guard page fault will be raised and control passed to the application's
+exception handler.  The application must then unguard the current guard
+page, commit the next highest page and then set guard on that page.  Should
+the application try to access uncommitted storage above the guard page,
+a general protection exception will occur.
+<P>
+OS/2 Version 2.0 provides a default guard page exception handler, which
+commits the next<I> lower</I> page in the object;  this is done because
+the default handler is written to handle dynamic stack growth.  Stacks are
+always propagated downward. For all threads other than the first in any
+process, OS/2 V2.0 allocates the stack as a sparse object.  The page with
+the highest address is committed and the page immediately below it is marked
+as a guard page.  No other pages are committed.  When the guard page is
+accessed, the default handler tries to get another guard page below the
+current one.  If successful, the original guard page becomes a normal stack
+page. An application could allow the default handler to process guard page
+exceptions on its private memory objects; however, in most cases the actions
+taken by this default handler will not be appropriate and an application
+should register its own exception handler.
+<P>
+Use of the guard page technique is strongly recommended whenever the amount
+of data to be written into a memory object is variable, or when the size
+of a memory object may increase during execution. The process of creating
+and registering an exception handler and of using guard pages and the handling
+of guard page exceptions within applications is described in<I> OS/2 Version
+2.0 - Volume 4:  Application Development</I>.
+
+<P><HR>
+
+<A HREF="078_L3_AllocationandManagem.html">[Back: Allocation and Management]</A> <BR>
+<A HREF="080_L3_VirtualMemoryManagem.html">[Next: Virtual Memory Management]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,87 @@
+<HTML>
+<HEAD>
+<TITLE>Moving the File Pointer</TITLE>
+</HEAD>
+<BODY>
+<H1>Moving the File Pointer</H1><!-- entering slot 940 -->
+<P>
+Every disk file has a corresponding file pointer that marks the current
+location in the file. The current location is the byte in the file that
+will be read from or written to on the next call to<A><!-- external link: 1D D7 C3 3D --> DosRead
+</A>or<A><!-- external link: 1D 0F C4 FC --> DosWrite</A>. Usually, the
+file pointer is at the beginning of the file when you first open or create
+the file, and it advances as you read or write to the file. You can, however,
+change the position of the file pointer at any time by using<A><!-- external link: 1D EB C3 FC --> DosSetFilePtr</A>.
+
+<P>
+<A><!-- external link: 1D EB C3 3E -->DosSetFilePtr</A> moves the file pointer
+a specified offset from a given position. You can move the pointer from
+the beginning of the file, from the end, or from the current position.
+<P>
+
+<P>
+The following code fragment shows how to move the pointer 200 bytes from
+the end of the file:
+<PRE>    #define INCL_DOSFILEMGR   /* File system values     */
+    #include &lt;os2.h&gt;
+
+    #define HF_STDOUT 1       /* Standard output handle */
+    #define BUF_SIZE 255
+
+    BYTE abBuf[BUF_SIZE];
+    HFILE hf;
+    ULONG ulRead,
+          ulWritten,
+          ulAction,
+          ulNewPtr;
+
+    DosOpen("SAMPLE.TXT",
+            &amp;hf,
+            &amp;ulAction,
+            0,
+            FILE_NORMAL,
+            FILE_OPEN,
+            OPEN_ACCESS_READONLY |
+            OPEN_SHARE_DENYNONE,
+            (PEAOP2) NULL);
+
+    DosSetFilePtr(hf,
+                  -200,
+                  FILE_END,
+                  &amp;ulNewPtr);
+
+    DosRead(hf,
+            &amp;abBuf,
+            sizeof(abBuf),
+            &amp;ulRead);
+
+    DosWrite(HF_STDOUT,
+             abBuf,
+             ulRead,
+             &amp;ulWritten);
+
+</PRE>
+
+<P>
+In this example,<A><!-- external link: 1D EB C3 3E --> DosSetFilePtr</A> moves
+the file pointer to the 200th byte from the end of the file. If the file
+is not that long, the function moves the pointer to the first byte in the
+file and returns the actual position (relative to the end of the file) in
+the<I> ulNewPtr</I> variable.
+<P>
+You can move the file pointer for disk files only. You cannot use<A><!-- external link: 1D EB C3 3E --> DosSetFilePtr
+</A>on devices, despite using other file functions (<A><!-- external link: 1D 9F C3 3C -->DosOpen</A>,
+<A><!-- external link: 1D D7 C3 FC -->DosRead</A>) to access a device.
+<P>
+If a file is read-only, write operations to the file will not be performed.
+
+<P>
+Moving the pointer from the end of the file can be used to determine the
+size of the file.
+
+<P><HR>
+
+<A HREF="916_L3_WritingtoFiles.html">[Back: Writing to Files]</A> <BR>
+<A HREF="918_L3_ClosingFiles.html">[Next: Closing Files]</A> 
+</BODY>
+</HTML>

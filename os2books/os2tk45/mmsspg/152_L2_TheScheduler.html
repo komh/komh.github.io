@@ -1,0 +1,72 @@
+<HTML>
+<HEAD>
+<TITLE>The Scheduler</TITLE>
+</HEAD>
+<BODY>
+<H1>The Scheduler</H1><!-- entering slot 194 -->
+<P>
+The scheduler is the mechanism that passes messages from one instance to
+another. It allows multiple instances to pass messages "simultaneously"
+to multiple targets. The scheduler uses two round-robin queues, Q1 and Q2.
+Q1 is for real-time messages, and Q2 for non-real-time System Exclusive
+(SysEx) messages. The scheduler uses the following algorithm:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Some instance creates a message. This can occur
+during interrupt time (for example, from a hardware node) or via task time
+(for example, from an application node).  It adds that message to the end
+of either Q1 or Q2. It then instructs the scheduler to process the queues.
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->The scheduler runs. If an interrupt from a Type
+A driver occurs, it is possible for a hardware node to create a new message
+while the scheduler is running. (See the<I> MMPM/2 Device Driver Reference
+</I>for a description of a Type A driver.) The scheduler can accept new
+entries into either queue while it is running. It will disable interrupts
+only during those times when the queue is manipulated.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->The scheduler first processes all entries in
+Q1.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->When Q1 is empty, the scheduler looks at Q2.
+If it is empty, the scheduler exits. Otherwise, it processes only one element
+in Q2. Steps 3 and 4 are repeated.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+In this manner, real-time messages in Q1 are given priority over messages
+in Q2. Source nodes should put non-real-time SysEx messages into Q2, and
+all other messages in Q1. This prevents bulk SysEx dumps from blocking the
+real-time messages.
+<P>
+The scheduler has the ability to use a<I> scheduler daemon</I> to run. After
+a source instance places a message on a scheduler queue, it tells the scheduler
+to run. However, this might occur at interrupt time if the message is from
+a hardware node. If the scheduler were to run at interrupt time as well,
+system performance could be significantly reduced.
+<P>
+The desired effect would be to run the scheduler in task time, after the
+interrupt handler has exited. This is known as<I> deferred interrupt processing
+</I>and the scheduler daemon provides this. The daemon is a small program
+which effectively creates a ring 0 super high priority thread. These threads
+are guaranteed to run immediately after the current thread or context has
+completed. In other words, if an interrupt handler unblocks such a thread,
+that thread is run immediately after the interrupt handler exits. If it
+is unblocked by a ring 3 process, then it preempts the process that unblocked
+and runs immediately. If it is unblocked by another ring 0 task thread,
+it runs after that thread has returned to ring 3 (for example, after the
+strategy call).
+<P>
+When the scheduler is asked to process the queues, it checks to see whether
+it is running in another thread.  If not, then it processes the queues immediately.
+Otherwise, it checks to see if the scheduler daemon is available. If so,
+then it unblocks the daemon thread, which will eventually run the scheduler.
+If there is no daemon, then it has no choice but to process the queues immediately.
+If the node network is complex, then the scheduler could spend a significant
+amount of time in the interrupt handler.
+
+<P><HR>
+
+<A HREF="151_L2_NodeInstances.html">[Back: Node Instances]</A> <BR>
+<A HREF="153_L2_PredefinedClasses.html">[Next: Pre-defined Classes]</A> 
+</BODY>
+</HTML>

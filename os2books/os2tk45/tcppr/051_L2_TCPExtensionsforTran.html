@@ -1,0 +1,79 @@
+<HTML>
+<HEAD>
+<TITLE>TCP Extensions for Transactions (T/TCP)</TITLE>
+</HEAD>
+<BODY>
+<H1>TCP Extensions for Transactions (T/TCP)</H1><!-- entering slot 55 -->
+<P>
+A client-server transaction is a client request to a server followed by
+the server's reply. TCP Extensions for Transactions (T/TCP) is an extension
+to TCP designed to make client-server transactions more efficient. For typical
+transaction processing, a reliable delivery of data is needed, with no explicit
+connection setup or tear down, and with minimal idle state at both ends.
+UDP is faster but not reliable. Standard TCP provides the reliability but
+with the overhead of connection setup and time wait delay. T/TCP addresses
+these needs. T/TCP can match UDP performance, and adds reliability.
+<P>
+The goal of T/TCP is to allow each transaction (request and response sequence)
+to be efficiently performed as a single incarnation of a TCP connection.
+Standard TCP imposes two performance problems for transaction-oriented communication.
+ First, a TCP connection is opened with a three-way handshake which must
+complete successfully before any data can be transferred. This handshake
+adds an extra round-trip time to transaction latency. Second, closing a
+TCP connection leaves one or both ends in time wait state (2 maximum segment
+lifetime periods (2 MSL)), which limits the rate of successive transactions
+between the same host-port pair, since a new incarnation cannot be reopened
+until the time wait delay expires.  (The default value for the time wait
+delay can be checked by using the INETCFG.EXE utility.)
+<P>
+T/TCP addresses the handshake issue by using TCP Accelerated Open (TAO),
+which is based on using a new incarnation number called 'connection count
+(CC)'. T/TCP uses the monotonic property of CC values to bypass the handshake.
+A T/TCP server host keeps a cache containing the last valid CC value that
+it has received from each different client host. If an initial SYN segment
+(connection request) from a particular client host carries a CC value larger
+than the cached value, then the incoming segment is ensured to be new and
+the connection can be accepted immediately. The use of CC also truncates
+the time wait delay. Apart from rate of transactions, reduction in the time
+wait delay also saves locked-up resources from the hosts.
+<P>
+T/TCP introduces three new TCP options; namely, CC, CCnew and CCecho, and
+adds seven new states to the existing ten finite TCP states. To invoke T/TCP,
+both  client and server ends of the transaction must support T/TCP. The
+CC value is sent by the client in the SYN segment (for active open) indicating
+a willingness to use T/TCP. The server sends back CCecho in the SYN-ACK
+segment, declaring that it understands T/TCP. The client can still optionally
+disable T/TCP and force a handshake by sending a CCNew segment. If any of
+the ends do not support T/TCP, the connection procedure reverts to the normal
+TCP connection setup procedure.
+<P>
+To take advantage of T/TCP, the socket calls sequence on a typical T/TCP
+client application is different from the client shown in  <A HREF="050_L2_TypicalSocketSession.html">A
+Typical Stream or Sequenced Packet Socket Session</A>.  On a typical T/TCP
+client application, after opening a Stream socket the client does not call
+connect(). Instead, it calls sendto() with the flag of MSG_<!-- entering slot 56 -->EOF
+.Thiswillsendtherequesttotheserver ,establishtheconnection ,andcauseaFINtobesentfromtheclienttotheserver
+.Thissinglesendto ( )callcombinesthefunctionalityofconnect ( ) ,write (
+) ,andshutdown ( )ofanormalTCPsession .ThetypicalT / TCPtransactionserverapplicationisthesameasatypicalTCPserver
+,excepttheMSG _ EOFflagcanbeindicatedonthesend ( )calltocauseaFINtobesentattheendofthetransactiondata
+.
+<P>
+T/TCP can be turned on for a system-wide effect through the INET configuration
+utility command 'inetcfg -set CC 1'. You can use getsockopt() and setsockopt()
+for each socket through the TCP_CC socket option.  By default the T/TCP
+option is turned off.
+<P>
+To assure that T/TCP is being invoked, IP tracing function can be turned
+on through 'iptrace -i', and the trace file IPTRACE.DMP can be formatted
+with the IPFORMAT utility, which can explicitly show the three CC option
+values in the formatted dump.
+<P>
+For more details on T/TCP functional specification, refer to RFC 1644<I> T/TCP
+-TCP Extensions for Transactions Functional Specification</I>.
+
+<P><HR>
+
+<A HREF="050_L2_TypicalSocketSession.html">[Back: Typical Socket Session Diagram]</A> <BR>
+<A HREF="052_L2_TCPExtensionsforHigh.html">[Next: TCP Extensions for High Performance (RFC 1323)]</A> 
+</BODY>
+</HTML>

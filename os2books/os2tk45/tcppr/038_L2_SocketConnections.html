@@ -1,0 +1,112 @@
+<HTML>
+<HEAD>
+<TITLE>Socket Connections</TITLE>
+</HEAD>
+<BODY>
+<H1>Socket Connections</H1><!-- entering slot 41 -->
+<P>
+Initially, a socket is created in the unconnected state, meaning the socket
+is not associated with any foreign destination. The connect() call binds
+a permanent destination to a socket, placing it in the connected state.
+An application program must call connect() to establish a connection before
+it can transfer data through a reliable stream socket. Sockets used with
+connectionless datagram services need not be connected before they are used,
+but connecting sockets makes it possible to transfer data without specifying
+the destination each time.
+<P>
+The semantics of the connect() call depend on the underlying protocols.
+In the case of TCP, the connect() call builds a TCP connection with the
+destination, or returns an error if it cannot. In the case of connectionless
+services, the connect() call does nothing more than store the destination
+address locally.
+<P>
+Connections are established between a client process and a server process.
+In a connection-oriented network environment, a client process initiates
+a connection and a server process receives, or responds to, a connection.
+The client and server interactions occur as follows:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 5 -->The server, when willing to offer its advertised services,
+binds a socket to a well-known address associated with the service.<!-- lm: 0x2 2 -->
+<P>
+<LI><!-- lm: 0x2 5 -->The server process socket is then marked to indicate
+incoming connections are to be accepted on it. It is then possible for an
+unrelated process to rendezvous with the server.<!-- lm: 0x2 2 -->
+<P>
+<LI><!-- lm: 0x2 5 -->The client requests services from the server by initiating
+a connection to the server's socket. The client process uses a connect()
+call to initiate a socket connection.<!-- lm: 0x2 2 -->
+<P>
+<LI><!-- lm: 0x2 5 -->If the client process' socket is unbound at the time
+of the connect() call, the system automatically selects and binds a name
+to the socket if necessary. This is the usual way that local addresses are
+bound to a socket.<!-- lm: 0x2 2 -->
+<P>
+<LI><!-- lm: 0x2 5 -->If the connection to the server fails, the client's
+connect() call fails (any name automatically bound by the system, however,
+remains). Otherwise, the socket is associated with the server and data transfer
+can begin.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+An example of a client application using the connect() call to request a
+connection is: AnApplicationUsingtheconnect ( )Call
+<BR>
+
+<PRE>int s;
+struct sockaddr_in servername;
+int rc;
+...
+memset(&amp;servername, 0, sizeof(servname));
+servname.sin_len = sizeof(servname);
+servername.sin_family = AF_INET;
+servername.sin_addr.s_addr = inet_addr("129.5.24.1");
+servername.sin_port = htons(1024);
+...
+rc = connect(s, (struct sockaddr *) &amp;servername, sizeof(servername));
+</PRE>
+
+<P>
+The connect() call attempts to connect socket<I> s</I> to the server with
+name supplied in<I> servername</I>. This could be the server that was used
+in the previous bind() example. With TCP stream sockets the caller blocks
+until the connection is accepted by the server.  On successful return from
+connect(), the socket<I> s</I> is associated with the connection to the
+server. See <A HREF="187_L2_ioctl.html">ioctl()</A> for additional information
+about determining blocking and nonblocking behavior. Note that the sockaddr_in
+structure should be cleared before calling connect(). For a more detailed
+description, see <A HREF="183_L2_connect.html">connect()</A>.
+<P>
+The following figure shows an example of using the gethostbyname() network
+utility routine to find out the internet address of<I> serverhost</I> from
+the name server or the ETC\HOSTS file:
+<BR>
+An Application Using the gethostbyname() Call
+<BR>
+
+<PRE>int s;
+struct sockaddr_in servername;
+char *hostname = "serverhost";
+int rc;
+int connect(int s, struct sockaddr *name, int namelen);  /* extracted from sys\socket.h */
+struct hostent *hp;
+...
+
+hp = gethostbyname(hostname);
+
+/* clear the structure */
+memset(&amp;servername, 0, sizeof(servname));
+servername.sin_len = sizeof(servername);
+servername.sin_family = AF_INET;
+servername.sin_addr.s_addr = *((u_long *)hp-&gt;h_addr);
+servername.sin_port = htons(1024);
+...
+rc = connect(s,(struct sockaddr *)&amp;servername,sizeof(servername));
+</PRE>
+
+
+<P><HR>
+
+<A HREF="037_L2_BindingNamestoSocket.html">[Back: Binding Names to Sockets]</A> <BR>
+<A HREF="039_L2_ObtainingSocketAddre.html">[Next: Obtaining Socket Addresses]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,106 @@
+<HTML>
+<HEAD>
+<TITLE>Upper Memory Blocks (UMBs)</TITLE>
+</HEAD>
+<BODY>
+<H1>Upper Memory Blocks (UMBs)</H1><!-- entering slot 217 -->
+<P>
+VXMS attempts to reserve all unreserved pages in the region of memory between
+640KB and 1MB; this region is often termed the<B> Upper Memory Area</B> (<B>UMA</B>).
+ The address ranges reserved in this manner will be used to simulate <A HREF="459_L2_uppermemoryblock.html"><B>Upper
+Memory Blocks</B> (<B>UMBs</B>)</A>.  Note that this allocation scheme requires
+that VXMS be the<I> last</I> device driver loaded; any device drivers loaded
+after VXMS will not be able to reserve any addresses in the UMA.
+<P>
+When a UMB is not in use, its corresponding range of addresses is mapped
+to a black hole.  When it is in use, the range of addresses corresponding
+to the UMB being allocated is mapped to a memory object outside the V86
+mode address space which is allocated for this purpose.  This is similar
+to the technique used to map objects in the HMA.
+<P>
+VXMS uses a delayed UMB allocation scheme.  Unlike conventional XMS implementations,
+no UMBs are allocated until the first UMB request.  Upon receiving the first
+UMB request, VXMS queries the UMB region to determine which address ranges
+are available, and reserves those ranges.  This technique supports memory
+mapped devices which lie in the same region from which UMBs are taken.  Advanced
+users can use<I> Include/Exclude Regions</I> in the DOS Settings feature
+to tell VXMS which ranges are not to be used.
+<P>
+Note that by default, all UMBs are<I> owned</I> by the DOS Emulation kernel
+and are<I> not</I> available for application use.  If an application wishes
+to use UMBs, the DOS = NOUMB statement must be included in CONFIG.SYS or
+the application can't get any UMB because they are already used by DOS.
+Alternatively, the ownership of UMBs for a single VDM may be enabled or
+disabled using the<I> DOS owns UMBs</I> setting; see <A HREF="284_L1_DOSSettings.html">DOS
+Settings</A>.
+<P>
+VXMS allows coexistence with EMS services, in that it queries VEMM before
+reserving address ranges, so that VEMM may reserve the space it requires
+for its frame.  As such, it is possible that an application using both EMS
+and XMS services will execute and function correctly.
+<P>
+<B>DOS Device Drivers</B>
+<P>
+DOS device drivers may be loaded into UMBs, thereby conserving memory within
+the 640KB DOS application space; this support is functionally compatible
+with that provided by DOS 5.0.  Loading a DOS device driver into a UMB requires
+a number of additional statements in CONFIG.SYS; an example is given in
+<A HREF="036_L2_CONFIGSYSLoadingDevi.html">Figure "CONFIG.SYS - Loading
+Device Drivers into UMBs"</A>.
+<P>
+The first statement causes the VXMS virtual device driver VXMS.SYS to be
+loaded at initialization time.  The second statement causes the ANSI.SYS
+device driver to be loaded into a UMB.  The SIZE parameter ensures that
+the device driver is loaded into a UMB of the required size for its operation;
+ if a UMB of this size cannot be allocated, the device driver is automatically
+loaded into low memory.
+<P>
+For DOS device drivers loaded into a specific VDM using<I> DOS Device Drivers
+</I>in the DOS Settings feature, the SIZE parameter is also supported. Specifying
+a SIZE parameter in DOS Settings will cause the device driver to be loaded
+into a UMB if possible; if UMBs are not present or if a sufficiently large
+UMB cannot be allocated, the device driver will be loaded into low memory.
+
+<P>
+Note that device drivers are always loaded into the largest available UMB;
+hence, in order to achieve efficiency in the utilization of UMBs, device
+drivers should be loaded in order of size, from largest to smallest.  This
+is achieved by placing the DEVICE= statements in CONFIG.SYS, or names of
+the device drivers in the<I> DOS Device Drivers</I> setting, in that order.
+
+<P>
+The third statement allocates ownership of UMBs to the DOS kernel, and prevents
+applications from accessing UMBs.  This statement sets the default for all
+VDMs; if an application running in a VDM requires UMBs, the default may
+be overridden for that VDM using the appropriate DOS Settings function.
+
+<P>
+Note that some device drivers may not function correctly in a UMB if they
+rely on having all memory above them available for their use.  If<!-- entering slot 218 --> incorrect
+operation of a device driver is experienced in a UMB, the value of the SIZE
+parameter should be increased by modifying the DEVICEHIGH statement in CONFIG.SYS
+or by altering the appropriate DOS settings for the VDM.
+<P>
+<B>TSR Programs</B>
+<P>
+TSR programs may also be loaded into UMBs in order to conserve DOS application
+space.  TSR programs such as APPEND, which are loaded by default when a
+VDM is started, are loaded into a UMB where possible, thereby saving approximately
+6KB of memory.  Loading a TSR program into a UMB is performed from the DOS
+command line or from a batch file using the LOADHIGH command, as shown in
+<A HREF="037_L2_LOADHIGHCommandLoadi.html">Figure "LOADHIGH Command - Loading
+TSRs into UMBs"</A>.
+<P>
+Note that parameters for TSR programs are supported by the LOADHIGH command.
+
+<P>
+TSR programs which rely on having all memory above their location available
+for their use may not execute correctly when loaded in a UMB.  In such cases,
+the TSR must be loaded into low memory.
+
+<P><HR>
+
+<A HREF="193_L3_HighMemoryAreaHMA.html">[Back: High Memory Area (HMA)]</A> <BR>
+<A HREF="195_L3_ExtendedMemoryBlocks.html">[Next: Extended Memory Blocks (EMBs)]</A> 
+</BODY>
+</HTML>

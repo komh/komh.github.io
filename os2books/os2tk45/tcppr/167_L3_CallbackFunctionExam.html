@@ -1,0 +1,105 @@
+<HTML>
+<HEAD>
+<TITLE>Callback Function Example</TITLE>
+</HEAD>
+<BODY>
+<H1>Callback Function Example</H1><!-- entering slot 177 -->
+<P>
+This example mainly shows the code that works with the previous example,
+which looks for a path message.  This example also prints all the event
+information, using the format routines of the RSVP API where appropriate:
+
+<PRE>struct sockaddr_in sndAddr; /* remember the sender IP addr:port here */
+
+    int _System callback(
+        rapi_sid_t         sid,          /* Which sid generated event    */
+        rapi_eventinfo_t   eventType,    /* Event type                   */
+        rapi_styleid_t     styleID,      /* Style ID                     */
+        int                errorCode,    /* Error code                   */
+        int                errorValue,   /* Error value                  */
+        struct sockaddr   *pNodeAddr,    /* Error node address           */
+        u_char             errorFlags,   /* Error flags                  */
+        int                nFilterSpecs, /* Number of filterspecs/sender*/
+                                         /*      templates in list       */
+        rapi_filter_t     *pFilterSpec,  /* Filterspec/sender templ list*/
+        int                nFlowSpecs,   /* Number of flowspecs/Tspecs   */
+        rapi_flowspec_t   *pFlowSpec,    /* Flowspec/tspec list          */
+        int                nAdSpecs,     /* Number of adspecs            */
+        rapi_adspec_t     *pAdSpec,      /* Adspec list                  */
+        void *             pClientArg    /* Client supplied arg          */
+        )
+    {
+    int i;
+    #define FMT_BUF_SIZE 600
+    char buf[FMT_BUF_SIZE];
+    printf("callback() sid %d, eventType %d, styleID %d\n",
+           sid, eventType, styleID);
+
+    /* if we received the path event then tell the select loop */
+    if (eventType == RAPI_PATH_EVENT)
+        {
+        receivedPathEvent = 1;
+        /* get the sender address from pFilterSpec */
+        if (nFilterSpec &amp;&amp; (pFilterSpec-&gt;form == RAPI_FILTERFORM_BASE))
+           sndAddr = pFilterSpec-&gt;filter.base.sender;
+        /* else it is another address form... */
+        }
+
+
+</PRE>
+
+<P>
+In a realistic program, the adspec information would be processed to determine
+what services are supported by network elements that support RSVP. Information
+on data rate, bandwidth, packet MTU, and so on, normally would be available.
+ A receiver would determine what reservation flowspec would be suitable
+for the data stream that the sender could send.
+<P>
+If a reservation event is being processed by a sender, the adspec information
+normally would provide the upper limit on packet size, and other useful
+information, and the sender could adjust its data flow accordingly.
+<P>
+To print all the event information:
+<PRE>    if (errorCode == RAPI_ERR_OK)
+        printf("errorCode %d\n", errorCode);
+    else
+        printf("errorCode %d, errorValue %d, nodeAddr %s:%d, errorFlags %d\n",
+               errorCode, errorValue,
+               inet_ntoa(((struct sockaddr_in*)pNodeAddr-&gt;sin_addr),
+               ((struct sockaddr_in*)pNodeAddr-&gt;sin_port, errorFlags);
+    if (nFilterSpecs)
+        for (i = 0; i &lt; nFilterSpecs; ++i)
+            {
+            rapi_fmt_filtspec(pFilterSpec + i, buf, FMT_BUF_SIZE);
+            printf("filterspec %d, %s\n", i, buf);
+            }
+    else
+        printf("No filter specs\n");
+    if (nFlowSpecs)
+        for (i = 0; i &lt; nFlowSpecs; ++i)
+            {
+            rapi_fmt_flowspec(pFlowSpec + i, buf, FMT_BUF_SIZE);
+            printf("flowspec %d, %s\n", i, buf);
+            }
+    else
+        printf("No flowspecs\n");
+    if (nAdSpecs)
+        for (i = 0; i &lt; nAdSpecs; ++i)
+            {
+            rapi_fmt_adspec(pAdSpec + i, buf, FMT_BUF_SIZE);
+            printf("adspec %d, %s\n", i, buf);
+            }
+    else
+        printf("No adspecs\n");
+    /* the function must return a value, but the API does nothing to it */
+    return 0;
+    } /* end callback */
+</PRE>
+
+
+<P><HR>
+
+<A HREF="166_L3_UsingSelectwiththeAl.html">[Back: Using Select() with the Alert Socket]</A> <BR>
+<A HREF="168_L3_MakingaQoSReservatio.html">[Next: Making a QoS Reservation]</A> 
+</BODY>
+</HTML>

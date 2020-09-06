@@ -1,0 +1,315 @@
+<HTML>
+<HEAD>
+<TITLE>Migrating Existing Applications</TITLE>
+</HEAD>
+<BODY>
+<H1>Migrating Existing Applications</H1><!-- entering slot 210 -->
+<P>
+Many OS/2 users will find themselves with existing PM applications that
+they have developed, and may wonder whether they can modify them to exploit
+the Workplace Shell environment.  Ideally, one would like every application
+to be built as a collection of WPS objects, interacting with one another
+and with the standard WPS objects, but many users will decide that converting
+existing PM programs to this application model is not justified.
+<P>
+There are two approaches one may take to application migration:  one is
+simply to make a few minor modifications so that the application works better
+in the new environment,  the other is to convert the whole program to the
+WPS/SOM application model, carrying over as much code from the PM version
+as possible.
+<P>
+<B>Minimal Changes</B>
+<P>
+A particularly useful facility provided by the Workplace Shell is<I> Association</I>;
+this can be by file type, filename or extension. A program may be associated
+with one or more data files. The effect of this is that the program concerned
+automatically becomes one of the views available from the<I> Open</I> action
+on the context menu of any file with this type. Opening this view causes
+the associated program to be started with the filename as its first command
+line parameter.
+<P>
+Many programs that operate on files are written to expect a filename as
+their first parameter, so these programs can be used in the Workplace Shell
+environment in a way that is consistent with the object-oriented user interface
+- the user chooses the object he wants to work on and opens it;  the window
+presented by the program can be thought of as a view of the object.
+<P>
+Any program that does not accept a filename as a command-line parameter
+can easily be modified to do so.
+<P>
+Other changes that could be considered:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Change the way the program ends, so that by default
+it saves its data back into the file from which it read it.  This is more
+consistent with the way a Workplace Shell object allows you to open a view,
+make changes, then close the view, without having explicitly to save the
+data first.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Replace the menu bar with a context menu.  This may
+or may not be desirable - menu bars are still a quite acceptable part of
+the user interface and are required by CUA 91, but are little used within
+Workplace Shell itself.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Implement some simple direct manipulation - doing
+this for printing can be very straightforward, and makes the program fit
+much better into the Workplace Shell environment.
+<P>
+Supporting drag/drop for files, even in a limited way, can be very helpful.
+ As an illustration, consider the Enhanced Editor provided with OS/2. This
+is a standard PM program but you can drag WPS data file objects from any
+folder and drop them on the open editor - the result is that the file is
+added to the edit ring (the list of files currently being edited).<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->If the program offers several tailoring options for
+the application, implement a<I> Settings</I> view, similar to those provided
+by WPS objects.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->If the application includes many large dialogs, currently
+using separate dialog boxes<!-- entering slot 211 --> invoked from the menu
+bar, consider replacing these with a notebook control - it can make a complex
+application seem a lot simpler.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Add an ASSOCTABLE statement to the program's resource
+script file. This statement sets up associations for the program so that
+the user is relieved of the need to do it himself, and also provides the
+only way to add new file types to those provided by the system.  For details
+of this see "Using an ASSOCTABLE to Add New File Types" below.
+<P>
+This statement allows for associations based on file extension, but our
+recommendation is to use file types as they provide greater flexibility
+for the user.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->If necessary, modify the program so that it behaves
+well when provided with an empty input file.  For example, if the program
+normally expects the contents of its files to have some pre-defined structure,
+make the program set up this structure automatically if it reads an empty
+input file, rather than issue a message complaining that the file is invalid.
+
+<P>
+The reason for this change is that we want the user to be able to start
+a new file by first dragging a new object of an appropriate type from the
+<I>Templates</I> folder, then opening it to start the application program.
+ Typically, the new file will be empty at this stage, so the program must
+recognize and accept that the user has chosen to start a new one.  Many
+existing PM programs expect the user to start a new file by selecting<I> New
+</I>from the<I> File</I> menu and will only load those files that already
+contain valid data.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+For PM programs that operate on whole files, like word processors and spreadsheets,
+very good results can be achieved with these simple techniques, without
+ever having to write any SOM code. With a template file available, and associations
+already set up, all the user need do to start working on a new file (document,
+spreadsheet, or whatever it is), is to drag a new one from the template
+and open it.  The program will start, presenting the user with a view of
+the data, and when he is finished working on it, he can close the view (that
+is, the program), and the data is saved automatically.
+<P>
+<B>An Illustration</B>
+<P>
+Let us illustrate this with a simple example.  We have an existing PM program
+that is an expenses calculator.  When it starts it presents an empty window
+with a menu bar that has two actions -<I> File</I> and<I> Process</I>.  With
+the File action the user can elect to start a new expenses form, load an
+existing one from disk, save the current one to disk, or to exit.  The Process
+pull-down menu includes actions to calculate totals, to print the current
+form, or to send it to the cashier for processing.
+<P>
+Let us see how we might modify this application to work in a way that is
+consistent with the Workplace Shell user interface:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Add an ASSOCTABLE statement to the program's
+resource script file, associating the program with the new type:<I> Expense
+Form</I>.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Modify the program so that it expects a filename
+as its first command line parameter and automatically loads an expense form
+from the named file.  If the program finds that the input file is empty
+it should start a new expense form.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Modify the program so that when<!-- entering slot 212 --> closed
+it automatically saves the current data into the file it read in when started
+(after prompting the user to confirm that this is what he wants).<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Take the actions currently on the menu bar and
+implement them in a context menu  displayed when the user presses Mouse
+Button 2.  Provide an option for the user to turn off the menu bar, which
+is now redundant.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Provide the user with installation instructions
+that tell him to copy the .EXE file onto his disk and create a Program object
+referring to it.  This will ensure that the<I> Expense form</I> file type
+is added to his system, and that an Expense form template file is created.
+<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+Now the user can start a new expense form by dragging one from the template
+in the<I> Templates</I> folder and double-clicking on it to start working
+with it. The context menu will then let the user calculate totals, print
+the form or send the form off for processing.
+<P>
+This is still not perfect; the user may well expect, as with real Workplace
+Shell objects, to be able to access the context menu from the object itself,
+not just from a view of it. This can be put right by making two copies of
+the program, and modifying them as follows:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->The first should be modified so that it only prints
+forms<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->The second should be modified so that it only sends
+forms for processing.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+These programs will be easy to produce since they already contain all the
+required function.  All that needs to be changed is to make them perform
+their specific functions automatically when started, and to remove extraneous
+code.
+<P>
+Since a large amount of code may now be duplicated between the three programs,
+it may be worth restructuring them so that common functions reside in a
+DLL accessible to all three. This provides significant benefits for run-time
+performance and program maintenance.
+<P>
+The user working with an expense form file will now find its context menu
+contains actions to open a form (which will start the main program), to
+print a form (which will invoke the new print program), and to send the
+form off for processing (which will invoke the other new program).  These
+actions are also available from within the main program when the user is
+actually working on the form.
+<P>
+The user may find it odd that all these actions appear under the<I> Open
+</I>action in the context menu.  This could be improved by removing the
+association from the Print and Send programs, and manually adding menu items
+to the template expense form file to invoke these programs.
+<P>
+The user will also find that he cannot print by direct manipulation of the
+file itself. If the user drags the Expense Form object onto a printer, it
+will print as a text file. There is no way that our print program can be
+invoked automatically to format the data in this situation. The only solution
+to this would be to develop a new WPS class, derived from<I> WPDataFile</I>,
+that overrides the<I> wpPrintObject</I> message. Then, when the object is
+asked to print itself, (typically in response to having been dropped on
+a printer object), it will invoke the print program to provide the required
+formatting. Developing this class would not involve<!-- entering slot 213 --> very
+much work, but would require the programmer to be familiar with WPS and
+SOM programming.
+<P>
+With only minor exceptions the expense form file object now behaves almost
+exactly as it might if it had been implemented as a new Workplace Shell
+class derived from WPDataFile, when in fact it is simply an ordinary data
+file with some associated PM programs.
+<P>
+<B>Using an ASSOCTABLE to Add New File Types</B>
+<P>
+The scenario described above requires that a new file type be added to every
+user's system - in the example its name was<I> Expense form</I>. This section
+explains how to do this for your own program. An alternative approach that
+is suitable for users and administrators can be found in <A HREF="174_L3_AddingNewFileTypes.html">Adding
+New File Types</A>.
+<P>
+The standard programming technique to do this involves the ASSOCTABLE statement
+in a program's resource script file. (This is one of the source files that
+a programmer creates when developing a PM program - for more information
+about this see<I> OS/2 Version 2.0 - Volume 4:  Application Development</I>).
+ This statement defines associations for the program being developed, in
+terms of either file type, filename or extension. The file type can be anything
+you choose, regardless of whether it is one of the existing file types defined
+within OS2.INI. In the case of the example above, the<I> Expense form</I> file
+type may be used in the ASSOCTABLE statement, despite the fact that at that
+time it is not a type known to OS/2.
+<P>
+An ASSOCTABLE suitable for this example is shown in <A HREF="046_L2_AnASSOCTABLEResource.html">Figure
+"An ASSOCTABLE Resource Script File Statement"</A>. The first quoted string
+gives a file type to be used for association with this program;  the second
+string allows for association by filename or extension (if you want to use
+only association by file type, an empty string may be specified here); the
+third parameter specifies that we want this program to be automatically
+associated with data files with this type; the last parameter specifies
+an icon to be used for representing data files that have this attribute.
+
+<P>
+When the program has been built, the<I> Settings</I> view for the executable
+file shows, on its Associations page, that associations have been set up
+for the specified file type(s) - in our case<I> Expense form</I>.
+<P>
+At this stage, however, there is no way you can create a data file with
+this file type - when you open the Type page of a data file's<I> Settings
+</I>view you find that<I> Expense form</I> is not one of the available types.
+
+<P>
+To achieve this you must create a Program object that refers to the executable
+file that you just created.  (The usual way to do this is to drag a Program
+object from the Program template in the<I> Templates</I> folder, then insert
+the executable file's path and filename into the "Program" page of its<I> Settings
+</I>view). This registers the program to the Workplace Shell, which finds
+that the program includes a type for association, and adds this to its list
+of available file types. It also adds a template file for this type to the
+<I>Templates</I> folder.
+<P>
+The new types are then available to be added to any data files on the system
+and new files of these types can be created by the user at any time simply
+by dragging from the corresponding templates.
+<P>
+<B>Converting a PM Program to WPS/SOM</B>
+<P>
+To convert an existing PM application to be a<!-- entering slot 214 --> full
+SOM/WPS application may require a great deal of work, depending on how well
+structured the program is to begin with.
+<P>
+Much of the code can probably be preserved - when a WPS object wants to
+display a window, it does so using normal PM facilities to create the window
+and has to provide a normal PM window procedure to support it;  most of
+this code may be transferred directly from the older program.  Similarly,
+any application processing code - for example for database access, communications,
+or calculation should be equally applicable to the new version.
+<P>
+The steps necessary to make the conversion include:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Consider the split between function that will be implemented
+as WPS objects (with all the drawbacks of running in the WPS process), and
+function that will be implemented in separate processes.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Devise the interprocess communications (IPC) protocols
+to be used between the two parts of the application.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Design the revised user interface.  Although much
+may be preserved, there will inevitably be design changes needed to make
+the application work well for the user in the new environment.  These may
+include:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 5 -->Increased emphasis on the use of icons to represent
+the data items manipulated by the application<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 5 -->Changes to terminology used (for example, "views"
+rather than "windows")<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 5 -->Use of container windows where list boxes may previously
+have been used<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 5 -->Replacing complex dialogs with notebook controls<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 5 -->Adding context menus.<!-- lm: 0x2 2 --><!-- lm: 0x2 0 -->
+</UL> <!-- lm: 0x2 2 -->
+<UL>Add
+the capability for the program to save its state when closed so that, the
+next time it is started, the program's options, settings, its window position
+and so on are the same as the last time it was run.<!-- lm: 0x2 0 -->
+</UL> <!-- lm: 0x2 2 -->
+<UL>Provide
+a way for the user to retrieve application windows that have been minimized.
+ Since in OS/2 Version 2.0 windows are not necessarily minimized onto the
+desktop, it is possible that application windows that the program has not
+added to the window list may be hard to restore. Such designs need to be
+revised for OS/2 Version 2.0.<!-- lm: 0x2 0 -->
+</UL>
+
+<P><HR>
+
+<A HREF="194_L3_HowMuchCanYouDowithP.html">[Back: How Much Can You Do with PM?]</A> <BR>
+<A HREF="196_L2_Summary.html">[Next: Summary]</A> 
+</BODY>
+</HTML>

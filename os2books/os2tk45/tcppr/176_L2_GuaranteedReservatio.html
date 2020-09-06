@@ -1,0 +1,154 @@
+<HTML>
+<HEAD>
+<TITLE>Guaranteed Reservations</TITLE>
+</HEAD>
+<BODY>
+<H1>Guaranteed Reservations</H1><!-- entering slot 187 -->
+<P>
+Guaranteed reservations are more complex than controlled load because guaranteed
+flow provides a way to reserve a specified maximum delay through the network,
+as well as a specified data rate.  Guaranteed service does not control the
+average or minimum packet delay. Guaranteed service also does not control
+jitter, the difference between minimum and maximum packet delays.
+<P>
+The guaranteed flow model of the network assumes that there are two sources
+of delay in the network, the delay (<I>D</I>) that is independent of rate
+of flow, and the delay (<I>C</I>) that is proportional to rate of flow.
+Delay for a rate<I> r</I> would be<I> C</I>*<I>r</I>+<I>D</I> in an ideal
+situation.  In practice, the RSVP-enabled network elements provide an upper
+bound for their contribution to<I> C</I> and<I> D</I>, and a lower bound
+for<I> D</I>. The lower bound for<I> C</I> is 0. The receiver chooses a
+reservation that takes these bounds into consideration.
+<P>
+The pathLatency field of the adspec for guaranteed service is an estimate
+of the minimum delay through the network for that type of service.  It can
+be estimated from many diverse factors such as speed of light through fiber
+cables or minimum path length of routing code. Each RSVP-enabled node adds
+its own estimate of this value to the adspec.
+<P>
+The delay that is based on the data rate can include many factors, such
+as time to queue a packet, and maximum time to wait for the current packet
+to be sent before the next one can be sent from an interface.
+<P>
+When a path message arrives at the receiver, the guaranteed flow adspec
+will contain Ctot and Dtot, which are accumulations of the C and D delay
+factors on the path through the network.  The terms Csum and Dsum are used
+by intermediate nodes along with the slack term that the guaranteed flow
+will provide.  These terms are used by nodes that will "reshape" the data
+flow to make it conform to the flow parameters.
+<P>
+These are the formula variables and their sources, for determining the Guaranteed
+flowspec.
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Var    Spec            Spec Field          Description             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Bmin   Guar_adspec_t   pathBW              Minimum path bandwidth  ³
+³                                           (IP packet bytes per    ³
+³                                           second)                 ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³MTU    Guar_adspec_t   composedMTU         Composed path MTU       ³
+³                                           (bytes)                 ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Ctot   Guar_adspec_t   Ctot                Total rate-dependent    ³
+³                                           error (bytes)           ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Dtot   Guar_adspec_t   Dtot                Total rate-independent  ³
+³                                           error (microseconds)    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³r      IS_Tspec_t      IS_Tspec_r          Token bucket rate (IP   ³
+³                                           packet bytes per second)³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³b      IS_Tspec_t      IS_Tspec_b          Token bucket depth      ³
+³                                           (bytes)                 ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³p      IS_Tspec_t      IS_Tspec_p          Peak data rate (IP      ³
+³                                           packet bytes per second)³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³m      IS_Tspec_t      IS_Tspec_m          Minimum Policed Unit    ³
+³                                           (bytes)                 ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³M      IS_Tspec_t      IS_Tspec_M          Maximum packet size     ³
+³                                           (bytes)                 ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³R      Guar_Rspec_t    Guar_Rspec_R        Guaranteed rate (IP     ³
+³                                           packet bytes per second)³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³S      Guar_Rspec_t    Guar_Rspec_S        Slack term              ³
+³                                           (microseconds)          ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+Values for<I> r</I>,<I> b</I>,<I> p</I>,<I> m</I>,<I> M</I>,<I> R</I>, and
+<I>S</I> are to be computed for the guaranteed reservation.  Assume that
+the reservation<I> r</I>,<I> b</I>,<I> p</I>, and<I> m</I> are chosen based
+on the original tspec values in the path message.  If<I> Bmin</I> is greater
+than<I> r</I> or<I> p</I>, they should be increased at least to<I> Bmin</I>.
+Assume that the reservation<I> M</I> is set to a reasonable value for the
+application that is not greater than MTU.  Assume that the minimum delay
+is not greater than the maximum that the application can tolerate.  Note
+that all computation described below should be floating point , especially
+the<!-- entering slot 188 --> division by 1000000 that converts between
+microseconds and seconds.
+<P>
+If<I> r</I> &lt;=<I> p</I> &lt;=<I> R</I> then the upper bound on end-to-end
+requested delay (<I>Dreq</I>) in seconds is:
+<PRE><I>Dreq</I> = (<I>M</I>+<I>Ctot</I>)/<I>R</I> + <I>Dtot</I>/1000000
+</PRE>
+
+<P>
+If<I> r</I> &lt;=<I> R</I> &lt;<I> p</I> then the upper bound on<I> Dreq
+</I>in seconds is
+<PRE>
+<I>Dreq</I> = [(<I>b</I>-<I>M</I>)/<I>R</I>*(<I>p</I>-<I>R</I>)/(<I>p</I>-<I>r</I>)] + (<I>M</I>+<I>Ctot</I>)/<I>R</I> + <I>Dtot</I>/1000000
+</PRE>
+
+<P>
+The higher the value of<I> R</I> is, the lower<I> Dreq</I> will be.  The
+application will choose an<I> R</I> value that is sufficiently high that
+the maximum delay is sufficient for what the sender and receiver need to
+do.  Note that studies have shown that packets will often arrive much more
+quickly than the maximum delay, and therefore the application must be prepared
+to buffer them.
+<P>
+If the peak rate<I> p</I> is unknown or unspecified, it should be set to
+infinity. Infinity is represented in IEEE floating point with an exponent
+of all one bits (255), and a sign and mantissa of all zero bits.  In that
+case the upper bound on end-to-end delay in seconds simplifies to:
+<PRE><I>Dreq</I> = <I>b</I>/<I>R</I> + <I>Ctot</I>/<I>R</I> + <I>Dtot</I>/1000000
+</PRE>
+
+<P>
+The slack term<I> S</I> is the difference between the requested maximum
+delay and the desired delay, and must be a non-negative number.  A typical
+desired delay is when<I> R</I> is set to<I> r</I>, in the ideal fluid model
+of flow. The delay in that model is
+<PRE><I>Dideal</I> = <I>b</I>/<I>r</I> + <I>Ctot</I>/<I>r</I> + <I>Dtot</I>/1000000
+</PRE>
+
+<P>
+The slack term can then be:
+<PRE><I>S</I> = <I>Dreq</I> - <I>Dideal</I>.
+</PRE>
+
+<P>
+If the application chooses an<I> S</I> greater than zero, then RSVP-enabled
+nodes on the path can use it and the<I> Csum</I> and<I> Dsum</I> values
+to adjust their local reservations to lower the amount of resources allocated
+to the flow.
+<P>
+Note that a guaranteed reservation may have its values<I> R</I> and<I> S
+</I>adjusted by intervening nodes, so that the reservation seen by the sender
+in the reservation message may be different from what the receiver provided
+with rapi_reserve() call.
+<P>
+For more information, refer to Internet RFC 1633,<I> Integrated Services
+in the Internet Architecture: an Overview</I>, and Internet Draft<I> draft-ietf-intserv-ctrl-load-svc-07</I>.
+
+
+<P><HR>
+
+<A HREF="175_L2_ControlledLoadReserv.html">[Back: Controlled Load Reservations]</A> <BR>
+<A HREF="177_L1_ReferenceInformation.html">[Next: Reference Information]</A> 
+</BODY>
+</HTML>

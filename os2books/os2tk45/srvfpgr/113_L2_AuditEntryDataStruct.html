@@ -1,0 +1,49 @@
+<HTML>
+<HEAD>
+<TITLE>Audit Entry Data Structures</TITLE>
+</HEAD>
+<BODY>
+<H1>Audit Entry Data Structures</H1><!-- entering slot 143 -->
+<P>
+Audit entry data structures consist of a fixed-length header followed by
+0 or more variable-length audit entry data structures.
+<P>
+In addition to the information contained within it, a data structure can
+specify that an additional variable-length ASCIIZ string is to be included.
+ To do this, an unsigned short offset is used, where the address of the
+additional ASCIIZ string is equal to the address of the variable-length
+structure plus the offset.
+<P>
+For example, assume that<I> ap</I> points to a buffer containing a complete
+audit entry and that<I> ae_type</I> contains the value AE_CONNSTOP, specifying
+the predefined<I> ae_connstop</I> data structure.  To make the variable
+<I>computer_name</I> point to the ASCIIZ string containing the name of the
+client whose connection was stopped, an application would perform the following
+algorithm:
+<PRE>struct audit_entry * ap;           /* fixed portion of audit entry */
+struct ae_connstop * acp;          /* variable-length structure */
+unsigned char * computer_name;     /* pointer to variable-length string */
+                     /* calculate offset to variable-length struct */
+ 
+acp = (struct ae_connstop *) ((unsigned char *) ap + ap-&gt; ae_data_offset);
+ 
+                              /* calculate offset to computer name */
+ 
+computer_name = (unsigned char *) acp + acp -&gt; ae_cp_compname;
+</PRE>
+
+<P>
+Some of the structures point to more than one data item.  To ensure that
+an item is used, the programmer must test for a null pointer and for a null
+string.  For example, many audit data structures have a user name and a
+computer name.  If the user name is not significant, then the computer name
+must be used instead.  To determine if the user name is significant, check
+whether<I> ae_so_username</I> is 0 (null pointer) or whether it points to
+a 0 (null string).
+
+<P><HR>
+
+<A HREF="112_L2_DOSConsiderations.html">[Back: DOS Considerations]</A> <BR>
+<A HREF="114_L3_AuditEntryHeader.html">[Next: Audit Entry Header]</A> 
+</BODY>
+</HTML>

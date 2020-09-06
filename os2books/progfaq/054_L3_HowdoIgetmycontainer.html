@@ -1,0 +1,56 @@
+<HTML>
+<HEAD>
+<TITLE>How do I get my containers to use Mini-icons?</TITLE>
+</HEAD>
+<BODY>
+<H1>How do I get my containers to use Mini-icons?</H1><!-- entering slot 65 -->
+<P>
+Here is some sample code that displays mini icons.  First, supply a missing
+#define:
+<PRE> #ifndef CCS_MINIICONS
+     #define CCS_MINIICONS 0x0800
+ #endif // not CCS_MINIICONS
+</PRE>
+
+<P>
+Use CCS_MINIICONS as part of your container style (when you create the container).
+ Now, fill in the RECORDCORE structure pointed to by 'pRecordCore'; 'pUserRecord'
+also points to 'pRecordCore', which is part of a "user data" structure:
+
+<PRE> // Fill in fields of container record.
+ #ifdef USE_MINIRECORDCORE
+     pRecordCore-&gt;cb = sizeof (MINIRECORDCORE) ;
+ #else
+     pRecordCore-&gt;cb = sizeof (RECORDCORE) ;
+ #endif // USE_MINIRECORDCORE
+     pRecordCore-&gt;flRecordAttr = 0 ; // CRA_DROPONABLE ;
+     // pRecordCore-&gt;ptlIcon is left to zeros.
+     pRecordCore-&gt;pszIcon = pUserRecord-&gt;szName ;
+     if (*DDirRecord.szIconName)
+        LoadIcon (pUserRecord) ;
+     // pRecordCore-&gt;hptrMiniIcon is left to zeros.
+     // pRecordCore-&gt;hbmBitmap is left to zeros.
+     // pRecordCore-&gt;hbmMiniBitmap is left to zeros.
+     // pRecordCore-&gt;pTreeItemDesc is left to zeros.
+
+ #ifndef USE_MINIRECORDCORE
+     pRecordCore-&gt;pszText = pUserRecord-&gt;szName ;
+     pRecordCore-&gt;pszName = pUserRecord-&gt;szName ;
+     pRecordCore-&gt;pszTree = pUserRecord-&gt;szName ;
+ #endif // not USE_MINIRECORDCORE
+</PRE>
+
+<P>
+Now, if your user asks for mini-icons (via a popup menu, presumably), you
+send a CM_SETCNRINFO message to your container, after ORing in the CV_MINI
+style to CnrInfo.flWindowAttr, or removing it to restore full-size icons.
+ Hope this helps.
+<P>
+Credit:  Wayne Kovsky 
+
+<P><HR>
+
+<A HREF="053_L3_HowdoIstopacontainer.html">[Back: How do I stop a container from flashing every time I add a record?]</A> <BR>
+<A HREF="055_L3_HowdoIsortacontainer.html">[Next: How do I sort a container control?]</A> 
+</BODY>
+</HTML>

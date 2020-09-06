@@ -1,0 +1,51 @@
+<HTML>
+<HEAD>
+<TITLE>DLL Side Effects</TITLE>
+</HEAD>
+<BODY>
+<H1>DLL Side Effects</H1><!-- entering slot 818 -->
+<P>
+Dynamic link routines are not processes.  They run on the thread of the
+calling process and therefore do not own resources.  Any resource that they
+obtain or use is owned by the calling process.  Authors of DLLs should be
+careful not to needlessly allocate resources until the resource is required
+by the calling process to perform the requested function. They also should
+free the resource as soon as that resource is no longer required.
+<P>
+A dynamic link routine that obtains and uses resources should attempt to
+minimize the use of a process's resources.  For example, stack space should
+be conserved. If an application redirects file handle 5 and calls a DLL
+entry that expects file handle 5 to be an open handle to an associated device
+driver, unpredictable results can occur.
+<P>
+If the routine opens an abundance of file handles, it might consider increasing
+the maximum number of file handles, so that the process maximum is not exceeded.
+ However, increasing the maximum number of file handles for a process also
+increases the maximum number of file handles for all processes created by
+the current process.  This will cause additional memory to be consumed and
+could cause problems for an application that assumes a limit of 20 file
+handles. Also, it should be noted that applications have the ability to
+redirect file handles.
+<P>
+Dynamic link routines also should not make system calls that affect the
+calling process environment.  If a DLL changes a process's current directory,
+another thread running under the same process could fail a file I/O call
+if it assumes a given working directory.
+<P>
+Applications and DLLs should not make calls to other DLLs, including system
+DLLs, within a critical section.  Since DLLs can use semaphores to synchronize
+threads within a process or between processes, calling a DLL within a critical
+section could cause application deadlocks. This would occur if the DLL requests
+a semaphore on behalf of the calling thread and another thread within the
+process owns the semaphore.  Because the calling thread is in a critical
+section and is the only thread within the process that is permitted to execute,
+the semaphore will never be freed, causing a deadlock.
+<P>
+
+
+<P><HR>
+
+<A HREF="800_L2_ProtectedMemoryUse.html">[Back: Protected Memory Use]</A> <BR>
+<A HREF="802_L2_Summary.html">[Next: Summary]</A> 
+</BODY>
+</HTML>

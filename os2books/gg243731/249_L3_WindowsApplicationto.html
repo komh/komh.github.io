@@ -1,0 +1,130 @@
+<HTML>
+<HEAD>
+<TITLE>Windows Application to Windows Application</TITLE>
+</HEAD>
+<BODY>
+<H1>Windows Application to Windows Application</H1><!-- entering slot 285 -->
+<P>
+In a native Windows 3.0 environment, a Windows application (client) will
+broadcast a<I> DDE Initiate</I> message. Windows serially posts a message
+to every Windows application currently running and then awaits a reply.
+As described above, the<I> Initiate Conversation</I> message contains the
+DDE topic to which any Windows application can respond. The client application
+continues execution when all other applications have serviced the message.
+At this time, the client application communicates directly with the server
+applications, as opposed to the initial broadcast message.
+<P>
+OS/2 Version 2.0 provides two applications to support communications between
+VDMs, without altering the Windows code:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->A resident Windows application referred to as the
+DDE<B> ServerAgent</B> (<B>SA</B>)<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->A DOS protected mode application referred to as the
+<B>DDEServer</B> (VDMSRVR.EXE).<!-- lm: 0x2 0 -->
+<BR>
+<B>ServerAgent</B>
+<P>
+The Windows VDM's resident ServerAgent consists of two parts:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->A "ServerAgent" which sends and receives messages
+outside of the VDM<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->One or more "agents" (each agent is a child window
+of the ServerAgent), which act as "clones" of applications running in other
+VDMs.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+If either the DDEServer or the VDM's ServerAgent is not executing, DDE is
+not available outside of the VDM.  The ServerAgent is automatically started
+when the Windows VDM is started.  When started, DDE is in<I> public</I> mode.
+ To keep it<I> local</I>, simply kill (close) the DDE Interchange Agent.
+ To make it<I> public</I> again, simply start the Interchange Agent once
+more.
+<P>
+Should the user choose to kill the DDE Interchange Agent, an information
+message will be displayed indicating that DDE activity will be visible only
+to the Windows applications executing in the current VDM, discontinuing
+DDE communication with Presentation Manager applications and other Windows
+applications.
+<P>
+The ServerAgent is responsible for all routing of DDE messages, including
+broadcast messages beyond the confines of the VDM to the DDEServer. The
+ServerAgent communicates with the DDEServer (VDMSRVR.EXE) via named pipes.
+
+<P>
+Agent applications communicate with Windows applications in their VDM and
+the ServerAgent executing in their VDM. Only the ServerAgent uses named
+pipes. Agents send requests to the ServerAgent to be forwarded outside of
+the VDM.
+<P>
+<B>DDEServer (VDMSRVR.EXE)</B>
+<P>
+The DDEServer is responsible for routing requests from ServerAgents to the
+appropriate VDMs. The DDE process is schematically represented in <A HREF="052_L2_DDEProcessbetweenWin.html">Figure
+"DDE Process between Windows Environments"</A>.
+<P>
+The sequence of events for DDE communication between applications running
+in different WIN-OS/2 VDMs is as follows:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->A DDE Initiate message is broadcast from Windows
+application A.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The message is forwarded by the ServerAgent to
+the DDEServer.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The DDEServer forwards this message to all other
+DDEAgents.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Each DDEAgent<I> broadcasts</I> this initiate
+message to all Windows applications in their VDM.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Windows application D responds  affirmatively
+to this DDE initiate message.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The DDEAgent creates a child task ServerAgent
+A to act as an agent to Windows application A.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The DDEAgent forwards an<I> acknowledgement</I> to
+the DDEServer.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The DDEServer forwards this<I> acknowledgement
+</I>to the DDEAgent for the Windows application A.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->This DDEAgent creates a child task ServerAgent
+D to act as an agent to Windows application D.<!-- lm: 0x2 0 -->
+<P>
+10.<!-- lm: 0x2 4 -->
+<UL>The DDEAgent forwards the response from Windows
+application D to the Windows application A.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+From here on, the two Windows applications communicate through this established
+path.
+<P>
+Appl. A &lt;-&gt; DDEChildAgent D &lt;-&gt; DDEAgent A &lt;-&gt; DDEServer
+&lt;-&gt; DDEAgent D &lt;-&gt; DDEChildAgent A &lt;-&gt; Appl. D.
+<P>
+This mechanism isolates all named pipe transactions (Steps 2, 3, 7 and 8)
+to the DDEAgents and the DDEServer.  It also gives the Windows application
+A the illusion of a point-to-point connection to Windows application D (because
+it will actually communicate with Windows application D's child agent in
+the same VDM).
+<P>
+The interprocess communication protocol used between the Windows applications
+and the DDEAgents is the original and unmodified DDE protocol.
+<P>
+If two Windows applications require significant amounts of DDE, these applications
+should be executed from within the same MAVDM.  In such instances, the ServerAgent
+and DDEServer applications would not be required, thereby improving performance
+and<!-- entering slot 286 --> usability.  Once this is done, the user need
+only kill (close) the participating DDE Interchange Agent to ensure that
+all DDE messaging is kept<I> local</I>.
+
+<P><HR>
+
+<A HREF="248_L3_DDEConcepts.html">[Back: DDE Concepts]</A> <BR>
+<A HREF="250_L3_WindowsApplicationto.html">[Next: Windows Application to Presentation Manager Application]</A> 
+</BODY>
+</HTML>

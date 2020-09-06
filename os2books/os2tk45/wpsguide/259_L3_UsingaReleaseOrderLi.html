@@ -1,0 +1,119 @@
+<HTML>
+<HEAD>
+<TITLE>Using a Release Order List</TITLE>
+</HEAD>
+<BODY>
+<H1>Using a Release Order List</H1><!-- entering slot 278 -->
+<P>
+The release order list is specified using the<I> releaseorder</I> modifier
+in the implementation section of the IDL file, as shown in the following
+sample code. In this example, the release order list groups related methods
+and data accordingly, that is, by instance variable and the functions that
+operate on that instance variable.
+<PRE>#ifndef  example_idl
+#define  example_idl
+#include &lt;somobj.idl&gt;
+
+interface Example : SOMObject
+
+{
+  attribute string         szVar1;
+  attribute unsigned long  ulVar2;
+
+  void Show_All_Vars();
+
+  #ifdef __SOMIDL__
+  implementation
+  {
+    releaseorder:  Show_All_Vars,
+                   _get_szVar1,
+                   _set_szVar1,
+                   _get_ulVar2,
+                   _set_ulVar2;
+
+    //# Class modifiers
+    callstyle    = oidl;    // For compatibility with SOM1
+    majorversion = 1;
+    minorversion = 2;
+  };
+ #endif /* __SOMIDL__ */
+};
+#endif  /* Example_idl */
+
+</PRE>
+
+<P>
+If a third attribute variable is added to the class definition file, compatibility
+with clients of the Example class defined in the previous sample code can
+be maintained by modifying the release order, as shown in the following
+sample code:
+<PRE>#ifndef  example_idl
+#define  example_idl
+#include &lt;somobj.idl&gt;
+
+interface Example : SOMObject
+
+{
+  attribute string         szVar1;
+  attribute char           chVar3;   /* New data added */
+  attribute unsigned long  ulVar2;
+
+  void Show_All_Vars();
+
+  #ifdef __SOMIDL__
+  implementation
+  {
+   /* Add new methods at the end of the release order */
+   /* list to maintain compatibility with clients     */
+    releaseorder:  Show_All_Vars,
+                   _get_szVar1,
+                   _set_szVar1,
+                   _get_ulVar2,
+                   _set_ulVar2,
+                   _get_chVar3,
+                   _set_chVar3;
+
+    //# Class modifiers
+
+    callstyle = oidl;    // For compatibility with SOM1
+    majorversion = 1;
+    minorversion = 2;
+  };
+#endif /* __SOMIDL__ */
+};
+#endif  /* example_idl */
+
+</PRE>
+
+<P>
+In the previous figure, the new attribute<I> chVar3</I> is added between
+the two existing attributes. The new method names, _get_chVar3 and _set_chVar3,
+are added to the end of the release order list.
+<P>
+Without a release order list, the data and methods in the first version
+of the Example class are processed in the order in which they occur in the
+file, as shown in in the following figure:
+<PRE>_get_szVar1, _set_szVar1, _get_ulVar2, _set_ulVar2, Show_All_Vars
+</PRE>
+
+<P>
+Without a release order list, the methods in the second version of the Example
+class are processed in the order in which they occur in the file, as shown
+in in the following figure:
+<PRE>_get_szVar1, _set_szVar1, _get_chVar3, _set_Var3, _get_ulVar2, _set_ulVar2, Show_All_Vars
+</PRE>
+
+<P>
+The method information maintained by SOM in the object data structures built
+for the first version of the Example class does not match that built for
+the second version of the Example class. The second version is not compatible
+with clients of the first version. Specifying a release order list, and
+adding new data and methods at the end of the list, ensures client compatibility.
+
+
+<P><HR>
+
+<A HREF="258_L3_ProgrammingwithObjec.html">[Back: Programming with Objects]</A> <BR>
+<A HREF="260_L3_ProcessingIDLFiles.html">[Next: Processing IDL Files]</A> 
+</BODY>
+</HTML>

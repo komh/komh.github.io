@@ -1,0 +1,262 @@
+<HTML>
+<HEAD>
+<TITLE>DLL Initialization</TITLE>
+</HEAD>
+<BODY>
+<H1>DLL Initialization</H1><!-- entering slot 98 -->
+<P>
+The following example illustrates a DLL stream handler's initialization
+process. During initialization, the stream handler must perform any global
+DLL initialization the first time the DLL is loaded and perform any instance
+initialization for each instance of the stream handler DLL. Each instance
+of the DLL represents a process. The stream handler must register itself
+with the Sync/Stream Manager during global initialization. The stream handler
+should also register an exit-list routine if any is required for DLL termination.
+
+<PRE>ULONG _DLL_InitTerm( HMODULE hmod, ULONG fTerm)
+
+{ /* Start of ShInit */
+
+RC rc = NO_ERROR;                       /* local return code */
+PARM_REG smhRegParm;                    /* Parameters for SMH_REGISTER */
+int Registered = FALSE;
+int HeapAllocated_Attached = FALSE;
+int GlobDataMtxCreated = FALSE;
+hmod;
+
+  /*
+   * Checking this parameter will insure that this routine will only
+   * be run on an actual initialization.  Return success from the
+   * termination.
+   */
+
+  if (fTerm)
+     {
+     return (1L);
+     }
+
+  if (_CRT_init())
+     {
+     return (0L);
+     }
+
+  /*
+   * Get the semaphore controlling the process count and update the process
+   * count if successful.  Then after we have the sem, if the count is 1,
+   * we are guaranteed that we must do the global initializations.
+   *
+   * There is a problem.  To determine if we need to create or open the
+   * semaphore, we need to check the ProcessCount to see if this is the
+   * first process.  But since we don't have the semaphore, we don't have
+   * a guarantee the count won't change.  If we get caught in this window
+   * then we will fail to get the semaphore and the rc will indicate error.
+  */
+
+  if (ulProcessCount == 0)
+    { /* First process */
+
+      if (!(rc = DosCreateMutexSem(pszProcCntMutexName,
+                                   &amp;hmtxProcCnt,
+                                   0L,
+                                   TRUE)))
+        {
+          ulProcessCount++;
+        }
+    } /* First process */
+  else
+    { /* not first process */
+      /* if a process exits and decrements ProcessCount before we get  */
+      /* the semaphore here, we will fail. */
+      if (!(rc = DosOpenMutexSem(pszProcCntMutexName,
+                                 &amp;hmtxProcCnt)))
+        {
+          if (!(rc = DosRequestMutexSem(hmtxProcCnt,
+                                        SEM_INDEFINITE_WAIT)))
+            {
+              ulProcessCount++;
+            }
+          else
+            {
+              DosCloseMutexSem(hmtxProcCnt);
+            }
+        }
+    } /* not first process */
+
+  if (!rc)
+  { /* Semaphore ok, In critical section */
+    /*
+     * If this is the first time this init routine is called then we are
+     * being brought in by the loader the first time, so we need to
+     * register with the SSM.
+     */
+    if (ulProcessCount == 1)
+      { /* First process */
+        smhRegParm.ulFunction = SMH_REGISTER;
+        smhRegParm.pszSHName = pszHandlerName;
+        smhRegParm.phidSrc = &amp;SrcHandlerID;
+        smhRegParm.phidTgt = &amp;TgtHandlerID;
+        smhRegParm.pshcfnEntry = ( PSHCFN ) ShcRouter;
+
+        smhRegParm.ulFlags = 0L;
+        if (ulHandlerFlags &amp; HANDLER_CAN_BE_SOURCE)
+          {
+            smhRegParm.ulFlags = REGISTER_SRC_HNDLR;
+          }
+        if (ulHandlerFlags &amp; HANDLER_CAN_BE_TARGET)
+          {
+            smhRegParm.ulFlags |= REGISTER_TGT_HNDLR;
+          }
+        if (ulHandlerFlags &amp; HANDLER_IS_NONSTREAMING)
+          {
+            smhRegParm.ulFlags |= REGISTER_NONSTREAMING;
+          }
+        rc = SMHEntryPoint((PVOID)&amp;smhRegParm);
+        /*
+         * If ok then allocate our memory pool (heap), since it is under
+         * semaphore control create and get the semaphore first.
+         */
+        if (!rc)
+          { /* Register ok */
+            Registered = TRUE;
+            hHeap = HhpCreateHeap(HEAPSIZE,
+                                  HH_SHARED);
+            if (hHeap)
+              { /* Heap Allocated */
+                HeapAllocated_Attached = TRUE;
+                if (!(rc = DosCreateMutexSem(NULL,
+                                             &amp;hmtxGlobalData,
+                                             DC_SEM_SHARED,
+                                             FALSE)))
+                  {
+                    GlobDataMtxCreated = TRUE;
+                  }
+              } /* Heap Allocated */
+            else
+              { /* Heap not allocated */
+                rc = ERROR_ALLOC_RESOURCES;
+              } /* Heap not allocated */
+          } /* Register ok */
+      } /* First Process */
+    else
+      { /* Not first process */
+        if (!(rc = DosOpenMutexSem(NULL,
+                                   &amp;hmtxGlobalData)))
+          { /* Global data semaphore opened */
+
+            GlobDataMtxCreated = TRUE;
+
+            if (!ENTERCRIT(rc))
+              { /* Global Data Sem obtained */
+
+                if (HhpAccessHeap(hHeap, <!-- entering slot 99 -->HhpGetPID()))
+                  { /* Error accessing heap */
+                    rc = ERROR_ALLOC_RESOURCES;
+                  } /* Error accessing heap */
+                else
+                  { /* Heap attached */
+                    HeapAllocated_Attached = TRUE;
+                  } /* Heap attached */
+
+                EXITCRIT;
+
+              } /* Global Data Sem obtained */
+          } /* Global data semaphore opened */
+      } /* Not first process */
+
+    /*
+     * If things are ok, Register an exit list handler and if that works
+     * increment the process count.
+     */
+    if (!rc)
+      {
+        rc = DosExitList(EXTLSTADD_ORDER,
+                         (PFNEXITLIST)ShExitList);
+      }
+
+    if (rc)
+      { /* Error occurred - Clean Up */
+        if (HeapAllocated_Attached)
+          {
+            HhpReleaseHeap(hHeap,
+                           HhpGetPID());
+          }
+        if (GlobDataMtxCreated)
+          {
+            DosCloseMutexSem(hmtxGlobalData);
+          }
+        if (Registered)
+          { /* Deregister */
+            PARM_DEREG smhDeregParm;
+
+            smhDeregParm.ulFunction = SMH_DEREGISTER;
+            smhDeregParm.pszSHName = pszHandlerName;
+            SMHEntryPoint(&amp;smhDeregParm);
+          } /* Deregister */
+        ulProcessCount--;
+        DosReleaseMutexSem(hmtxProcCnt);
+        DosCloseMutexSem(hmtxProcCnt);
+      } /* Error occurred - Clean Up */
+    else
+      {
+#ifdef MMRAS_PTRACE
+        InitPTrace()
+#endif
+        DosReleaseMutexSem(hmtxProcCnt);
+      }
+
+  } /* Semaphore ok, In critical section */
+  /*
+   * The return codes expected are:
+   *  TRUE (any non-zero) - init routine worked
+   *  FALSE (zero)        - init routine failed
+   *
+   * So we have to reverse the local rc before we pass it back.
+   */
+  return(!rc);
+
+} /* End of SHInit */
+</PRE>
+
+<P>
+The stream event handling logic in the DLL stream handlers is essentially
+the same as in device driver stream handlers. The only significant difference
+is that stream events are detected and reported at task time in a DLL, rather
+than at interrupt time as in the case with device drivers
+<PRE>#include        "os2.h"
+#include        "os2me.h"
+
+  RC            rc;                    /* Error return code            */
+  HID           hidSource;             /* Source handler ID            */
+  TIME_EVCB     timeevcb;              /* Cuepoint event control block */
+  HEVENT        hevent;                /* time event handle            */
+  HSTREAM       hstream;               /* Stream handle                */
+  HID           hid;                   /* Handler ID                   */
+  PARM_EVENT    parm_event;            /* Report event parameter block */
+  MMTIME        mmtimeCurrent;         /* Current stream time          */
+  PSMHFN        SMHEntryPoint;         /* Pointer to SMH entry point   */
+
+/*-------------------------------------------------------------------*/
+/*  Report an event.                                                 */
+/*-------------------------------------------------------------------*/
+  parm_event.ulFunction = SMH_REPORTEVENT;     /* Set function         */
+  parm_event.hid = hidSource;                  /* Source handler ID    */
+  parm_event.hevent = hevent;                  /* Event handle         */
+  parm_event.pevcbEvent = (PEVCB) &amp;timeevcb;   /* Pointer to Time EVCB */
+
+  timeevcb.ulType = EVENT_CUE_TIME;            /* Set event type       */
+  timeevcb.hstream = hstream;                  /* Set stream handle    */
+  timeevcb.hid = hid;                          /* Set handler ID       */
+  timeevcb.ulStatus = 0;                       /* No status            */
+  timeevcb.mmtimeStream = mmtimeCurrent;       /* Set current time     */
+
+  if (rc = SMHEntryPoint (&amp;parm_event))
+     return(rc);                               /* Error! */
+</PRE>
+
+
+<P><HR>
+
+<A HREF="077_L3_SHCEntryPoint.html">[Back: SHCEntryPoint]</A> <BR>
+<A HREF="079_L3_Synchronization.html">[Next: Synchronization]</A> 
+</BODY>
+</HTML>

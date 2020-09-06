@@ -1,0 +1,132 @@
+<HTML>
+<HEAD>
+<TITLE>The Three Files in This Sample</TITLE>
+</HEAD>
+<BODY>
+<H1>The Three Files in This Sample</H1><!-- entering slot 110 -->
+<P>
+This sample uses three files. First we'll show you the files, then we'll
+explain how they work. The first file, CDNOTES.CMD, shows some of the synchronization
+you can do with REXX:
+<BR>
+The CDNOTES.CMD "play and display" file
+<BR>
+
+<PRE>/* CDNOTES.CMD -- plays a CD and displays synchronized text           */
+parse arg track                             /* Get a track number     */
+if track='' then do
+   say 'Must specify a track number...'
+   exit
+end
+script=.script~new('gabriel.'||track)       /* Create script          */
+cd=.multimedia~new('cdaudio')               /* Create CDAUDIO object  */
+cd~set('time format milliseconds')          /* Set the time format    */
+startloc=cd~status('position track' track)  /* Set start point        */
+if track=cd~status('number of tracks') then /* Last track?            */
+   endloc=''                                /* Set stop point...      */
+else
+   endloc='to' cd~status('position track' track+1)
+
+/* Play the CD and return control immediately                         */
+done=cd~start('play','from' startloc endloc)
+script~start                            /* Start synchronized display */
+cd~close                                /* Close the CD object        */
+rc=.multimedia~free                     /* Free multimedia resources  */
+exit
+
+::requires orexxmm
+</PRE>
+
+<P>
+CDNOTES plays an audio CD and displays text that is synchronized with the
+music so that you can sing along. The text is read from a second file, which
+also contains timing information:
+<BR>
+The GABRIEL.7 timing information file
+<BR>
+
+<PRE>0  Digging in the Dirt -- by Peter Gabriel
+25 Something in me...
+31 All the time...
+37 No way of dealing...
+43 Can't go on...
+49 This time...
+51 This time...
+54 This time...
+57 I told you...
+     .
+     .
+     .
+</PRE>
+
+<P>
+To make this all work, two new classes are needed: one for the text (that
+is, the script), and one for the multimedia objects. These class definitions
+are in a third file, OREXXMM.CMD:
+<BR>
+The OREXXMM.CMD class definitions file
+<BR>
+
+<PRE>/* Object REXX class and methods for multimedia                     */
+
+::class script public                     /* Class for scripts      */
+
+  ::method init
+   expose timeline
+   use arg fileid                         /* Get the file ID        */
+   file=.stream~new(fileid)               /* Create stream object   */
+   timeline=file~makearray('line')        /* Read file into array   */
+   file~close                             /* Close the file         */
+
+  ::method start
+   expose timeline
+   j=timeline~dimension(1)              /* Get the number of lines  */
+   do i=1 to j                          /* For each line...         */
+                                        /* ...create message object */
+     msg=.message~new(self,'do','I',i)  /* ...hurl it into the void */
+     .alarm~new(timeline[i]~word(1),msg)
+   end                                  /* end do                   */
+
+  ::method do
+   expose timeline
+   use arg i                              /* Retrieve line number   */
+   say time() timeline[i]~subword(2)      /* Display words          */
+
+::class multimedia public         /* Class to "wrap" MCI string     */
+
+  ::method init
+   expose object
+   use arg object
+   /* Initialize the REXX multimedia support                        */
+   call rxfuncadd 'mciRxInit', 'MCIAPI', 'mciRxInit'
+   call mciRxInit
+   /* Open the specified device                                     */
+   return mciRxSendString('open' type 'wait','retstr','0','0')
+
+  ::method unknown                /* All MCI string verbs use this  */
+   expose object
+   use arg mname, margs
+   /* Call the MCI support with appropriate verb and arguments      */
+   if margs[1]=.nil then margs[1]=''
+   return self~mciRxSendString(mname, margs[1] 'wait')
+
+  ::method mciRxSendString
+   expose object
+   use arg verb, items
+   rc=mciRxSendString(verb object items,'retstr','0','0')
+   return retstr
+
+  ::method free class            /* Class method to free resources  */
+   call mciRxExit
+   return result
+</PRE>
+
+<P>
+
+
+<P><HR>
+
+<A HREF="103_L3_ComputerKaraokeAREXX.html">[Back: Computer Karaoke--A REXX Concurrency Sample]</A> <BR>
+<A HREF="105_L4_HowtheClassDefinitio.html">[Next: How the Class Definition File Works]</A> 
+</BODY>
+</HTML>

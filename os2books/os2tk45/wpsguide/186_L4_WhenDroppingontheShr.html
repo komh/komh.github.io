@@ -1,0 +1,72 @@
+<HTML>
+<HEAD>
+<TITLE>When Dropping on the Shredder</TITLE>
+</HEAD>
+<BODY>
+<H1>When Dropping on the Shredder</H1><!-- entering slot 201 -->
+<P>
+The Workplace Shell shredder object supports a rendering mechanism called
+DRM_DISCARD, not a standard PM mechanism. When dropping DRM_OBJECT or DRM_OS2FILE
+on a shredder, with<I> pDragItemhstrContainerName</I> or<I> pDragItemhstrSourceName
+</I>defined, the Workplace Shell will perform the action, and notify the
+source with a DM_ENDCONVERSATION message.
+<P>
+When dropping DRM_OS2FILE, with<I> pDragItemhstrContainerName</I> set to
+NULL, or dropping DRM_DISCARD on the shredder, the shredder sends a DM_DISCARDOBJECT
+message.
+<P>
+The following sample code shows an example of how to use wpDrop:
+<PRE>/*
+ *  Rejects objects that are not file system objects from being dropped
+ *  from being dropped on the Browse_O_matic.
+ */
+
+SOM_Scope MRESULT SOMLINK Browse_O_Maticwps_wpDrop(
+                          Browse_O_Matic *somSelf,
+                          HWND hwndCnr,
+                          PDRAGINFO pdrgInfo,
+                          PDRAGITEM pdrgItem)
+
+{
+  CHAR    pszBuffer[255];
+  MRESULT mResult;
+
+  /* Browse_O_MaticData *somThis = Browse_O_MaticGetData(somSelf); */
+  Browse_O_MaticMethodDebug("Browse_O_Matic",
+                            "Browse_O_Maticwps_wpDrop");
+
+  mResult = MRFROM2SHORT(DOR_DROP, 0);
+
+  /* Don't call the parent. Initialize mResult to allow */
+  /* the drop to proceed.                               */
+  if(DOR_NEVERDROP != SHORT1FROMMR(mResult) &amp;&amp;
+                      DrgVerifyRMF(pdrgItem, "DRM_OS2FILE", NULL))
+
+  {
+    /* Get the path */
+    DrgQueryStrName(pdrgItem-&gt;hstrContainerName,
+                    sizeof(pszBuffer),
+                    pszBuffer);
+
+    /* Append the name of the object to the path */
+    DrgQueryStrName(pdrgItem-&gt;hstrSourceName,
+                    sizeof(pszBuffer) - strlen(pszBuffer),
+                    &amp;pszBuffer[strlen(pszBuffer)]);
+    _wpViewObject(somSelf, NULLHANDLE, OPEN_DEFAULT, (ULONG)pszBuffer);
+    mResult = MRFROM2SHORT(DOR_DROP, SHORT2FROMMR(mResult));
+  }
+  else
+    mResult = MRFROMSHORT(DOR_NEVERDROP);
+
+  return(mResult);
+}
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="185_L4_WhenDroppingonaPrint.html">[Back: When Dropping on a Printer]</A> <BR>
+<A HREF="187_L1_ObjectPersistenceSav.html">[Next: Object Persistence: Save/Restore Methods]</A> 
+</BODY>
+</HTML>

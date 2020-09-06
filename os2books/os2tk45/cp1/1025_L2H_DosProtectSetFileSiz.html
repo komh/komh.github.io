@@ -1,0 +1,67 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosProtectSetFileSize - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosProtectSetFileSize - Example Code</H1><!-- entering slot 1041 -->
+<P>
+This example writes to a file named "DOSPMAN.DAT", resets the buffer, and
+changes the size of the file using DosProtect functions.
+<PRE>#define INCL_DOSFILEMGR          /* File Manager values */
+#define INCL_DOSERRORS           /* DOS Error values    */
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+int main(VOID) {
+   HFILE  hfFileHandle   = 0L;     /* Handle for file being manipulated */
+   ULONG  ulAction       = 0;      /* Action taken by DosOpen */
+   FHLOCK FileHandleLock = 0;      /* File handle lock   */
+
+   ULONG  ulWrote        = 0;      /* Number of bytes written by DosWrite */
+   UCHAR  uchFileName[20]  = "dospman.dat",     /* Name of file */
+          uchFileData[4]   = "DATA";            /* Data to write to file */
+   APIRET rc             = NO_ERROR;            /* Return code */
+
+   /* Open the file dosman.dat.  Use an existing file or create a new */
+   /* one if it doesn't exist.                                      */
+   rc = DosProtectOpen(uchFileName, &amp;hfFileHandle, &amp;ulAction, 4L,
+              FILE_ARCHIVED | FILE_NORMAL,
+              OPEN_ACTION_CREATE_IF_NEW | OPEN_ACTION_OPEN_IF_EXISTS,
+              OPEN_FLAGS_NOINHERIT | OPEN_SHARE_DENYNONE  |
+              OPEN_ACCESS_READWRITE, 0L, &amp;FileHandleLock);
+   if (rc != NO_ERROR) {
+      printf("DosOpen error: return code = %u\n", rc);
+      return 1;
+   }
+
+   rc = DosProtectWrite (hfFileHandle, (PVOID) uchFileData,
+                  sizeof (uchFileData), &amp;ulWrote, FileHandleLock);
+   if (rc != NO_ERROR) {
+      printf("DosWrite error: return code = %u\n", rc);
+      return 1;
+   }
+
+   rc = DosResetBuffer (hfFileHandle);
+   if (rc != NO_ERROR) {
+      printf("DosResetBuffer error: return code = %u\n", rc);
+      return 1;
+   } /* endif */
+
+   rc = DosProtectSetFileSize (hfFileHandle, 8L, FileHandleLock);
+   if (rc != NO_ERROR) {
+      printf("DosSetFileSize error: return code = %u\n", rc);
+      return 1;
+   }
+
+   return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1024_L2H_DosProtectSetFileSiz.html">[Back: DosProtectSetFileSize - Related Functions]</A> <BR>
+<A HREF="1026_L2H_DosProtectSetFileSiz.html">[Next: DosProtectSetFileSize - Topics]</A> 
+</BODY>
+</HTML>

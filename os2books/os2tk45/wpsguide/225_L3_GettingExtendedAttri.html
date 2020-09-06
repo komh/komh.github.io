@@ -1,0 +1,92 @@
+<HTML>
+<HEAD>
+<TITLE>Getting Extended Attributes</TITLE>
+</HEAD>
+<BODY>
+<H1>Getting Extended Attributes</H1><!-- entering slot 244 -->
+<P>
+The following figure shows the syntax of SysGetEA:
+<PRE>Syntax:  SysGetEA(file, name, variable)
+
+where
+
+file         File containing the extended attribute.
+name         Name of the extended attribute, for example .ICON.
+variable     Name of the REXX variable containing the extended
+             attribute value.
+
+</PRE>
+
+<P>
+The Workplace Shell uses the following extended attribute headers:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B>Extended Attribute</B><!-- lm: 0x2 26 -->
+<UL><B> Description</B><!-- lm: 0x2 1 -->
+</UL> .ASSOCTABLE
+<!-- lm: 0x2 26 -->
+<UL>Enables an application to indicate the type, extension,
+and icon for the data file that it recognizes.<!-- lm: 0x2 1 -->
+</UL> .CLASSINFO
+<!-- lm: 0x2 26 -->
+<UL>Specifies the class type of the class object.<!-- lm: 0x2 1 -->
+</UL> .ICON
+<!-- lm: 0x2 26 -->
+<UL>Specifies the icon that represents the file.<!-- lm: 0x2 1 -->
+</UL> .LONGNAME
+<!-- lm: 0x2 26 -->
+<UL>Stores or restores a long file name that is copied
+to media (floppy drive, hard drive, tape) not supporting long file names.
+<!-- lm: 0x2 1 -->
+</UL>.TYPE<!-- lm: 0x2 26 -->
+<UL> Specifies the file
+type of the file object, such as plain text (TXT), bitmap (BMP), or executable
+(EXE).<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following sample code fragments stores the file's extended attribute
+icon data to a temporary file. The icon data file is then modified by using
+the icon editor. Once saved, the icon data extended attribute is updated
+in the file.
+<PRE>/* */Arg Filename
+call RxFuncAdd "SysLoadFuncs", "rexxutil", "SysLoadFuncs"
+call SysLoadFuncs
+
+TempName = 'TEMP$.ICO'
+If (Stream (TempName, 'c', 'query exists') &lt;&gt; ' ') then
+  'ERASE ' TempName     /* If the TempFile exists, erase it */
+
+If SysGetEA(Filename, '.icon', 'ICON') = 0 then
+  do   /* Load the icon extended attribute to the TempFile */
+    Parse Var ICON AInfo 5 ICON
+    do I = 1 to Length(ICON)
+      Rc = Charout(TmpName, Substr(Icon, I, 1))
+    end
+  If Length(Icon) \= 0 then Rc = Charout(TempName)
+  end
+
+say
+say 'The icon data for the file ' Filename ' will now be open '
+say 'into the icon editor.'
+say 'You can update the icon.'
+say 'If this is a brand new icon, you will be prompted to '
+say 'save the data to a file.  Save it to ' TempName '.'
+say 'When you are ready, press the Enter key.'
+
+Rc=SysGetKey()
+
+'@ICONEDIT 'TempName                  /* Start the icon editor */
+Rc = SysSetIcon(Filename, TempName)   /* Update the icon data  */
+                                      /* extended attributes   */
+'@DEL 'TempName
+return
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="224_L3_RegisteringandDeregi.html">[Back: Registering and Deregistering Objects]</A> <BR>
+<A HREF="226_L4_ExtendedAttributesan.html">[Next: Extended Attributes and the Workplace Shell]</A> 
+</BODY>
+</HTML>

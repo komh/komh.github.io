@@ -1,0 +1,203 @@
+<HTML>
+<HEAD>
+<TITLE>DosPerfSysCall</TITLE>
+</HEAD>
+<BODY>
+<H1>DosPerfSysCall</H1><!-- entering slot 55 -->
+<P>
+<B>Purpose</B>
+<P>
+DosPerfSysCall retrieves system performance information and performs software
+tracing.
+<P>
+<B>Syntax</B>
+<PRE>#define INCL_BASE
+#include  os2.h&gt;
+
+</PRE>
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+APIRET DosPerfSysCall<!-- lm: 0x2 11 -->
+<UL><B> (ULONG ulCommand, ULONG
+ulParm1, ULONG ulParm1,ULONG ulParm2, ULONG ulParm3)</B><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Parameters</B><!-- lm: 0x2 1 -->
+<P>
+ulCommand (ULONG)  input<!-- lm: 0x11 11 -->
+<UL> Accepts following commands
+ <!-- lm: 0x2 11 -->
+<P>
+CMD_KI_RDCNT 0x63<!-- lm: 0x2 26 -->
+<UL> Reads CPU utilization information
+in both uniprocessor and symmetric multi-processor (SMP) environments by
+taking a snapshot of the time stamp counters. To determine CPU utilization,
+the application must compute the difference between  two time stamp snapshots
+using 64 bit aritimetic. See the example code for details.<!-- lm: 0x2 11 -->
+</UL> CMD_SOFTTRACE_LOG0x14
+<!-- lm: 0x2 26 -->
+<UL>Records software trace information.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL> ulParm1
+(ULONG)  input/output<!-- lm: 0x11 11 -->
+<UL><!-- lm: 0x2 11 -->
+<P>
+CMD_KI_RDCNT<!-- lm: 0x2 26 -->
+<UL> Pointer to CPUUTIL structure
+<P>
+<I>ulParm1</I> would be set to the address of the CPUUTIL structure.
+<P>
+<I>ulParm2</I>and<I> ulParm3</I>are not used and should be set to zero.
+<!-- lm: 0x2 11 -->
+</UL>CMD_SOFTTRACE_LOG<!-- lm: 0x2 26 -->
+<UL> Major
+code for the trace entry in the range of 0 to 255. Major codes 184 (0x00b8)
+and 185 (0x00b9) have been reserved for customer use. Major code 1 is reserved
+for exclusive use by IBM(R).<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL> ulParm2
+(ULONG)  input/output<!-- lm: 0x11 11 -->
+<UL><!-- lm: 0x2 11 -->
+<P>
+CMD_KI_RDCNT<!-- lm: 0x2 26 -->
+<UL> 0 (reserved)<!-- lm: 0x2 11 -->
+</UL> CMD_SOFTTRACE_LOG
+<!-- lm: 0x2 26 -->
+<UL>Minor code for the trace entry in the range of 0
+to 255.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL> ulParm3 (ULONG)  input/output
+<!-- lm: 0x11 11 -->
+<UL><!-- lm: 0x2 11 -->
+<P>
+CMD_KI_RDCNT<!-- lm: 0x2 26 -->
+<UL> 0 (reserved)<!-- lm: 0x2 11 -->
+</UL> CMD_SOFTTRACE_LOG
+<!-- lm: 0x2 26 -->
+<UL>Pointer to a HOOKDATA data structure.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Returns</B><!-- lm: 0x2 1 -->
+<P>
+ulrc (APIRET)  returns<!-- lm: 0x11 11 -->
+<UL> Return Code.
+<P>
+DosPerfSysCall returns one of the following values <!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->NO_ERROR<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->ERROR_INVALID_FUNCTION<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Remarks</B>
+<P>
+DosPerfSysCall is a general purpose performance function. This function
+accepts four parameters. The first parameter is the command requested. The
+other three parameters are command specific.
+<P>
+Some functions of DosPerfSysCall may have a dependency on Intel Pentium
+or Pentium-Pro support. If a function cannot be provided because OS/2 is
+not running on a processor with the required features, a return code will
+indicate an attempt to use an unsupported function.
+<P>
+<B>Example Code</B>
+<P>
+This example uses DosPerfSysCall to obtain CPU utilization information.
+
+<PRE>#define INCL_BASE#include  os2.h&gt;
+#include  stdio.h&gt;
+#include  stdlib.h&gt;
+#include  string.h&gt;
+#include  perfutil.h&gt;
+
+#define LL2F (high, low) (4294967296.0* (high) + (low)
+
+void main (int argc, char *argv[])
+{
+
+   APIRET   rc;
+   int      i, iter, sleep_sec;
+   double   ts_val, idle_val_prev;
+   double   idle_val, busy_val_prev;
+   double   busy_val, busy_val_prev;
+   dobule   intr_val intr_val_prev;
+   CPUUTIL  CPUUtil;
+
+   if ((argc   2) || (*aargv[1]   '1') || (*aargv[1] &gt; '9')) {
+     fprintf(stderr, "usage  %s [1-9]\n", argv[0]);
+     exit(0);
+   }
+   sleep_sec = *argv[1] - '0';
+
+   iter = 0;
+   do {
+     rec = DosPerfSysCall (CMD_KI_RDCNT, (ULONG)  CPUUtil,0,0);
+     if (rc) {
+        fprintf (stderr, "CMD_KI_RDCNT failed rc = %d\n", rc);
+        exit(1);
+     }
+     ts_val = LL2F (CPUUtil.ulTimeHigh, CPUUtil.ulTimeLow);
+     idle_val = LL2f (CPUUtil.ulIdleHigh, CPUUtil.ulIdleLow);
+     busy_val = LL2F (CPUUtil.ulBusyHigh, CPUUtil.ulBusyLow);
+     intr_val = LL2F (CPUUtil.ulIntrHigh, CPUUtil.<!-- entering slot 56 -->ulIntrLow);
+
+     if (iter &gt; 0) {
+        double ts_delta = ts_val - ts_val_prev;
+        printf ("idle  %4.2%% busy  %4.2f%% intr  %4.2f%%\n";
+           (idle_val - idle_val_prev/ts_delta*100.0,
+           (busy_val - busy_val_prev/ts_delta*100.0,
+           (intr_val - intr_val_prev/ts_delta*100.0);
+     }
+     ts_val_prev = ts_val;
+     idle_val_prev = idle_val;
+     busy_val_prev = busy_val;
+     intr_val_prev = intr_val;
+
+     iter++;
+     DosSleep(1000*sleep_sec);
+
+   } while (1);
+}
+
+</PRE>
+
+<P>
+This example performs software tracing from a program in ring 3.
+<PRE>#define INCL_BASE
+#include  os2.h&gt;
+#include  stdio.h&gt;
+#include  stdlib.h&gt;
+#include  string.h&gt;
+#include  perfutil.h&gt;
+
+int main (int argc, char *argv[])
+{
+   APIRET     rc;
+   BYTE       HookBuffer [256];
+   HOOKDATA   Hookdata = {0,HookBuffer};
+   ULONG      ulMajor, ulMinor;
+   *((PULONG)  HookBuffer[0]) = 1;
+   *((PULONG)  HookBuffer[4]) = 2;
+   *((PULONG)  HookBuffer[8]) = 3;
+   strcpy((PSZ  HookBuffer[12], "Test of 3 ULONG values and a string.")
+   HookData.ulLength = 12 + strlen((PSZ HookBuffer[12]) + 1;
+
+   ulMajor = 0x00b8 
+   ulMinor = 0x0001
+
+   rc = DosPerfSystCall(CMD_SOFTTRACE_LOG, ulMajor, ulMinor, (ULONG)  HookData);
+   if (rc != NO_ERROR) {
+     fprintf (stderr, "CMD_SOFTTRACE_LOG failed   rc = %u\n", rc);
+     return 1;
+     }
+
+   return NO_ERROR;
+}
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="035_L2_DosOpenL.html">[Back: DosOpenL]</A> <BR>
+<A HREF="037_L2_DosProtectOpenL.html">[Next: DosProtectOpenL]</A> 
+</BODY>
+</HTML>

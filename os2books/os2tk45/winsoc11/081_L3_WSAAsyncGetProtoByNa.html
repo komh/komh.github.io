@@ -1,0 +1,181 @@
+<HTML>
+<HEAD>
+<TITLE>WSAAsyncGetProtoByName()</TITLE>
+</HEAD>
+<BODY>
+<H1>WSAAsyncGetProtoByName()</H1><!-- entering slot 95 -->
+<P>
+<B>Description</B>
+<P>
+Get protocol information corresponding to a protocol name - asynchronous
+version.
+<P>
+
+<PRE>#include &lt;winsock.h&gt;</PRE>
+ 
+<P>
+<B>HANDLE PASCAL FAR WSAAsyncGetProtoByName ( HWND</B><I> hWnd</I><B>, unsigned
+int</B><I> wMsg</I><B>, const char FAR *</B><I> name</I><B>, char FAR *
+</B><I>buf</I><B>, int</B><I> buflen</I><B>);</B><!-- lm: 0x2 1 -->
+<UL>
+<P>
+<I>hWnd</I><!-- lm: 0x11 3 -->
+<UL> The handle of the window which should
+receive a message when the asynchronous request completes.<!-- lm: 0x2 1 -->
+</UL><I> wMsg
+</I><!-- lm: 0x11 3 -->
+<UL>The message to be received when the asynchronous
+request completes.<!-- lm: 0x2 1 -->
+</UL><I> name</I><!-- lm: 0x11 3 -->
+<UL> Apointer
+to the protocol name to be resolved.<!-- lm: 0x2 1 -->
+</UL><I> buf</I><!-- lm: 0x11 3 -->
+<UL> A
+pointer to the data area to receive the protoent data.  Note that this must
+be larger than the size of a protoent structure.  This is because the data
+area supplied is used by the Windows Sockets implementation to contain not
+only a protoent structure but any and all of the data which is referenced
+by members of the protoent structure.  It is recommended that you supply
+a buffer of MAXGETHOSTSTRUCT bytes.<!-- lm: 0x2 1 -->
+</UL><I> buflen</I><!-- lm: 0x11 3 -->
+<UL> The
+size of data area<I> buf</I> above.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Remarks</B>
+<P>
+This function is an asynchronous version of <A HREF="074_L3_getprotobyname.html">getprotobyname()</A>,
+and is used to retrieve the protocol name and number corresponding to a
+protocol name.  The Windows Sockets implementation initiates the operation
+and returns to the caller immediately, passing back an<B> asynchronous task
+handle</B> which the application may use to identify the operation.  When
+the operation is completed, the results (if any) are copied into the buffer
+provided by the caller and a message is sent to the application's window.
+ When the asynchronous operation is complete the application's window<I> hWnd
+</I>receives message<I> wMsg</I>.  The<I> wParam</I> argument contains the
+asynchronous task handle as returned by the original function call.  The
+high 16 bits of<I> lParam</I> contain any error code.  The error code may
+be any error as defined in<B> winsock.h</B>.  An error code of zero indicates
+successful completion of the asynchronous operation.  On successful completion,
+the buffer supplied to the original function call contains a protoent structure.
+ To access the elements of this structure, the original buffer address should
+be cast to a protoent structure pointer and accessed as appropriate.
+<P>
+Note that if the error code is WSAENOBUFS, it indicates that the size of
+the buffer specified by<I> buflen</I> in the original call was too small
+to contain all the resultant information.  In this case, the low 16 bits
+of<I> lParam</I> contain the size of buffer required to supply ALL the requisite
+information. If the application decides that the partial data is inadequate,
+it may reissue the<B> WSAAsyncGetProtoByName()</B> function call with a
+buffer large enough to receive all the desired  information (i.e.  no smaller
+than the low 16 bits of<I> lParam</I>).
+<P>
+The error code and buffer length should be extracted from the<I> lParam
+</I>using the macros  WSAGETASYNCERROR and WSAGETASYNCBUFLEN, defined in
+<B>winsock.h</B> as:
+<P>
+
+<PRE>#define WSAGETASYNCERROR(lParam)            HIWORD(lParam)#define WSAGETASYNCBUFLEN(lParam)           LOWORD(lParam)
+</PRE>
+
+<P>
+The use of these macros will maximize the portability of the source code
+for the application.
+<P>
+<B>Return Value</B>
+<P>
+The return value specifies whether or not the asynchronous operation was
+successfully initiated.  Note that it does not imply success or failure
+of the operation itself. If the operation was successfully initiated,<B> WSAAsyncGetProtoByName()
+</B>returns a nonzero value of type HANDLE which is the asynchronous task
+handle for the request.  This value can be used in two ways.  It can be
+used to cancel the operation using <A HREF="086_L3_WSACancelAsyncReques.html">WSACancelAsyncRequest()</A>.
+It can also be used to match up asynchronous operations and completion messages,
+by examining the<I> wParam</I> message argument.
+<P>
+If the asynchronous operation could not be initiated,<B> WSAAsyncGetProtoByName()
+</B>returns a zero value, and a specific error number may be retrieved by
+calling <A HREF="089_L3_WSAGetLastError.html">WSAGetLastError()</A>.
+<P>
+<B>Comments</B>
+<P>
+The buffer supplied to this function is used by the Windows Sockets implementation
+to construct a protoent structure together with the contents of data areas
+referenced by members of the same protoent structure. To avoid the WSAENOBUFS
+error noted above, the application should provide a buffer of at least MAXGETHOSTSTRUCT
+bytes (as defined in<B> winsock.h</B>).
+<P>
+<B>Notes For Windows Sockets Suppliers</B>
+<P>
+It is the responsibility of the Windows Sockets implementation to ensure
+that messages are successfully posted to the application.  If a<B><!-- entering slot 96 --> PostMessage()
+</B>operation fails, the Windows Sockets implementation<B> must</B> re-post
+that message as long as the window exists.
+<P>
+Windows Sockets suppliers should use the WSAMAKEASYNCREPLY macro when constructing
+the<I> lParam</I> in the message.
+<P>
+<B>Error Codes</B>
+<P>
+The following error codes may be set when an application window receives
+a message.  As described above, they may be extracted from the<I> lParam
+</I>in the reply message using the WSAGETASYNCERROR macro.
+<P>
+<!-- lm: 0x2 1 -->
+<P>
+WSAENETDOWN<!-- lm: 0x11 11 -->
+<UL> The Windows Sockets implementation
+has detected that the network subsystem has failed.<!-- lm: 0x2 1 -->
+</UL> WSAENOBUFS
+<!-- lm: 0x11 11 -->
+<UL>No/insufficient buffer space is available<!-- lm: 0x2 1 -->
+</UL> WSAHOST_NOT_FOUND
+<!-- lm: 0x11 11 -->
+<UL>Authoritative Answer Host not found.<!-- lm: 0x2 1 -->
+</UL> WSATRY_AGAIN
+<!-- lm: 0x11 11 -->
+<UL>Non-Authoritative Host not found, or SERVERFAIL.
+<!-- lm: 0x2 1 -->
+</UL>WSANO_RECOVERY<!-- lm: 0x11 11 -->
+<UL> Non recoverable
+errors, FORMERR, REFUSED, NOTIMP.<!-- lm: 0x2 1 -->
+</UL> WSANO_DATA<!-- lm: 0x11 11 -->
+<UL> Valid
+name, no data record of requested type.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following errors may occur at the time of the function call, and indicate
+that the asynchronous operation could not be initiated.
+<P>
+<!-- lm: 0x2 1 -->
+<P>
+WSANOTINITIALISED<!-- lm: 0x11 11 -->
+<UL> A successful <A HREF="093_L3_WSAStartup.html">WSAStartup()
+</A>must occur before using this API.<!-- lm: 0x2 1 -->
+</UL> WSAENETDOWN
+<!-- lm: 0x11 11 -->
+<UL>The Windows Sockets implementation has detected
+that the network subsystem has failed.<!-- lm: 0x2 1 -->
+</UL> WSAEINPROGRESS
+<!-- lm: 0x11 11 -->
+<UL>A blocking Windows Sockets operation is in progress.
+<!-- lm: 0x2 1 -->
+</UL>WSAEWOULDBLOCK<!-- lm: 0x11 11 -->
+<UL> The asynchronous
+operation cannot be scheduled at this time due to resource or other constraints
+within the Windows Sockets implementation.<!-- lm: 0x2 1 -->
+</UL> 
+<P>
+<B>See Also</B>
+<P>
+<A HREF="074_L3_getprotobyname.html">getprotobyname()</A><B>,</B> <A HREF="086_L3_WSACancelAsyncReques.html">WSACancelAsyncRequest()
+</A>
+<P>
+
+
+<P><HR>
+
+<A HREF="080_L3_WSAAsyncGetHostByNam.html">[Back: WSAAsyncGetHostByName()]</A> <BR>
+<A HREF="082_L3_WSAAsyncGetProtoByNu.html">[Next: WSAAsyncGetProtoByNumber()]</A> 
+</BODY>
+</HTML>

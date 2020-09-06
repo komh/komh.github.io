@@ -1,0 +1,163 @@
+<HTML>
+<HEAD>
+<TITLE>Handling two bytes as a double-byte character</TITLE>
+</HEAD>
+<BODY>
+<H1>Handling two bytes as a double-byte character</H1><!-- entering slot 33 -->
+<PRE>旼컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴커
+쿌 double-byte character always needs to be handled by a two-byte unit.�
+읕컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴켸
+</PRE>
+
+<P>
+A double-byte character always needs to be handled by a two-byte unit. You
+should not bisect a double-byte character and should not mistake the second
+byte of a double-byte character for a single-byte character, because the
+second byte of a double-byte character can take any hexadecimal value except
+00H. If a double-byte character is bisected, you are not able to tell whether
+it is a single-byte character or a part of a double-byte character. You
+need to take this rule into consideration when you program routines for
+truncation, substring, insertion, substitution and comparison.
+<P>
+We show embodiment of this rule, using a routine to compare two strings
+of our example program in Comparing two strings (source: CUSTDLG.C). szText[]
+is a target string to be compared in the example. szKey[] is a keyword string
+to find. To make sure double-byte characters of szText[] are treated by
+a double-byte unit, the example always starts comparing two strings, szText[]
+and szKey[], from a character-boundary.  The pointer to show a position
+at which the comparison begins points either a single-byte character or
+the first byte of a double-byte character. That is, it always starts comparing
+two strings at either a single-byte character or the first byte of a DBCS
+character. It never does so at a second-byte of a DBCS character. In turn,
+the first byte or the second byte of a DBCS character of szText[] is never
+mistaken for a SBCS character.<!-- lm: 0x2 5 -->
+<UL>
+<P>
+<LI><LI><LI><LI><LI><LI><LI><LI><LI><LI>Hints and Tips<!-- lm: 0x2 6 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 10 -->5CH is not always a path delimiter for describing
+a file path.  On DBCS OS/2, a file name can be in DBCS. This means 5CH may
+appear as a path delimiter or the second byte of a DBCS character.  Don't
+mistake the second byte of a DBCS for a path delimiter.<!-- lm: 0x2 6 -->
+<P>
+ <LI><LI><!-- lm: 0x2 10 -->There are several functions for wide-character
+(wchar_t) string manipulation such as wcsncmp and wcsrchr. These utilities
+release programmers from the complexity of the mixed string handling.<!-- lm: 0x2 5 -->
+</UL>
+<P>
+<LI><LI><LI><LI><LI><LI><LI><LI><LI><LI>End of Hints and Tips<!-- lm: 0x2 1 -->
+</UL>Comparingtwostrings( source :CUSTDLG . C )
+<PRE>...
+
+/**********************************************************************/
+/*    Compare a customer name with a given keyword using a simple     */
+/*    string-matching algorithm.                                      */
+/**********************************************************************/
+SHORT MatchCustName(CHAR szText[], CHAR szKey[]) {
+
+  #define DBCS_PLUS  2
+  #define SBCS_PLUS  1
+  USHORT  sMoveStart, i, j;
+
+  if (isDBCS1st(szText[0]) == DBCS_1ST)  sMoveStart = DBCS_PLUS;
+  else                                   sMoveStart = SBCS_PLUS;
+  i=j=0;
+  while((szText[i] != '\0') &amp;&amp; (szKey[j] != '\0')) {
+    if (szText[i] == szKey[j]) {
+      i++; j++;
+    } else {
+      /*------------------------------------------------------------*/
+      /*   If a value of the i-th byte of the target string is not  */
+      /*   the same as a value of the j-th byte of the keyword,     */
+      /*   move the pointer of the target string by 1 byte or       */
+      /*   2 byte unit (sMoveStart) so that it points the next      */
+      /*   character.                                               */
+      /*------------------------------------------------------------*/
+      i = i - j + sMoveStart;  j=0;
+      if (isDBCS1st(szText[i]) ==  DBCS_1ST)  sMoveStart = DBCS_PLUS;
+      else                                    sMoveStart = SBCS_PLUS;
+    }
+  }
+  if (szKey[j] == '\0') return MATCH;
+
+  return UN_MATCH;
+}
+</PRE>
+
+<PRE>旼컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴커
+쿢sing WinNextChar, WinPrevChar and WinDrawText APIs, you can handle   �
+쿏BCS properly without large effort.                                   �
+읕컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴켸
+</PRE>
+
+<P>
+The easiest way to achieve proper DBCS string manipulation is to use system-supplied
+APIs,<B>WinNextChar</B> and<B> WinPrevChar</B> Those APIs are DBCS-enabled
+and have the ability to handle DBCS automatically. Using the APIs, You can
+find a character in a string regardless of SBCS or DBCS.
+<P>
+<B>WinDrawText</B> is also a convenient API for drawing DBCS at multiple
+lines. When<B> DT_WORDBREAK</B> is set as ON,<B> WinDrawText</B> breaks
+a DBCS string at a proper position so that DBCS is handled by a two-byte
+unit. It doesn't yield any invalid characters<!-- entering slot 34 --> on
+displaying a string, which may be composed of single-byte and double-byte
+characters, at multiple lines.
+<BR>
+Drawing DBCS (source: MISCWIN)
+<BR>
+
+<PRE>   ...
+    static HWND hwndMenu;
+    static HPS hps;
+    static RECTL rcl;
+
+    LONG lStrLength,
+         lTtlDrawn,
+         lDrawn,
+         lYcoord;
+    ULONG stringID[NUM_EXMPL] = {IDS_TEXT1, IDS_TEXT2, IDS_TEXT3,
+                                 IDS_TEXT4, IDS_TEXT5};
+    CHAR szExmplNo[NUM_EXMPL][10] = {"Example 1", "Example 2", "Example 3",
+                                     "Example 4", "Example 5"};
+    static CHAR szExmpl[NUM_EXMPL][256];
+    static LONG lCharWidth,
+                lCharHeight;
+    static BOOL flWBreak = FALSE;
+
+    USHORT i;
+
+   ...
+
+          case ID_BREAKON:    /* On */
+            /* Alternate ON-OFF status of flWBreak */
+            flWBreak = (BOOL)(flWBreak == DT_WORDBREAK) ?
+                       (USHORT)0 : DT_WORDBREAK;
+
+   ...
+
+              lStrLength = (LONG)strlen(szExmpl[i]);
+
+              /* WinDrawText until all the characters in the string are
+                 drawn.  (If flWBreak = OFF, the following for-loop is
+                 executed only once) */
+              for (lTtlDrawn = 0; lTtlDrawn != lStrLength;
+                                                     rcl.yTop -= lCharHeight){
+                lDrawn = <B>WinDrawText(hps, lStrLength - lTtlDrawn,
+                              szExmpl[i] + lTtlDrawn, &amp;rcl, 0L, 0L,
+                              flWBreak | DT_TOP | DT_LEFT | DT_TEXTATTRS);</B>
+                if (lDrawn)
+                  lTtlDrawn += lDrawn;
+                else
+                  break;
+              }
+   ...
+</PRE>
+
+
+<P><HR>
+
+<A HREF="029_L2_ProcessingDBCSstring.html">[Back: Processing DBCS strings]</A> <BR>
+<A HREF="031_L2_PreparingforDBCSoutp.html">[Next: Preparing for DBCS output]</A> 
+</BODY>
+</HTML>

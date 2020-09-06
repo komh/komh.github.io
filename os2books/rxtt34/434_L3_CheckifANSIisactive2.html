@@ -1,0 +1,94 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Check if ANSI is active - 2 -</TITLE>
+</HEAD>
+<BODY>
+<H1>Check if ANSI is active - 2 -</H1><!-- entering slot 450 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* sample routine to check if ANSI is activated (using REXXUTIL)      */
+/* based on a idea and code of Erik Schneller                         */
+/* (see <A HREF="961_L2H_EMailaddressesS.html">EMail Addresses</A>)                                              */
+/*                                                                    */
+/* see also <A HREF="433_L3_CheckifANSIisactive1.html">Check if ANSI is active - 1 -</A>                             */
+/*                                                                    */
+  i = CheckAnsi()
+  if i = 1 then
+    say "ANSI is activated"
+  else
+    if i = 0 then
+      say "ANSI is not activated."
+    else
+      say "Error detecting ANSI."
+
+exit 0
+
+/* ------------------------------------------------------------------ */
+/* function: Check if ANSI is activated                               */
+/*                                                                    */
+/* call:     CheckAnsi                                                */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  1 - ANSI support detected                                */
+/*           0 - no ANSI support available                            */
+/*          -1 - error detecting ansi                                 */
+/*                                                                    */
+/* note:     Tested with the German and the US version of OS/2 3.0    */
+/*           based on a idea and code of Erik Schneller               */
+/*           (see <A HREF="961_L2H_EMailaddressesS.html">EMail Addresses</A>)                                    */
+/*                                                                    */
+/*                                                                    */
+CheckAnsi: PROCEDURE
+  thisRC = -1
+
+                        /* install a local error handler              */
+  SIGNAL ON ERROR Name InitAnsiEnd
+
+                    /* register the function SysCurPos from REXXUTIL  */
+  call rxFuncAdd "SysCurPos", "REXXUTIL", "SysCurPos"
+
+                    /* get and save the current cursor position       */
+  curPos = SysCurPos()
+
+                    /* write a CR/LF and the ANSI code for CursorUp   */
+  call charOut , D2C(13) || "1B"x || "[1A"
+
+                    /* now get the current cursor position            */
+  NewPos=SysCurPos()
+
+                    /* compare the new position to the old position   */
+  if LEFT( NewPos,2 ) == LEFT( curPos,2 ) THEN
+  do
+                    /* ANSI support is OFF                            */
+     thisRC = 0
+
+                /* goto the begin of the line and delete the garbage  */
+     call CharOut, D2C(13) || copies( " ",4 ) || D2C(13)
+  end /* if left( ... */
+  else
+  do
+                    /* ANSI support is ON                             */
+
+                    /* restore the old cursor position                */
+    call CharOut , "1B"x || "[B"
+    thisRC = 1
+  end /* else */
+
+InitAnsiEnd:
+RETURN thisRC
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="433_L3_CheckifANSIisactive1.html">[Back: Check if ANSI is active - 1 -]</A> <BR>
+<A HREF="435_L3_Getthecurrentcursorp.html">[Next: Get the current cursor position]</A> 
+</BODY>
+</HTML>

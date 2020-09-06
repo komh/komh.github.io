@@ -1,0 +1,105 @@
+<HTML>
+<HEAD>
+<TITLE>EXTERNDEF (Declare Global Identifier)</TITLE>
+</HEAD>
+<BODY>
+<H1>EXTERNDEF (Declare Global Identifier)</H1><!-- entering slot 728 -->
+<P>
+The<B> EXTERNDEF</B> directive combines the functionality of the <A HREF="722_L3_EXTERNEXTRNDeclareEx.html">EXTERN/EXTRN
+</A>and <A HREF="726_L3_PUBLICMakeSymbolVisi.html">PUBLIC</A> directives.
+ It provides a uniform way to declare global symbols that are to be shared
+across multiple modules.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B>Syntax</B><!-- lm: 0x2 11 -->
+<UL>
+<P>
+
+<PRE><B>EXTERNDEF</B> [<A HREF="137_L3_LanguageNames.html"><I>Language-Name</I></A>] <I>Name</I><I>:Type [, ...]</I>
+</PRE>
+
+<P>
+Where<I> Type</I> is one of:<!-- lm: 0x2 13 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 16 --><B>ABS</B><!-- lm: 0x2 13 -->
+<BR>
+<LI><!-- lm: 0x2 16 --><A HREF="256_L2_TypeDeclarations.html"><I>Type-Declaration
+</I></A><!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL><B>Remarks</B><!-- lm: 0x2 11 -->
+<UL>
+<P>
+A symbol declared with<B> EXTERNDEF</B> is treated as <A HREF="726_L3_PUBLICMakeSymbolVisi.html">PUBLIC
+</A>if a definition for the symbol is encountered during the assembly, otherwise
+the symbol is assumed to be defined in another module and is treated as
+if it were declared with the <A HREF="722_L3_EXTERNEXTRNDeclareEx.html">EXTERN/EXTRN
+</A>directive.<!-- lm: 0x2 1 -->
+</UL><B> Example</B><!-- lm: 0x2 11 -->
+<UL>
+<P>
+The following example shows how a declaration for the<B> ReturnCode</B> symbol
+can be shared between two modules (Main.asm and FileErr.asm) by way of a
+common header file (ErrNum.inc):
+<PRE>; ----------------------------------------------------------------------
+; ErrNum.inc
+
+RETCODE_T typedef DWORD
+
+RC_NoError      equ 0
+RC_FileNotFound equ 1
+RC_SystemError  equ 3
+
+EXTERNDEF ReturnCode:RETCODE_T    ; declaration
+
+
+; ----------------------------------------------------------------------
+; FileErr.asm
+.386
+.MODEL FLAT
+INCLUDE ErrNum.inc                ; bring in error number definitions
+                                  ; and declaration for ReturnCode
+
+.CODE
+; Tell the user about the file error,
+; then make sure the program has a non-zero exit status
+FileError proc
+          ...
+          mov ReturnCode, RC_FileNotFound
+          ret
+FileError endp
+          end
+
+
+; ----------------------------------------------------------------------
+; Main.asm
+.386
+.MODEL FLAT
+INCLUDE ErrNum.inc                ; bring in error number definitions
+                                  ; and declaration for ReturnCode
+EXTERNDEF FileError:PROC          ; This could be in a common header too
+
+.DATA
+ReturnCode RETCODE_T RC_NoError   ; actual definition of ReturnCode
+
+.CODE
+Main proc
+     ...
+     ...
+     call FileError          ; hypothetical error condition
+     ...
+     ...
+     mov eax, ReturnCode     ; load the exit status
+     call Exit               ; and shutdown the program
+Main endp
+     end Main
+
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="722_L3_EXTERNEXTRNDeclareEx.html">[Back: EXTERN/EXTRN (Declare External Identifier)]</A> <BR>
+<A HREF="724_L3_INCLUDELIBPassLibrar.html">[Next: INCLUDELIB (Pass Library Name to Linker through Object File)]</A> 
+</BODY>
+</HTML>

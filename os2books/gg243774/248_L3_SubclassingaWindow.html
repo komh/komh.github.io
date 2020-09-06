@@ -1,0 +1,129 @@
+<HTML>
+<HEAD>
+<TITLE>Subclassing a Window</TITLE>
+</HEAD>
+<BODY>
+<H1>Subclassing a Window</H1><!-- entering slot 266 -->
+<P>
+The use of subclassing to modify the methods of an existing window class
+has been described in <A HREF="225_L2_Subclassing.html">Subclassing</A>.
+ An application subclasses a particular window instance (rather than the
+entire window class) by creating a<B> subclass window procedure</B>, and
+registering this window procedure to Presentation Manager using the<B> WinSubclassWindow()
+</B>function.
+<P>
+The use of the<B> WinSubclassWindow()</B> function is shown in <A HREF="030_L2_WinSubclassWindowFun.html">Figure
+"WinSubclassWindow() Function"</A>.
+<P>
+The<B> WinSubclassWindow()</B> function substitutes a new window procedure,
+known as the<B> subclass window procedure</B>, for the original window procedure
+associated with the window being subclassed.  The window handle of the window,
+along with the entry point of the  subclass window procedure, is passed
+to the<B> WinSubclassWindow()</B> function.  The function returns the entry
+point address of the original window procedure for that window.
+<P>
+Once a window has been subclassed, Presentation Manager routes messages
+destined for that window to the subclass window procedure. The subclass
+window procedure may:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Process the message itself, if it indicates an action
+for which the method must be modified.
+<P>
+The subclass window procedure then returns control immediately to Presentation
+Manager.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Pass the message on to the original window procedure
+for that window, if the subclass window procedure is not explicitly concerned
+with the action indicated by the message.
+<P>
+The original window procedure is directly invoked by the subclass window
+procedure; note that this is one of the few instances where direct invocation
+of a window procedure is recommended.  The return code from the original
+window procedure is then returned to Presentation Manager.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Both of the above, if the subclass window procedure
+must perform some processing in addition to that normally performed by the
+original window procedure.
+<P>
+The additional processing performed by the subclass window procedure may
+be performed either before or after the processing performed by the original
+window procedure.  This sequence is at the discretion of the application
+developer, and depends largely on the desired modification in the window's
+behavior.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+A subclass window procedure is similar in structure to a "normal" window
+procedure, except that instead of calling the<B> WinDefWindowProc()</B> function
+as its default case, it should invoke the original window procedure.  This
+means that the entry point address of the original window procedure must
+be known to and accessible from the subclass window procedure.  Note also
+that the entry point address might not be that of the original window procedure
+specified when the window class was registered to Presentation Manager,
+since the window might previously have been subclassed, and the current
+subclassing operation might be effectively subclassing the subclass window
+procedure.
+<P>
+The entry point address of the original procedure can be supplied to the
+subclass window procedure in a number of ways:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->It may be determined from the information returned
+by the<B> WinSubclassWindow()</B> call, and passed to the subclass window
+procedure in an application-defined message.  The subclass window procedure
+may then store the entry point address in a global variable or in the window
+words of the window, assuming the available window words are not already
+in use.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->It may be determined by the subclass window procedure
+itself by querying Presentation Manager.  Note, however, that this method
+will only work if the window has not previously been subclassed, since Presentation
+Manager only records the original window procedure (as specified in the
+<B>WinRegisterClass()</B> function call) in the CLASSINFO structure for
+the window.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+An example of a subclass window procedure, including a query to obtain the
+original entry point address from the Presentation Manager class information,
+is given in <A HREF="031_L2_SubclassWindowProced.html">Figure "Subclass
+Window Procedure"</A>. <A HREF="031_L2_SubclassWindowProced.html">Figure
+"Subclass Window Procedure"</A> shows each of the possible cases listed
+above.  The message class WMP_MESSAGE1 is explicitly processed by the subclass
+window procedure, which then returns control to Presentation Manager with
+a<I> return</I> statement upon completion.
+<P>
+The message class WMP_MESSAGE2 is also explicitly processed by the subclass
+window procedure, but in this case it is required that the processing performed
+by the original window procedure be allowed to occur, after the subclass
+window procedure's processing.  The subclass window procedure therefore
+does not return control immediately to Presentation Manager, but merely
+terminates the<I> switch</I> statement, allowing  the final four statements
+to be executed.
+<P>
+For other message classes with which the subclass window procedure is not
+concerned, the default case also terminates the<I> switch</I> statement,
+allowing the final four statements to be executed.
+<P>
+These final statements determine the entry point address of the original
+window procedure, using the<B> WinQueryClassName()</B> and<B> WinQueryClassInfo()
+</B>functions to access control information held by Presentation Manager.
+ This entry point address is then used to invoke the original window procedure
+to process messages with which the subclass window procedure is not concerned,
+or for which the normal processing must be allowed to occur.
+<P>
+The last four statements in the example above are common to all subclass
+window procedures, and organizations undertaking development of Presentation
+Manager applications may wish to incorporate them<!-- entering slot 267 --> into
+a standard subroutine and place them in a library for access by developers.
+
+<P>
+Note that a subclass window procedure, like all window and dialog procedures,
+must use the<I> system</I> linkage convention.  This is normally achieved
+by declaring the subclass window procedure using the EXPENTRY keyword.
+
+<P><HR>
+
+<A HREF="247_L3_InstanceDataandWindo.html">[Back: Instance Data and Window Words]</A> <BR>
+<A HREF="249_L2_WindowCommunication.html">[Next: Window Communication]</A> 
+</BODY>
+</HTML>

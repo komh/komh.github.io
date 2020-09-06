@@ -1,0 +1,107 @@
+<HTML>
+<HEAD>
+<TITLE></TITLE>
+</HEAD>
+<BODY>
+<H1></H1><!-- entering slot 3599 --><B>Context</B> (or thread context) refers the
+<I>view</I> of the system any given <A HREF="3319_L0_.html">thread</A> has.
+Only one thread context may be current at any time.
+<P>
+<I>Switching contexts</I> refers to the process of preparing the system
+for another thread to run. From an application program's perspective this
+implies restoring its registers and ring 2 and 3 stacks when it is given
+the opportunity to run again. From the system's perspective, restoration
+of an application's registers and stacks is done after the context switch,
+by the dispatcher, on exiting kernel mode. Not every context switch is followed
+by exiting kernel mode. For example, if another thread in the same process
+is in critical section (but blocked) then the new thread enters<B> crt</B> state
+and the scheduler is called to select yet another thread.
+<P>
+Context switching includes the following system actions:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Updating GDT descriptor entries 28, 30, 38 and 150b,
+which point to<!-- lm: 0x2 11 -->
+<UL>
+<P>
+the current process'<B> LDT</B>,<!-- lm: 0x2 11 -->
+<P>
+the current threads ring 0 stack,<!-- lm: 0x2 11 -->
+<P>
+the current thread's floating point emulator work area,<!-- lm: 0x2 11 -->
+<P>
+the current thread's <A HREF="3273_L0_.html">TIB</A>. (By default the<B> FS
+</B>selector is loaded with 150b).<!-- lm: 0x2 6 -->
+</UL><B> Note: </B> The
+<B>LDT</B> selector is only updated when the process changes with a context
+switch, that is, for a process context switch.<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>Updating
+page directory and tables for a process context switch.<!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>Updating
+the<B> TR</B> register if the process switch involves a task switch (normally
+only <A HREF="3272_L0_.html">VDMs</A>).<!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>Updating
+the current <A HREF="3275_L0_.html">TSS</A> ring 0 and ring 2 stack addresses.
+<!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL>Updating system copies of
+the Global and Local Information Segments.<!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>Copying
+the Local Information Segment from the incoming PTDA and the Thread Local
+Memory Area from the incoming TCB to the segment mapped by LDT selector
+<B>dfff</B>.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Note: </B>
+<P>
+Besides addressing the current ring 0 stack, selector 30 also addresses
+the current thread's scheduling control blocks.  In particular: the <A HREF="3335_L0_.html">PTDA</A>,
+<A HREF="3345_L0_.html">TCB</A> and <A HREF="3346_L0_.html">TSD</A>. This
+is done by aliasing selected address ranges from selector 30 to those of
+the true PTDA, TCB and TSD in the system arena global memory for the current
+context.  The system defines a dummy module containing a hard-coded PTDA.
+ The symbols of this module have the same name as those of the fields in
+the PTDA.  The system arranges for this to map the PTDA addressed by selector
+30.  This trick allows the system to refer to PTDA fields for the current
+context without regard for which process is current, simply by using the
+field names as public symbols.  The user may use the same symbols for referencing
+the PTDA but these are only valid for the current system context.  To access
+PTDA fields in other contexts the following technique can be used:
+<PRE>--------------------------------------------------------------------------------Note that the current PTDA is located at <B>PTDA_Start</B>
+##.p *
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+*0025  0004 0002 0004 0001 blk 0300 7b7c8000 7bbc4080 7bbe8a90 1fc4 16 someprog
+The current thread slot is 25
+We wish to <!-- entering slot 3600 -->know the thread that has entered critical section in process of
+thread slot 40. The address of the critical section <B>TCB</B> is
+saved in <B>ptda_pTCBCritSec</B> and the thread ordinal and slot number
+are the first two words of the <B>TCB</B>.
+##.p 40
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 0040  0012 0002 0012 0001 blk 0500 7b7d6000 7b9e4020 7b9c8a70 1eb8 10 userprog
+##dw %(DW(%7b9e4020+ptda_ptcbcritsec-ptda_start)) l2
+%7b9c8de0 0002 0041
+Thread 2 of 12 or thread slot 41 is in critical section
+##.p 41
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 0041  0012 0002 0012 0002 blk 0800 7b7da000 7b9e4020 7b9c8de0 1ed4 10 userprog
+--------------------------------------------------------------------------------
+</PRE>
+
+<P>
+Refer to the Kernel Debugger and Dump Formatter <A HREF="378_L3_PDisplayProcessStatu.html">.P
+</A>and <A HREF="386_L3_SSetorDisplayDefault.html">.S</A> commands for more
+information.<!-- lm: 0x2 1 -->
+<P>
+
+
+<P><HR>
+
+<A HREF="3283_L0_.html">[Back: ]</A> <BR>
+<A HREF="3285_L0_.html">[Next: ]</A> 
+</BODY>
+</HTML>

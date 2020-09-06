@@ -1,0 +1,119 @@
+<HTML>
+<HEAD>
+<TITLE>DosAllocSeg</TITLE>
+</HEAD>
+<BODY>
+<H1>DosAllocSeg</H1><!-- entering slot 3 -->Bindings:  <A HREF="177_L2H_DosAllocSeg.html">C</A>,
+<A HREF="352_L2H_DosAllocSeg.html">MASM</A>
+<BR>
+
+<P>
+This call allocates a segment of memory to a requesting process.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+DosAllocSeg<!-- lm: 0x2 17 -->
+<UL> (Size, Selector, AllocFlags)<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+<B>Size</B> (USHORT) - input<!-- lm: 0x11 4 -->
+<UL> Number of bytes requested.
+ The value specified must be less than or equal to 65535.  A value of zero
+indicates 65536 bytes.<!-- lm: 0x2 1 -->
+</UL><B> Selector</B> (PSEL) -
+output<!-- lm: 0x11 4 -->
+<UL> Address where the selector of the segment
+allocated is returned.<!-- lm: 0x2 1 -->
+</UL><B> AllocFlags</B> (USHORT)
+- input<!-- lm: 0x11 4 -->
+<UL> Bit indicators describing the characteristics
+of the segment being allocated.  The bits that can be set and their meanings
+are:<!-- lm: 0x2 4 -->
+<P>
+Bit<!-- lm: 0x2 14 -->
+<UL> Description<!-- lm: 0x2 4 -->
+</UL>15-4<!-- lm: 0x2 14 -->
+<UL> Reserved and must be set to zero.<!-- lm: 0x2 4 -->
+</UL>3<!-- lm: 0x2 14 -->
+<UL> If segment is shared, it can be decreased
+in size by <A HREF="128_L2_DosReallocSeg.html">DosReallocSeg</A>.<!-- lm: 0x2 4 -->
+</UL>2<!-- lm: 0x2 14 -->
+<UL> Segment may be discarded by the system in
+low memory situations.<!-- lm: 0x2 4 -->
+</UL>1<!-- lm: 0x2 14 -->
+<UL> Segment is shareable through <A HREF="069_L2_DosGetSeg.html">DosGetSeg</A>.
+<!-- lm: 0x2 4 -->
+</UL>0<!-- lm: 0x2 14 -->
+<UL> Segment is shareable through <A HREF="072_L2_DosGiveSeg.html">DosGiveSeg</A>.
+<!-- lm: 0x2 1 -->
+</UL><B>rc</B> (USHORT) - return<!-- lm: 0x11 4 -->
+<UL> Return
+code descriptions are:<!-- lm: 0x2 4 -->
+<P>
+<LI><!-- lm: 0x2 14 -->NO_ERROR<!-- lm: 0x2 4 --> 8<!-- lm: 0x2 14 -->
+<UL> ERROR_NOT_ENOUGH_MEMORY
+<!-- lm: 0x2 4 -->
+</UL>87<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_PARAMETER<!-- lm: 0x2 1 -->
+</UL><B>Remarks</B>
+<P>
+DosAllocSeg allows a process to allocate a data segment up to 64KB in size,
+which is movable and swappable by the system. If your application needs
+to accommodate a large data structure that exceeds the 64KB limit, <A HREF="001_L2_DosAllocHuge.html">DosAllocHuge
+</A>may be issued to allocate multiple segments as one huge block of memory.
+
+<P>
+A segment allocated by DosAllocSeg with AllocFlags bit 2 set can be discarded
+by the system to remedy a low memory situation when the segment is not in
+use. Upon allocation, a discardable segment is locked and ready for access.
+The caller issues DosUnlockSeg when it is finished using the segment. The
+next time the caller needs to access the segment, it must issue DosLockSeg.
+During the time a segment is locked, it cannot be discarded, but it can
+still be swapped.
+<P>
+Allocate memory as discardable when it is needed to hold data for only short
+periods of time; for example, saved bit map images for obscured windows.
+Once the system discards a segment, the caller must reallocate the segment
+with DosReallocSeg and regenerate the data. Reallocating the segment automatically
+locks it for the first access. 
+<P>
+A segment may also be designated as shared with another process. If a process
+issues DosAllocSeg with AllocFlags bit 0 set, then the segment allocated
+is shareable through <A HREF="072_L2_DosGiveSeg.html">DosGiveSeg</A>. To
+share the segment in this manner, the owning process can then issue DosGiveSeg
+to obtain a selector for the sharer to use. The owning process then passes
+the selector to the sharer using some means of interprocess communication.
+The sharing process can use the selector to access the shared segment. If
+the shared segment has been designated discardable (AllocFlags bit 2 is
+also set), the sharer must issue <A HREF="077_L2_DosLockSeg.html">DosLockSeg
+</A>to lock the segment.
+<P>
+Memory allocated with DosAllocSeg is freed by a call to <A HREF="046_L2_DosFreeSeg.html">DosFreeSeg</A>.
+
+<P>
+<B>Note: </B> This request may be issued from privilege level 2.  However,
+the segment is allocated as a privilege level 3 segment.<!-- lm: 0x2 1 -->
+<P>
+
+<BR>
+<B>Family API Considerations</B>
+<P>
+Some options operate differently in the DOS mode than in the OS/2 mode.
+ Therefore, the following restrictions apply to DosAllocSeg when coding
+for the DOS mode:<!-- lm: 0x2 1 -->
+<P>
+o<!-- lm: 0x2 3 -->
+<UL>Requested Size value is rounded up to the next paragraph
+(16-byte).<!-- lm: 0x2 1 -->
+</UL>o<!-- lm: 0x2 3 -->
+<UL>Selector is the actual segment address allocated.
+<!-- lm: 0x2 1 -->
+</UL>o<!-- lm: 0x2 3 -->
+<UL>AllocFlags must be set to zero.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="001_L2_DosAllocHuge.html">[Back: DosAllocHuge]</A> <BR>
+<A HREF="003_L2_DosAllocShrSeg.html">[Next: DosAllocShrSeg]</A> 
+</BODY>
+</HTML>

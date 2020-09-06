@@ -1,0 +1,136 @@
+<HTMLHIDDEN>
+<HEAD>
+<TITLE>DosFlagProcess</TITLE>
+</HEAD>
+<BODY>
+<H1>DosFlagProcess</H1><!-- entering slot 261 -->
+<PRE>#define INCL_DOSSIGNALS
+
+USHORT  rc = DosFlagProcess(ProcessID, ActionCode, Flagnum, Flagarg);
+
+PID              ProcessID;     /* Process ID to flag */
+USHORT           ActionCode;    /* Indicate to flag descendants */
+USHORT           Flagnum;       /* Flag number */
+USHORT           Flagarg;       /* Flag argument */
+
+USHORT           rc;            /* return code */
+</PRE>
+
+<P>
+<B>Example</B>
+<P>
+This example starts a program named 'simple2.exe', and then signals the
+program with the external flag A.
+<PRE>#define INCL_DOSPROCESS
+#define INCL_DOSSIGNALS
+
+#define PROGRAM_NAME "simple2.exe"
+
+CHAR        LoadError[100];
+PSZ         Args;
+PSZ         Envs;
+RESULTCODES ReturnCodes;
+USHORT      FlagArg;
+USHORT      rc;
+
+   FlagArg = 2;
+
+   if(!DosExecPgm(LoadError,             /* Object name buffer */
+                  sizeof(LoadError),     /* Length of object name buffer */
+                  EXEC_ASYNC,            /* Asynchronous/Trace flags */
+                  Args,                  /* Argument string */
+                  Envs,                  /* Environment string */
+                  &amp;ReturnCodes,          /* Termination codes */
+                  PROGRAM_NAME))         /* Program file name */
+      rc = DosFlagProcess(ReturnCodes.codeTerminate,  /* Process ID to
+                                                          flag */
+                          FLGP_PID,                   /* Indicate to flag
+                                                             descendants */
+                          PFLG_A,                     /* Flag number */
+                          FlagArg);                   /* Flag argument */
+</PRE>
+
+<P>
+The following example illustrates the use of a user-defined flag to signal
+time-critical events.  The main thread installs a routine, named FlagA_Handler(),
+as the signal handler for user-defined Flag A.  It then creates a thread
+and blocks on a reserved RAM semaphore; this thread obtains its process
+ID and signals the main thread via Flag A.  The main thread responds by
+executing the signal handler.
+<PRE>#define INCL_DOSPROCESS
+#define INCL_DOSSIGNALS
+#define INCL_DOSERRORS
+
+#include &lt;os2.h&gt;
+
+#define TIMEOUT           5000L
+
+TID         ThreadID;
+BYTE        ThreadStack[4000];
+
+VOID APIENTRY FlagA_Handler(arg1, arg2)       /* Define signal handler */
+  USHORT      arg1;
+  USHORT      arg2;
+{
+  printf("Handler for Flag A now running.\n");
+  return;
+}
+
+VOID APIENTRY Thread_A()
+{
+  PIDINFO     PidInfo;
+  USHORT      FlagArg;
+  USHORT      rc;
+
+  DosGetPID(&amp;PidInfo);
+  printf("Process ID is %d\n", PidInfo.pid);
+  if(!(rc = DosFlagProcess(PidInfo.pid,
+                           FLGP_PID,
+                           PFLG_A,
+                           FlagArg)))
+    printf("FlagA signal sent from ThreadA to main thread.\n");
+  else
+    printf("FlagProcess rc is %d\n", rc)/* Error processing on rc */;
+  DosExit(EXIT_THREAD,                 /* Action Code */
+          RETURN_CODE);                /* Result Code */
+
+}
+</PRE>
+
+<PRE>main()
+{
+  ULONG            RamSem = 0L;
+  ULONG far        *RamSemHandle = &amp;RamSem;
+  USHORT           rc;
+
+  if(!(rc=DosSetSigHandler((PFNSIGHANDLER) FlagA_Handler,
+                           NULL,
+                           NULL,
+                           SIGA_ACCEPT,
+                           SIG_PFLG_A)))
+    printf("Main thread has set FlagA handler.\n");
+  else
+
+    /* Error processing on rc */;
+  if(!(rc=DosSemRequest(RamSemHandle,
+                        TIMEOUT)))
+    printf("Semaphore obtained.\n");
+  if(!(DosCreateThread((PFNTHREAD) Thread_A,
+                        &amp;ThreadID,
+                        &amp;ThreadStack[3999])))
+    printf("ThreadA created.\n");
+  printf("Main thread will now wait on a Ramsem for a while.\n");
+  if((rc=DosSemRequest(RamSemHandle,
+                       TIMEOUT))
+       == ERROR_INTERRUPT)
+  printf("Main thread interrupted while waiting, rc is %d.\n", rc);
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="217_L2H_DosFindNext.html">[Back: DosFindNext]</A> <BR>
+<A HREF="219_L2H_DosFreeModule.html">[Next: DosFreeModule]</A> 
+</BODY>
+</HTML>

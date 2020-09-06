@@ -1,0 +1,69 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosLoadModule - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosLoadModule - Example Code</H1><!-- entering slot 739 -->
+<P>
+This example loads the dynamic link module "DISPLAY.DDL," queries its address
+and type, and finally frees it.
+<PRE> #define INCL_DOSMODULEMGR     /* Module Manager values */
+ #define INCL_DOSERRORS        /* Error values */
+ #include &lt;os2.h&gt;
+ #include &lt;stdio.h&gt;
+
+int main(VOID) {
+
+ PSZ      ModuleName     = "C:\\OS2\\DLL\\DISPLAY.DLL";  /* Name of module   */
+ UCHAR    LoadError[256] = "";          /* Area for Load failure information */
+ HMODULE  ModuleHandle   = NULLHANDLE;  /* Module handle                     */
+ PFN      ModuleAddr     = 0;           /* Pointer to a system function      */
+ ULONG    ModuleType     = 0;           /* Module type                       */
+ APIRET   rc             = NO_ERROR;    /* Return code                       */
+
+   rc = DosLoadModule(LoadError,               /* Failure information buffer */
+                      sizeof(LoadError),       /* Size of buffer             */
+                      ModuleName,              /* Module to load             */
+                      &amp;ModuleHandle);          /* Module handle returned     */
+   if (rc != NO_ERROR) {
+      printf("DosLoadModule error: return code = %u\n", rc);
+      return 1;
+   } else {
+      printf("Module %s loaded.\n", ModuleName);
+   } /* endif */
+
+   rc = DosQueryProcAddr(ModuleHandle,         /* Handle to module           */
+                         1L,                   /* No ProcName specified      */
+                         NULL,                 /* ProcName (not specified)   */
+                         &amp;ModuleAddr);         /* Address returned           */
+   if (rc != NO_ERROR) {
+      printf("DosQueryProcAddr error: return code = %u\n", rc);
+      return 1;
+   } else printf("Address of module is 0x%x.\n", ModuleAddr);
+
+   rc = DosQueryProcType(ModuleHandle,         /* Handle to module           */
+                         1L,                   /* Indicate no ProcName given */
+                         NULL,                 /* ProcName (not specified)   */
+                         &amp;ModuleType);         /* Type 0=16-bit   1=32-bit   */
+   if (rc != NO_ERROR) {
+      printf("DosQueryProcType error: return code = %u\n", rc);
+      return 1;
+   } else printf("This is a %s module.\n", ( ModuleType ? "32-bit" : "16-bit"));
+
+   rc = DosFreeModule(ModuleHandle);
+   if (rc != NO_ERROR) {
+      printf("DosFreeModule error: return code = %u\n", rc);
+      return 1;
+   } else printf("Module %s freed.\n", ModuleName);
+
+   return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="730_L2H_DosLoadModuleRelated.html">[Back: DosLoadModule - Related Functions]</A> <BR>
+<A HREF="732_L2H_DosLoadModuleTopics.html">[Next: DosLoadModule - Topics]</A> 
+</BODY>
+</HTML>

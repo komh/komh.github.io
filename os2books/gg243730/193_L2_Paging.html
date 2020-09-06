@@ -1,0 +1,97 @@
+<HTML>
+<HEAD>
+<TITLE>Paging</TITLE>
+</HEAD>
+<BODY>
+<H1>Paging</H1><!-- entering slot 214 -->
+<P>
+In addition to the segmented memory management offered on the earlier 80286
+processors, the 80386 provides a paged memory model. This is an optional
+function of the 80386, and there are no direct performance implications
+of an operating system choosing not to use paged memory.  However, the paged
+memory model provides significant performance benefits when running large
+applications which make extensive use of virtual memory.
+<P>
+Under previous versions of OS/2, the smallest unit of memory (for memory
+management purposes) was the segment, since the operating system was designed
+to execute on the 80286 processor and use the segmented memory model.  With
+the 80286, segments may vary in size between 16 bytes and 64KB; there is
+therefore a danger of having a large amount of free memory which is fragmented
+into small, discontiguous units.
+<P>
+Previous versions of OS/2 managed this by moving segments within real storage
+to create a larger free space, and by swapping unused segments to disk until
+they are required.  This entailed a high degree of overhead for the operating
+system.  With an 80386 processor, however, segments may be up to 4GB in
+size, and the overhead could potentially result in an unacceptable performance
+impact, particularly for applications with very large segments.  Also there
+is the problem of having sufficient physical memory to load a complete segment,
+when the segment is very large.
+<P>
+In order to avoid this situation, the 80386 processor provides a paged memory
+model, implemented in hardware through a dedicated paging unit included
+on the processor chip. A page is a 4KB unit of contiguous memory, and replaces
+the segment as the unit of granularity for memory management, including
+swapping to and from disk.  Note that paging is available in protected mode,
+in conjunction with both the segmented and flat memory models.
+<P>
+Using the paged memory model, an application makes a memory reference in
+the normal way, using either the segmented memory model or the flat memory
+model.  The segmentation unit in the processor automatically resolves the
+reference into a 32-bit linear address.  However, this linear address does
+not represent a physical address, but is made up as follows:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->The high-order 10 bits of the field are used as an
+index into a page directory table.  The entry in this table in turn refers
+to the base address of a page table.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->The next 10 bits of the field are used as an index
+into the page table referred to by the page directory entry.  The entry
+in the page table provides the physical base address of a 4KB page.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->The lower-order 12 bits of the field are used as an
+offset within the page referred to by the page table entry.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+OS/2 Version 2.0 maintains a single page directory for the entire system,
+but a separate set of page directory entries for each process present in
+the system. The physical address of the page directory is held in the CR3
+control register.  This is known as the page directory base register (PDBR)
+in OS/2 Version 2.0.  When a task switch takes place, the page directory
+entries, for the process being scheduled, are copied into the page directory.
+
+<P>
+<A HREF="036_L2_ProtectedModeAddress.html">Figure "Protected Mode Addressing
+- with Paging"</A>
+<P>
+Both the page directory and page tables contain 32-bit page specifiers.
+ The page directory and page tables are themselves contained within single
+pages, and may therefore contain a maximum of 1024 entries.  Each page directory
+can hence access up to 4GB of storage, which is the maximum physical address
+space of the 80386.
+<P>
+Pages may be shared between processes by defining them in the page tables
+of more<!-- entering slot 215 --> than one process.  Note that this is done
+at the page table level rather than the page directory level, in order to
+share<I> only</I> the individual pages required.
+<P>
+In order to further reduce the overhead involved in looking up page references,
+the 80386 also provides a hardware-based address caching mechanism for paging
+information.  This is known as the translation lookaside buffer (TLB).  The
+TLB contains the physical addresses for the 32 most recently used pages,
+and therefore allows very fast access to these pages since it is no longer
+necessary to read entries from the page directory and a page table, which
+are held in system memory. Use of the TLB is handled entirely within the
+paging unit, and is not visible to software.  The operating system must,
+however, ensure that the buffer is flushed whenever the PDBR is updated
+or an entry in either the page directory or a page table is changed.  This
+ensures that the TLB contents are kept in step with the operating system
+maintained tables.
+
+<P><HR>
+
+<A HREF="192_L3_ProtectedModeFlatMem.html">[Back: Protected Mode (Flat Memory Model)]</A> <BR>
+<A HREF="194_L2_TaskSwitching.html">[Next: Task Switching]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,146 @@
+<HTMLHIDDEN>
+<HEAD>
+<TITLE>DosCreateThread</TITLE>
+</HEAD>
+<BODY>
+<H1>DosCreateThread</H1><!-- entering slot 236 -->
+<PRE>#define INCL_DOSPROCESS
+
+USHORT  rc = DosCreateThread(PgmAddress, ThreadIDWord, NewThreadStack);
+
+PFNTHREAD        PgmAddress;     /* Program address */
+PTID             ThreadIDWord;   /* New thread ID (returned) */
+PBYTE            NewThreadStack; /* End of stack for new thread */
+
+USHORT           rc;             /* return code */
+</PRE>
+
+<P>
+<B>Example</B>
+<P>
+In this example, a second thread is started at TestRoutine with a stack
+size of 4096 bytes. Remember to compile with Stack checking disabled (-Gs).
+ Also, threads started with DosCreateThread should not use some C library
+functions.  See chapter 6 of the
+<BR>
+IBM C/2 Language Reference (version 1.1) for a discussion of threads and
+the
+<BR>
+C functions _beginthread and _endthread.  This example can be compiled as
+follows:
+<P>
+ clm -YMS -Gs example.c
+<PRE>#define INCL_DOSPROCESS
+#define INCL_VIO
+#define SLEEP_THREAD1 5000L
+#define SLEEP_THREAD2 1000L
+#define VIO_HANDLE 0
+#define RETURN_CODE 0
+
+TID    ThreadID;
+BYTE   ThreadStackArea[4096];
+USHORT rc;
+
+VOID APIENTRY TestRoutine( )
+   {
+   USHORT r;
+
+   r = DosSleep(SLEEP_THREAD2);        /* Interval size */
+   r = VioWrtTTY("...Thread2...",      /* String to be written */
+                 14,                   /* Length of string */
+                 VIO_HANDLE);          /* Video handle */
+   DosExit(EXIT_THREAD,                /* Indicates end thread of process */
+           RETURN_CODE);               /* Result code */
+   }
+
+main( )
+   {
+   rc = DosCreateThread( (PFNTHREAD) TestRoutine,     /* Program address */
+                        &amp;ThreadID,                    /* New thread ID */
+                        &amp;ThreadStackArea[4095]);     /* End of stack for
+                                                               new thread */
+   rc = DosSleep(SLEEP_THREAD2);       /* Interval size */
+   printf("...Thread1...\n");
+   }
+</PRE>
+
+<P>
+The following example shows how to suspend and resume execution of a thread
+within a process.  The main thread creates Thread2 and allows it to begin
+executing.  Thread2 iterates through a loop that prints a line and then
+sleeps, relinquishing its time slice to the main thread. After one iteration
+by Thread2, the main thread suspends Thread2 and then resumes it.  Subsequently,
+Thread2 completes the remaining three iterations.
+<PRE>#define INCL_DOSPROCESS
+
+#include &lt;os2.h&gt;
+
+#define   SEGSIZE       4000   /* Number of bytes requested in segment */
+#define   ALLOCFLAGS    0      /* Segment allocation flags - no sharing */
+#define   SLEEPSHORT    5L     /* Sleep interval - 5 milliseconds */
+#define   SLEEPLONG     75L    /* Sleep interval - 75 milliseconds */
+#define   RETURN_CODE   0      /* Return code for DosExit() */
+
+VOID APIENTRY Thread2()
+{
+  USHORT     i;
+
+  /* Loop with four iterations */
+  for(i=1; i&lt;5; i++)
+  {
+    printf("In Thread2, i is now %d\n", i);
+    /* Sleep to relinquish time slice to main thread */
+    DosSleep(SLEEPSHORT);          /* Sleep interval */
+  }
+  DosExit(EXIT_THREAD,             /* Action code - end a thread */
+          RETURN_CODE);            /* Return code */
+}
+
+
+main()
+{
+  TID        ThreadID;             /* Thread identification */
+  SEL        ThreadStackSel;       /* Segment selector for thread stack */
+  PBYTE      StackEnd;             /* Ptr. to end of thread stack */
+  USHORT     rc;
+
+  /** Allocate segment for thread stack; make pointer to **/
+  /**  end of stack. **/
+  /** We must allocate a segment in order to preserve **/
+  /**  segment protection for the thread. **/
+
+  rc = DosAllocSeg(SEGSIZE,             /* Number of bytes requested */
+                   &amp;ThreadStackSel,     /* Segment selector (returned) */
+                   ALLOCFLAGS);         /* Allocation flags - no sharing */
+  StackEnd = MAKEP(ThreadStackSel, SEGSIZE-1);
+
+  /** Start Thread2 **/
+  if(!(rc=DosCreateThread((PFNTHREAD) Thread2,    /* Thread address */
+                       &amp;ThreadID,                 /* Thread ID (returned) */
+                       StackEnd)))   /* End of thread stack */
+    printf("Thread2 created.\n");
+
+  /* Sleep to relinquish time slice to Thread2 */
+  if(!(DosSleep(SLEEPSHORT)))                  /* Sleep interval */
+    printf("Slept a little to let<!-- entering slot 237 --> Thread2 execute.\n");
+
+  /***** Suspend Thread2, do some work, then resume Thread2 *****/
+  if(!(rc=DosSuspendThread(ThreadID)))         /* Thread ID */
+    printf("Thread2 SUSPENDED.\n");
+  printf("Perform work that will not be interrupted by Thread2.\n");
+  if(!(rc=DosResumeThread(ThreadID)))          /* Thread ID */
+    printf("Thread2 RESUMED.\n");
+  printf("Now we may be interrupted by Thread2.\n");
+
+  /* Sleep to allow Thread2 to complete */
+  DosSleep(SLEEPLONG);                         /* Sleep interval */
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="194_L2H_DosCreateSem.html">[Back: DosCreateSem]</A> <BR>
+<A HREF="196_L2H_DosCwait.html">[Next: DosCwait]</A> 
+</BODY>
+</HTML>

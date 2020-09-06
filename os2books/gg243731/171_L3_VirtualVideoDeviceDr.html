@@ -1,0 +1,238 @@
+<HTML>
+<HEAD>
+<TITLE>Virtual Video Device Driver</TITLE>
+</HEAD>
+<BODY>
+<H1>Virtual Video Device Driver</H1><!-- entering slot 184 -->
+<P>
+VDM video activity consists of both port I/O and memory operations. Virtual
+video device drivers are provided to support concurrent operations by multiple
+VDMs.  A number of virtual video device drivers are provided by OS/2 Version
+2.0, and are installed depending upon the physical display adapter types
+present in the system:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->VCGA.SYS provides support for CGA devices<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->VEGA.SYS provides support for EGA devices<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->VVGA.SYS provides support for VGA devices<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->VSVGA.SYS provides support for SVGA devices<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->VEGB.SYS provides support for VGA devices when configured
+to operate in EGA modes only<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->V8514.SYS provides support for the display adapter
+8514/A<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->VXGA.SYS provides support for the XGA display adapter.
+<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+In the following discussion, the term<I> VVIDEO</I> will be used generically
+to refer to all virtual video device drivers.
+<P>
+By trapping all I/O operations and mapping a virtual video memory buffer
+to the region where a VDM expects physical video memory, VVIDEO insulates
+the physical hardware from background VDM  activity.  Only a foreground
+VDM's video operations are allowed to write directly to the physical hardware.
+
+<P>
+The major IBM adapter types (MONO, CGA, EGA, VGA, XGA and 8514) are fully
+supported by VVIDEO, in that it supports all standard modes of operation
+for multiple VDMs (concurrently, if all VDMs are running in text modes).
+
+<P>
+The following is a list of the video configurations supported and their
+default mode of operation:
+<P>
+<A HREF="073_L2_ListofSupportedVideo.html">Table "List of Supported Video
+Configurations"</A>
+<P>
+As in a native DOS environment, the default setting of the equipment flags
+determines which display adapter is the primary display.  VVIDEO examines
+this to determine which will be the primary display. The video signal for
+secondary displays is initially disabled, until such time as a MODE command
+or user application explicitly enables it.
+<P>
+<B>VDM Screen-Switching</B>
+<P>
+The OS/2 Version 2.0 session manager informs VVIDEO whenever a VDM's display
+state changes, ensuring that no more than one foreground VDM exists at any
+point in time, and that no VDMs are regarded as foreground processes while
+any other protected mode process, including the operating system shell,
+is in foreground.  This mutually exclusive activity relationship between
+VVIDEO and OS/2 display drivers ensures screen integrity.
+<P>
+VDMs in background are switchable at any time since their state is maintained
+in memory by VVIDEO, rather than in the device itself.  32KB of virtual
+video buffer memory is allocated by VVIDEO for each VDM upon creation.  This
+is the maximum buffer size addressable in any text mode. When the VDM is
+switched to foreground, the video buffer is reallocated to the maximum size
+supported by the adapter, with a limit of 256KB.
+<P>
+The act of switching a VDM from foreground to background or vice versa requires
+that the calling routine yield control, and hence there may be a time delay
+during the switch.  In order to preserve the integrity of the video buffer,
+the VDM is suspended for the duration of the screen switch, to avoid any
+portion of the video state that was already copied to or from the hardware
+being changed before the switch is complete.
+<P>
+<B>Foreground VDM Support</B>
+<P>
+There are literally no limits to what a VDM can do with video hardware when
+running in foreground, since it<!-- entering slot 185 --> has complete access
+to all ports and device memory through VVIDEO.  I/O trapping is still operative,
+but only to "shadow" changes and ensure the ability to switch screens.
+<P>
+<B>Background VDM Support</B>
+<P>
+VDMs running in the background must always use virtual video memory, which
+is actually normal system memory that has been mapped into the VDM's video
+address space.  In cases where the selected video mode (typically a graphics
+mode) requires multiple planes of video memory, normal system memory is
+inadequate to effectively virtualize video memory.
+<P>
+Whenever a VDM running the in background places the video hardware in a
+multi-plane graphics mode, virtual video memory is invalidated and if touched,
+results in the VDM being "frozen". If the VDM returns to a single-plane
+video mode (implying that it never accessed video memory), then its virtual
+video memory is validated once more.  This approach allows VDMs to switch
+between different text modes entirely in background, without the risk of
+being frozen.
+<P>
+To support graphics operation in the background, VVIDEO must trap all video
+memory references and remap them to a set of simulated planes, or use some
+form of hardware-assisted virtualization that Presentation Manager and the
+other OS/2 processes know nothing about.
+<P>
+<B><I>Suspended Background VDM:</B></I>  There are three cases in which
+DOS graphics applications may be suspended (receive no processor time) when
+running in the background:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->A DOS multiplane graphics application that uses
+advanced graphics, such as 640x480x16 or 640x350x16, will be suspended,
+regardless of the graphics adapter installed, if any other DOS application
+is running in the foreground in a full-screen session.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->A DOS multiplane graphics application that uses
+advanced graphics, such as 640x480x16 or 640x350x16, will be suspended when
+a Presentation Manager session is running in the foreground in XGA mode.
+Currently, this situation occurs even if you have an Extended Graphics Array
+(XGA) and a Video Graphics Array (VGA) adapter connected to your system.
+<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->A DOS multiplane graphics application that uses
+1024x768x16 graphics mode will be suspended when a Presentation Manager
+session is running in the foreground in 8514/A mode.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+Note that suspending DOS applications running in the background generally
+poses no problems unless the applications are timing-dependent, such as
+communications or process-control applications. In these cases, suspending
+them may cause them to fail. Avoid this situation by running these applications
+in the foreground in full-screen sessions only. If they are graphics applications,
+run them only in a single-plane mode, such as 640x200x2, 320x200x256, or
+640x480x2, in full-screen sessions.
+<P>
+Note also that for WIN-OS/2 sessions, set the VIDEO_SWITCH_NOTIFICATION
+DOS setting to ON to avoid having Windows programs suspended when running
+in the background.
+<P>
+<B><I>Graphical Applications Programs Support:</B></I>  OS/2 Version 2.0
+supports a broad variety of display-adapter hardware as you can see from
+<A HREF="074_L2_GraphicalApplication.html">Table "Graphical Applications
+Programs Support under OS/2 Version 2.0"</A>. This allows OS/2 programs,
+DOS programs, and Windows programs to run in both windowed and full-screen
+sessions. OS/2, DOS, and Windows programs can run successfully in both the
+foreground and the background.  Normally, the OS/2 user need not be concerned
+with the graphics modes that are used within a program, or whether a program
+will run successfully in a background session.
+<P>
+Some types of display<!-- entering slot 186 --> adapters do, however, place
+limits on the ability of the OS/2 operating system to run certain classes
+of DOS and Windows graphics programs in the background. The limits exist
+because of the difficulty of providing virtual access to the display-adapter
+hardware without disturbing either the foreground session or other background
+sessions.
+<P>
+Under certain conditions, DOS applications that use graphical display modes
+will become suspended in background sessions when they attempt to write
+to the display.
+<P>
+<A HREF="074_L2_GraphicalApplication.html">Table "Graphical Applications
+Programs Support under OS/2 Version 2.0"</A> gives you an overview of what
+happens with graphical applications programs in combination with different
+display adapters.
+<P>
+To determine under what conditions your applications will run in a background
+session in <A HREF="074_L2_GraphicalApplication.html">Table "Graphical Applications
+Programs Support under OS/2 Version 2.0"</A> as described now:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Find your graphical display hardware in the "Type
+of Video" column.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Find your System Desktop Mode.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Read across the table to your application column.
+<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+For example, assume you have a DOS application using VGA mode on a system
+with VGA video. The application is in full-screen. To determine if the application
+will be suspended:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Find your type of video (VGA) in the "Type of
+Video" column.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Find your System Desktop Mode (VGA).<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Read across the table to your application column
+(DOS Application, Matches Desktop Mode, Full-Screen).<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+The PF indicates that the DOS application runs when PM has control of the
+screen or when the application is in a foreground session.
+<P>
+<B>Device-Independent Pointer Services</B>
+<P>
+VVIDEO provides services which allow the virtual mouse driver to define
+a pointer image and specify its position.  Since the position must always
+be given relative to the physical dimensions of the VDM's screen, and since
+coordinates may change whenever the video mode is reset, the virtual mouse
+driver provides an entry point which is notified of such changes by VVIDEO.
+These interfaces are device-independent because dimensions are always given
+in terms of pixels or character cells, and not in predefined video mode
+identifiers.  By separating the pointer-drawing code from the virtual mouse
+driver, mouse support becomes automatically available on any video adapter.
+
+<P>
+<B>Font Support</B>
+<P>
+At VDM creation time only a single font exists; this is either a default
+font contained in video ROM, or one specified by OS/2 if code page support
+is active.  In the latter case, VVIDEO automatically loads the OS/2 code
+page font whenever the VDM restores the default ROM font by resetting the
+video mode.
+<P>
+Note that since the process of loading a font is essentially the same as
+entering a graphics mode, background VDMs will "freeze" if they attempt
+this.
+<P>
+<B>Clipboard Support</B>
+<P>
+To transfer VDM screen contents to the clipboard, VVIDEO provides two services:
+one to return the VDM's video configuration, and a second to copy the video
+contents to a shell-supplied buffer address.  The shell then handles the
+transfer from this buffer to the clipboard.
+
+<P><HR>
+
+<A HREF="170_L3_VCDROMDeviceDriver.html">[Back: VCDROM Device Driver]</A> <BR>
+<A HREF="172_L2_VirtualDeviceHelperS.html">[Next: Virtual Device Helper Services]</A> 
+</BODY>
+</HTML>

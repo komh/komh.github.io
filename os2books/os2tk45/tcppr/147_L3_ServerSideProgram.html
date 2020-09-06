@@ -1,0 +1,195 @@
+<HTML>
+<HEAD>
+<TITLE>Server Side Program</TITLE>
+</HEAD>
+<BODY>
+<H1>Server Side Program</H1><!-- entering slot 154 -->
+<P>
+The following is an example of the lowest layer of RPC on the server side
+program:
+<PRE>#define RMTPROGNUM   (u_long)0x3fffffffL
+#define RMTPROGVER   (u_long)0x1L
+#define LONGPROC   1
+#define STRINGPROC 2
+
+#define MAXLEN 100
+
+#include &lt;stdio.h&gt;
+#include &lt;rpc\rpc.h&gt;
+#include &lt;sys\socket.h&gt;
+
+main(argc, argv)
+int argc;
+char *argv[ ];
+
+{
+     int rmtprog();
+     SVCXPRT *transp;
+
+...
+
+/* create TCP transport handle */
+     transp = svctcp_create(RPC_ANYSOCK, 1024*10, 1024*10);
+/* or create UDP transport handle */
+/*   transp = svcudp_create(RPC_ANYSOCK);  */
+     if (transp == NULL)   /* check transport handle creation */
+      {
+        fprintf(stderr, "can't create an RPC server transport\n");
+        exit(-1);
+      }
+
+/* If exists, remove the mapping of remote program and port */
+     pmap_unset(RMTPROGNUM, RMTPROGVER);
+
+/* register remote program (TCP transport) with local Portmapper */
+     if (!svc_register(transp, RMTPROGNUM, RMTPROGVER, rmtprog,
+                         IPPROTO_TCP))
+/* or register remote program (UDP transport) with local Portmapper */
+/*   if (!svc_register(transp, RMTPROGNUM, RMTPROGVER, rmtprog,*/
+                      /* IPPROTO_UDP)) */
+      {
+       fprintf(stderr, "can't register rmtprog() service\n");
+       exit(-1);
+      }
+
+     svc_run();
+     printf("Error:svc_run should never reaches this point \n");
+     exit(1);
+
+}
+
+rmtprog(rqstp, transp)           /* code for remote program */
+struct svc_req *rqstp;
+SVCXPRT *transp;
+{
+   long in_long,out_long;
+   char buf[100], *in_string=buf, *out_string=buf;
+...
+   switch((int)rqstp-&gt;rq_proc)   /* Which procedure ? */
+   {
+    case NULLPROC:
+         if (!svc_sendreply(transp,xdr_void, 0))
+          {
+           fprintf(stderr,"can't reply to RPC call\n");
+           exit(-1);
+          }
+         return;
+
+    case LONGPROC:
+...
+         /* Process the request */
+         if (!svc_sendreply(transp,xdr_long,&amp;out_long))
+          {
+           fprintf(stderr,"can't reply to RPC call\n");
+           exit(-1);
+          }
+         return;
+
+    case STRINGPROC:   /* send received "Hello" message back */
+                                 /* to client */
+         svc_getargs(transp,xdr_wrapstring,(char *)&amp;in_string);
+         strcpy(out_string,in_string);
+
+         /* send a reply back to a RPC client */
+         if (!svc_sendreply(transp,xdr_wrapstring,
+                                          (char *)&amp;out_string))
+          {
+           fprintf(stderr,"can't reply to RPC call\n");
+           exit(-1);
+          }
+         return;
+    case ... :
+...
+       /* Any Remote procedure in RMTPROGNUM program */
+...
+    default:
+       /* Requested procedure not found */
+       svcerr_noproc(transp);
+       return;
+    }
+}
+</PRE>
+
+<P>
+The following steps describe the lowest layer of RPC on the server side
+program:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 5 -->Service the transport handle.
+<P>
+The svctcp_create() and svcudp_create() calls create TCP and UDP transport
+handles (SVCXPRT) respectively, used for receiving and replying to RPC messages.
+The SVCXPRT transport handle structure is defined in the &lt;RPC\SVC.H&gt;
+header file.
+<P>
+If the argument of the svctcp_create() call is RPC_ANYSOCK, the RPC library
+creates a socket on which to receive and reply to remote procedure calls.
+The svctcp_create() and clnttcp_create() calls cause the RPC library calls
+to bind the appropriate socket, if it is not already bound.
+<P>
+If the argument of the svctcp_create() call is not RPC_ANYSOCK, the svctcp_create()
+call expects its argument to be a valid socket number.  If you specify your
+own socket, it can be bound or unbound.  If it is bound to a port by you,
+the port numbers of the svctcp_create() and clnttcp_create() calls must
+match.
+<P>
+If the send and receive buffer size parameter of svctcp_create() is 0, the
+system selects a reasonable default.<!-- lm: 0x2 1 -->
+<P>
+ <LI><LI><!-- lm: 0x2 5 -->Register the rmtprog service with Portmapper.
+
+<P>
+If the rmtprog service terminated abnormally the last time it was used,
+the pmap_unset() call erases any trace of it before restarting. The pmap_unset()
+call erases the entry for RMTPROGNUM from the Portmapper's table.
+<P>
+A service can register its port number with the local Portmapper service
+by specifying a nonzero protocol number in the svc_register() call. A programmer
+at the client machine can determine the server port number by consulting
+Portmapper at the server machine. You can do this automatically by specifying
+0 as the port number in the clntudp_create() or clnttcp_create() calls.
+
+<P>
+Finally, the program and version number are associated with the rmtprog
+procedure. The<!-- entering slot 155 --> final argument to the svc_register()
+call is the protocol being used, which in this case is IPPROTO_TCP. Register
+at the program level, not at the procedure level.<!-- lm: 0x2 1 -->
+<P>
+ <LI><LI><!-- lm: 0x2 5 -->Run the remote program RMTPROG.
+<P>
+The rmtprog service routine must call and dispatch the appropriate XDR calls
+based on the procedure number. Unlike the registerrpc() call, which performs
+them automatically, the rmtprog routine requires two tasks:<!-- lm: 0x2 7 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 10 -->When the NULLPROC procedure (currently 0) returns
+with no results, use it as a simple test for detecting whether a remote
+program is running.<!-- lm: 0x2 7 -->
+<P>
+<LI><!-- lm: 0x2 10 -->Check for incorrect procedure numbers. If you detect
+one, call the svcerr_noproc() call to handle the error.<!-- lm: 0x2 5 -->
+
+</UL>As an example, the procedure STRINGPROC has an argument for a character
+string and returns the character string back to the client. The svc_getargs()
+call takes an SVCXPRT handle, the xdr_wrapstring() call, and a pointer that
+indicates where to place the input.
+<P>
+The user service (rmtprog) serializes the results and returns them to the
+RPC caller through the svc_sendreply() call.
+<P>
+Parameters of the svc_sendreply() call include the:<!-- lm: 0x2 7 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 10 -->SVCXPRT handle<!-- lm: 0x2 7 -->
+<BR>
+<LI><!-- lm: 0x2 10 -->XDR routine, which indicates return data type<!-- lm: 0x2 7 -->
+<BR>
+<LI><!-- lm: 0x2 10 -->Pointer to the data to be returned<!-- lm: 0x2 5 --><!-- lm: 0x2 0 -->
+</UL>
+
+<P><HR>
+
+<A HREF="146_L3_WhentoUsetheRPCLowes.html">[Back: When to Use the RPC Lowest Layer]</A> <BR>
+<A HREF="148_L3_ClientSideProgram.html">[Next: Client Side Program]</A> 
+</BODY>
+</HTML>

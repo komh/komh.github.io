@@ -1,0 +1,185 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Sample for using compound variables</TITLE>
+</HEAD>
+<BODY>
+<H1>Sample for using compound variables</H1><!-- entering slot 194 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+Use the string-oriented search features of REXX where possible.
+<P>
+Example: Suppose you've got a file in the following format:
+<PRE> 
+Doe John , 01.03.65, Engineer
+Miller Franklin, 03.04.67, Butcher
+Gernot Martha, 06.05.65, Saleswoman
+</PRE>
+
+<P>
+To read this file into a compound variable and search an entry you can use
+the following code:
+<PRE> 
+/*                                                                    */
+/* sample for using compound variables - slow method                  */
+/*                                                                    */
+
+/* ------------------------ variable section ------------------------ */
+
+                    /* name of the input file                         */
+  inFile = "pdata.txt"
+
+                    /* name for the output file                       */
+  outFile = "data.new"
+
+                    /* compound variable for the file contents        */
+  persons. = ""
+  persons.0 = 0
+
+/* ------------------------- read the file -------------------------- */
+
+                    /* read the file                                  */
+  do i = persons.0+1 while lines( inFile ) &lt;&gt; 0
+    persons.i = lineIn( inFile )
+  end /* do while lines( inFile ) &lt;&gt; 0 */
+
+  persons.0 = i-1
+
+/* ------------------------ search an entry ------------------------- */
+
+                    /* compound variable with the entries to search   */
+  entriesToSearch.0 = 2
+  entriesToSearch.1 = "Miller Franklin"
+  entriesToSearch.2 = "MILLER Franklin"
+
+  do j = 1 to entriesToSearch.0
+    curSearchEntry = entriesToSearch.j
+
+    found = 0
+    do i = 1 to persons.0 while found=0
+      if pos( curSearchEntry, persons.i ) = 1 then
+        found = i
+    end /* do i = 1 to persons.0 while found=0 */
+
+    if found &lt;&gt; 0 then
+      say "Entry &lt;" || curSearchEntry || "&gt; found: " || ,
+           persons.found
+    else
+      say "Entry &lt;" || curSearchEntry || "&gt; NOT found!"
+
+  end /* do j = 1 to entriesToSearch.0 */
+
+/* --------- write the compound variable back into a file ----------- */
+
+  do i = 1 to persons.0
+                    /* ignore deleted entries                         */
+    if persons.i &lt;&gt; "" then
+      call LineOut outFile, persons.i
+  end /* do i = 1 to persons.0 */
+
+
+</PRE>
+
+<P>
+You can use this method -- but it's not very fast (especially if you've
+got hundreds or thousands of entries).
+<P>
+A better method to do this is: Use a key field as name for the tail. Example:
+
+<PRE> 
+/*                                                                    */
+/* sample for using compound variables - faster method                */
+/*                                                                    */
+
+/* ------------------------ variable section ------------------------ */
+
+                    /* name of the input file                         */
+  inFile = "pdata.txt"
+
+                    /* name for the output file                       */
+  outFile = "data.new"
+
+                    /* compound variables for the file contents       */
+  persons. = ""
+  persons.0 = 0
+
+                    /* "index" variable                               */
+  personsIndex = ""
+
+                    /* separator for the index variable               */
+  separator = "00"x
+
+/* ------------------------- read the file -------------------------- */
+
+  do i = 1 while lines( inFile ) &lt;&gt; 0
+    parse value lineIn( inFile ) with entryKey "," entryValue
+
+                    /* in this example the key field is the name of   */
+                    /* the person                                     */
+    entryKey = strip( entryKey )
+
+
+                    /* check for duplicate keys and create the stem   */
+                    /* entry if possible                              */
+    if persons.entryKey &lt;&gt; "" then
+    do
+                    /* duplicate key found                            */
+      say "Error: Duplicate key &lt;" || entryKey || "&gt; in the file!"
+    end /* if persons.entryKey &lt;&gt; "" then */
+    else
+    do
+                    /* save the key in the "index" variable           */
+      personsIndex = personsIndex || entryKey || separator
+
+      persons.entryKey = entryValue
+    end /* else */
+
+  end /* do i = 1 while lines( inFile ) &lt;&gt; 0 */
+
+  persons.0 = i-1
+
+/* ------------------------ search an entry ------------------------- */
+
+                    /* compound variable with the entries to search   */
+  entriesToSearch.0 = 2
+  entriesToSearch.1 = "Miller Franklin"
+  entriesToSearch.2 = "MILLER Franklin"
+
+  do i = 1 to entriesToSearch.0
+    curSearchEntry = entriesToSearch.i
+
+    if persons.curSearchEntry &lt;&gt; "" then
+      say "Entry &lt;" || curSearchEntry || "&gt; found:" || ,
+           persons.curSearchEntry
+    else
+      say "Entry &lt;" || curSearchEntry || "&gt; NOT found!"
+  end /* do i = 1 to entriesToSearch.0 */
+
+
+/* --------- write the compound variable back into a file ----------- */
+
+  do while personsIndex &lt;&gt; ""
+
+                    /* get the next variable name                     */
+    parse var personsIndex curPerson (separator) personsIndex
+
+                    /* ignore deleted entries                         */
+    if persons.curPerson &lt;&gt; "" then
+      call LineOut outFile, curPerson || "," || persons.curPerson
+
+  end /* do while personIndex &lt;&gt; "" */
+
+</PRE>
+
+<P>
+Note that you can use<B> any</B> character for the tail of a compound variable.
+But keep in mind, that using this method the name of the tail is case sensitive!
+(see also <A HREF="192_L4_Usingvariablesforthe.html">Using variables for
+the tail</A>) 
+
+<P><HR>
+
+<A HREF="193_L4_Writinggeneralroutin.html">[Back: Writing general routines for compound variables]</A> <BR>
+<A HREF="195_L3_Localvariables.html">[Next: Local variables]</A> 
+</BODY>
+</HTML>

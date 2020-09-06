@@ -1,0 +1,265 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosStartSession - Remarks</TITLE>
+</HEAD>
+<BODY>
+<H1>DosStartSession - Remarks</H1><!-- entering slot 1815 -->
+<P>
+DosStartSession allows an application to start another session, and to specify
+the name of the program to be started in that session.
+<P>
+A session can be thought of as a logical console, consisting of buffers
+for the screen, keyboard, and mouse.
+<P>
+New sessions may only be started in the foreground when the caller's session
+(or one of the caller's descendant sessions) is currently executing in the
+foreground. The foreground session for windowed applications is the session
+of the application that owns the window focus. The new session appears in
+the Shell switch list.
+<P>
+Any protect-mode application may start any other protect-mode application
+in a new session, regardless of the issuing program's session type.
+<P>
+You may use <A HREF="445_L2_DosExecPgm.html">DosExecPgm</A> to start a process
+that is of the same type as the starting process. Process types include
+Presentation Manager, text-windowed, and full-screen. You may not use <A HREF="445_L2_DosExecPgm.html">DosExecPgm
+</A>to start a process that is of a different type than the starting process.
+
+<P>
+You must use DosStartSession to start a new process from a process that
+is of a different type. For example, use DosStartSession to start a Presentation
+Manager process from a non-Presentation Manager process.
+<P>
+If you call DosStartSession from a detached process, the function returns
+ERROR_SMG_INVALID_CALL. This happens regardless of whether the session is
+to be started in the foreground or in the background. Detached processes
+are programs that:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Run in the background<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Run asynchronously (independently) from their parents
+<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Do not use the keyboard, mouse, or screen (other than
+VioPopups)<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Detached processes are started when:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Programs are started from the command line using the
+DETACH command<!-- lm: 0x2 3 --> <!-- lm: 0x2 6 -->
+<UL>Programs are started
+with <A HREF="445_L2_DosExecPgm.html">DosExecPgm</A> using the EXEC_BACKGROUND
+flag<!-- lm: 0x2 1 -->
+</UL>
+<P>
+See <A HREF="445_L2_DosExecPgm.html">DosExecPgm</A> for more information
+on detached processes.
+<P>
+<B>Foreground/Background Considerations</B>
+<P>
+DosStartSession will only start a new session in the foreground if the program
+issuing DosStartSession or a descendent session is executing in the foreground
+session. Otherwise, DosStartSession will override the foreground request
+and start the new session in the background. A unique error is returned,
+ERROR_SMG_START_IN_BACKGROUND, indicating that the new session was started
+in the background.  An active popup window may also prevent the new session
+from starting in the foreground. The foreground session for windowed applications
+is the session of the application that owns the window focus. Therefore,
+when a windowed session is started in the foreground, the new session will
+be given the window focus.
+<P>
+<B>Parent/Child Relationship</B>
+<P>
+When you specify SSF_RELATED_CHILD for Related, DosStartSession establishes
+a parent session/child session relationship. A parent process/child process
+relationship is not established. The parent process is the shell process
+just as if the operator had started the program from the shell menu. Therefore,
+the<I> ppid</I> returned by DosStartSession may not be used with any system
+functions (for example, <A HREF="1713_L2_DosSetPriority.html">DosSetPriority</A>)
+that require a parent process/child process relationship.
+<P>
+Once a process has issued DosStartSession specifying SSF_RELATED_CHILD for
+<I>Related</I>, no other process within that session can issue related DosStartSession
+functions until all the dependent sessions have ended.
+<P>
+<B>Debugger Considerations</B>
+<P>
+Debuggers may want to debug all processes associated with an application,
+no matter how the process was started (by <A HREF="445_L2_DosExecPgm.html">DosExecPgm
+</A>or DosStartSession). A special trace option,<I> TraceOpt</I> value 2,
+has been provided for this purpose. When a value of 2 is specified for<I> TraceOpt</I>,
+the debugger must also supply the name of an existing queue, and a value
+of 1 for<I> Related</I>, on the DosStartSession function.
+<P>
+The Session Manager notifies the debugger whenever a new session is created
+through DosStartSession from the initial session started with a value of
+2 for<I> TraceOpt</I>, or from any descendant session. The queue is posted
+regardless of how the new session is started (related, independent, with
+or without inheritance).
+<P>
+<B>Note: </B> If the first session started by the parent process (debugger)
+ends, any messages generated by descendent sessions of the first session
+will not get posted to the parent process (debugger). For example, session
+A starts session B. Session B, in turn, starts session C and D. When session
+B ends, the messages from sessions C and D will not get posted to session
+A.
+<P>
+Sessions started without inheritance are executed for tracing. It is the
+responsibility of the debugger to resume execution of the new process.
+<P>
+The debugger must issue <A HREF="1425_L2_DosReadQueue.html"><!-- entering slot 1816 -->DosReadQueue
+</A>to receive notification when a child session is created. The word containing
+the request parameter, returned by <A HREF="1425_L2_DosReadQueue.html">DosReadQueue</A>,
+will have a value of 1. The data element structure has the following format:
+<!-- lm: 0x2 1 -->
+<P>
+Size<!-- lm: 0x2 14 -->
+<UL> Description<!-- lm: 0x2 1 -->
+</UL><A><!-- external link: 1D DC C4 E4 -->USHORT</A><!-- lm: 0x2 14 -->
+<UL> Session
+ID<!-- lm: 0x2 1 -->
+</UL><A><!-- external link: 1D DC C4 E4 -->USHORT</A><!-- lm: 0x2 14 -->
+<UL> Process
+ID<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The debugger should issue <A HREF="1425_L2_DosReadQueue.html">DosReadQueue
+</A>with the<I> wait</I> parameter set to 0. This is the only process that
+has addressability to the notification data element. After reading and processing
+the data element, the debugger must free the segment that contains the data
+element by issuing <A HREF="542_L2_DosFreeMem.html">DosFreeMem</A>.
+<P>
+The debugger may use <A HREF="1526_L2_DosSelectSession.html">DosSelectSession
+</A>to switch itself or any descendant session into the foreground whenever
+the current foreground session is a descendant of the debugger.
+<P>
+<B>PgmName and PgmInputs Considerations</B>
+<P>
+The program identified by<I> PgmName</I> is executed directly, with no intermediate
+secondary command (CMD.EXE) process. Alternatively, the program can be executed
+indirectly through a secondary command (CMD.EXE) process by specifying CMD.EXE
+for<I> PgmName</I>, and by specifying either /C or /K followed by the file
+specification of the application to be loaded for<I> PgmInputs</I>. If the
+/C parameter is inserted at the beginning of the<I> PgmInputs</I> string,
+then when the application program ends, the session ends. If the /K parameter
+is inserted at the beginning of the<I> PgmInputs</I> string, then when the
+application ends, the operator sees the system command line prompt displayed.
+The operator can then either enter the name of another program or command
+to execute, or enter the EXIT command to end the session.
+<P>
+When the<I> PgmName</I> address is 0, or the ASCIIZ string is null, the
+program identified by the<I> PgmHandle</I> is started in the new session.
+If the<I> PgmHandle</I> is not specified, then the program specified as
+a parameter to the protect mode shell on the OS2_SHELL statement, or on
+the SHELL statement for a DOS session, in the configuration file (CONFIG.SYS)
+is executed and passed the specified<I> PgmInputs</I>. The default is the
+program name for the command processor (CMD.EXE for a non-DOS session, or
+COMMAND.COM for a DOS session).
+<P>
+The<I> PgmName</I> and<I> PgmInputs</I> strings combined length may not
+exceed 1024 characters.
+<P>
+<B>Program Handle Considerations</B>
+<P>
+If a process issues DosStartSession specifying only the program handle,
+then it must change to the working directory before issuing DosStartSession,
+and start the new process as inherited. If a process is started as non-inherited,
+it is up to that process to change to the correct directory.
+<P>
+<B>Parent/Child Termination Considerations</B>
+<P>
+The parent must create the termination queue prior to specifying the queue
+name on DosStartSession. The Session Manager will continue to notify the
+parent session through the specified queue as long as the process issuing
+DosStartSession remains a parent session. When all the child sessions for
+a particular parent session end, the termination queue is closed by the
+Session Manager. An existing queue name must be specified on the next DosStartSession
+function if the caller wants to continue receiving termination notification
+messages. The caller must use the same queue for all calls to DosStartSession.
+
+<P>
+The Session Manager writes a data element into the specified queue when
+any child session ends. The queue is posted regardless of who terminates
+the child session (for example, child, parent, or operator) and whether
+the termination is normal or abnormal.
+<P>
+A parent session issues <A HREF="1425_L2_DosReadQueue.html">DosReadQueue
+</A>to receive notification when a child session has ended. The word that
+contains the request parameter, returned by <A HREF="1425_L2_DosReadQueue.html">DosReadQueue
+</A>will be 0. The data element structure has the following format:<!-- lm: 0x2 1 -->
+<P>
+Size<!-- lm: 0x2 14 -->
+<UL> Description<!-- lm: 0x2 1 -->
+</UL><A><!-- external link: 1D DC C4 E4 -->USHORT</A><!-- lm: 0x2 14 -->
+<UL> Session
+ID of child<!-- lm: 0x2 1 -->
+</UL><A><!-- external link: 1D DC C4 E4 -->USHORT</A><!-- lm: 0x2 14 -->
+<UL> Result
+code<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The process that originally issued DosStartSession should issue <A HREF="1425_L2_DosReadQueue.html">DosReadQueue
+</A>with the<I> wait</I> parameter set to 0. This is the only process that
+has addressability to the notification data element. After reading and processing
+the data element, the caller must free the segment containing the data element
+by issuing <A HREF="542_L2_DosFreeMem.html">DosFreeMem</A>.
+<P>
+An application may use the termination queue for additional interprocess
+communication, provided that a unique request identifier is passed via <A HREF="2006_L2_DosWriteQueue.html">DosWriteQueue</A>.
+Request identifier values 0 through 99 are reserved for the operating system.
+Request identifier values equal to or greater than 100 are available for
+application use.
+<P>
+When a child session ends, the result code returned in the<I> TermQ</I> data
+element is the result code of the program specified by<I> PgmName</I> assuming
+either:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->the program is executed directly, with no intermediate
+secondary command (CMD.EXE) process, or<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->the program is executed indirectly through a secondary
+command (CMD.EXE) process, and the /C parameter is specified.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Otherwise, the result code of CMD.EXE is returned.
+<P>
+When a child session is executing in the foreground at the time it ends,
+the parent session becomes the foreground session. When a parent session
+ends, all child sessions that it created with DosStartSession, specifying
+a value of 1 for<I> Related</I>, are ended. When an independent session,
+created specifying a value of 0 for<I> Related</I>, ends in the foreground,
+the<!-- entering slot 1817 --> Shell selects the next foreground session.
+
+<P>
+<B>Grandchildren Considerations</B>
+<P>
+A session started through DosStartSession may issue DosStartSession. The
+following rules apply:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->The<I> pidSession</I>, specified on <A HREF="1526_L2_DosSelectSession.html">DosSelectSession</A>,
+<A HREF="1744_L2_DosSetSession.html">DosSetSession</A>, and <A HREF="1812_L2_DosStopSession.html">DosStopSession
+</A>may only be the session identifier (<I>pidSession</I>) of an immediate
+child session, not a grandchild session or any descendant other than an
+immediate child session.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If a bond is established between session A and its
+immediate child session B, and if another bond is established between session
+B and its immediate child session C, then if session A is selected, session
+C is brought to the foreground. Refer to <A HREF="1744_L2_DosSetSession.html">DosSetSession
+</A>for a description of what establishing a bond means.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->When a session ends, all of its descendants (child
+sessions, grandchild sessions, and so on) are ended.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="1796_L2H_DosStartSessionParam.html">[Back: DosStartSession - Parameters]</A> <BR>
+<A HREF="1798_L2H_DosStartSessionRelat.html">[Next: DosStartSession - Related Functions]</A> 
+</BODY>
+</HTML>

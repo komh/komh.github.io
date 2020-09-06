@@ -1,0 +1,472 @@
+<HTML>
+<HEAD>
+<TITLE>Waveform Audio Media Control Driver DLL (AUDIOMCT.DLL)</TITLE>
+</HEAD>
+<BODY>
+<H1>Waveform Audio Media Control Driver DLL (AUDIOMCT.DLL)</H1><!-- entering slot 56 -->
+<P>
+Following describes the files and messages that are processed in in the
+AUDIOMCT.DLL.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B>File</B><!-- lm: 0x2 18 -->
+<UL><B> Description</B><!-- lm: 0x2 1 -->
+</UL> ADMCOPEN.C
+<!-- lm: 0x2 18 -->
+<UL>Processes the MCI_OPEN message.  On an MCI_OPEN,
+a streaming MCD should perform the following actions: 1. Check flags and
+validate pointers.
+<BR>
+2. Get default values from the INI files (if necessary).
+<BR>
+3. Process MCI_OPEN_PLAYLIST (if supported).
+<BR>
+4. Process MCI_OPEN_MMIO (if supported).
+<BR>
+5. Process MCI_OPEN_ELEMENT (if supported).
+<BR>
+6. Connect to the amp/mixer.
+<BR>
+7. Get the stream protocol key (if necessary).
+<BR>
+<!-- lm: 0x2 1 -->
+</UL>LOADSUBS.C<!-- lm: 0x2 18 -->
+<UL> Provides various
+utility functions used by MCI_OPEN and MCI_LOAD including: 1. Creating temporary
+filenames (CheckForValidElement)
+<BR>
+2. Aborting in process commands (LoadAbortNotify)
+<BR>
+3. Processing the OPEN_MMIO flag (OpenHandle)
+<BR>
+4. Rational as to when to open the card in record or playback mode (OpenHandle)
+(ProcessElement).
+<BR>
+5. Processing temp files (ProcessElement).
+<BR>
+6. Opening a file with MMIO (ProcessElement).
+<BR>
+7. Processing the MCI_READ_ONLY flag (ProcessElement).
+<BR>
+8. Creating a temporary file ( SetupTempFiles).
+<BR>
+9. Using mmioSendMessage API to talk to an IOProc (SetupTempFiles).
+<BR>
+10.Retrieving a connection and opening the connected device.
+<BR>
+11.Stream Handler Setup (StreamSetup)
+<BR>
+12.Processing MCI_NOTIFY or MCI_WAIT and callback handles (NotifyWaitSet
+up).
+<BR>
+<!-- lm: 0x2 1 -->
+</UL>AUDIOMCD.C<!-- lm: 0x2 18 -->
+<UL> Processes the
+MCIDRV_RESTORE message.  A streaming MCD will receive a restore message
+when it regains control of the device they are attached to (for example,
+someone quit another application causing us to gain use of the device).
+ On a restore, the MCD should check to see if it is in a paused state.  If
+so, resume the stream.<!-- lm: 0x2 1 -->
+</UL>  <!-- lm: 0x2 18 -->
+<UL> Processes
+the MCIDRV_SAVE message.  A streaming MCD will receive a save message when
+it loses control of the device it is attached to (for example, someone started
+another application which takes over the waveaudio device).  On a save,
+the MCD should check to see if the MCD is currently streaming (either record
+or playback).  If so, pause the stream, and set a flag stating that the
+MCD was saved.<!-- lm: 0x2 1 -->
+</UL> ADMCLOAD.C<!-- lm: 0x2 18 -->
+<UL> Processes
+the MCI_LOAD message.  This file illustrates the following concepts: 1.
+How to check flags on a load.
+<BR>
+2. How to stop any commands which are in process.
+<BR>
+3. Why cuepoints/positionadvises need to be turned off on a MCI_LOAD.
+<BR>
+4. Handling OPEN_MMIO on an MCI_LOAD.
+<BR>
+5. Why reassociation of a stream on MCI_LOAD is desirable and
+<BR>
+  when it is appropriate.
+<BR>
+<!-- lm: 0x2 1 -->
+</UL>ADMCCAP.C<!-- lm: 0x2 18 -->
+<UL> Processes the
+MCI_GETDEVCAPS message.  This file illustrates several concepts used to
+handle MCI_GETDEVCAPS including: 1. How to process the capability message
+commands.
+<BR>
+  These are messages which this MCD supports (such as play, close etc.)
+<BR>
+  Messages (or commands to the caller) such as sysinfo are
+<BR>
+  not supported by this MCD.
+<BR>
+2. How to process the capability item flag.
+<BR>
+  Items describe particular features (such as the ability to record)
+<BR>
+  which the MCD either does or does not support.
+<BR>
+<!-- lm: 0x2 1 -->
+</UL>ADMCSTAT.C<!-- lm: 0x2 18 -->
+<UL> Processes the
+MCI_STATUS message.  This file illustrates several concepts used to handle
+MCI_STATUS including: 1. When/If to report media position within a stream.
+<BR>
+2. How to determine the length of an existing file.
+<BR>
+3. How to determine the length of a file which is currently
+<BR>
+  being recorded.
+<BR>
+4. Communicating with the amp/mixer to determine volume,
+<BR>
+  and other amplifier specific commands.
+<BR>
+5. Reporting our current mode.
+<BR>
+6. Reporting the current time format.
+<BR>
+<!-- lm: 0x2 1 -->
+</UL>ADMCCUE.C<!-- lm: 0x2 18 -->
+<UL> Processes the
+MCI_CUE message.  Applications will typically<!-- entering slot 57 --> call
+MCI_CUE in order to reduce the time required to begin the initial record
+or play.  To a streaming MCD, MCI_CUE translates to an SPI_START_PREROLL.
+ The start preroll will fill up all of the initial streaming buffers but
+will not start the stream. Then, when MCI_PLAY or MCI_RECORD are called,
+when they do an SpiStartStream then stream can start immediately.
+<P>
+On an MCI_CUE, a streaming MCD should perform the following actions: 1.
+Check flags and validate pointers.
+<BR>
+2. Check to see if the stream is already in cue state.  If it is, then
+<BR>
+  just return success.
+<BR>
+3. If the caller wants to cue for output, execute the following:
+<BR>
+  a. stop any in process commands.
+<BR>
+  b. If the stream is going in the wrong direction (that is, record),
+<BR>
+   destroy it.
+<BR>
+  c. Create the stream if necessary.
+<BR>
+  d. Preroll start the stream.
+<BR>
+
+<BR>
+4. If the caller wants to cue for input, execute the following:
+<BR>
+  a. Stop any in process commands.
+<BR>
+  b. If the stream is going in the wrong direction, destroy it.
+<BR>
+  c. Create the stream if necessary.
+<BR>
+  d. Preroll start the stream.
+<BR>
+<!-- lm: 0x2 1 -->
+</UL><LI><!-- lm: 0x2 18 -->Processes the MCI_SET_CUEPOINT
+message.  On a MCI_SET_CUEPOINT, a streaming MCD should perform the following
+actions: 1. Check flags and validate pointers.
+<BR>
+2. Turn the cuepoint on or off depending on what flags are passed in.
+<BR>
+<!-- lm: 0x2 1 -->
+<P>
+ADMCSEEK.C<!-- lm: 0x2 18 -->
+<UL> Processes the MCI_SEEK message.  On a
+seek, a streaming MCD should perform the following actions: 1. Verify that
+the flags passed are valid.
+<BR>
+2. Verify the MCI_FROM, MCI_TO parameter if they were passed in.
+<BR>
+3. Ensure that any pointers passed are valid.
+<BR>
+4. Stop any commands which are active on another thread.
+<BR>
+5. If no stream has been created, then create one.
+<BR>
+6. If a stream had previously been created, ensure that it is in
+<BR>
+  stopped state.
+<BR>
+<!-- lm: 0x2 1 -->
+</UL>ADMCPLAY.C<!-- lm: 0x2 18 -->
+<UL> Processes the
+MCI_PLAY message.  On a MCI_PLAY, a streaming MCD should perform the following
+actions: 1. Always check flags and validate memory first.  This way,
+<BR>
+  if the flags are invalid, the previous command will not be interrupted.
+<BR>
+2. If there is a command active on another thread (that is, a play,
+<BR>
+  record or save), then either abort (record or save) or supersede
+<BR>
+  (play) by stopping the stream and sending a message to the caller.
+<BR>
+3. If the stream is going the wrong way (for example,
+<BR>
+  it is set up for recording) then destroy the stream.
+<BR>
+4. If no stream has been created, then create one.  If the stream handler
+
+<BR>
+  needs to associate a data object, do it here.
+<BR>
+5. If we destroyed a recording stream before creating the play back stream,
+<BR>
+  ensure that playback stream has the same position as the previous
+<BR>
+  record stream.
+<BR>
+6. Enable any events (such as cuepoints or position advises).
+<BR>
+7. Start stream.
+<BR>
+8. Wait for a streaming event.
+<BR>
+9. Stop the stream if necessary.
+<BR>
+10.If MCI_NOTIFY was sent used, inform the caller of command completion.
+<BR>
+<!-- lm: 0x2 1 -->
+</UL>ADMCRECD.C<!-- lm: 0x2 18 -->
+<UL> Processes the
+MCI_RECORD message.  On a MCI_RECORD, a streaming MCD should perform the
+following actions: 1. Always check flags and validate memory first.  This
+way, if the flags
+<BR>
+  are invalid, the previous command will not be interrupted.
+<BR>
+2. If there is a command active on another thread (that is,
+<BR>
+  a play, record or save), then either abort (play or save)
+<BR>
+  or supersede (record) by stopping the stream and sending
+<BR>
+  a message to the caller.
+<BR>
+3. If the stream is going the wrong way (for example,
+<BR>
+  it is setup for playback) then destroy the stream.
+<BR>
+4. If no stream has been created, then create one.  If the stream handler
+
+<BR>
+  needs to associate a data object, do it here.
+<BR>
+5. If we destroyed a play back stream before creating the record stream,
+<BR>
+  seek to the same position in the record stream where the play back
+<BR>
+  stream was.
+<BR>
+6. Enable any events (such as cuepoints or position advises).
+<BR>
+7. Start stream.
+<BR>
+8. Wait for a streaming event.
+<BR>
+9. Stop the stream if necessary.
+<BR>
+10.If MCI_NOTIFY was sent used, inform the caller of command completion.
+<BR>
+<!-- lm: 0x2 1 -->
+</UL>ADMCCLOS.C<!-- lm: 0x2 18 -->
+<UL> Processes the
+MCI_CLOSE message.  On a close, a streaming MCD must perform the following
+actions: 1. Stop all commands which are active on another thread(s).
+<BR>
+2. Destroy all active streams.
+<BR>
+3. Close all open files.
+<BR>
+4. Delete any temporary files.
+<BR>
+5. Close any connected devices (such as an amp-mixer).
+<BR>
+6. If MCI_NOTIFY was used, notify the caller of completion.
+<BR>
+<!-- lm: 0x2 1 -->
+</UL>ADMCCONN.C<!-- lm: 0x2 18 -->
+<UL> Processes the
+MCI_CONNECTOR message.  This source file illustrates how to enable, disable
+and query connectors.  It also illustrates how to pass messages on to a
+connected MCD.<!-- lm: 0x2 1 -->
+</UL> ADMCREST.C<!-- lm: 0x2 18 -->
+<UL> Processes
+the MCI_STOP message.  On a stop, a streaming MCD should perform the following
+actions: 1. Verify that the flags passed are valid.
+<BR>
+2. Stop any commands which are active on another thread.
+<BR>
+3. If a stream had previously been created, ensure that it is in
+<BR>
+  stopped state.
+<BR>
+4. If it is a paused stream, then do a STOP_PAUSE to ensure that
+<BR>
+  no data will be lost.
+<BR>
+<!-- lm: 0x2 1 -->
+</UL><LI><!-- lm: 0x2 18 -->Processes the MCI_RESUME
+message.  On a MCI_RESUME, a streaming MCD should perform the following
+actions: 1. Ensure that no flags are passed in.
+<BR>
+2. If we are paused, resume the stream.
+<BR>
+<!-- lm: 0x2 1 -->
+<P>
+<LI><!-- lm: 0x2 18 -->Processes the MCI_SETPOSITIONADVISE message.  To
+a streaming MCD, a position advise simply is a cuepoint which reoccurs every
+x time units.  To enable position advise, the following<!-- entering slot 58 --> steps
+should be followed: 1. Check flags and validate and pointers.
+<BR>
+2. If the caller has asked for position advise to be turned on then
+<BR>
+  a. If a stream has been created, then enable the recurring cuepoint
+<BR>
+   event.
+<BR>
+  b. Else, set a flag and enable the event later.
+<BR>
+3. If position advise is to be turned off, then disable the recurring
+<BR>
+  cuepoint event.
+<BR>
+<!-- lm: 0x2 1 -->
+<P>
+<LI><!-- lm: 0x2 18 -->Processes the MCI_PAUSE message.  On a MCI_PAUSE,
+a streaming MCD should perform the following actions: 1. Ensure that no
+flags are passed in.
+<BR>
+2. If we are currently streaming, pause the stream.
+<BR>
+3. Set flag indicating that we are in paused state.
+<BR>
+<!-- lm: 0x2 1 -->
+<P>
+ADMCSAVE.C<!-- lm: 0x2 18 -->
+<UL> Processes the MCI_SAVE message.  MCI_SAVE
+is not a required command, however, if a streaming MCD takes advantage of
+temporary files, then it should use MCI_SAVE. 1. Ensure that the flags are
+valid.
+<BR>
+2. Then ensure that all pointers point to valid memory.
+<BR>
+3. If any operations are currently active, they are then
+<BR>
+  aborted.
+<BR>
+4. Finally, the save operation itself is then done.
+<BR>
+<!-- lm: 0x2 1 -->
+</UL>AUDIOSUB.C<!-- lm: 0x2 18 -->
+<UL> Contains various
+utility functions including: 1. Correct processing of notifications.
+<BR>
+2. Handling calls the are neither MCI_WAIT or MCI_NOTIFY (PostMDMMessage).
+<BR>
+3. Using mmioGetHeader to obtain audio settings from a file (GetHeader).
+<BR>
+4. Creating a playlist stream (AssociatePlaylist).
+<BR>
+5. Installing an IOProc (InstallIOProc).
+<BR>
+6. Communicating with IOProcs with different capabilities (OpenFile).
+<BR>
+7. Processing audio files with various file formats (OpenFile).
+<BR>
+8. Time format conversion (ConvertToMM + ConvertTimeFormat).
+<BR>
+9. Creating an SPI stream (CreateNAssociateStream)
+<BR>
+10.Associating an SPI stream (CreateNAssociateStream)
+<BR>
+11.Setting an event for use in play to/record to (DoTillEvent).
+<BR>
+<!-- lm: 0x2 1 -->
+</UL>ADMCPST.C<!-- lm: 0x2 18 -->
+<UL> Processes the
+MCI_PASTE message.  This file illustrates using MMIO functions and clipboard
+functions to: 1. Process the MCI_FROM_BUFFER flag or MCI_TO_BUFFER.
+<BR>
+2. Handle default positioning if no MCI_FROM/MCI_TO flags are
+<BR>
+  passed
+<BR>
+3. Use MMIO to insert information into a file.
+<BR>
+<!-- lm: 0x2 1 -->
+</UL>ADMCCOPY.C<!-- lm: 0x2 18 -->
+<UL> Processes the
+MCI_COPY, MCI_DELETE, MCI_CUT, MCI_UNDO and MCI_REDO messages.  It is a
+generic routine which handles placing information into the clipboard: 1.
+Default positioning for cut/copy/delete messages.
+<BR>
+2. Using MMIOM_DELETE to remove information from a file.
+<BR>
+3. Positioning after a cut/copy/delete
+<BR>
+4. Using MMIOM_UNDO and MMIOM_REDO messages.
+<BR>
+<!-- lm: 0x2 1 -->
+</UL>ADMCEDIT.C<!-- lm: 0x2 18 -->
+<UL> Contains utilities
+used by clipboard functions (such as cut and copy).  The file illustrates:
+1. How to Process MCI_FROM / MCI_TO for edit operations (CheckEditFlags)
+.
+<BR>
+2. Determine default from/to positions.
+<BR>
+3. Generic stream abort routine
+<BR>
+4. Retrieving information from the clipboard.
+<BR>
+5. Placing information into the clipboard.
+<BR>
+6. Using MMIO memory files to manipulate clipboard data.
+<BR>
+<!-- lm: 0x2 1 -->
+</UL>ADMCINI.C<!-- lm: 0x2 18 -->
+<UL> Illustrates how
+to parse device specific parms from the INI file.<!-- lm: 0x2 1 -->
+</UL> STRMSUBS.C
+<!-- lm: 0x2 18 -->
+<UL>Contains streaming subroutines used by play, record
+and cue. 1. How to close mmio files, and temp files (CloseFile).
+<BR>
+2. How to stop a record/playback stream (StopStream).
+<BR>
+3. How to use a semaphore to protect in progress commands
+<BR>
+  from being aborted in sensitive areas.
+<BR>
+4. Why a stream<!-- entering slot 59 --> must be destroyed after an MCI_SET
+(DestroySetStream).
+<BR>
+5. How to handle superseding and aborting of notifies.
+<BR>
+6. How and why to set a cue time pause event for
+<BR>
+  MCI_TO (ProcessFromToFlags).
+<BR>
+7. How to enable cuepoints and positionchanges (EnableEvents).
+<BR>
+8. Networking functions (BeginQualityOfService, EndQualityOfService)
+<BR>
+<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="048_L3_WaveformAudioMCDModu.html">[Back: Waveform Audio MCD Modules]</A> <BR>
+<A HREF="050_L2_ControllingaNonstrea.html">[Next: Controlling a Nonstreaming Device: CD Audio MCD]</A> 
+</BODY>
+</HTML>

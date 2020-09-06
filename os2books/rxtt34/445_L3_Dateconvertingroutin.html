@@ -1,0 +1,173 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Date converting routine - 1 -</TITLE>
+</HEAD>
+<BODY>
+<H1>Date converting routine - 1 -</H1><!-- entering slot 461 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<P>
+Captured from a message in a public CompuServe Forum
+<P>
+<B>Note from the author from the PL/1 version</B> 
+<P>
+Julian (sense 1) date routines, handling Julian (sense 2) and Gregorian
+calendars. Algorithm is valid from 4713 B.C. to 19,999 A.D. This version
+is known to be free of errors.
+<P>
+Based on Pascal code copyright 1985 by Michael A. Covington, published in
+P.C. Tech Journal, December 1985, based on formulae appearing in Astronomical
+Formulae for Calculators by Jean Meeus. Reconversion to normal Julian epoch,
+integer arithmetic, 4000-year correction, and translation to PL/I by John
+W. Kennedy
+<P>
+Historical exceptions _not_ allowed for in this module:
+<BR>
+Until Julius Caesar established the Julian calendar in 45 B.C., calendars
+were irregular.
+<BR>
+This module assumes the Julian calendar back to 4713 B.C.
+<BR>
+The Julian calendar was altered in 8 B.C.  From 45 B.C. to 8 B.C., the months
+were   Jan=31, Feb=29(30), Mar=31, Apr=30, May=31, Jun=30,   Jul=31, Aug=30,
+  Sep=31, Oct=30, Nov=31, Dec=30
+<BR>
+This module assumes the month lengths as we know them. Leap years from 45
+B.C. to 8 A.D. were miscalculated: (45, 42, 39, 36, 33, 30, 27, 24, 21,
+18, 15, 12, 9, then none at all until 8 A.D.) This module assumes leap years
+every four years, as they were meant to have been. January 1 was not always
+the first day of the year. The United Kingdom, in particular, started the
+year on March 25 until 1752. (However, the year ended on December 31, leaving
+the days between in limbo.) This module assumes January 1 is the first day
+of the year. Leap-year day was originally done by having February 24 (25
+from 45 to 8 B.C.) twice. This module assumes Leap-year day is February
+29.
+<P>
+The "Transition" argument is the first Julian date to be considered as belonging
+to the Gregorian calendar.  Usual values are:
+<BR>
+ 2299161 = October 5/15, 1582, as in Rome, or  2361222 = September 3/14,
+1752, as in the United Kingdom and the American colonies 
+<PRE> 
+/* sample routines to convert dates                                   */
+
+  call Charout , "Enter a date in the format dd.mm.yyyy: "
+  curDMYDate = lineIn()
+
+  curJulianDate = DMYToJulian( curDMYDate )
+  say "DMYToJulian(" || curDMYDate || ") is " || curJulianDate
+
+  say "JulianToDMY(" || curJulianDate || ") is " || ,
+      JulianToDMY( curJulianDate )
+
+exit 0
+
+/* ------------------------------------------------------------------ */
+/* function: Convert a date from Julian to DMY                        */
+/*                                                                    */
+/* call:     JulianToDMY julianDate {trans}                           */
+/*                                                                    */
+/* where:    julianDate - the date in julian format                   */
+/*           trans - see note above                                   */
+/*                                                                    */
+/* returns:  the date in the format dd.mm.yyyy                        */
+/*                                                                    */
+/*                                                                    */
+JulianToDMY: PROCEDURE
+  Arg J Trans
+
+  if Trans = "" then
+    Trans = 2299161
+
+  if J &lt; Trans then
+    A = J
+  Else
+  <!-- entering slot 462 -->do
+    AA = J - 1721120
+    AC = Trunc(AA / 1460969)
+    AB = 31 * AC
+    AA = AA - AC * 1460969
+    AC = Trunc(AA / 146097)
+    AB = AB + 3 * AC
+    AA = AA - AC * 146097
+    if AA = 146096 then
+      AB = AB + 3
+    Else
+      AB = AB + Trunc(AA / 36524)
+    A = J + (AB - 2)
+  end
+  B = A + 1524
+  C = Trunc((20 * B - 2442) / 7305)
+  D = Trunc(1461 * C / 4)
+  EE = B - D
+  E = Trunc(10000 * EE / 306001)
+  YMDD = EE - Trunc(306001 * E / 10000)
+  if E &gt;= 14 then
+    YMDM = E - 13
+  else
+    YMDM = E - 1
+  if YMDM &gt; 2 then
+    Y = C - 4716
+  else
+    Y = C - 4715
+  if Y &lt; 1 then
+    YMDY = Y - 1
+  else
+    YMDY = Y
+
+RETURN YMDD || '.' || YMDM || '.' || YMDY
+
+/* ------------------------------------------------------------------ */
+/* function: Convert a date from DMY to Julian                        */
+/*                                                                    */
+/* call:     DMYToJulian dmyDate {trans}                              */
+/*           trans - see note above                                   */
+/*                                                                    */
+/* where:    dmyDate - the date in the format dd.mm.yyyy              */
+/*                                                                    */
+/* returns:  the date in Julian format                                */
+/*                                                                    */
+/*                                                                    */
+DMYToJulian: PROCEDURE
+  parse arg dmyDate trans
+
+  parse var dmyDate YMDD "." YMDM "." YMDY
+
+  if Trans = "" then
+    Trans = 2299161
+
+  AY = YMDY
+  if YMDY &lt; 0 then
+    Y = YMDY + 4717
+  else
+    Y = YMDY + 4716
+  if YMDM &lt; 3 then
+  do
+    M = YMDM + 12
+    Y = Y - 1
+    AY = AY - 1
+  end
+  else
+    M = YMDM
+  D = Trunc((1461 * Y) / 4) + Trunc((153 * (M + 1)) / 5) + YMDD - 1524
+  G = D + 2 - Trunc(AY / 100) + Trunc(AY / 400) - Trunc(AY / 4000)
+  if G &gt;= Trans then
+    thisRC = G
+  else
+    thisRC = D
+
+RETURN thisRC
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="444_L3_Uppercase&Lowercasei.html">[Back: Uppercase & Lowercase including German "Umlaute"]</A> <BR>
+<A HREF="446_L3_Dateconvertingroutin.html">[Next: Date converting routine - 2 -]</A> 
+</BODY>
+</HTML>

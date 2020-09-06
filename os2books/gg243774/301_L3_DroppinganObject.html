@@ -1,0 +1,80 @@
+<HTML>
+<HEAD>
+<TITLE>Dropping an Object</TITLE>
+</HEAD>
+<BODY>
+<H1>Dropping an Object</H1><!-- entering slot 332 -->
+<P>
+When the user drops a dragitem over a Presentation Manager window, the target
+receives a DM_DROP message.  The window procedure for the target may process
+that message in order to handle the drop operation, and may either complete
+the operation or initiate a conversation with the source window or object
+in order to do so, typically by sending it a DM_RENDER message, which ultimately
+will result in the data being transferred.
+<P>
+When the user drops a dragitem over a Workplace Shell object, the Workplace
+Shell invokes that object's<I> _wpDrop</I> method. The processing of this
+method is very similar to that discussed below for the DM_DROP message.
+ However, object classes that do not implement private rendering mechanisms
+need not override the<I> _wpDrop</I> method; the default processing provided
+by the parent class may be allowed to occur.
+<P>
+In the customer/phone dialler example, the only type of dragitem that the
+order program will accept is a customer object, which uses the application-defined
+DRM_SHAREMEM rendering mechanism.  The correct data type and rendering mechanism
+is verified by the target window procedure during processing of the DM_DRAGOVER
+message, so there is no need for further checking when the DM_DROP is processed.
+ Note however, that in a more sophisticated application, which supports
+multiple data types and rendering mechanisms, it may be necessary to perform
+more detailed checking.
+<P>
+In <A HREF="072_L2_HandlingtheDM_DROPMe.html">Figure "Handling the DM_DROP
+Message"</A>, access must first be gained to the DRAGINFO and DRAGITEM structures.
+ This is achieved in a similar manner to that already described for the
+DM_DRAGOVER message.  Having gained access to these structures, a named
+shared memory object is then allocated, into which the source window will
+be asked to place the customer details.
+<P>
+A DRAGTRANSFER structure is then allocated, in which information about the
+target's requirements can be passed to the source window.  This structure
+is similar to the DRAGINFO structure, in that it must be accessible from
+multiple processes.  It is therefore allocated using the<B> DrgAllocDragtransfer()
+</B>function, ensuring that the structure will be accessible to the source
+window, which may be in another process and therefore not have direct access
+to the target's private data areas.
+<P>
+There are several important fields in this structure.  The target window
+procedure places a pointer to the DRAGITEM structure into the<I> pditem
+</I>field, thereby enabling the source to identify which item has been dropped.
+ The<I> hstrSelectedRMF</I> field is used to identify which rendering mechanism
+and data format is to be used for this target, from the selection offered
+by the source in the DRAGITEM structure.  The<I> hstrRenderToName</I> field
+is used in the DRM_SHAREMEM rendering mechanism to pass the name of the
+shared memory object to the source window.
+<P>
+Once this structure has been completed with the necessary information, it
+is sent to the source window as part of a DM_RENDER message.  This message
+is passed to the source window using the<B> DrgSendTransferMsg()</B> function.
+This function should be used for drag/drop operations in preference to the
+<B>WinSendMsg()</B> function since, for a DM_RENDER message, it also grants
+access to the DRAGTRANSFER structure for the process that owns the window
+to which the message is being sent.
+<P>
+In processing the DM_RENDER message, the source window copies the customer
+details into the shared memory so that when<B> DrgSendTransferMsg()</B> returns,
+the target window procedure may extract the data it needs.  A detailed explanation
+of the source window's processing of a DM_RENDER message is given in <A HREF="302_L3_TransferringInformat.html">Transferring
+Information</A>.
+<P>
+Upon completion of the information transfer, the entire drag/drop operation
+is complete and the data structures allocated during the operation may be
+released.  For the DRAGINFO and DRAGTRANSFER structures, this must be carried
+out using the<B> DrgFreeDraginfo()</B> and<B> DrgFreeDragtransfer()</B> functions.
+
+
+<P><HR>
+
+<A HREF="300_L3_DraggingOveraWindow.html">[Back: Dragging Over a Window]</A> <BR>
+<A HREF="302_L3_TransferringInformat.html">[Next: Transferring Information]</A> 
+</BODY>
+</HTML>

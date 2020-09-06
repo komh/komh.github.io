@@ -1,0 +1,834 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Math. functions</TITLE>
+</HEAD>
+<BODY>
+<H1>Math. functions</H1><!-- entering slot 549 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* This source code contains REXX implementations for the following   */
+/* mathematical functions:                                            */
+/*                                                                    */
+/*   sqrt(x)     sin(x)      asin(x)     fctrl(x)                     */
+/*   cbrt(x)     cos(x)      acos(x)     gamma(x)                     */
+/*   ln(x)       tan(x)      atan(x)     lngamma(x)                   */
+/*   exp(x)      cot(x)      acot(x)     erf(x)                       */
+/*   sinh(x)     sec(x)      asec(x)     erfc(x)                      */
+/*   cosh(x)     csc(x)      acsc(x)     power(x,y)                   */
+/*                                                                    */
+/* Note that I've only changed the formatting and the comments.       */
+/*                                                                    */
+/* ------------------------------------------------------------------ */
+/* Copyright 1988, B.E. Chi (BEC@ALBNYVM1.BITNET), Computing Services */
+/* University of NY at Albany.  power(x,y) added by MikeA.            */
+/*                                                                    */
+/* EVX has been given away free on BITNET for years.  It is freeware, */
+/* and is not for sale.  You are free to alter this program, as long  */
+/* as you note that in the comments.                                  */
+/* Ported to OS/2 by                                                  */
+/* Michael Antonio (713221.1742@CompuServ.COM), 1990                  */
+/*                                                                    */
+/* EVX expression evaluates any numeric (or, more generally,          */
+/* any REXX) expression. Examples:                                    */
+/*                                                                    */
+/*      EVX 24*(35/2)-.5        returns 419.5                         */
+/*      EVX max(3.5,3/2,17/3)   returns 5.6666667                     */
+/*      EVX 3*sqrt(2.7)         returns 4.9295030                     */
+/*      EVX reverse(abcxyz)     returns ZYXCBA                        */
+/*      EVX date()              returns 19 Feb 1987  (for instance)   */
+/*                                                                    */
+/* The expression may contain certain mathematical functions if       */
+/* required. Among the standard REXX functions, the ones using        */
+/* numeric arguments and returning a numeric value are:               */
+/*                                                                    */
+/*       ABS(x), MAX(x,y,...,z), MIN(x,y,...,z), SIGN(x).             */
+/*                                                                    */
+/* Two utility functions are rad(x) and deg(x), which convert         */
+/* degrees to radians and radians to degrees, respectively.           */
+/*                                                                    */
+/* Finally, the following algebraic and transcendental functions      */
+/* are provided:                                                      */
+/*                                                                    */
+/*   sqrt(x)     sin(x)      asin(x)     fctrl(x)                     */
+/*   cbrt(x)     cos(x)      acos(x)     gamma(x)                     */
+/*   ln(x)       tan(x)      atan(x)     lngamma(x)                   */
+/*   exp(x)      cot(x)      acot(x)     erf(x)                       */
+/*   sinh(x)     sec(x)      asec(x)     erfc(x)                      */
+/*   cosh(x)     csc(x)      acsc(x)     power(x,y)                   */
+/*                                                                    */
+/* The symbols "pi" and "e" are defined to have their customary       */
+/* values. Also, the value of the expression is saved with            */
+/* symbol "x" which may be used in an expression in a subsequent      */
+/* call of EVX. Example:                                              */
+/*                                                                    */
+/*     EVX 3*4  returns 12.                                           */
+/*     EVX x/6  returns 2.                                            */
+/*                                                                    */
+/* Calling EVX with no argument invokes nonstop mode. For each        */
+/* subsquent expression typed, the corresponding value is             */
+/* displayed. To return to the operating system, enter a blank        */
+/* line. The symbol "x" may be used as before.                        */
+/*                                                                    */
+/* EVX may be called from within another exec. To retrieve the        */
+/* result, execute the statement                                      */
+/*                                                                    */
+/*    "GLOBALV  STACK  evx_p;  PULL x"    (in CMS)                    */
+/*                                                                    */
+/* or                                                                 */
+/*                                                                    */
+/*     "x = VALUE('evx_p', 'OS2ENVIRONMENT')"  (under OS/2).          */
+/*                                                                    */
+/* Alternately,                                                       */
+/*                                                                    */
+/*   EVX expression "(STACK" (in CMS)                                 */
+/*                                                                    */
+/* or                                                                 */
+/*                                                                    */
+/*   EVX expression "-STACK" (in OS/2)                                */
+/*                                                                    */
+/* suppresses printing and PUSHes the result onto the                 */
+/* <!-- entering slot 550 -->current stack in the usual manner.                                 */
+/*                                                                    */
+
+                        /* install an error handler                   */
+  SIGNAL ON syntax
+
+                        /* get the parameter                          */
+  PARSE ARG evx_expr
+
+                        /* get the current operating system           */
+  PARSE SOURCE env .
+
+  IF env = 'OS/2' THEN
+    delim = '-'
+  ELSE
+    delim = '('
+
+  IF evx_expr = "?" THEN
+  DO
+                        /* show the usage help                        */
+    DO i = 22
+      IF SOURCELINE(i) = "" THEN
+        EXIT
+      SAY SOURCELINE(i)
+    END /* DO i = 22 */
+  END /* IF */
+
+  x = LASTPOS( delim,evx_expr )
+  evx_stack = x &gt; 0 &amp; TRANSLATE(SUBSTR(evx_expr,x+1)) = "STACK"
+  IF evx_stack THEN
+    evx_expr = SUBSTR(evx_expr,1,x-1)
+                /* evx_stack = 0 or 1; evx_expr = actual expression.  */
+
+  evx_stop = evx_expr \= ""
+  IF evx_stop THEN
+    PUSH evx_expr
+  ELSE
+    IF evx_stack THEN
+    DO
+      SAY "EVX nonstop and stack modes may not be used together."
+      EXIT 1
+    END
+    ELSE
+      SAY "Enter EVX nonstop mode:"
+
+  NUMERIC DIGITS 12
+
+                        /* define some constants                      */
+  pi = 3.14159265359
+  e = 2.71828182846
+                        /* get the result of the previous calculation */
+  x = getvar( "EVX_P" )
+  IF x = "" THEN
+    x = 0               /* default is zero                            */
+
+  DO UNTIL evx_stop
+    PARSE PULL evx_expr
+    IF evx_expr = "" THEN
+      evx_stop = 1
+    ELSE
+    DO
+                        /* increase the accuracy                      */
+      NUMERIC DIGITS 12
+                        /* calculate the expression                   */
+      INTERPRET "x = "evx_expr
+
+      NUMERIC DIGITS 8
+
+                        /* round the result                           */
+      IF DATATYPE(x,N) &amp; \DATATYPE(x,W) THEN
+        x = x + 0
+      IF evx_stack THEN
+        PUSH x
+      ELSE
+        SAY evx_expr" =" x
+    END
+  END
+                       /* save the result in the environment variable */
+  rt=setvar("EVX_P", x)
+
+                       /* reset the NUMERIC DIGITS settings           */
+  NUMERIC DIGITS
+EXIT 0
+
+/* ================================================================== */
+/* function: Convert degrees to radians                               */
+/*                                                                    */
+/* call:     frad(x)                                                  */
+/*                                                                    */
+rad: PROCEDURE
+  ARG x
+  CALL argtest "rad",x
+RETURN .0174532925199*x
+
+/* ================================================================== */
+/* function: Convert radians to degrees                               */
+/*                                                                    */
+/* call:     deg(x)                                                   */
+/*                                                                    */
+deg: PROCEDURE
+  ARG x
+  CALL argtest "deg",x
+RETURN 57.2957795131*x
+
+/* ================================================================== */
+/* sqrt(x)                                                            */
+/*                                                                    */
+/* Method:                                                            */
+/*   Assuming x &gt;= 0, set x = a * 4**n, choosing n so .25 &lt; a &lt;= 1.   */
+/*   Then sqrt(x) = 2**n sqrt(a). Evaluate sqrt(a) by using 0.707 as  */
+/*   an initial approximation and then iterating four times, using    */
+/*   Newton's method.                                                 */
+/*                                                                    */
+sqrt: PROCEDURE
+  ARG x
+  CALL argtest "sqrt",x
+  IF x &lt; 0 THEN
+  DO
+    SAY "sqrt argument" x " out of range."
+    EXIT
+  END
+  IF x = 0 THEN
+    RETURN 0
+  n = 0
+  DO WHILE x &gt; 1
+    x = x/4
+    n = n + 1
+  END
+  DO WHILE x &lt;= .25
+    x = 4*x
+    n = n - 1
+  END
+  y = .707
+  DO 4
+    y = .5*(y + x/y)
+  END
+RETURN 2**n*y
+
+/* ================================================================== */
+/* cbrt(x)                                                            */
+/*                                                                    */
+/* Method:                                                            */
+/*   Set x = a * 8**n, choosing n so .125 &lt; a &lt;= 1. Then              */
+/*   cbrt(x) = 2**n cbrt(a).  Evaluate cbrt(a) by using 0.737 as      */
+/*   an initial approximation and then iterating five times, using    */
+/*   Newton's  method.                                                */
+/*                                                                    */
+cbrt: PROCEDURE
+  ARG x
+  CALL argtest "cbrt",x
+  IF x = 0 THEN
+    RETURN 0
+  s = SIGN(x)
+  x = ABS(x)
+  n = 0
+  DO WHILE x &gt; 1
+    x = x/8
+    n = n + 1
+  END
+  DO WHILE x &lt;= .125
+    x = 8*x
+    n = n - 1
+  END
+  y = .737
+  DO 5
+    y = (2*y + x/(y**2))/3
+  END
+RETURN s*2**n*y
+
+/* ================================================================== */
+/* sin(x)                                                             */
+/*                                                                    */
+/* Method:                                                            */
+/*   x is first reduced so that ABS(x) &lt;= pi/2. Then a polynomial     */
+/*   approximation is used for evaluation.                            */
+/*                                                                    */
+sin: PROCEDURE
+  ARG x
+  CALL argtest "sin",x
+  s=SIGN(x)
+  x=ABS(x)
+  x = x//6.28318530718
+  IF x &gt; 3.14159265359 THEN
+  DO
+    x = x - 3.14159265359
+    s = -s
+  END
+  IF x &gt; 1.57079632679 THEN
+    x = 3.14159265359 - x
+  y = x*x
+  x = s*x*(((((-.0000000239*y + .0000027526)*y - .0001984090)*y + ,
+      .0083333315)*y - .1666666664)*y + 1)
+RETURN x
+
+/* ================================================================== */
+/* cos(x)                                                             */
+/*                                                                    */
+/* Method:                                                            */
+/*   x is first reduced so that ABS(x) &lt;= pi/2. Then a                */
+/*   polynomial approximation is used for evaluation.                 */
+/*                                                                    */
+cos: PROCEDURE
+  ARG x
+  CALL argtest "cos",x
+  s=1
+  x=ABS(x)
+  x = x//6.28318530718
+  IF x &gt; 3.14159265359 THEN
+  DO
+    x = x - 3.14159265359
+    s = -s
+  END
+  IF x &gt; 1.57079632679 THEN
+  DO
+    x = 3.14159265359 - x
+    s = -s
+  END
+  y = x*x
+  x = s*(((((-.0000002605*y + .0000247609)*y - .0013888397)*y + ,
+      .0416666418)*y - .4999999963)*y + 1)
+RETURN x
+
+/* ================================================================== */
+/* tan(x)                                                             */
+/*                                                                    */
+/* Method:                                                            */
+/*   x is first reduced so that ABS(x) &lt;= pi/2. Then if               */
+/*   ABS(x) &gt; pi/4, tan(x) = cot(pi/2 - x). Otherwise, a polynomial   */
+/*   approximation is used for evaluation.                            */
+/*                                                                    */
+tan: PROCEDURE
+  ARG x
+  CALL argtest "tan",x
+  s=SIGN(x)
+  x=ABS(x)
+  x = x//6.28318530718
+  IF x &gt; 3.14159265359 THEN
+  DO
+    x = x - 3.14159265359
+    s = -s
+  END
+  IF x &gt; 1.57079632679 THEN
+  DO
+    x = 3.14159265359 - x
+    s = -s
+  END
+  IF x &gt; .785398163397 THEN
+    x = cot(1.57079632679 - x)
+  ELSE
+  DO
+    y = x*x
+    x = x*((((((.0095168091*y + .0029005250)*y + .0245650893)*y + ,
+      .0533740603)*y + .1333923995)*y + .3333314036)*y + 1)
+  END
+RETURN s*x
+
+/* ================================================================== */
+/* cot(x)                                                             */
+/*                                                                    */
+/* Method:                                                            */
+/*   x is first reduced so that ABS(x) &lt;= pi/2. Then if               */
+/*   ABS(x) &gt; pi/4, cot(x) = tan(pi/2 - x). Otherwise, a polynomial   */
+/*   approximation is used for evaluation.                            */
+/*                                                                    */
+cot: PROCEDURE
+  ARG x
+  CALL argtest "cot",x
+  s=SIGN(x)
+  x=ABS(x)
+  x = x//6.28318530718
+  IF x &gt; 3.14159265359 THEN
+  DO
+    x = x - 3.14159265359
+    s = -s
+  END
+  IF x &gt; 1.57079632679 THEN
+  DO
+    x = 3.14159265359 - x
+    s = -s
+  END
+  IF x &gt; .785398163397 THEN
+    x = tan(1.57079632679 - x)
+  ELSE
+  DO
+    y = x*x
+    x = (((((-.0000262619*y - .0002078504)*y - .0021177168)*y - ,
+      .0222220287)*y - .3333333410)*y + 1)/x
+  END
+RETURN s*x
+
+/* ================================================================== */
+/* sec(x)                                                             */
+/*                                                                    */
+/* Method:                                                            */
+/*   sec(x) = 1/cos(x)                                                */
+/*                                                                    */
+sec: PROCEDURE
+  ARG x
+  CALL argtest "sec",x
+RETURN 1/cos(x)
+
+/* ================================================================== */
+/* csc(x)                                                             */
+/*                                                                    */
+/* Method:                                                            */
+/*   csc(x) = 1/sin(x)                                                */
+/*                                                                    */
+csc: PROCEDURE
+  ARG x
+  CALL argtest "csc",x
+RETURN 1/sin(x)
+
+/* ================================================================== */
+/* exp(x)                                                             */
+/*                                                                    */
+/* Method:                                                            */
+/*   Let n = integer part of x/ln 2, f = fractional part of x/ln 2.   */
+/*   Then                                                             */
+/*     exp(x) = exp((n + f) ln 2) = exp(ln 2**n) exp (f ln 2)         */
+/*            = 2**n exp (f ln 2),                                    */
+/*   where f ln 2 &lt;= ln 2.  (See A&amp;S p. 90, ex. 11.)                  */
+/*   The remaining exponential is evaluated using a polynomial        */
+/*   approximation (see A&amp;S 4.2.45).                                  */
+/*                                                                    */
+exp: PROCEDURE
+  ARG x
+  CALL argtest "exp",x
+  s = SIGN(x)
+  x = ABS(x/.69314718056)
+  n = x % 1
+  <!-- entering slot 551 -->d = (x - n)*.69314718056
+  x = ((((((-.0001413161*d + .0013298820)*d - .0083013598)*d + ,
+     .0416573475)*d - .1666653019)*d + .4999999206)*d - .9999999995)*d + 1
+  x = 2**n/x
+  IF s = -1 THEN
+    x = 1/x
+RETURN x
+
+/* ================================================================== */
+/* ln(x)                                                              */
+/*                                                                    */
+/* Method:                                                            */
+/*   Assuming x &gt; 0, set x = a * 2**n, choosing n so that 1 &lt;= a &lt;= 2.*/
+/*   Then ln(x) = ln(a) + n*ln(2). Evaluate ln(a) using a polynomial  */
+/*   approximation (A&amp;S 4.1.44).                                      */
+/*                                                                    */
+ln: PROCEDURE
+  ARG x
+  CALL argtest "ln",x
+  IF x &lt;= 0 THEN
+  DO
+    SAY "ln argument" x " out of range."
+    EXIT
+  END
+  n = 0
+  DO WHILE x &gt; 2
+    x = x/2
+    n = n + 1
+  END
+  DO WHILE x &lt; 1
+    x = 2*x
+    n = n - 1
+  END
+  x = x - 1
+  x = (((((((-.0064535442*x + .0360884937)*x - .0953293897)*x + ,
+     .1676540711)*x - .2407338084)*x + .3317990258)*x - .4998741238)*x + ,
+     .9999964239)*x
+  x = x + .6931471806*n
+RETURN x
+
+/* ================================================================== */
+/* power(x,y)                                                         */
+/*                                                                    */
+/* Method:                                                            */
+/*   x(y) = e^(y*ln(x))                                               */
+/*                                                                    */
+power: PROCEDURE
+  ARG x,y
+  CALL argtest "power",x
+  CALL argtest "power",y
+  IF datatype(x,W) &amp; datatype(y,W) THEN
+    pow = x**y
+  ELSE
+  DO
+    IF x&lt;0 THEN
+    DO
+      SAY "power argument" y "out of range."
+      EXIT
+    END
+    pow = exp(y*ln(x))
+  END
+RETURN pow
+
+/* ================================================================== */
+/* asin(x)                                                            */
+/*                                                                    */
+/* Method:                                                            */
+/*   A polynomial approximation is used.                              */
+/*                                                                    */
+asin: PROCEDURE
+  ARG x
+  CALL argtest "asin",x
+  IF x&lt;-1 | x&gt;1 THEN
+  DO
+    SAY "asin argument" x " out of range."
+    EXIT
+  END
+  s = SIGN(x)
+  x = ABS(x)
+  x = (((((((-.0012624911*x + .0066700901)*x - .0170881256)*x + ,
+             .0308918810)*x - .0501743046)*x + .0889789874)*x - ,
+             .2145988016)*x + 1.570796305)*sqrt(1 - x)
+RETURN s*(1.57079632679 - x)
+
+/* ================================================================== */
+/* acos(x)                                                            */
+/*                                                                    */
+/* Method:                                                            */
+/*   Use acos(x) = pi/2 - asin(x)                                     */
+/*                                                                    */
+acos: PROCEDURE
+  ARG x
+  CALL argtest "acos",x
+  IF x&lt;-1 | x&gt;1 THEN
+  DO
+    SAY "acos argument" x " out of range."
+    EXIT
+  END
+RETURN 1.57079632679 - asin(x)
+
+/* ================================================================== */
+/* atan(x)                                                            */
+/*                                                                    */
+/* Method:                                                            */
+/*   Use atan(x) = pi/4 - atan((1-x)/(1+x)).  Evaluate                */
+/*   the latter function using a polynomial approximation, taking     */
+/*   advantage of the fact that its argument is less than one as      */
+/*   long as x &gt; -1.                                                  */
+/*                                                                    */
+atan: PROCEDURE
+  ARG x
+  CALL argtest "atan",x
+  IF x = 0 THEN
+    RETURN 0
+  s=SIGN(x)
+  x=ABS(x)
+  x = (x - 1)/(x + 1)
+  y = x*x
+  x = ((((((((.0028662257*y - .0161657367)*y + .0429096138)*y - ,
+             .0752896400)*y + .1065626393)*y - .1420889944)*y + ,
+             .1999355085)*y - .3333314528)*y + 1)*x
+RETURN .785398163397 + s*x
+
+/* ================================================================== */
+/* acot(x)                                                            */
+/*                                                                    */
+/* Method:                                                            */
+/*   Use acot(x) = pi/2 - atan(x)                                     */
+/*                                                                    */
+acot: PROCEDURE
+  ARG x
+  CALL argtest "acot",x
+RETURN 1.57079632679 - atan(x)
+
+/* ================================================================== */
+/* asec(x)                                                            */
+/*                                                                    */
+/* Method:                                                            */
+/*   Use asec(x) = acos(1/x)                                          */
+/*                                                                    */
+asec: PROCEDURE
+  ARG x
+  CALL argtest "asec",x
+  IF x&gt;-1 &amp; x&lt;1 THEN
+  DO
+    SAY "asec argument" x " out of range."
+    EXIT
+  END
+RETURN acos(1/x)
+
+/* ================================================================== */
+/* acsc(x)                                                            */
+/*                                                                    */
+/* Method:                                                            */
+/*   Use acsc(x) = asin(1/x)                                          */
+/*                                                                    */
+acsc: PROCEDURE
+  ARG x
+  CALL argtest "acsc",x
+  IF x&gt;-1 &amp; x&lt;1 THEN
+  DO
+    SAY "acsc argument" x " out of range."
+    EXIT
+  END
+RETURN asin(1/x)
+
+/* ================================================================== */
+/* sinh(x)                                                            */
+/*                                                                    */
+sinh: PROCEDURE
+  ARG x
+  CALL argtest "sinh",x
+RETURN .5*(exp(x) - exp(-x))
+
+/* ================================================================== */
+/* cosh(x)                                                            */
+/*                                                                    */
+cosh: PROCEDURE
+  ARG x
+  CALL argtest "cosh",x
+RETURN .5*(exp(x) + exp(-x))
+
+/* ================================================================== */
+/* tanh(x)                                                            */
+/*                                                                    */
+tanh: PROCEDURE
+  ARG x
+  CALL argtest "tanh",x
+RETURN (exp(x) - exp(-x))/(exp(x) + exp(-x))
+
+/* ================================================================== */
+/* gamma(x)                                                           */
+/*                                                                    */
+/* Method:                                                            */
+/*   Use                                                              */
+/*    gamma(x) = (x - 1)(x - 2)...(x - n)gamma(x - n + 1)  if x &gt;= 1, */
+/*   or                                                               */
+/*    gamma(x) = gamma(x + n + 1)/x(x + 1)(x + 2)...(x + n) if x &lt; 1, */
+/*   in either case, choosing n so that the argument of the gamma     */
+/*   function on the right hand side is in the range 0 through 1.     */
+/*   Evaluate this gamma function using a polynomial approximation.   */
+/*                                                                    */
+gamma: PROCEDURE
+  ARG x
+  CALL argtest "gamma",x
+  p = 1
+
+  SELECT
+
+    WHEN x &gt;= 1 THEN
+      DO WHILE x &gt;= 2
+        x = x - 1
+        p = x*p
+      END
+
+    WHEN x%1 = x THEN
+    DO
+      SAY "gamma argument" x "out of range."
+      EXIT
+    END
+
+    OTHERWISE
+      DO UNTIL x &gt;= 1
+        IF x &lt;= -1 &amp; ABS(p) &gt;= ABS(1E999999999/x) THEN
+          RETURN 0
+        p = x*p
+        x = x + 1
+      END
+      p = 1/p
+
+  END /* SELECT */
+
+  IF x \= 1 THEN
+  DO
+    x = x - 1
+    x = (((((((.035868343*x - .193527818)*x + .482199394)*x - ,
+              .756704078)*x + .918206857)*x - .897056937)*x + ,
+              .988205891)*x - .577191652)*x + 1
+    p = x*p
+  END
+
+RETURN p
+
+/* ================================================================== */
+/* lngamma(x), x &gt; 0                                                  */
+/*                                                                    */
+/* Method:                                                            */
+/*   If x &lt; 5, calculate ln(gamma(x)).                                */
+/*   Otherwise, use Stirling's formula through x**-7.                 */
+/*                                                                    */
+lngamma: PROCEDURE
+  ARG x
+  CALL argtest "lngamma",x
+  IF x &lt; 0 THEN
+  DO
+    SAY "lngamma argument" x "out of range."
+    EXIT
+  END
+  IF x &lt; 5 THEN
+    RETURN ln(gamma(x))
+
+RETURN (x - .5)*ln(x) - x + .91893853320 + 1/(12*x) - 1/(360*x**3) + ,
+        1/(1260*x**5) - 1/(1680*x**7)
+
+/* ================================================================== */
+/* fctrl(x)                                                           */
+/*                                                                    */
+/* Method:                                                            */
+/*   fctrl(x) = x! = gamma(x + 1):                                    */
+/*                                                                    */
+fctrl: PROCEDURE
+  ARG x
+  CALL argtest "fctrl",x
+
+  IF x%1 = x &amp; x &lt; 0 THEN
+  DO
+    SAY "fctrl argument" x "out of range."
+    EXIT
+  END
+RETURN gamma(x + 1)
+
+/* ================================================================== */
+/* erf(x)                                                             */
+/*                                                                    */
+/* Method:                                                            */
+/*   One or another polynomial approximation is used, the choice      */
+/*   depending upon the magnitude of x.  (CACM Algorithm 209.)        */
+/*                                                                    */
+erf: PROCEDURE
+  ARG x
+  CALL argtest "erf",x
+  s = SIGN(x)
+  x = .707106781187*ABS(x)
+  IF x &gt;= 3 | x = 0 THEN
+    RETURN s
+  IF x &lt; 1 THEN
+  DO
+    w = x*x
+    x = ((((((((.000124818987*w - .001075204047)*w + .005198775019)*w - ,
+               .019198292004)*w + .059054035642)*w - .151968751364)*w + ,
+               .319152932694)*w - .531923007300)*w + .797884560593)*2*x
+  END
+  ELSE
+  DO
+    x = x - 2
+    x = (((((((((((((-.000045255659*x + .000152529290)*x - ,
+               .000019538132)*x - .000676904986)*x + .001390604284)*x - ,
+               .000794620820)*x - .002034254874)*x + .006549791214)*x - ,
+               .010557625006)*x + .011630447319)*x - .009279453341)*x + ,
+               .005353579108)*x - .002141268741)*x + .000535310849)*x + ,
+               .999936657524
+  END
+RETURN s*x
+
+/* ================================================================== */
+/* erfc(x)                                                            */
+/*                                                                    */
+/* Method:                                                            */
+/*   erfc(x) = 1 - erf(x)                                             */
+/*                                                                    */
+erfc: PROCEDURE
+  ARG x
+  CALL argtest "erfc",x
+RETURN 1 - erf(x)
+
+/* ------------------- misc. sub routines of EVX -------------------- */
+
+/* ------------------------------------------------------------------ */
+/* function: check if the argument for a function is numeric          */
+/*                                                                    */
+/* call:     ArgTest functionName, functionArgument                   */
+/*                                                                    */
+/* where:    functionName - name of the function                      */
+/*           functionArgument - argument for the function             */
+/*                                                                    */
+/* returns:  nothing                                                  */
+/*                                                                    */
+/* note:     exits the program if the argument is not numeric         */
+/*                                                                    */
+Argtest: PROCEDURE
+  PARSE ARG name,x
+
+  IF DATATYPE(x,"N") THEN
+    RETURN
+  SAY name "argument" x "not a number."
+EXIT
+
+/* ------------------------------------------------------------------ */
+/* function: get the <!-- entering slot 552 -->value of an environment variable                 */
+/*                                                                    */
+/* call:     GetVar varName                                           */
+/*                                                                    */
+/* where:    varName - name of the environment variable               */
+/*                                                                    */
+/* returns:  the value of the environment variable (or "")            */
+/*                                                                    */
+Getvar: PROCEDURE
+  PARSE UPPER ARG varName
+  PARSE UPPER SOURCE env .
+
+  rt = ""
+  IF env = 'CMS' THEN
+  DO
+    'GLOBALV STACK' varName
+    PULL rt
+  END
+  ELSE
+    IF env = 'OS/2' THEN
+      rt = value(varName,,'OS2ENVIRONMENT')
+RETURN rt
+
+/* ------------------------------------------------------------------ */
+/* function: set the value for an environment variable                */
+/*                                                                    */
+/* call:     SetVar varName, varValue                                 */
+/*                                                                    */
+/* where:    varName - name of the environment variable               */
+/*           varValue - value for the environment variable            */
+/*                                                                    */
+/* returns:  the old value of the environment variable (or "")        */
+/*                                                                    */
+Setvar: PROCEDURE
+  PARSE UPPER ARG varName,value
+  PARSE UPPER SOURCE env .
+
+  rt = ""
+  IF env = 'CMS' THEN
+    'GLOBALV SET' varName value
+  ELSE
+    IF env = 'OS/2' THEN
+      rt = value(varName,value,'OS2ENVIRONMENT')
+RETURN rt
+
+/* ------------------------------------------------------------------ */
+/* syntax error handler                                               */
+/*                                                                    */
+SYNTAX:
+  say '"'evx_expr'" is not quite valid syntax. Try again!'
+exit
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="527_L3_Sqrtroutine.html">[Back: Sqrt routine]</A> <BR>
+<A HREF="529_L3_Convertadecimalnumbe.html">[Next: Convert a decimal number into a system based n]</A> 
+</BODY>
+</HTML>

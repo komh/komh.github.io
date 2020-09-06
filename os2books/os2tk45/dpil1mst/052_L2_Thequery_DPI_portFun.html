@@ -1,0 +1,127 @@
+<HTML>
+<HEAD>
+<TITLE>The query_DPI_port() Function</TITLE>
+</HEAD>
+<BODY>
+<H1>The query_DPI_port() Function</H1><!-- entering slot 55 -->
+<P>
+<B>Syntax</B>
+<PRE>#include &lt;snmp_dpi.h&gt;
+
+long int query_DPI_port(        /* Query (GET) SNMP_DPI port  */
+  char          *hostname_p,    /* target hostname/IPaddress  */
+  char          *community_p,   /* communityname for GET      */
+  int            porttype);     /* port type, one of:         */
+                                /*   dpiPortForTCP            */
+                                /*   dpiPortForUDP            */
+</PRE>
+
+<P>
+<B>Parameters</B><!-- lm: 0x2 1 -->
+<UL>
+<P>
+hostname_p<!-- lm: 0x11 3 -->
+<UL> A pointer to a NULL terminated character
+string representing the host name or IP address in dot notation of the host
+where the DPI capable SNMP agent is running.<!-- lm: 0x2 1 -->
+</UL> community_p
+<!-- lm: 0x11 3 -->
+<UL>A pointer to a NULL terminated character string
+representing the community name that is required to obtain the dpiPort from
+the SNMP agent via an SNMP GET request.<!-- lm: 0x2 1 -->
+</UL> porttype
+<!-- lm: 0x11 3 -->
+<UL>The dpiPort object for a specific port type that
+you want to obtain.  Currently there are two types:  one for a TCP port
+and one for a UDP port.  The snmp_dpi.h include file has two #define statements
+for these DPI port types:
+<PRE>  #define dpiPortForTCP    1
+  #define dpiPortForUDP    2
+</PRE>
+
+<P>
+At this time, the dpiPORTForUDP port type is not supported.  If you use
+it, the return value is set to -1, which indicates a failure.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Return Values</B><!-- lm: 0x2 6 -->
+<UL>
+<P>
+If successful, the DPI port number for the specified protocol, TCP or UDP,
+is returned.<!-- lm: 0x2 6 -->
+<P>
+If failure, a value of -1 is returned.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Description</B>
+<P>
+The query_DPI_port function is used to obtain the port number on which the
+DPI capable SNMP agent at the specified host is listening for connections
+(TCP) or packets (UDP).
+<P>
+The DPI subagent programmer only needs to use this function to code the
+connection setup and send or await the packet.  The programmer then obtains
+the DPI port number, finds the IP address of the agent with <A HREF="051_L2_Thelookup_hostFuncti.html">the
+lookup_host() function</A> and then sets up a socket for communication.
+
+<P>
+This function is implicitly executed by the DPIconnect_to_agent_TCP() function,
+which is the function that the DPI subagent programmer would normally use.
+ So the query_DPI_port() function is normally not used by the DPI subagent
+programmer.
+<P>
+<B>Examples</B>
+<PRE>#include &lt;snmp_dpi.h&gt;#include /* other include files for BSD sockets and such */
+int                  handle;
+unsigned char       *pack_p;
+long int             dpi_port;
+int                  fd;
+struct sockaddr_in   s,t;              /* source and target   */
+
+dpi_port = query_DPI_port("localhost", /* get DPI port number */
+                  "public",            /* for TCP, local host */
+                  dpiPortForTCP);
+if (dpi_port &lt; 0) exit(1);             /* error if negative   */
+
+host_addr = lookup_host("localhost");  /* find target IP addr */
+if (host_addr == 0) exit(1);           /* unknown, that's it  */
+
+fd = socket(AF_INET,SOCK_STREAM,0);    /* create a TCP socket */
+if (fd &lt; 0) exit(1);                   /* failure to do so    */
+
+memset(&amp;s,0,sizeof(s));
+s.sin_family      = AF_INET;           /* set AF_INET family  */
+s.sin_port        = 0;                 /* give us any port,   */
+s.sin_addr.s_addr = htonl(INADDR_ANY); /* any local IPaddress */
+
+rc = bind(fd,(struct sockaddr *)s,     /* bind our socket(fd) */
+          sizeof(s_sock));             /* defined in s socket */
+if (rc &lt; 0) exit(1);                   /* failure, so exit    */
+
+memset(&amp;d,0,sizeof(d));
+d.sin_family      = AF_INET;           /* set AF_INET family  */
+d.sin_port        = htons(dpi_port);   /* set requested port  */
+d.sin_addr.s_addr = host_addr;         /* destination IP addr */
+                                       /* network byte order  */
+rc = connect(fd,(struct sockaddr *)d,  /* connect to target   */
+             sizeof(d));               /* based on d sock     */
+if (rc &lt; 0) exit(1);                   /* failed, exit        */
+/* now we have a socket on which to send/receive DPI packets  */
+</PRE>
+
+<P>
+<B>Related Information</B><!-- lm: 0x2 6 -->
+<UL>
+<P>
+<A HREF="051_L2_Thelookup_hostFuncti.html">The lookup_host() Function</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="047_L2_TheDPIconnect_to_age.html">The DPIconnect_to_agent_TCP()
+Function</A><!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="051_L2_Thelookup_hostFuncti.html">[Back: The lookup_host() Function]</A> <BR>
+<A HREF="053_L1_DPIStructures.html">[Next: DPI Structures]</A> 
+</BODY>
+</HTML>

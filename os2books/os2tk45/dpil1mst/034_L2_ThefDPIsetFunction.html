@@ -1,0 +1,84 @@
+<HTML>
+<HEAD>
+<TITLE>The fDPIset() Function</TITLE>
+</HEAD>
+<BODY>
+<H1>The fDPIset() Function</H1><!-- entering slot 34 -->
+<P>
+<B>Syntax</B>
+<PRE>#include &lt;snmp_dpi.h&gt;
+
+void fDPIset(snmp_dpi_set_packet *packet_p);
+</PRE>
+
+<P>
+<B>Parameters</B><!-- lm: 0x2 1 -->
+<UL>
+<P>
+packet_p<!-- lm: 0x11 3 -->
+<UL> A pointer to the first snmp_dpi_set_packet
+structure in a chain of such structures.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Description</B>
+<P>
+The fDPIset() function is typically used if you must free a chain of one
+or more snmp_dpi_set_packet structures.  This may be the case if you are
+in the middle of preparing a chain of such structures for a DPI RESPONSE
+packet, but then run into an error before you can actually make the response.
+
+<P>
+If you get to the point where you make a DPI response packet to which you
+pass the chain of snmp_dpi_set_packet structures, then the mkDPIresponse()
+function will free the chain of snmp_dpi_set_packet structures.
+<P>
+<B>Examples</B>
+<PRE>#include &lt;snmp_dpi.h&gt;unsigned char       *pack_p;
+snmp_dpi_hdr        *hdr_p;
+snmp_dpi_set_packet *set_p, *first_p;
+long int             num1 = 0, num2 = 0;
+
+hdr_p = pDPIpacket(pack_p);              /* assume pack_p     */
+/* analyze packet and assume all OK */   /* points to the     */
+/* now prepare response; 2 varBinds */   /* incoming packet   */
+
+set_p = mkDPIset(snmp_dpi_NULL_p,        /* create first one  */
+             "1.3.6.1.2.3.4.5.","1.0",   /* OID=1, instance=0 */
+             SNMP_TYPE_Integer32,
+             sizeof(num1), &amp;num1);
+if (set_p) {                             /* if success, then  */
+   first_p = set_p;                      /* save ptr to first */
+   set_p   = mkDPIset(set_p,             /* chain next one    */
+               "1.3.6.1.2.3.4.5.","1.1", /* OID=1, instance=1 */
+               SNMP_TYPE_Integer32,
+               sizeof(num2), &amp;num2);
+   if (set_p) {                          /* success 2nd one   */
+      pack_p = mkDPIresponse(hdr_p,      /* make response     */
+                    SNMP_ERROR_noError,  /* It will also free */
+                    0L, first_p);        /* the set_p tree    */
+      /* send DPI response to agent */
+   } else {                              /* 2nd mkDPIset fail */
+      fDPIset(first_p);                  /* must free chain   */
+   } /* endif */
+} /* endif */
+</PRE>
+
+<P>
+<B>Related Information</B><!-- lm: 0x2 6 -->
+<UL>
+<P>
+<A HREF="033_L2_ThefDPIparseFunction.html">The fDPIparse() Function</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="060_L2_Thesnmp_dpi_set_pack.html">The snmp_dpi_set_packet Structure
+</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="039_L2_ThemkDPIresponseFunc.html">The mkDPIresponse() Function
+</A><!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="033_L2_ThefDPIparseFunction.html">[Back: The fDPIparse() Function]</A> <BR>
+<A HREF="035_L2_ThemkDPIAreYouThereF.html">[Next: The mkDPIAreYouThere() Function]</A> 
+</BODY>
+</HTML>

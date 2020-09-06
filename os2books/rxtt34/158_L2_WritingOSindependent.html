@@ -1,0 +1,288 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Writing OS independent programs</TITLE>
+</HEAD>
+<BODY>
+<H1>Writing OS independent programs</H1><!-- entering slot 158 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+To write OS independent REXX programs, you can use the PARSE SOURCE</A> statement
+to distinguish between the different platforms (see example below and the
+chapter about <A HREF="255_L3_PARSESOURCE.html">PARSE SOURCE</A>. The chapter
+titled <A HREF="163_L2_ForceaREXXprogramtor.html">Force a REXX program to
+run in a special way</A> also discusses the use of PARSE SOURCE to identify
+the environment in which a REXX program is running and then process conditional
+commands.
+<P>
+When writing programs for use on other platforms in addition to OS/2, remember
+that some of the features and functions in OS/2 REXX are not implemented
+in REXX on other platforms (or may be implemented in a different manner)!
+
+<P>
+(see REXXTRY.CMD  for another example for OS independent REXX programs)
+
+<PRE> 
+/* ------------------------------------------------------------------ */
+/*                                                                    */
+/* APPLICATION - Cross Platform - CMS, OS/2 2.0 and TSO               */
+/* FUNCTION    - Merge 4 comma-delimited input files into an          */
+/*               outputfile, tagging each record with the name of     */
+/*               it's corresponding input file                        */
+/* USE:   OS/2 - MERGE f1.ext,f2.ext,f3.ext,f4.ext,outfile.ext        */
+/*        TSO  - MERGE f1.qlf,f2.qlf,f3.qlf,f4.qlf,outfile.qlf        */
+/*        CMS  - MERGE fn1 ft1 fm1,fn2 ft2 fm2,...fm4,ofn oft ofm     */
+/* AUTHOR      - Michel Plungjan April '93                            */
+/*               (see <A HREF="958_L2H_EMailaddressesP.html">EMail Addresses</A>)                                */
+/*                                                                    */
+/* History:                                                           */
+/*  12.12.1995 /bs                                                    */
+/*    - reformatted and added some comments                           */
+/*  26.02.1996 /bs                                                    */
+/*    - corrected a bug in the TSO read secition according to         */
+/*      information from Michel Plungjan                              */
+/*                                                                    */
+/* ------------------------------------------------------------------ */
+
+  arg InFile.1 "," InFile.2 "," InFile.3 "," InFile.4 "," Merged
+
+  if InFile.1 = "/?" then
+    signal HELP;
+
+  call INIT
+
+  j = 0;
+  do i = 1 to 4
+    FileName = Infile.i
+    call READFILE;
+    if InRec.0 &gt; 0 then
+    do k = 1 to InRec.0
+      j = j + 1
+      OutRec.j = strip(InRec.k,"T") substr(FileName,1,4)
+    end; /* do k = 1 to InRec.0 */
+  end; /* do i = 1 to 4 */
+
+  if j &gt; 0 then
+  do
+    OutRec.0 = j;
+    call WRITEFILE;
+  end /* if j &gt; 0 then */
+  else
+  do
+    XReason = "Input files empty...";
+    XRc = 8;
+    SIGNAL ABNORMAL_END
+  end; /* else */
+
+SIGNAL NORMAL_END;
+
+/* ------------------------------------------------------------------ */
+/*                                                                    */
+READFILE:
+  select
+
+    when sys = 'CMS' then
+    do
+
+/* --------------------- code for CMS ------------------------------- */
+
+      'EXECIO * DISKR' FileName '(FINIS STEM INREC.'
+       hrc = rc
+       if hrc &lt;&gt; 0 then
+       do
+         XRc = hrc
+         XReason = 'Error when reading' FileName 'dataset'
+         SIGNAL ABNORMAL_END
+       end /* if hrc &lt;&gt; 0 then */
+    end /* CMS */
+
+    when sys = 'TSO' then
+    do
+
+/* --------------------- code for TSO ------------------------------- */
+
+      'ALLOC DA('FileName') FI(INDD) SHR'
+      hrc = rc
+      if hrc &lt;&gt; 0 then
+      do
+        XRc = hrc
+        XReason = 'Allocation error of' FileName 'dataset'
+        SIGNAL ABNORMAL_END
+      end
+      'EXECIO * DISKR INDD (FINIS STEM INREC.'              /* v2.10 */
+      hrc = rc
+      if hrc &lt;&gt; 0 then
+      do
+        XRc = hrc
+        XReason = 'Error when reading' FileName 'dataset'
+        SIGNAL ABNORMAL_END
+      end /* if hrc &lt;&gt; 0 then */
+      'FREE FI(INDD)'
+      hrc = rc
+      if hrc &lt;&gt; 0 then
+      do
+        XRc = hrc
+        XReason = 'Error when freeing' FileName 'dataset, DDName INDD'
+        SIGNAL ABNORMAL_END
+      end /* if hrc &lt;&gt; 0 then */
+    end /* TSO */
+
+    when sys = 'OS/2' then
+    do
+
+/* --------------------- code for OS/2 ------------------------------ */
+
+      do ii = 1 while lines(filename) &gt; 0
+        InRec.ii = linein(FileName)
+      end; /* do ii = 1 while lines( fileName) &gt; 0 */
+
+      InRec.0 = ii - 1
+      if (stream(FileName,'S') &lt;&gt; 'READY') then
+      do
+        XRc = 1
+        XReason = 'Error when reading' InFile ,
+                  'file, Error indicator is 'stream(FileName,'D')
+        SIGNAL ABNORMAL_END
+      end /* I/O Error */
+    end /* OS/2 */
+
+    otherwise
+    do
+
+/* --------------------- unknown OS --------------------------------- */
+
+      XReason = 'This program does not know how the environment' sys,
+                'uses I/O, please <!-- entering slot 159 -->contact author'
+      XRc = 8
+      SIGNAL ABNORMAL_END
+    end /* otherwise */
+
+  end /* Select */
+return
+
+/* ------------------------------------------------------------------ */
+/*                                                                    */
+WRITEFILE:
+
+  select
+
+    when sys = 'CMS' then
+    do
+
+/* --------------------- code for CMS ------------------------------- */
+
+      'EXECIO 'OutRec.0 'DISKW 'Merged '0 F 80 (FINIS STEM OUTREC.'
+      hrc = rc
+      if hrc &lt;&gt; 0 then
+      do
+        XRc = hrc
+        XReason = 'Error when writing' Merged 'dataset'
+        SIGNAL ABNORMAL_END
+      end /* if hrc &lt;&gt; 0 then */
+
+    end /* CMS */
+
+    when sys = 'TSO' then
+    do
+
+/* --------------------- code for TSO ------------------------------- */
+
+      'ALLOC DA('Merged') FI(OUTDD) SHR' /* File must already exist */
+      hrc = rc
+      if hrc &lt;&gt; 0 then
+      do
+        XRc = hrc
+        XReason = 'Allocation error of' Merged 'dataset'
+        SIGNAL ABNORMAL_END
+      end /* if hrc &lt;&gt; 0 then */
+
+      'EXECIO' OutRec.0 'DISKW OUTDD (FINIS STEM OUTREC.'
+      hrc = rc
+
+      if hrc &lt;&gt; 0 then
+      do
+        XRc = hrc
+        XReason = 'Error when writing' Merged 'dataset'
+        SIGNAL ABNORMAL_END
+      end /* if hrc &lt;&gt; 0 then */
+
+      'FREE FI(OUTDD)'
+      hrc = rc
+      if hrc &lt;&gt; 0 then
+      do
+        XRc = hrc
+        XReason = 'Error when freeing' Merged 'dataset, DDName OUTDD'
+        SIGNAL ABNORMAL_END
+      end /* if hrc &lt;&gt; 0 then */
+
+    end /* TSO */
+
+    when sys = 'OS/2' then
+    do
+
+/* --------------------- code for OS/2 ------------------------------ */
+
+      do i = 1 to OutRec.0
+        Dummy = lineout(Merged,OutRec.i);
+      end; /* do i = 1 to OutRec.0 */
+
+      rc = stream(Merged,'c','close')
+
+      /* please put your own OS/2 error checking here */
+    end /* OS/2 */
+
+    otherwise
+    do
+
+/* --------------------- unknown OS --------------------------------- */
+
+      XReason = 'This program does not know how the environment' sys,
+                'uses I/O, please contact author'
+      XRc = 8
+      SIGNAL ABNORMAL_END
+    end /* otherwise */
+
+  end /* Select */
+return;
+
+/* ------------------------------------------------------------------ */
+/* init global variables and get the current OS (in the var SYS)      */
+/*                                                                    */
+INIT:
+  true  = 1;
+  false = 0;
+  XReason = 'Files merged, you may now sort the file 'Merged;
+  XRc = 0
+  parse source sys .
+return
+
+/* ------------------------------------------------------------------ */
+/* show the usage help                                                */
+/*                                                                    */
+HELP:
+  do i = 1 until pos('* ---',sourceline(i)) &gt; 0
+    say strip(sourceline(i))
+  end /* do i = 1 ... */
+exit;
+
+/* ------------------------------------------------------------------ */
+/*                                                                    */
+ABNORMAL_END:
+  say 'Program stopped due to'
+
+/* ------------------------------------------------------------------ */
+/*                                                                    */
+NORMAL_END:
+  say XReason 'return code:' Xrc
+exit
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="157_L2_Usingcomments.html">[Back: Using comments]</A> <BR>
+<A HREF="159_L2_Writingfilterprogram.html">[Next: Writing filter programs in REXX]</A> 
+</BODY>
+</HTML>

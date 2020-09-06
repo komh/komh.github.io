@@ -1,0 +1,147 @@
+<HTML>
+<HEAD>
+<TITLE>rapi_reserve()</TITLE>
+</HEAD>
+<BODY>
+<H1>rapi_reserve()</H1><!-- entering slot 442 -->
+<P>
+The rapi_reserve() call makes a reservation to be a receiver.
+<P>
+<B>Syntax</B>
+<PRE>#include &lt;rsvprapi.h&gt;
+
+int  rapi_reserve(
+       rapi_sid_t         sid,
+       int                flag,
+       struct sockaddr   *phost,
+       rapi_sytleid_t     style,
+       rapi_stylex_t     *pstyle,
+       rapi_policy_t     *ppolicy,
+       int                numFilters,
+       rapi_filter_t     *pfilter,
+       int                numFlows,
+       rapi_flowspec_t   *pflow);
+</PRE>
+
+<P>
+<B>Parameters</B><!-- lm: 0x2 0 -->
+<P>
+<I>sid</I><!-- lm: 0x11 10 -->
+<UL> Session identifier.<!-- lm: 0x2 0 -->
+</UL><I> flag
+</I><!-- lm: 0x11 10 -->
+<UL>Only the optional RAPI_REQ_CONFIRM flag can
+be used, or a zero.  Using this flag requests a RAPI_RESV_CONFIRM event
+be provided to the callback function when the reservation is complete.  This
+indicates merely a high probability that the reservation was completed,
+not that it is certain.<!-- lm: 0x2 0 -->
+</UL><I> phost</I><!-- lm: 0x11 10 -->
+<UL> Receive
+host address and port, or NULL. For this implementation, this is a pointer
+to a sockaddr_in structure. If the address is INADDR_ANY, or if<I> phost
+</I>is NULL, the default interface will be used.
+<P>
+<!-- lm: 0x2 0 -->
+</UL><I>style</I><!-- lm: 0x11 10 -->
+<UL> The reservation
+style may be RAPI_RSTYLE_WILDCARD, RAPI_RSTYLE_FIXED, or RAPI_RSTYLE_SE.
+<!-- lm: 0x2 0 -->
+</UL><I>pstyle</I><!-- lm: 0x11 10 -->
+<UL> Style extension
+(not supported).<!-- lm: 0x2 0 -->
+</UL><I> ppolicy</I><!-- lm: 0x11 10 -->
+<UL> Receiver
+policy (not supported).<!-- lm: 0x2 0 -->
+</UL><I> numFilters</I><!-- lm: 0x11 10 -->
+<UL> Number
+of filterspecs pointed to by pfilter.<!-- lm: 0x2 0 -->
+</UL><I> pfilter
+</I><!-- lm: 0x11 10 -->
+<UL>An array of filterspecs.<!-- lm: 0x2 0 -->
+</UL><I> numFlows
+</I><!-- lm: 0x11 10 -->
+<UL>The number of flowspecs pointed to by pflow.
+ If 0, the current  reservation for the session is removed, if there is
+one.<!-- lm: 0x2 0 -->
+</UL><I> pflow</I><!-- lm: 0x11 10 -->
+<UL> An array
+of flowspecs.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>Description</B>
+<P>
+The rapi_reserve() call establishes the user of the session as a receiver.
+It specifies a reservation style and a filterspec array and flowspec array.
+If there is a previous reservation still in effect, and the rapi_reserve()
+call specifies a different one, the new reservation replaces the previous
+one.  If the number of flowspecs is 0, the current reservation is deleted
+but no new reservation is made.
+<P>
+After successfully calling rapi_reserve(), the application callback function
+can be called with RAPI_RESV_ERROR or RAPI_RESV_CONFIRM events.
+<P>
+There are three reservation styles:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 5 -->Fixed filter (RAPI_RSTYLE_FIXED) specifies one or
+more senders in the array of filterspecs, and an equal number of flowspecs.
+The i-th flowspec is associated with the i-th filterspec.<!-- lm: 0x2 2 -->
+<P>
+<LI><!-- lm: 0x2 5 -->Shared explicit filter (RAPI_RSTYLE_SE) specifies
+one or more senders in the array of filterspecs, and one flowspec. All the
+senders are expected to match the flowspec.<!-- lm: 0x2 2 -->
+<P>
+<LI><!-- lm: 0x2 5 -->Wildcard filter (RAPI_RSTYLE_WILDCARD) specifies a
+single flowspec, and either no filterspec, or a single filterspec with appropriate
+wildcard(s).  If no sender is specified with a filterspec, any sender that
+matches the flowspec is a valid sender.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+Filterspecs have two formats:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 5 -->RAPI_FILTERFORM_1 allows for a wildcard specification
+of allowable senders.  This format is not supported in this implementation
+of the RSVP API.<!-- lm: 0x2 2 -->
+<P>
+<LI><!-- lm: 0x2 5 -->RAPI_FILTERFORM_BASE has a sockaddr_in structure that
+specifies a sender IP address and port.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+Flowspecs have the following formats:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 5 -->RAPI_FORMAT_IS_CL specifies a controlled load flowspec.
+<!-- lm: 0x2 2 -->
+<P>
+<LI><!-- lm: 0x2 5 -->RAPI_FORMAT_IS_GUAR specifies a guarenteed flowspec.
+<!-- lm: 0x2 0 -->
+</UL>The <A HREF="173_L2_TspecsandFlowspecs.html">flowspec data fields</A> relate
+to rapi_reserve().
+<P>
+<B>Return Values and Descriptions</B><!-- lm: 0x2 0 -->
+<P>
+RAPI_ERR_BADSID<!-- lm: 0x12 25 -->
+<UL> The session identifier is not valid,
+or the session is not open.<!-- lm: 0x2 0 -->
+</UL> RAPI_ERR_INVAL<!-- lm: 0x12 25 -->
+<UL> The
+argument is not valid.<!-- lm: 0x2 0 -->
+</UL> RAPI_ERR_OK<!-- lm: 0x12 25 -->
+<UL> The
+daemon accepted the reservation. Asynchronous callbacks may report further
+status.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>Related Calls</B><!-- lm: 0x2 5 -->
+<UL>
+<P>
+<A HREF="405_L2_rapi_sender.html">rapi_sender()</A><!-- lm: 0x2 0 -->
+</UL>
+
+<P><HR>
+
+<A HREF="403_L2_rapi_release.html">[Back: rapi_release()]</A> <BR>
+<A HREF="405_L2_rapi_sender.html">[Next: rapi_sender()]</A> 
+</BODY>
+</HTML>

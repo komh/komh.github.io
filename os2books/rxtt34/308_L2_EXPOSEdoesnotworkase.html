@@ -1,0 +1,186 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>EXPOSE does not work as expected</TITLE>
+</HEAD>
+<BODY>
+<H1>EXPOSE does not work as expected</H1><!-- entering slot 317 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<P>
+<B>Problem: </B> You find that a variable used in the EXPOSE</A> statement
+of a procedure is not visible in your routine.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+<B>Hint: </B> There's a bug in the processing of the EXPOSE statement in
+Classic REXX (<B>not</B> in <A HREF="269_L1_HintsforObjectREXX.html">Object-Oriented
+REXX</A>!):
+<P>
+If you expose a stem variable directly in the EXPOSE statement and also
+in a variable list in parentheses the order of the parameter for the EXPOSE
+statement is important. Try the example below to see what I mean.
+<P>
+To avoid this bug, you should always specify variable lists before variable
+names for EXPOSE statements
+<BR>
+E.g. use
+<PRE> 
+   test: PROCEDURE expose (myVarList1) (myVarList2) myVar3 myVar4
+</PRE>
+
+<P>
+instead of
+<PRE> 
+   test: PROCEDURE expose  myVar3 myVar4 (myVarList1) (myVarList2)
+</PRE>
+
+<P>
+
+<P>
+(see also <A HREF="226_L3_Thekeywordinstructio.html">The keyword instruction
+EXPOSE</A>)<!-- lm: 0x2 1 -->
+<P>
+
+<P>
+
+<PRE> 
+/* sample code to show the bug in the processing of the EXPOSE      */
+/* statement in Classic REXX                                        */
+
+                    /* define some variable lists for the EXPOSE    */
+                    /* statement                                    */
+  exposeList = 'test1. test2. test3.'
+  exposeList1 = 'test1. testVar test2. test3.'
+
+                    /* define some variables for the EXPOSE         */
+                    /* statement                                    */
+  testVar = 'Testing...'
+
+  test1.0 = 2
+  test1.1 = 'T1_1'
+  test1.2 = 'T1_2'
+
+  test2.0 = 2
+  test2.1 = 'T2_1'
+  test2.2 = 'T2_2'
+
+  test3.0 = 2
+  test3.1 = 'T3_1'
+  test3.2 = 'T3_2'
+
+                    /* show the values of the variables in the main */
+                    /* procedure                                    */
+  say 'Now in Main:'
+  call ShowVariables
+
+                    /* now call the various subroutines with        */
+                    /* different EXPOSE statements.                 */
+                    /* Note that all global variables should be     */
+                    /* available in all subroutines!                */
+  call TestProc1
+  call TestProc2
+  call TestProc3
+  call TestProc4
+
+return
+
+TestProc1: PROCEDURE expose (exposeList) test2. test1. testVar
+  say 'Now in TESTPROC1: PROCEDURE expose (exposeList) test2. test1. testVar'
+  call ShowVariables
+return
+
+TestProc2: PROCEDURE expose test1. (exposeList)  TestVar
+  say 'Now in TESTPROC2: PROCEDURE expose test1. (exposeList) TestVar'
+  call ShowVariables
+return
+
+TestProc3: PROCEDURE expose test2. (exposeList1)
+  say 'Now in TESTPROC3: PROCEDURE expose test2. (exposeList1) '
+  call ShowVariables
+return
+
+TestProc4: PROCEDURE expose test1. (exposeList1)
+  say 'Now in TESTPROC4: PROCEDURE expose test1. (exposeList1) test2. TestVar'
+  call ShowVariables
+return
+
+/* sample routine to show the value of all global variables         */
+ShowVariables:
+  if datatype( test1.0 ) = 'NUM' then
+  do
+    do i = 0 to test1.0
+      call CharOut, 'test1.' || i || ' is "' || test1.i || '" '
+    end
+    say
+  end
+  else
+    say 'test1.0 is "' || test1.0 || '" (= NOT DEFINED!!!)'
+
+  if datatype( test2.0 ) = 'NUM' then
+  do
+    do i = 0 to test2.0
+      call CharOut, 'test2.' || i || ' is "' || test2.i || '" '
+    end
+    say
+  end
+  else
+    say 'test2.0 is "' || test2.0 || '" (= NOT DEFINED!!!)'
+
+  if datatype( test3.0 ) = 'NUM' then
+  do
+    do i = 0 to test3.0
+      call CharOut, 'test3.' || i || ' is "' || test3.i || '" '
+    end
+    say
+  end
+  else
+    say 'test3.0 is "' || test3.0 || '" (= NOT DEFINED!!!)'
+
+  say 'TestVar is "' || testVar || '"'
+return
+</PRE>
+
+<P>
+
+<P>
+Here is the result from the code above executed under Classic REXX: 
+<PRE> 
+Now in Main:
+test1.0 is "2" test1.1 is "T1_1" test1.2 is "T1_2"
+test2.0 is "2" test2.1 is "T2_1" test2.2 is "T2_2"
+test3.0 is "2" test3.1 is "T3_1" test3.2 is "T3_2"
+TestVar is "Testing..."
+Now in TESTPROC1: PROCEDURE expose (exposeList) test2. test1. testVar
+test1.0 is "2" test1.1 is "T1_1" test1.2 is "T1_2"
+test2.0 is "2" test2.1 is "T2_1" test2.2 is "T2_2"
+test3.0 is "2" test3.1 is "T3_1" test3.2 is "T3_2"
+TestVar is "Testing..."
+Now in TESTPROC2: PROCEDURE expose test1. (exposeList) TestVar
+test1.0 is "2" test1.1 is "T1_1" test1.2 is "T1_2"
+test2.0 is "TEST2.0" (= NOT DEFINED!!!)
+test3.0 is "TEST3.0" (= NOT DEFINED!!!)
+TestVar is "Testing..."
+Now in TESTPROC3: PROCEDURE expose test2. (exposeList1)
+test1.0 is "2" test1.1 is "T1_1" test1.2 is "T1_2"
+test2.0 is "2" test2.1 is "T2_1" test2.2 is "T2_2"
+test3.0 is "TEST3.0" (= NOT DEFINED!!!)
+TestVar is "Testing..."
+Now in TESTPROC4: PROCEDURE expose test1. (exposeList1) test2. TestVar
+test1.0 is "2" test1.1 is "T1_1" test1.2 is "T1_2"
+test2.0 is "TEST2.0" (= NOT DEFINED!!!)
+test3.0 is "TEST3.0" (= NOT DEFINED!!!)
+TestVar is "TESTVAR"
+</PRE>
+
+<P>
+  
+
+<P><HR>
+
+<A HREF="307_L2_SYS0317Thesystemcann.html">[Back: SYS0317: The system cannot find message 32799 in message file OSO001.MSG]</A> <BR>
+<A HREF="309_L1_REXXUTILfunctions.html">[Next: REXXUTIL functions]</A> 
+</BODY>
+</HTML>

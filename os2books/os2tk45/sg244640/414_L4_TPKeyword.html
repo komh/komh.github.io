@@ -1,0 +1,222 @@
+<HTML>
+<HEAD>
+<TITLE>TP Keyword</TITLE>
+</HEAD>
+<BODY>
+<H1>TP Keyword</H1><!-- entering slot 593 -->
+<P>
+The TP parameter is a required keyword parameter. If TP is specified more
+than once for a single tracepoint definition, the tracepoint is discarded.
+TP has three mutually exclusive definitions which can be coded as:
+<PRE>
+        TP=@STATIC,
+
+</PRE>
+
+<P>
+where:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+STATIC<!-- lm: 0x2 5 -->
+<UL>
+<P>
+defines this tracepoint entry to be used only for creating a trace format
+statement for the TFF file.  No tracepoint definition is created for the
+TDF, and the only other TRACE parameters that will be used are<B> DESC</B>,
+<B>MINOR</B> and<B> FMT</B>. This is used to create trace formatting information
+for static tracepoints (or dynamic tracepoints generated directly by the
+<A><!-- external link: 1D FE FF 48 -->DTRACE command</A>). If the TSF contains
+only @STATIC directives, no TDF files are created and MODNAME is then not
+required.<!-- lm: 0x2 1 -->
+</UL> 
+<PRE>        TP=@filename,linenum,
+
+</PRE>
+
+<P>
+where:<!-- lm: 0x2 1 -->
+<P>
+filename<!-- lm: 0x2 5 -->
+<UL>
+<P>
+is an ASCII string specifying the name (including extension) of a source
+filename used in creating the module. The source filename is stored in the
+debug information contained in the executable module, so debug information
+must exist to use this parameter. The filename is not case sensitive.
+<P>
+<B>Note: </B>
+<P>
+path information may be specfied with<B> filename</B> when also specified
+at compilation time.<!-- lm: 0x2 5 --><!-- lm: 0x2 1 -->
+</UL> linenum<!-- lm: 0x2 5 -->
+<UL>
+<P>
+is a decimal number specifying the line number in the given source file
+name to place the tracepoint.<!-- lm: 0x2 1 -->
+</UL> 
+<P>
+<B>Note: </B> Debug information must exist to use this option. The statement
+at the given source linenum may have been rearranged during compiler optimization,
+so the developer must use this with caution.  If the linenum is not found
+in the debug information, the tracepoint is applied at the next linenum
+defined in the debug information and a warning message is issued to the
+user.
+<P>
+An example to apply a tracepoint to line 35 of file stubfile.c is:
+<PRE>    TRACE   MINOR=0x700A,              /* puts tracepoint on code at line */            TP=@stubfile.c,35,.....    /*  35 of source file stubfile.c   */
+</PRE>
+
+<P>
+Use of line number refernece affords great flexibility is tracepoint location,
+however the user will need to modify the TSF file every time referenced
+source files are updated. To facilitate this the <A HREF="441_L2_UsingtheMAKETSFUtili.html">MAKETSF
+</A>utility may be used to generate line number references automaticaly
+from TSF statements embeeded as comments in C or Assembler source.
+<PRE>
+        TP=.name[{+|-}offs][,RETEP[=retopt[+retopt...]]],
+
+</PRE>
+
+<P>
+where:<!-- lm: 0x2 1 -->
+<P>
+name<!-- lm: 0x2 5 -->
+<UL>
+<P>
+is a public label or an entry point name of a procedure to be traced. The
+"." preceding<B> name</B> is required.<B> Name</B> must be found in the
+debug information in the module or<B> name</B> must be a public symbol as
+found in the MAP file. If debug information is used, the address of this
+tracepoint will be immediately following the prologue of the procedure.
+If MAP information is used, this address points to the opcode at the given
+label unless the<B> /PREINV</B> command line switch is specified. In this
+case TRCUST attempts to locate the instruction following the
+<PRE>      MOV EBP,ESP
+
+or
+
+      MOV BP,SP
+</PRE>
+instructions as with done when debug information is used. Use of<B> /PREINV
+</B>allows parameter and local variable references to be made relative to
+<B>EBP</B> in non-optimised code.
+<P>
+See <A HREF="402_L4_SourceLevelSymbolicS.html">Source Level Symbolic Support
+</A>and <A HREF="403_L4_MAPFileSupport.html">MAP File Support</A> for information
+on using symbolic references.<!-- lm: 0x2 1 -->
+</UL> offs<!-- lm: 0x2 5 -->
+<UL> (optional)
+
+<P>
+is a decimal (specified as nnnnnnnn)  or hex (specified as 0xnnnnnnnn) offset
+from the entry point address.<!-- lm: 0x2 1 -->
+</UL> RETEP<!-- lm: 0x2 5 -->
+<UL> (optional)
+
+<P>
+specifies that the tracepoint will be<!-- entering slot 594 --> inserted
+at the<B> return</B> address corresponding to this entry point.
+<P>
+Default criteria for specifying the return point are specified by the<B> /RM
+</B>RETEP mode command line option. TRCUST will search back from the end
+of the routine for the instruction sequence matching the RETEP mode. The
+length of the search is governed by the<B> /RS</B> command line option.
+The default RETEP mode may be overridden per tracepoint by coding one or
+more optional<B> retopt</B> keywords, separated by a<B> +</B> sign with
+RETEP. The following keywords are allowed:<!-- lm: 0x2 5 -->
+<P>
+CV<!-- lm: 0x2 20 -->
+<UL> use CodeView information.<!-- lm: 0x2 5 -->
+</UL> LRET
+<!-- lm: 0x2 20 -->
+<UL>search for a LEAVE+RET or POP EBP + RET instruction
+sequences near the end of the routine.<!-- lm: 0x2 5 -->
+</UL> RET<!-- lm: 0x2 20 -->
+<UL> search
+for RET instruction sequences near the end of the routine.<!-- lm: 0x2 5 -->
+</UL> JMP
+<!-- lm: 0x2 20 -->
+<UL>search for JMP instruction sequences near the end
+of the routine.
+<P>
+<B>Note: </B> to reduce the hazard of generting a tracepoint on a non-instruction
+boundary, JMP instructions with 0xFF opcodes are not selected.<!-- lm: 0x2 20 --><!-- lm: 0x2 5 -->
+</UL> LEAVE
+<!-- lm: 0x2 20 -->
+<UL>search for a LEAVE instruction near the end of the
+routine.<!-- lm: 0x2 5 --> 
+</UL><B> Note: </B>
+<P>
+If more than one option is specified the RETEP uses the following order
+of precidence: CV, LRET, RET, LEAVE, JMP.
+<P>
+When the RETEP is used, the<B> name</B> must be a valid entry point to a
+procedure.
+<P>
+The RETEP option depends upon the manner in which a C compiler generates
+its code. Therefore this option may not work will some of the newer compilers
+or with code optimisation.<!-- lm: 0x2 5 -->
+<P>
+<B>Warning:</B>
+<P>
+Use of RETEP can run the risk of having a tracepoint not generated on an
+insruction boundary. The result of which would be unpredictable and probably
+cause the traced program to trap. This risk is grealty reduced by allowing
+the RETEP mode to default to<B> /RM2</B>. If the user chooses to widen the
+RETEP criteria then appropriate validation of the resulting tracepoints
+must be made.
+<BR>
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Note: </B> For ASM functions to accomplish tracing, a label must be made
+public to have a tracepoint applied.  Therefore, to accomplish "POST" tracing,
+a label must be made public at the return statement.
+<P>
+Partial examples of Pre/Post tracing of DosOpen follows:
+<PRE>      TRACE   MINOR=0x0001,              TP=.DosOpen,.....            /* Pre-invocation tracing */
+
+      TRACE   MINOR=0x8001,
+              TP=.DosOpen,RETEP,.....      /* Post-invocation tracing */
+</PRE>
+
+<P>
+<B>Note: </B> It is not possible to set dynamic tracepoints on the following
+machine instructions:<!-- lm: 0x2 1 -->
+<P>
+0x9C<!-- lm: 0x2 7 -->
+<UL> PUSHF<!-- lm: 0x2 1 -->
+</UL>0xCC<!-- lm: 0x2 7 -->
+<UL> INT 3<!-- lm: 0x2 1 -->
+</UL>0xCD<!-- lm: 0x2 7 -->
+<UL> INT n<!-- lm: 0x2 1 -->
+</UL>0xCE<!-- lm: 0x2 7 -->
+<UL> INTO<!-- lm: 0x2 1 -->
+</UL>0x62<!-- lm: 0x2 7 -->
+<UL> BOUND<!-- lm: 0x2 1 -->
+</UL>0x69<!-- lm: 0x2 7 -->
+<UL> IMUL<!-- lm: 0x2 1 -->
+</UL>0x6B<!-- lm: 0x2 7 -->
+<UL> IMUL<!-- lm: 0x2 1 -->
+</UL>0xF6<!-- lm: 0x2 7 -->
+<UL> DIV, IDIV, MUL, IMUL<!-- lm: 0x2 1 -->
+</UL>0xF7<!-- lm: 0x2 7 -->
+<UL> DIV, IDIV, MUL, IMUL<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+
+<P>
+TRCUST gives an error for these opcodes and the tracepoint is rejected.
+
+<P>
+<B>Note: </B> No more than one tracepoint may be applied to a given address.
+<!-- lm: 0x2 1 -->
+<P>
+
+
+<P><HR>
+
+<A HREF="413_L4_MINORKeyword.html">[Back: MINOR Keyword]</A> <BR>
+<A HREF="415_L4_OPCODEKeyword.html">[Next: OPCODE Keyword]</A> 
+</BODY>
+</HTML>

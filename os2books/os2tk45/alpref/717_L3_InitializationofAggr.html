@@ -1,0 +1,114 @@
+<HTML>
+<HEAD>
+<TITLE>Initialization of Aggregate Types</TITLE>
+</HEAD>
+<BODY>
+<H1>Initialization of Aggregate Types</H1><!-- entering slot 721 -->
+<P>
+An aggregate data item is a collection of one or more sub-items of possibly
+dissimilar types that are allocated, initialized, and treated as a single
+unit.  The sub-items usually have unique names, and their positions relative
+to other sub-items is significant.  The assembler provides the ability to
+define aggregate types through use of the <A HREF="790_L3_RECORDDefineaRecordT.html">RECORD</A>,
+<A HREF="791_L3_STRUCTSTRUCDefineaSt.html">STRUCT</A>, and <A HREF="793_L3_UNIONDefineaUnionTyp.html">UNION
+</A>directives.
+<P>
+Initialization of an aggregate data item requires a programming notation
+that isolates the entire aggregate from surroundings constructs, and denotes
+the position of each sub-item within the aggregate.  The syntax for this
+construct is as follows:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+<I>Aggregate-Initializer</I><I>:</I><!-- lm: 0x2 11 -->
+<UL>
+<BR>
+<B><LI></B><LI><I>Initializer-List</I>]<B> }</B><!-- lm: 0x2 11 -->
+<BR>
+<B>&lt;</B> [<I>Initializer-List</I>]<B> &gt;</B><!-- lm: 0x2 11 -->
+<BR>
+<!-- lm: 0x2 6 --><!-- lm: 0x2 6 -->
+</UL><I>Initializer-List</I><I>:</I><!-- lm: 0x2 11 -->
+<UL><I> Initializer-Item
+</I><!-- lm: 0x2 11 -->
+<BR>
+<I>Initializer-List</I>, [<I>LineBreak</I>]<I> Initializer-Item</I><!-- lm: 0x2 11 -->
+<BR>
+<!-- lm: 0x2 6 --><!-- lm: 0x2 6 -->
+</UL><I>Initializer-Item</I><I>:</I><!-- lm: 0x2 11 -->
+<UL> [<I>Scalar-Initializer</I>]
+<!-- lm: 0x2 11 -->
+<BR>
+<LI><I>Aggregate-Initializer</I>]<!-- lm: 0x2 11 -->
+<BR>
+<LI><I>Array-Initializer</I>]<!-- lm: 0x2 11 -->
+<BR>
+<!-- lm: 0x2 6 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+The syntax requires that an<I> Aggregate-Initializer</I> be enclosed in
+an outer set of braces or angle brackets, but the<I> Initializer-List</I> or
+individual comma-separated<I> Initializer-Item</I>s may be left unspecified,
+in which case a default initializer value is used.  Commas are used to denote
+the position of each sub-item within the entire aggregate, and nested initializers
+are allowed to accomodate imbedded occurrences of other aggregates (or vector
+types, which share the same initializer syntax).
+<P>
+When initializing an instance of a union, the assembler only allows an initializer
+to be specified for the first field defined in the union type.<!-- lm: 0x2 1 -->
+<P>
+<B>Examples</B><!-- lm: 0x2 11 -->
+<UL>
+<P>
+Here are some examples of aggregate initialization:
+<PRE>YES   equ  1NO    equ  0
+MAYBE equ -1
+
+BOOL_T typedef sbyte
+
+IDEAS_T struct
+  sanctum  BOOL_T ?          ; For scalar data, use the ? operator
+  peace    BOOL_T ?          ;   to request an uninitialized value.
+  pilzner  BOOL_T ?
+IDEAS_T ends
+
+PROBLEM_T struct
+   work   BOOL_T  YES        ; Establish default initial values that
+   car    BOOL_T  NO         ;   can be inherited when an instance of
+   house  BOOL_T  MAYBE      ;   the structure is allocated
+PROBLEM_T ends
+
+SOLUTION_T struct
+    fixing PROBLEM_T {}      ; Outermost set of braces required even
+           IDEAS_T   {}      ;  with unspecified (default) initializers
+SOLUTION_T ends
+
+DATA segment
+  ProblemWith PROBLEM_T  { NO, , MAYBE }         ; First-level structure
+  ThinkOf     SOLUTION_T { { YES, YES, YES },    ; Intializer syntax for
+                           {  NO,  NO,  NO } }   ;   imbedded structures
+DATA ends
+
+CODE   segment
+       assume ds:DATA
+       mov al, NO
+       or  al, ProblemWith.work
+       or  al, ProblemWith.car
+       or  al, ProblemWith.house
+       jz  exit
+       mov ThinkOf.fixing.work, NO     ; References to named fields in
+       mov ThinkOf.fixing.car, NO      ;   imbedded structures must be
+       mov ThinkOf.fixing.house, NO    ;   fully qualified.
+exit:  mov ThinkOf.pilzner, YES        ; Reference to "promoted" field
+       ret
+CODE   ends
+end
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="716_L3_InitializationofScal.html">[Back: Initialization of Scalar Types]</A> <BR>
+<A HREF="718_L3_InitializationofVect.html">[Next: Initialization of Vector Types]</A> 
+</BODY>
+</HTML>

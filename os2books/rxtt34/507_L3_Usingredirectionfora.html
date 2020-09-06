@@ -1,0 +1,222 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Using redirection for a simple process controller</TITLE>
+</HEAD>
+<BODY>
+<H1>Using redirection for a simple process controller</H1><!-- entering slot 526 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* This is a simple process controller in REXX.                       */
+/* It starts one or more programs and restarts them if they end.      */
+/*                                                                    */
+/* It uses the redirection of the handle 3 into a file as semaphore   */
+/* to check if the program is still running.                          */
+/* (Hint: You can use all handles from 1 to 9 for this purpose;       */
+/*        handle 0 is the handle for STDIN)                           */
+/*                                                                    */
+/* Note also that this method does _not_ work for all programs, for   */
+/* example VIEW.EXE in OS/2 WARP 4!                                   */
+/*                                                                    */
+/*                                                                    */
+/* (c) 1996 <A HREF="002_L1_GeneralForeword.html">Bernd Schemmer</A>, Germany, EMail: Bernd.Schemmer@gmx.de     */
+/*                                                                    */
+
+                    /* get the name of this program                   */
+  parse source . . thisProgram
+
+                    /* install an error handler for CTRL-BREAK        */
+  signal on halt
+
+  call log "Initializing ..."
+
+                    /* load the neccessary REXXUTIL functions         */
+  call rxFuncAdd "SysLoadFuncs", "REXXUTIL", "SysLoadFuncs"
+  call SysLoadFuncs
+
+                    /* stem with the programs to start                */
+  programsToStart.0 = 0
+  i = programsToStart.0
+
+                    /* The entry for VIEW.EXE does _not_ work in      */
+                    /* OS/2 WARP 4!!!                                 */
+  i=i+1;
+  programsToStart.i.Name =      "VIEW.EXE"      /* program name       */
+  programsToStart.i.Parameter = "CMDREF.INF"    /* program parameter  */
+  programsToStart.i.SemFile =   "$$VIEW$$"      /* "semaphore" file   */
+
+                    /* Note:                                          */
+                    /* Use special code to get the names for the      */
+                    /* semaphore files if you want to run this        */
+                    /* program more than ones at the same time!!!     */
+                    /* (e.g. use the routine <A HREF="468_L3_Getanameforatemporar.html">GetTempFile</A> from RXT&amp;T)  */
+
+  i=i+1;
+  programsToStart.i.Name =      "E.EXE"
+  programsToStart.i.Parameter = ""
+  programsToStart.i.SemFile =   "$$E$$"
+
+  i=i+1;
+  programsToStart.i.Name =      "ICONEDIT.EXE"
+  programsToStart.i.Parameter = ""
+  programsToStart.i.SemFile =   "$$ICON$$"
+
+  programsToStart.0 = i
+
+                    /* get the directory for the "semaphore" files    */
+  tempDir = value( "TEMP",, "OS2ENVIRONMENT" )
+  if tempDir = "" then
+    tempDir = value( "TMP",, "OS2ENVIRONMENT" )
+  if tempDir = "" then
+    tempDir = ".\"
+
+  if right( tempDir,1 ) &lt;&gt; "\" then
+    tempDir = tempDir || "\"
+
+  call log "Starting the programs ..."
+
+                    /* marker for the initial round                   */
+  firstRound = 1
+
+                    /* no. of processes started in the initial round  */
+  programsStarted = 0
+
+
+  do forever
+
+    do i = 1 to programsToStart.0
+      curProgram = programsToStart.i.name
+      curParams = programsToStart.i.Parameter
+      curSemFile = tempDir || programsToStart.i.SemFile
+
+                    /* ignore empty entries                           */
+      if curProgram = "" then
+        iterate
+
+                    /* check, if we can write to the semaphore file   */
+      if stream( curSemFile, "c", "OPEN WRITE" ) = "READY:" then
+      do
+                    /* we can write to the semaphore file -&gt;          */
+                    /* program seems not to be running                */
+        call stream curSemFile, "c", "CLOSE"
+
+        if firstRound = 0 then
+        do
+                    /* program ended for misc. reason -&gt; restart it   */
+          call log "Program """ || curProgram || """ ended. "
+          call log "Restarting the program: " || curProgram
+          call log "Parameter are: " || curParams
+        end /* if firstRound = 0 then */
+        else
+        do
+                    /* program not yet started -&gt; start it            */
+          call log "Starting the program: " || curProgram
+          call log "Parameter are: " || curParams
+        end /* else */
+
+                    /* start/restart the program                      */
+                    /* (redirect handle 3 into the "semaphore" file)  */
+        "@start " curProgram curParams "3&gt;" || curSemFile
+
+        if stream( curSemFile, "c", "OPEN WRITE" ) = "READY:" then
+        do
+                    /* error starting the program                     */
+          call stream curSemFile, "c", "CLOSE"
+
+          call log "Error starting """ || curProgram || """"
+          call log "Now ignoring the program " || curProgram
+          programsToStart.i.name = ""
+
+        end /* if stream( curSemFile, "c", "OPEN WRITE" ) = "READY:" then */
+        else
+          if firstRound = 1 then
+            programsStarted = programsStarted +1
+
+      end /* if stream( curSemFile, "c", "OPEN WRITE" ) = "READY:" then */
+      else
+      do
+        if firstRound &lt;&gt; 0 then
+        do
+                    /* cannot use the semaphore file                  */
+          call log "Error using the semaphore file " || curSemFile
+          call log "Now ignoring the program " || curProgram
+          programsToStart.i.name = ""
+
+        end /* if firstRound &lt;&gt; 0 then */
+
+      end /* else */
+
+    end /* do i = 1 to programsToStart.0  */
+
+    if firstRound = 1 then
+      if programsStarted = 0 then
+      do
+        call log "Could not start any of the programs!"
+        call log "Program ends."
+        leave
+      end /* if programsStarted = 0 then */
+      else
+        call log programsStarted || " program(s) started."
+
+    firstRound = 0
+
+                    /* wait 2 seconds before we check again           */
+    call SysSleep 2
+
+  end /* do forever */
+
+exit
+
+/* ------------------------------------------------------------------ */
+log: PROCEDURE expose thisProgram
+  parse arg message
+
+  say "[" || fileSpec( "N", thisProgram ) || " - " || ,
+      date() time() || "]" message
+RETURN
+
+/* ------------------------------------------------------------------ */
+/* error handler for CTRL-BREAK                                       */
+halt:
+
+  call log "CTRL-BREAK received. Doing housekeeping ..."
+  call log "Press any key after closing all programs started from " || ,
+       thisprogram || " ..."
+  "@PAUSE &gt;NUL"
+
+  call log "Deleting the semaphore files ... "
+  do i = 1 to programsToStart.0
+    curSemFile = tempDir || programsToStart.i.SemFile
+    curProgram = programsToStart.i.name
+
+    if curProgram &lt;&gt; "" then
+    do
+      call log "Deleting " || curSemFile
+      "@<!-- entering slot 527 -->del " curSemFile "2&gt;NUL 1&gt;NUL"
+      if rc &lt;&gt; 0 then
+      do
+        call log "Error " || rc || " deleting " || curSemFile
+        call log "(Maybe " || curProgram || " is still running.)"
+      end /* if rc &lt;&gt; 0 then */
+    end /* if curProgram &lt;&gt; "" then */
+
+  end /* do i = 1 to programsToStart.0 */
+
+  call log "Program ended."
+exit 0
+/* ------------------------------------------------------------------ */
+
+</PRE>
+
+<P>
+
+
+<P><HR>
+
+<A HREF="506_L3_Navigateanotherprogr.html">[Back: Navigate another program]</A> <BR>
+<A HREF="508_L2_Variablehandling.html">[Next: Variable handling]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,90 @@
+<HTML>
+<HEAD>
+<TITLE>Offset resolution</TITLE>
+</HEAD>
+<BODY>
+<H1>Offset resolution</H1><!-- entering slot 56 -->
+<P>
+To obtain a pointer to a procedure using<B> offset</B> resolution, the C/C++
+usage bindings provide the<B> SOM_Resolve</B> and<B> SOM_ResolveNoCheck
+</B>macros. The usage bindings themselves use the first of these,<B> SOM_Resolve</B>,
+for offset-resolution method calls. The difference in the two macros is
+that the<B> SOM_Resolve</B> macro performs consistency checking on its arguments,
+but the macro<B> SOM_ResolveNoCheck</B>, which is faster, does not. Both
+macros require the same arguments:
+<P>
+<B>SOM_Resolve</B>(&lt;<I>receiver</I>&gt;, &lt;<I>className</I>&gt;, &lt;<I>methodName</I>&gt;)
+<B>SOM_ResolveNoCheck</B>(&lt;<I>receiver</I>&gt;, &lt;<I>className</I>&gt;,
+&lt;<I>methodName</I>&gt;)
+<P>
+where the arguments are as follows:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<I>receiver</I><!-- lm: 0x2 19 -->
+<UL> The object to which the method will
+apply. It should be specified as an expression without side effects.<!-- lm: 0x2 1 -->
+</UL><I> className
+</I><!-- lm: 0x2 19 -->
+<UL>The name of the class that introduces the method.
+<!-- lm: 0x2 1 -->
+</UL><I>methodName</I><!-- lm: 0x2 19 -->
+<UL> The name
+of the desired method.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+These two names (<I>className</I> and<I> methodName</I>) must be given as
+tokens, rather than strings or expressions. (For example, as Animal rather
+than "Animal".) If the symbol<B> SOM_TestOn</B> is defined and the symbol
+<B>SOM_NoTest</B> is not defined in the current compilation unit, then<B> SOM_Resolve
+</B>verifies that<I> receiver</I> is an instance of<I> className</I> or
+some class derived from<I> className</I>. If this test fails, an error message
+is output and execution is terminated.
+<P>
+The<B> SOM_Resolve</B> and<B> SOM_ResolveNoCheck</B>  macros use the procedure
+<B>somResolve</B> to obtain the entry-point address of the desired method
+procedure (or raise a fatal error if<I> methodName</I> is not introduced
+by<I> className)</I>. This result can be directly applied to the method
+arguments, or stored in a variable of generic procedure type (for example,
+<B>somMethodPtr</B>) and retained for later method use. This second possibility
+would result in a loss of information, however, for the reasons now given.
+
+<P>
+The<B> SOM_Resolve</B> or<B> SOM_ResolveNoCheck</B> macros are especially
+useful because they cast the method procedure they obtain to the right type
+to allow the C or C++ compiler to call  this procedure with<I> system linkage
+</I>and with the appropriate arguments. This is why the result of<B> SOM_Resolve
+</B>is immediately useful for calling the method procedure, and why storing
+the result of<B> SOM_Resolve</B> in a variable of some "generic" procedure
+type results in a loss of information. The correct type information can
+be regained, however, because the type used by<B> SOM_Resolve</B> for casting
+the result of<B> somResolve</B>  is available from C/C++ usage bindings
+using the typedef name<B> somTD_</B>&lt;<I>className</I>&gt;_&lt;<I>methodName</I>&gt;.
+This type name describes a pointer to a method procedure for<I> methodName
+</I>introduced by class<I> className</I>. If the final argument of the method
+is a<B> va_list</B>, then the method procedure returned by<B> SOM_Resolve
+</B>or<B> SOM_ResolveNoCheck</B> must be called with a<B> va_list</B>  argument,
+and not a variable number of arguments.
+<P>
+Below is a C example of using<B> SOM_Resolve</B> to obtain a method procedure
+pointer for method "sayHello", introduced by class "Hello", and using it
+to invoke the method on "obj." (Assume that the only argument required by
+the "sayHello" method is the<B> Environment</B> pointer.)
+<PRE>   somMethodProc *p;   SOMObject obj = HelloNew();
+   p = SOM_Resolve(obj, Hello, sayHello);
+   ((somTD_Hello_sayHello)p) (obj, somGetGlobalEnvironment());
+</PRE>
+
+<P>
+<B>SOM_Resolve</B> and<B> SOM_ResolveNoCheck</B> can only be used to obtain
+method procedures for<I> static methods</I>  (methods that have been declared
+in an IDL specification for a class) and not methods that are added to a
+class at run time. See the<I> System Object Model Programming Reference
+</I>for more information and examples on<B> SOM_Resolve</B> and<B> SOM_ResolveNoCheck</B>.
+
+
+<P><HR>
+
+<A HREF="039_L4_Obtainingamethodspro.html">[Back: Obtaining a method's procedure pointer]</A> <BR>
+<A HREF="041_L5_Namelookupmethodreso.html">[Next: Name-lookup method resolution]</A> 
+</BODY>
+</HTML>

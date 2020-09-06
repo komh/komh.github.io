@@ -1,0 +1,267 @@
+<HTML>
+<HEAD>
+<TITLE>NetUserSetLogonAsn or Net32UserSetLogonAsn</TITLE>
+</HEAD>
+<BODY>
+<H1>NetUserSetLogonAsn or Net32UserSetLogonAsn</H1><!-- entering slot 597 -->NetUserSetLogonAsn or Net32UserSetLogonAsn
+<P>
+The NetUserSetLogonAsn API sets logon assignments for a user.
+<P>
+To add a single logon assignment to an existing user logon, the application
+must:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Call NetUserGetLogonAsn.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Append a<I> logon_asn_list</I> data structure
+(with the new logon assignment) to the buffer returned from NetUserGetLogonAsn.
+(The buffer must be large enough to hold another<I> logon_asn_list</I>.
+If it is not large enough, increase the value of<I> usBuflen</I> and reallocate
+the buffer.)<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Increase the<I> lai1_count</I> field by 1.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Call NetUserSetLogonAsn.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+To delete all of a user's logon assignments,<I> buf</I> must point to a
+<I>logon_asn_info_1</I> structure with its<I> lai1_count</I> element set
+to 0.<!-- lm: 0x2 1 -->
+<P>
+Restrictions
+<P>
+<!-- lm: 0x2 10 -->
+<UL><B>LAN Server and OS/2 Warp Server Only</B>
+<P>
+Domain control database subdirectories and files must exist for the user
+before NetUserSetLogonAsn is called. You can use the NetUserDCDBInit API
+to create the subdirectories and files.
+<P>
+This API can be called from DLS and OS/2 workstations, but DLS workstations
+can issue this call only to a remote LAN Server workstation.
+<P>
+For NetUserSetLogonAsn to run successfully, one of the following must be
+true:<!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 -->The calling process has Administrator authority.
+<!-- lm: 0x2 12 -->
+<P>
+<LI><!-- lm: 0x2 15 -->The calling process has accounts operator privilege.
+<!-- lm: 0x2 12 -->
+<P>
+<LI><!-- lm: 0x2 15 -->The calling process has User authority and is setting
+information about the logged-on user's logon assignments.<!-- lm: 0x2 10 -->
+</UL>
+<P>
+The<I> lal_type</I> field of the<I> logon_asn_list</I> data structure is
+ignored for this API.
+<P>
+<B>Directory and Security Server Only</B>
+<P>
+Authority is based on ACLs rather than privilege level.
+<P>
+DSS also supports level 200 which allows setting logon assignments for multiple
+resource domains at the same time.<!-- lm: 0x2 1 -->
+</UL> Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>#include &lt;netcons.h&gt;#include &lt;dcdb.h&gt;
+#include &lt;lsdceerr.h&gt;    /* DSS only */
+ 
+NetUserSetLogonAsn(<I>pszTarget</I>, <I>pszUserID</I>, <I>usLevel</I>,
+                     <I>buf</I>, <I>usBuflen</I>);                 /* 16 bit */
+ 
+Net32UserSetLogonAsn(<I>pszTarget</I>, <I>pszUserID</I>, <I>ulLevel</I>,
+                     <I>buf</I>, <I>ulBuflen</I>, <I>pStatusbuf</I>);    /* 32 bit */
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Parameters
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+See <A HREF="021_L2_CommonParameterDefin.html">Common Parameter Definitions
+</A>for descriptions of parameters not defined here.<!-- lm: 0x2 10 -->
+<P>
+<I>pszServername</I><!-- lm: 0x12 20 -->
+<UL> (const unsigned char LSFAR
+*) points to an ASCIIZ string containing the name of the domain controller
+of a domain in which<I> pszUserID</I> is defined.  It can be null only if
+the calling application is running on a domain controller.<!-- lm: 0x2 10 -->
+</UL><I> sLevel
+</I>or<I> ulLevel</I><!-- lm: 0x12 20 -->
+<UL> (16-bit short or 32-bit unsigned
+long) must be 1 or 200, which specifies the data structure described in
+<A HREF="433_L2_LogonAssignmentDataS.html">Logon Assignment Data Structure</A>.
+<!-- lm: 0x2 10 -->
+</UL><!-- lm: 0x2 1 -->
+</UL>Return Codes
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+The following table lists the return codes most significant to this API.
+ (See <A HREF="462_L1_APIReturnCodes.html">API Return Codes</A> for a complete
+list of return codes.) ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³SYMBOLICCONSTANT
+    ³VALUE³MEANING                ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_FILE_NOT_FOUND     ³ 2   ³ The file was not found.         ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_TOO_MANY_OPEN_FILES  ³ 4   ³ The maximum number of open files was
+ ³
+<BR>
+³               ³    ³<!-- entering slot 598 --> exceeded.             
+ ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_ACCESS_DENIED     ³ 5   ³ Administrator privilege is required.  ³
+
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_NOT_ENOUGH_MEMORY   ³ 8   ³ Sufficient memory is not available.
+  ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_INVALID_DATA      ³ 13   ³ The specified data is not valid.    ³
+
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_ALREADY_ASSIGNED    ³ 85   ³ Duplicate redirection.         ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ ERROR_INVALID_LEVEL     ³ 124  ³ The ul/usLevel parameter is not valid.
+³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_NetNotStarted      ³ 2102  ³ The redirector NETWKSTA.200 has not
+  ³
+<BR>
+³               ³    ³ been started.              ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_BufTooSmall       ³ 2123  ³ The buffer is too small for fixed-   ³
+
+<BR>
+³               ³    ³ length data.              ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_InvalidAPI       ³ 2142  ³ The requested API is not supported on
+ ³
+<BR>
+³               ³    ³ the remote server.           ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_UserNotFound      ³ 2221  ³ The user name cannot be found.     ³
+
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_AliasNotFound      ³ 2783  ³ The alias does not exist.        ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_DCDBError        ³ 2786  ³ A domain control database file is    ³
+<BR>
+³               ³    ³ unreadable or cannot be accessed at   ³
+<BR>
+³               ³    ³ this time.               ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_NotPrimaryDCDB     ³ 2795  ³ An attempt was made to access a domain
+³
+<BR>
+³               ³    ³ control database file on a machine   ³
+<BR>
+³               ³    ³ that is not the domain controller.   ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_DCEError        ³ 7500  ³ DCE error status returned.       ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_DCEErrorLogged     ³ 7501  ³ DCE error status has been logged.  
+³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_AuthTicketExpired    ³ 7511  ³ The user's DCE authorization ticket
+  ³
+<BR>
+³               ³    ³ has expired.              ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_RegistryNotFound    ³ 7512  ³ Unable to contact the DCE security
+  ³
+<BR>
+³               ³    ³ registry.                ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_UserNotInResdom     ³ 7513  ³ The user is not a member of the speci-
+³
+<BR>
+³               ³    ³ fied resource domain.          ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ NERR_AliasNotInResDom    ³ 7522  ³ The alias is not defined to the speci-
+³
+<BR>
+³               ³    ³ fied resource domain.          ³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+
+<P>
+Other codes could be returned from the following functions:<!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 -->DosLoadModule<!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 -->DosGetProcAddr<!-- lm: 0x2 10 -->
+</UL><!-- lm: 0x2 1 -->
+</UL>Related Information
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+For information about:<!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 -->Initializing the domain control database for a particular
+user, see <A HREF="437_L2_NetUserDCDBInitorNet.html">User - NetUserDCDBInit</A>.
+<!-- lm: 0x2 12 -->
+<P>
+<LI><!-- lm: 0x2 15 -->Retrieving a particular user's logon assignments,
+see <A HREF="443_L2_NetUserGetLogonAsnor.html">User - NetUserGetLogonAsn</A>.
+<!-- lm: 0x2 12 -->
+<P>
+<LI><!-- lm: 0x2 15 -->Changing information for a particular alias definition,
+see <A HREF="094_L2_NetAliasSetInfoorNet.html">Alias - NetAliasSetInfo</A>.
+<!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="450_L3_RelatedInformation.html">[Back: Related Information]</A> <BR>
+<A HREF="452_L2_NetUserValidate2orNe.html">[Next: NetUserValidate2 or Net32UserValidate2]</A> 
+</BODY>
+</HTML>

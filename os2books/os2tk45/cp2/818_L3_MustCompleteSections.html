@@ -1,0 +1,71 @@
+<HTML>
+<HEAD>
+<TITLE>Must-Complete Sections</TITLE>
+</HEAD>
+<BODY>
+<H1>Must-Complete Sections</H1><!-- entering slot 836 -->
+<P>
+A thread can defer the handling of<I> asynchronous</I> exceptions by creating
+a<I> must-complete section</I>. A must-complete section is a section of
+code that cannot be safely interrupted; it must be allowed to complete its
+execution even if an asynchronous exception occurs while within its boundaries.
+For example, a must-complete section can be used:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->When modifying shared-memory data structures that
+cannot be modified through an atomic operation<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Across database update operations<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->During a remote communications operation.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Creating a must-complete section ensures that the execution of critical
+instructions will be completed and that resources will be cleaned up before
+the thread ends. When used in conjunction with a<I> mutual exclusion (mutex)
+semaphore</I>, a must-complete section also ensures that a thread will have
+exclusive access to a resource.
+<P>
+The boundaries of the must-complete section are defined by<A><!-- external link: 1D 7F C3 3C --> DosEnterMustComplete
+</A>and<A><!-- external link: 1D 87 C3 3D --> DosExitMustComplete</A> requests.
+While a thread is executing instructions in a must-complete section, the
+system will hold<I> asynchronous exceptions</I>, which include signal exceptions
+and asynchronous process terminations.
+<P>
+The system increments a counter each time<A><!-- external link: 1D 7F C3 3C --> DosEnterMustComplete
+</A>is called, and decrements the counter when<A><!-- external link: 1D 87 C3 3D --> DosExitMustComplete
+</A>is called.  Any asynchronous exceptions that have been held are dispatched
+when the counter reaches 0.  A count greater than 1 indicates the degree
+of nesting of the must-complete section. If<A><!-- external link: 1D 87 C3 3D --> DosExitMustComplete
+</A>is called when the count is already 0, ERROR_ALREADY_RESET is returned.
+
+<P>
+The handling of<I> synchronous</I> system exceptions and user-defined exceptions
+is not deferred by the system. To defer the handling of these exceptions,
+a procedure typically registers an exception handler (by calling<A><!-- external link: 1D E6 C3 FC --> DosSetExceptionHandler</A>)
+and initializes a local<I> Raise Exception</I> flag to 0 before entering
+the must-complete section. The flag is set to 1, and the information is
+stored, if the exception handler receives a synchronous exception that it
+wants to reraise later.
+<P>
+If the value of the<I> raise exception</I> flag is 0 after the thread exits
+from the must-complete section, then no exceptions occurred, and the thread
+continues its normal operation.
+<P>
+If the value of the flag is 1 after the must-complete section has been completed,
+then an exception occurred, and the thread must call<A><!-- external link: 1D D6 C3 3E --> DosRaiseException
+</A>to raise the deferred exception for handling.
+<P>
+<B>Note: </B> A thread must not call a function that is outside the scope
+of the must-complete section (for example, a DLL routine), because an error
+in the called routine could cause the process to end without returning.
+Keep must-complete sections as short as possible.<!-- lm: 0x2 1 -->
+<P>
+
+
+<P><HR>
+
+<A HREF="817_L3_UserDefinedException.html">[Back: User-Defined Exceptions]</A> <BR>
+<A HREF="819_L3_UnwindingExceptionHa.html">[Next: Unwinding Exception Handlers]</A> 
+</BODY>
+</HTML>

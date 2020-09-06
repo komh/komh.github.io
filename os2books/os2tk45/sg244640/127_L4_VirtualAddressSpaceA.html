@@ -1,0 +1,222 @@
+<HTML>
+<HEAD>
+<TITLE>Virtual Address Space Arenas and Regions</TITLE>
+</HEAD>
+<BODY>
+<H1>Virtual Address Space Arenas and Regions</H1><!-- entering slot 154 -->
+<P>
+OS/2 partitions the 4G virtual address space into three types of arena:
+<!-- lm: 0x2 6 -->
+<UL>
+<P>
+System<!-- lm: 0x2 6 -->
+<P>
+Shared<!-- lm: 0x2 6 -->
+<P>
+Private<!-- lm: 0x2 1 -->
+</UL> 
+<P>
+The system arena is common to all processes.  It starts at the 512M boundary
+and occupies the address space up to 4G.  Only system code (and device drivers)
+can access data in the system arena directly. User code must use APIs invoked
+by the call gate mechanism to access system arena code and data. Nearly
+all system arena data is global: that is, managed by a common set of page
+tables, whatever the current thread/process context. The exception to this
+is in the memory area mapped by selector 30. Page table entries are adjusted
+as part of context switching so that selector 30 addresses the current PTDA,
+TCB and TSD. 
+<P>
+The shared arena address range is common to all processes, but it comprises
+data that is both global and instance. Instance data occurs where a separate
+set of page table entries are used per context to map the same linear address
+range. 
+<P>
+Instance data is used when the same type of data needs to be allocated as
+multiple private copies to each process.  An example of this would be a
+logical screen buffer.  The shared arena starts initially at the 304M boundary
+and ends at 512M.  User programs may access the shared arena.  DLL code
+and data is located in the shared arena.  DLL code segments are always global,
+but DLL data segments may be instance or global and are usually a mixture
+of both.
+<P>
+The shared arena is further subdivided into a number of regions:<!-- lm: 0x2 1 -->
+<P>
+<I>Region</I><!-- lm: 0x2 23 -->
+<UL><I> Description</I><!-- lm: 0x2 1 -->
+</UL> Protected
+<!-- lm: 0x2 23 -->
+<UL>This region is reserved for protected data segments
+of protected DLLs. In General 16- and 32-bit applications do not have addressability
+above the 448Mb boundary. Potentially 32-bit applications are able to modify
+all read/write global data, whether intended by the owning DLL or not. The
+Protected region is provided so that Protected DLLs can isolate their data
+from general access. Only Protected DLLs have addressability to the protected
+region by being assigned data selector 63.
+<P>
+32-bit DLLs become protected through use of the protect option at compile
+time.
+<P>
+16-bit DLLs may also use the protected region, if explicitly coded to do
+so and listed in CONFIG.SYS using:
+<PRE>   PROTECT16=dll1,dll2,....</PRE>
+
+<P>
+The Protected Region may be subsumed into the Based Region (see below) by
+coding in CONFIG.SYS the<B> NOPROTECT</B> option on the<B> MEMMAN</B> statement.
+
+<P>
+The default is<B> MEMMAN=PROTECT</B>
+<P>
+<B>Note: </B>
+<P>
+From OS/2 Warp V3.0 fix pack 19 and OS/2 Warp V4.0, the Protected Regon
+has been absorbed into the Based Region. The system bahaves as if<B> MEMMAN=NOPROTECT
+</B>is in effect and<B> MEMMAN=PROTECT</B> has no effect.<!-- lm: 0x2 23 --><!-- lm: 0x2 1 -->
+</UL> Based
+<!-- lm: 0x2 23 -->
+<UL>The Based Region is reserved for non-protected DLLs
+that have a preferential base address assigned by the linkage editor by
+using the<B> BASE</B> option.
+<P>
+The purpose of the Based Region is to improve performance of module loading,
+by avoiding the need for the System Loader to do fix-up processing.
+<P>
+<B>Note: </B>
+<P>
+Under OS/2 2.x,<B> MEMMAN=NOPROTECT</B> would cause the Based and Packed
+Regions to move up 64M bytes - effectively giving another 64M bytes for
+general purpose use in the Shared<!-- entering slot 155 --> Arena.<!-- lm: 0x2 23 --><!-- lm: 0x2 1 -->
+</UL> Packed
+<!-- lm: 0x2 23 -->
+<UL>The Packed Region is reserved for 16-bit DLL code
+segments. Within the Packed Region the <A HREF="3306_L0_.html">Compatibility
+Region Mapping Algorithm</A> does not apply. Code segments are packed contiguously
+to make best use of physical pages.
+<P>
+Potentially, tiny DLL code segments can deplete physical storage very rapidly
+if not packed. However, when packing is used there is no general algorithm
+that will convert 16-bit addresses into 32-bit addresses within the Packed
+Region. The system has to scan the <A HREF="3332_L0_.html">LDT</A>, over
+the Packed Region, to make this conversion.
+<P>
+Packing may be disabled by specifying the<B> NOPACK</B> option of the<B> MEMMAN
+</B>statement in CONFIG.SYS. The default is<B> PACK</B>. When packing is
+disabled up to 32M bytes is made available to the Global Shared Region.
+
+<P>
+<B>Notes: </B>
+<P>
+Under OS/2 2.x only<B> MEMMAN=NOPACK</B> would tend to reduce the Swapper
+Size where a great many 16-bit code segments are in use. This is because
+code segments outside the Packed Region are normally discardable (they are
+not swapped). Within the packed region they are swappable since a 4K page
+may contain code from a number of different modules.
+<P>
+Under OS/2 2.x<B> MEMMAN=NOPACK</B> would provide up to 32M bytes extra
+virtual address space for general purpose use in the Shared Arena.
+<P>
+Packing does not affect the availability of LDT selectors for allocations
+in the Packed Region, just the base linear address boundaries on which they
+are deployed.
+<P>
+Packing should not be confused with either the LINK386 PACK option or the
+PACK.EXE utility.
+<P>
+From OS/2 Warp V3.0 fix pack 19 and OS/2 Warp V4.0 the packed region has
+been reduced to 16Mb.<!-- lm: 0x2 23 --><!-- lm: 0x2 1 -->
+</UL> Global
+Shared<!-- lm: 0x2 23 -->
+<UL> This region has a lower boundary at 320M
+bytes and includes the Packed, Based and Protected Regions.  This is reserved
+for Global Read-Only allocations only.  Since no Read/Write data is allocated
+in the Global Shared Region some page table economies are possible. Also
+process context switching performance is improved.
+<P>
+<B>Notes: </B>
+<P>
+The Global Shared Region is not configurable.
+<P>
+The Global Shared Region is only implemented in OS/2 WARP version 3.
+<P>
+Under OS/2 2.x Read/Write segments would be allocated in the Based Region.
+<!-- lm: 0x2 23 --><!-- lm: 0x2 1 -->
+</UL>Read/Write Basing<!-- lm: 0x2 23 -->
+<UL> The
+Read/Write Basing region is the preferred region for locating Read/Write
+DLL data segments where a base address has been assigned to a DLL module
+by the linkage editor. The purpose of this region is to keep Read/Write
+segments out of the Global Shared Region and thus retain its performance
+advantages. It also places an upper bound on the location of dynamic shared
+allocations, namely the Minimum Read/Write Basing Region address.
+<P>
+<B>Notes: </B>
+<P>
+The Read/Write Basing Region is not defined in OS/2 versions prior to version
+3.
+<P>
+Based DLLs under OS/2 2.x, by preference, have their segments loaded sequentially
+starting with segment 1 at the base address. With the implementation of
+the Global Shared Region only Read-Only segments can be loaded sequentially
+from the base address.<!-- lm: 0x2 23 --><!-- lm: 0x2 1 -->
+</UL> Expansion
+<!-- lm: 0x2 23 -->
+<UL>The Shared Arena is an<I> expand-down</I> arena,
+that is, allocation searches for free regions from the high addresses to
+low. The Shared Arena therefore expands from the minimum Read/Write Basing
+Region address towards the highest upper bound of all the<!-- entering slot 156 --> Private
+Arenas. This area is the expansion region for both the Shared Arena and
+all the Private Arenas.
+<P>
+The Shared Arena will not contract to an address higher than the minimum
+Read/Write Basing address.
+<P>
+<B>Note: </B>
+<P>
+The expansion region for OS/2 2.x is from the lower boundary of the Packed
+Region, if present. If not, then from the lower boundary of the Protected
+Region, if present. If both the Protected and Packed Regions are removed
+(using MEMMAN=NOPACK,NOPROTECT) then expansion occurs from the top of the
+Shared Arena.<!-- lm: 0x2 23 --><!-- lm: 0x2 1 -->
+</UL> 
+<P>
+Each private arena occupies the lowest range of virtual address space from
+0 - 64M bytes expanding up to a maximum of 304M bytes, the minimum Read/Write
+Basing address. None of the Private Arenas will be allowed to expand beyond
+the lowest allocation in the Shared Arena, that is Private and Shared Arenas
+may not overlap.
+<P>
+In general each process uses a separate set of page table entries to map
+each page of its private arena.  Thus the data in the private arena is private
+to each process.  Code (.EXE files) however is treated differently.  Since
+code is read only an economy is made whenever more than one process runs
+the same .EXE. Where this happens the same page table entries are used among
+the processes sharing the common .EXE file.  User programs may only access
+the private arena of the process they are running in (a special exception
+to this is possible through the DosDebug API by defining memory aliases).
+ 
+<P>
+Virtual Memory Arenas and Regions may be presented pictorially as in the
+following diagram.
+<P>
+<B>Note: </B>
+<P>
+Some regions of the 4G address space are reserved. This is done for a variety
+of reasons which include:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+H/W and BIOS restrictions<!-- lm: 0x2 6 -->
+<P>
+Enforced segregation between Arenas<!-- lm: 0x2 6 -->
+<P>
+Guaranteed reserved address ranges.<!-- lm: 0x2 1 -->
+</UL> <!-- lm: 0x2 1 -->
+<P>
+<!-- Unable to decode bitmap format --><IMG SRC="127_L4_VirtualAddressSpaceA_0.gif" WIDTH=716 HEIGHT=1010><!-- Unable to decode bitmap format --><IMG SRC="127_L4_VirtualAddressSpaceA_1.gif" WIDTH=817 HEIGHT=1155>
+
+
+<P><HR>
+
+<A HREF="126_L3_MemoryManagementandO.html">[Back: Memory Management and Ownership Topics]</A> <BR>
+<A HREF="128_L4_VirtualAddressSpaceM.html">[Next: Virtual Address Space Management]</A> 
+</BODY>
+</HTML>

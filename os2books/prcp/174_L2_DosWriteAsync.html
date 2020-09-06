@@ -1,0 +1,128 @@
+<HTML>
+<HEAD>
+<TITLE>DosWriteAsync</TITLE>
+</HEAD>
+<BODY>
+<H1>DosWriteAsync</H1><!-- entering slot 214 -->Bindings:  <A HREF="349_L2H_DosWriteAsync.html">C</A>,
+<A HREF="524_L2H_DosWriteAsync.html">MASM</A>
+<BR>
+
+<P>
+This call asynchronously transfers the specified number of bytes from a
+buffer to a file.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+DosWriteAsync<!-- lm: 0x2 19 -->
+<UL> (FileHandle, RamSemaphore, ReturnCode,
+BufferArea, BufferLength, BytesWritten)<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+<B>FileHandle</B> (HFILE) - input<!-- lm: 0x11 4 -->
+<UL> File handle obtained
+from <A HREF="091_L2_DosOpen.html">DosOpen</A>.<!-- lm: 0x2 1 -->
+</UL><B> RamSemaphore
+</B>(PULONG) - input<!-- lm: 0x11 4 -->
+<UL> Address used by the system
+to signal the caller that the write operation is complete.<!-- lm: 0x2 1 -->
+</UL><B> ReturnCode
+</B>(PUSHORT) - output<!-- lm: 0x11 4 -->
+<UL> Address of the I/O error
+return code.<!-- lm: 0x2 1 -->
+</UL><B> BufferArea</B> (PVOID) - input<!-- lm: 0x11 4 -->
+<UL> Address
+of the output buffer.<!-- lm: 0x2 1 -->
+</UL><B> BufferLength</B> (USHORT)
+- input<!-- lm: 0x11 4 -->
+<UL> Number of bytes to be written.<!-- lm: 0x2 1 -->
+</UL><B> BytesWritten
+</B>(PUSHORT) - output<!-- lm: 0x11 4 -->
+<UL> Address of the number of
+bytes written.<!-- lm: 0x2 1 -->
+</UL><B> rc</B> (USHORT) - return<!-- lm: 0x11 4 -->
+<UL> Return
+code descriptions are:<!-- lm: 0x2 4 -->
+<P>
+<LI><!-- lm: 0x2 14 -->NO_ERROR<!-- lm: 0x2 4 --> 5<!-- lm: 0x2 14 -->
+<UL> ERROR_ACCESS_DENIED
+<!-- lm: 0x2 4 -->
+</UL>6<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_HANDLE<!-- lm: 0x2 4 -->
+</UL>26<!-- lm: 0x2 14 -->
+<UL> ERROR_NOT_DOS_DISK<!-- lm: 0x2 4 -->
+</UL>33<!-- lm: 0x2 14 -->
+<UL> ERROR_LOCK_VIOLATION<!-- lm: 0x2 4 -->
+</UL>89<!-- lm: 0x2 14 -->
+<UL> ERROR_NO_PROC_SLOTS<!-- lm: 0x2 4 -->
+</UL>109<!-- lm: 0x2 14 -->
+<UL> ERROR_BROKEN_PIPE<!-- lm: 0x2 1 -->
+</UL><B>Remarks</B>
+<P>
+A BufferLength value of 0 is not considered an error.  No data transfer
+occurs.  There is no effect on the file or the file pointer.
+<P>
+A call to DosWriteAsync may return before the write is complete. To wait
+for the asynchronous write to complete, RamSemaphore must be set by the
+application before the DosWriteAsync call is made.  The application issues
+<A HREF="137_L2_DosSemSet.html">DosSemSet</A> to set the semaphore, calls
+DosWriteAsync, and then issues <A HREF="139_L2_DosSemWait.html">DosSemWait
+</A>to wait for the clearing of the semaphore, which signals the write is
+complete.
+<P>
+When RamSemaphore is cleared, BytesWritten identifies the number of bytes
+written.  If BytesWritten is different from BufferLength, it usually indicates
+insufficient disk space.
+<P>
+The program must not modify the contents of BufferArea or look at the values
+returned in ReturnCode or BytesWritten until after RamSemaphore is cleared.
+
+<P>
+Buffers that are multiples in size of the hardware's base physical unit
+for data, written to the file on these base boundaries, are written directly
+to the device.  (The base physical unit is defined as the smallest block
+that can be physically written to the device.)  Other buffer sizes force
+at least some I/O to go through an internal system buffer (if the file handle
+state bit indicates that internal buffers may be used) and reduce the efficiency
+of I/O operation.
+<P>
+The read/write pointer is moved by I/O operations. It can also be moved
+to a desired position by calling <A HREF="010_L2_DosChgFilePtr.html">DosChgFilePtr</A>.
+The value of the pointer is updated by the File Level Request Router before
+the I/O request is queued to the device driver.
+<P>
+If the file is read-only, the write to the file is not performed.
+<P>
+<B>Note: </B> If it is necessary to make a DosWriteAsync request from within
+a segment that has I/O privilege, <A HREF="006_L2_DosCallback.html">DosCallback
+</A>may be used to invoke a privilege level 3 segment, which makes the actual
+DosWriteAsync request.<!-- lm: 0x2 1 -->
+<P>
+
+<BR>
+<B>Named Pipe Considerations</B>
+<P>
+DosWriteAsync is also used to write bytes and messages to named pipes.
+<P>
+Each write to a message pipe writes a message whose size is the length of
+the write; DosWriteAsync automatically encodes message lengths in the pipe,
+so applications need not encode this information in the buffer being written.
+
+<P>
+Writes in blocking mode always write all requested bytes before returning.
+In non-blocking mode, if the message size is bigger than the buffer size,
+the write blocks<!-- entering slot 215 --> . If the message size is smaller
+than the pipe, but not enough space is left in the pipe, DosWriteAsync returns
+immediately with a value of zero, indicating no bytes were written.
+<P>
+In the case of a byte pipe, if the number of bytes to be written exceeds
+the space available in the pipe, DosWriteAsync writes as many bytes as it
+can and returns with the number of bytes actually written.
+<P>
+An attempt to write to a pipe whose other end has been closed returns with
+ERROR_BROKEN_PIPE.
+
+<P><HR>
+
+<A HREF="173_L2_DosWrite.html">[Back: DosWrite]</A> <BR>
+<A HREF="175_L2_DosWriteQueue.html">[Next: DosWriteQueue]</A> 
+</BODY>
+</HTML>

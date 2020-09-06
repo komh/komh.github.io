@@ -1,0 +1,89 @@
+<HTML>
+<HEAD>
+<TITLE>Example code</TITLE>
+</HEAD>
+<BODY>
+<H1>Example code</H1><!-- entering slot 427 -->
+<P>
+The following code fragment shows an example of the implementation of the
+<B>somsBind</B> method of the<B> TCPIPSockets</B> subclass, for both AIX
+and OS/2. The sample illustrates that, for TCP/IP, the implementation is
+basically a one-to-one mapping of<B> Sockets</B> methods onto TCP/IP calls.
+For other transport protocols, the mapping from the socket abstraction to
+the protocol's API may be more difficult.
+<P>
+For AIX, the mapping from<B> Sockets</B> method to TCP/IP call is trivial.
+
+<PRE>SOM_Scope long  SOMLINK somsBind(TCPIPSockets somSelf,
+                                 Environment *ev,
+                                 long s, Sockets_sockaddr* name,
+                                 long namelen)
+{
+    long rc;
+
+    TCPIPSocketsMethodDebug("TCPIPSockets","somsBind");
+
+    rc = (long) bind((int)s, name, (int)namelen);
+
+    if (rc == -1)
+       __set_serrno(somSelf, ev, errno);
+
+    return rc;
+}
+</PRE>
+
+<P>
+On OS/2, however, the TCP/IP Release 1.2.1 library is a 16-bit library.
+Consequently, many of the method calls require conversion ("thunking") of
+32-bit parameters into 16-bit parameters, before the actual TCP/IP calls
+can be invoked. For example, the function prototype for the<B> somsBind
+</B>method is defined as:
+<PRE>SOM_Scope long  SOMLINK somsBind(TCPIPSockets somSelf,
+                                 Environment *ev,
+                                 long s, Sockets_sockaddr* name,
+                                 long namelen);
+</PRE>
+
+<P>
+whereas the file<B> socket.h</B> on OS/2 declares the<B> bind</B> function
+with the following prototype:
+<PRE>short _Far16 _Cdecl bind(short /*s*/, void * _Seg16 /*name*/,
+                         short /*len*/);
+</PRE>
+
+<P>
+In this case, the pointer to the "name" structure, passed as a 32-bit address,
+cannot be used directly in the<B> bind</B> call: a 16-bit address must be
+passed instead. This can be accomplished by dereferencing the 32-bit pointer
+provided by the "name" parameter in the<B> somsBind</B> call, copying the
+caller's Sockets_sockaddr structure into a local structure ("name16"), and
+then passing the address of the local structure ("&amp;name16") as a 16-bit
+address in the<B> bind</B> call.
+<PRE>SOM_Scope long  SOMLINK somsBind(TCPIPSockets somSelf,
+                                 Environment *ev,
+                                 long s, Sockets_sockaddr* name,
+                                 long namelen)
+{
+    long rc;
+    Sockets_sockaddr name16;
+
+    TCPIPSocketsMethodDebug("TCPIPSockets","somsBind");
+
+    /* copy user's parameter into a local structure */
+    memcpy ((char *)&amp;name16, (char *)((sockaddr32 *)name), namelen);
+    rc = (long) bind((short)s, (void *)&amp;name16, (short)namelen);
+
+    if (rc == -1)
+       __set_serrno(somSelf, ev, tcperrno());
+
+    return rc;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="373_L2_Implementationconsid.html">[Back: Implementation considerations]</A> <BR>
+<A HREF="375_L1_Notices.html">[Next: Notices]</A> 
+</BODY>
+</HTML>

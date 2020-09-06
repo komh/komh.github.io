@@ -1,0 +1,125 @@
+<HTML>
+<HEAD>
+<TITLE>Object references and proxy objects</TITLE>
+</HEAD>
+<BODY>
+<H1>Object references and proxy objects</H1><!-- entering slot 329 -->
+<P>
+CORBA 1.1 defines the notion of an<I> object reference</I>, which is the
+information needed to specify an object in the ORB. An object is defined
+by its<B> ImplementationDef, InterfaceDef,</B> and application-specific
+"reference data" used to identify or describe the object. An object reference
+is used as a handle to a remote object in method calls. When a server wants
+to export a reference to an object it implements, it supplies the object's
+<B>ImplementationDef, InterfaceDef,</B> and reference data to the Object
+Adapter, which returns the reference.
+<P>
+The structure of an object reference is opaque to the application, leaving
+its representation up to the ORB.
+<P>
+In DSOM, an object reference is represented as an object that can simply
+be used to identify the object on that server. The DSOM class that implements
+simple object references is called<B> SOMDObject</B> (corresponding to<B> Object
+</B>in CORBA 1.1.) However, in a client's address space, DSOM represents
+the remote object with a<I> proxy object</I> in order to allow the client
+to invoke methods on the target object as if it were local. When an object
+reference is passed from a server to a client, DSOM<I> dynamically</I> and
+<I>automatically</I> creates a proxy in the client for the remote object.
+Proxies are specialized forms of<B> SOMDObject;</B> accordingly, the base
+proxy class in DSOM<B> SOMDClientProxy,</B> is derived from<B> SOMDObject.
+</B>
+<P>
+In order to create a proxy object, DSOM must first build a proxy class.
+It does so automatically using SOM facilities for building classes at run
+time. The proxy class is constructed using multiple inheritance: the proxy
+object functionality is inherited from<B> SOMDClientProxy,</B> while just
+the<I> interface</I> of the target class is inherited.
+<P>
+In the newly derived proxy class, DSOM overrides each method inherited from
+the target class with a "remote dispatch" method that forwards an invocation
+request to the remote object. Consequently, the proxy object provides location
+transparency, and the client code invokes operations (methods) on the remote
+object using the same language bindings as if it were a local target object.
+
+<P>
+For example, recall the "Stack" class used in the tutorial example given
+earlier. When a server returns a reference to a remote "Stack" object to
+the client, DSOM builds a "Stack_ _Proxy" class (note two underscores in
+the name), derived from<B> SOMDClientProxy</B> and "Stack", and creates
+a proxy object from that class.  When the client invokes the "push" method
+on the proxy,
+<PRE>
+_push(stk, &amp;ev, 100);
+
+</PRE>
+
+<P>
+the method is redispatched using the remote-dispatch method of the SOMDClientProxy
+class, and the method is forwarded to the target object.
+<P>
+CORBA defines several special operations on object references that operate
+on the local references (proxies) themselves, rather than on the remote
+objects. These operations are defined by the classes<B> SOMOA</B> (SOM Object
+Adapter),<B> SOMDObject</B> (which is DSOM's implementation of CORBA's<B> Object
+</B>"pseudo-class" and<B> ORB</B> (Object Request Broker class). Some of
+these operations are listed below, expressed in terms of their IDL definitions.
+
+<P>
+<B>SOMOA</B> methods (inherited from<B> BOA):</B><!-- lm: 0x2 6 -->
+<UL>
+<P>
+ 
+<PRE>
+sequence &lt;octet,1024&gt; ReferenceData;
+SOMDObject<B>  create</B> (in ReferenceData id, in InterfaceDef intf
+                    in ImplementationDef impl);
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Creates and returns an object reference.
+<P>
+<B>SOMDObject</B> methods:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+
+<PRE>SOMDObject  duplicate ( );</PRE>
+ 
+<P>
+Creates and returns a duplicate object reference.<!-- lm: 0x2 6 -->
+<P>
+
+<PRE>void  <B>release</B> ( );</PRE>
+
+<P>
+Destroys an object reference.<!-- lm: 0x2 6 -->
+<P>
+
+<PRE>boolean<B>  is_nil</B> ( );</PRE>
+
+<P>
+Tests to see if the object reference is NULL.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>ORB</B> methods:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+
+<PRE>string <B> object_to_string</B> ( SOMDObject obj );</PRE>
+
+<P>
+Converts an object reference to a (storable) string form.<!-- lm: 0x2 6 -->
+<P>
+
+<PRE>SOMDObject <B> string_to_object</B> ( string str );</PRE>
+
+<P>
+Converts a string form back to the original object reference.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="286_L4_ObjectRequestBrokerr.html">[Back: Object Request Broker run-time interfaces]</A> <BR>
+<A HREF="288_L4_Creationofremoteobje.html">[Next: Creation of remote objects]</A> 
+</BODY>
+</HTML>

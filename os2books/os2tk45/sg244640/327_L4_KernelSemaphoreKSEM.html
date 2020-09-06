@@ -1,0 +1,138 @@
+<HTML>
+<HEAD>
+<TITLE>Kernel Semaphore (KSEM)</TITLE>
+</HEAD>
+<BODY>
+<H1>Kernel Semaphore (KSEM)</H1><!-- entering slot 474 -->
+<PRE>
+&gt;&gt; Intra-Process serialisation mutex KSEM imbedded in the PTDA.
+&gt;&gt; This KSEM is sometimes referred to as "fscrit" (file system critical
+&gt;&gt; section) since it is used to serialise file system activity within
+&gt;&gt; a process.
+.p#
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+*000c# 0002 0000 0002 0004 blk 0804 ab78d000 ab997020 ab978420 1c9c 00 cntrl
+##.d ksem %ab997020 +ptda_ptdasem-ptda_start
+Signature     : KSEM                        Nest: 0000
+Type          : MUTEX
+Flags         : 00
+Owner         : 0000              PendingWriters: 0000
+##
+
+
+&gt;&gt; MFT Shared KSEM imbedded at the beginning of the MFT
+
+##..d sft d0:8
+      sf_ref_count: 0001                        sfi_mode: 00a0
+        sf_usercnt: 0000                        sfi_hVPB: 0012
+          reserved: 00                         sfi_ctime: 0000
+       sf_flags(2): 0100:0000                  sfi_cdate: 0000
+         sf_devptr: #0000:0000                 sfi_atime: 0000
+            sf_FSC: #00c8:0008                 sfi_adate: 0000
+          sf_chain: #0000:0000                 sfi_mtime: 0000
+            sf_MFT: fe7fb788                   sfi_mdate: 0000
+sfdFAT_firFILEclus: 5ad6                        sfi_size: 000bb135
+    sfdFAT_cluspos: 09c8                    sfi_position: 00085d90
+
+
+##.d ksem %fe7fb788
+Signature     : KSEM                        Nest: 0000
+Type          : SHARE                    Readers: 0000
+Flags         : 01                PendingReaders: 0000
+Owner         : 0000              PendingWriters: 0000
+##
+
+&gt;&gt; Slot 49 is blocked. So we proceed by finding out what the BlockId
+&gt;&gt; represents by finding its owner.
+
+##.pb 49
+ Slot  Sta BlockID  Name     Type        Addr    Symbol
+ 0049  blk fe83bdf4 warp_d
+
+##.m  %0fe83bdf4
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 072c %feaf8dd2 00000400 %00540000 149 072d 072b 0003 0000 0003 0025 hptda=0878
+ hal=0025 pal=%ffe5d140  har=072c  hptda=0878  pgoff=00000  f=021
+ har     par      cpg        va    flg next prev link hash hob   hal
+ 0003 %feaef04c 00000400 %fe6ef000 001 0002 0023 0000 0000 0003 0000      =0000
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 0003  072c fec5  1000 ffec 0000  0000 00  01 00 00 vmkrhrw
+   pvmli    cs    eip     phlock   cpg      va    flg  hptda hob sig  csig
+ %fe82e4c4 002d 0a6800a5 %ac22403c 0001 %fe83c000 0005 024b 0003 ea9f ea9f
+
+&gt;&gt; Block Id is in the kernel resident heap - assume that it is at the
+&gt;&gt; beginning of a data portion of a heap block.
+&gt;&gt; Dump the header.
+
+##dd  %0fe83bdf4-10 l8
+%fe83bde4  00000000 bd100000 fe83fe83 ff7e0018
+%fe83bdf4  4d45534b 000a0004 46380001 bd28a801
+
+&gt;&gt; Object Owner Id is ff7e
+##.mo ff7e
+ff7e ksem
+##.d ksem %0fe83bdf4
+Signature     : KSEM
+Type          : <!-- entering slot 475 -->EVENT
+Flags         : 04
+Owner         : 000a              PendingWriters: 0001
+##
+</PRE>
+
+<BR>
+Kernel Semaphore
+<P>
+<B>Notes: </B><!-- lm: 0x2 6 -->
+<UL>
+<P>
+KSEMs are usually found imbedded in system control blocks for serialisation
+and sharing purposes.<!-- lm: 0x2 6 -->
+<P>
+Dynamically allocated KSEMs are allocated out of one of the kernel heaps.
+<!-- lm: 0x2 6 -->
+<P>
+Virtual Device Driver semaphore helper services result in KSEMs.<!-- lm: 0x2 6 -->
+<P>
+Under the ALLSTRICT kernel only, the KSEM has a signature field. This is
+manufactured by the<B> .D</B>  command for non-ALLSTRICT kernels. Under
+the ALLSTRICT kernel the presence of a KSEM may be verified by dumping the
+KSEM in bytes. Offset<B> +0x0</B> is where the signature is located.<!-- lm: 0x2 6 -->
+<P>
+The owner field refers to the <A HREF="3320_L0_.html">slot number</A> of
+the semaphore owner.<!-- lm: 0x2 6 -->
+<P>
+When a thread blocks on a KSEM the following addresses are used as the <A HREF="3351_L0_.html"><B>BlockId
+</B></A><!-- lm: 0x2 6 -->
+<P>
+MUTEX KSEM<!-- lm: 0x2 27 -->
+<UL> Address of the beginning of the KSEM
+<A HREF="3128_L3_KSEMStructuresforOS2.html">structure</A>.<!-- lm: 0x2 6 -->
+</UL> SHARED
+KSEM<!-- lm: 0x2 27 -->
+<UL> Address of the Pending Readers count field
+within the KSEM <A HREF="3128_L3_KSEMStructuresforOS2.html">structure</A>.
+<!-- lm: 0x2 6 -->
+</UL>EXCLUSIVE KSEM<!-- lm: 0x2 27 -->
+<UL> Address of
+the Pending Writers count field within the KSEM <A HREF="3128_L3_KSEMStructuresforOS2.html">structure</A>.
+<!-- lm: 0x2 6 -->
+</UL>To format KSEM from a BlockId, locate the beginning
+of the KSEM, either by dumping a few bytes before the BlockId addess. The
+signature will be visible under the ALLSTICT kernel, which is at the beginning
+of the KSEM. If the KSEM is allocated from one of the Kernel's heaps then
+the KSEM object id,<B> 0xff7e</B> will occur in the heap header which prefixes
+the beginning of the KSEM.<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+
+<P>
+For a description of the KSEM structure see the <A HREF="3128_L3_KSEMStructuresforOS2.html">Kernel
+Semaphore Structure</A> in the<B> System Reference</B>. 
+
+<P><HR>
+
+<A HREF="326_L4_CurrentDirectoryStru.html">[Back: Current Directory Structure (CDS)]</A> <BR>
+<A HREF="328_L4_PhysicalDeviceDriver.html">[Next: Physical Device Driver Header (DEV)]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,131 @@
+<HTML>
+<HEAD>
+<TITLE>How do I make a multi-column listbox?</TITLE>
+</HEAD>
+<BODY>
+<H1>How do I make a multi-column listbox?</H1><!-- entering slot 84 -->
+<P>
+Use the container in details view.  If you just have to use a list box:
+
+<P>
+Here is an extract from my dialog box procedure that produces a two-column
+list box.
+<P>
+In this example there is only one list box, so I don't have to worry about
+which control is involved.  In this example, a blank is used to separate
+the first and second column.  You could use tabs or any other sort of separator
+character.  You could also draw anything you wanted in the list box item,
+including bit maps, colors, other fonts, etc.
+<P>
+This is not a complete program, of course, but does show the details of
+handling a multi-column list box.
+<PRE>/******************** Dialog Box Procedure ******************************/
+
+MRESULT EXPENTRY SelectDlgProc (HWND hwnd, USHORT msg, MPARAM mp1, MPARAM mp2)
+{
+    HPS     hPS;                 /* Handle to the presentation space */
+    FONTMETRICS FontMetrics;     /* Metrics of default font */
+    CHAR    pszItemText[MAX_ITEM_TEXT_LENGTH];
+    CHAR    *s;
+    OWNERITEM FAR *poi;          /* Pointer to owner item structure */
+    RECTL   rcl;                 /* Rectangle for writing */
+    COLOR   clrForeGround;
+    COLOR   clrBackGround;
+
+    switch (msg)
+        {
+        case WM_INITDLG:   /* Initialize the list box */
+
+            FillCfgListBox (hwnd);     /* Fill the list box */
+
+            return (FALSE);
+
+
+        case WM_MEASUREITEM:     /* Measure text height */
+
+            hPS = WinGetPS (hwnd);     /* Get handle to presentation space */
+            GpiQueryFontMetrics (hPS, (LONG) sizeof (FONTMETRICS),
+                                 &amp;FontMetrics);
+            WinReleasePS (hPS);        /* Release the presentation space */
+
+            return (FontMetrics.lMaxBaselineExt);
+
+
+        case WM_DRAWITEM:      /* Draw a list box entry */
+
+            poi = mp2;               /* Get address of owner item */
+
+            if (poi-&gt;fsState == TRUE)  /* Is this cell to be highlighted? */
+            {                          /* Yes, use highlight attributes */
+                clrForeGround = SYSCLR_HILITEFOREGROUND;
+                clrBackGround = SYSCLR_HILITEBACKGROUND;
+            }
+            else                       /* No, use normal attributes */
+            {
+                clrForeGround = CLR_NEUTRAL;
+                clrBackGround = CLR_BACKGROUND;
+            }
+
+            WinSendMsg (poi-&gt;hwnd,     /* Get item text */
+                        LM_QUERYITEMTEXT,
+                        (MPARAM) MAKEULONG (poi-&gt;idItem,
+                        MAX_ITEM_TEXT_LENGTH),
+                        (MPARAM) pszItemText);
+
+            rcl.xLeft	= poi-&gt;rclItem.xLeft;  /* Set co-ordinates */
+            rcl.xRight	= poi-&gt;rclItem.xRight; /* of rectangle */
+            rcl.yTop	= poi-&gt;rclItem.yTop;
+            rcl.yBottom = poi-&gt;rclItem.yBottom;
+
+            s = strchr (pszItemText, ' ');  /* Find first blank */
+            if (s)
+              *s = '\0';               /* Terminate first column here */
+
+            WinDrawText (poi-&gt;hps,     /* Draw the first column */
+                         -1,           /* Null-terminated string */
+                         pszItemText,  /* File name is here */
+                         &amp;rcl,     /* Rectangle to draw in */
+                         clrForeGround,/* Foreground color */
+                         clrBackGround,/* Background color */
+                         DT_LEFT | DT_VCENTER | DT_ERASERECT);
+
+            if (s)		       /* If there is a second column */
+            {
+              rcl.xLeft = 100;         /* It starts out here */
+                                       /* Spacing calculations could be */
+                                       /* much cleverer than this very */
+                                       /* <!-- entering slot 85 -->crude use of an absolute position */
+                                       /* (which is not transportable */
+                                       /* to different display types, as */
+                                       /* between 8514 and VGA) */
+                s++;                   /* Point to beginning of text */
+                WinDrawText (poi-&gt;hps, /* Draw the second column */
+                             -1,       /* Also a null-terminated string */
+                             s,        /* File Description */
+                             &amp;rcl, /* Rectangle to draw in */
+                             clrForeGround,  /* Colors are same as */
+                             clrBackGround,  /* before */
+                             DT_LEFT | DT_VCENTER);
+            }
+
+                /* If fsState || fsStateOld and return TRUE, then */
+                /* control will invert the rectangle -- not what */
+                /* we want.  Tell control not do do anything like that! */
+
+            poi-&gt;fsState = poi-&gt;fsStateOld = FALSE;
+
+            return (TRUE); /* Say we did it */
+
+... case statements for rest of program ...
+
+</PRE>
+
+<P>
+Credit:  Guy Scharf 
+
+<P><HR>
+
+<A HREF="070_L2_Whenminimizingmydial.html">[Back: When minimizing, my dialog box is overwriting my icon!]</A> <BR>
+<A HREF="072_L2_HowdoIcreatemyownMas.html">[Next: How do I create my own Master Help Index?]</A> 
+</BODY>
+</HTML>

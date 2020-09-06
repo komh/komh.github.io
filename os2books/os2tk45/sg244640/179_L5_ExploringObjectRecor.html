@@ -1,0 +1,509 @@
+<HTML>
+<HEAD>
+<TITLE>Exploring Object Records</TITLE>
+</HEAD>
+<BODY>
+<H1>Exploring Object Records</H1><!-- entering slot 253 -->
+<P>
+We now explore the <A HREF="3334_L0_.html">memory object record (VMOB)</A> and
+the <A HREF="361_L3_MOFormatMemoryObject.html">.MO command.</A> 
+<PRE>
+&gt;&gt;&gt; There are two types of object managed by object records:
+&gt;&gt;&gt;     pseudo-objects
+&gt;&gt;&gt;     non-pseudo-object
+
+&gt;&gt;&gt; Non-pseudo-objects have an associated arena record. These are by
+&gt;&gt;&gt; far the most common type of memory object. They include code and
+&gt;&gt;&gt; data segments of application and system code. However, there is
+&gt;&gt;&gt; a draw-back in that arena records deal with page size quantities.
+&gt;&gt;&gt; For certain system control blocks it is useful to have distinct
+&gt;&gt;&gt; objects associated with each instance of them. But these objects
+&gt;&gt;&gt; are generally very much smaller than a page. To overcome these
+&gt;&gt;&gt; difficulties such objects are sub-allocated from the system
+&gt;&gt;&gt; heap and given an object type of pseudo-object. They have
+&gt;&gt;&gt; no associated arena record.
+
+&gt;&gt;&gt; We list a few pseudo-objects. Note the 'p' parameter of .mo to
+&gt;&gt;&gt; do this.
+
+
+# .mop
+ hob       va     flgs own  hmte  sown,cnt lt st xf
+ 0004  %fff13238  8000 ffe1 0000  0000 00  00 00 00 vmah
+ 0005  %fff13190  8000 ffe1 0000  0000 00  00 00 00 vmah
+ 0006  %fff0a891  8000 ffa6 0000  0000 00  00 00 00 mte       doscalls.dll
+ 0072  %ffe3c7d4  8000 ffcb 0000  0000 00  00 00 00 ptda 0001 *sysinit
+ 007a  %fff0b3fa  8000 ffa6 0000  0000 00  00 00 00 mte       mvdm.dll
+ 007b  %fff0b26b  8000 ffa6 0000  0000 00  00 00 00 mte       fshelper.dll
+ 007d  %fe720f60  8000 ffa6 0000  0000 00  00 00 00 mte       a:mini_fsd.fsd
+ 0086  %fe861ee0  8000 ffa6 0000  0000 00  00 00 00 mte       c:pmdd.sys
+ 0087  %fe861f30  8000 ffa6 0000  0000 00  00 00 00 mte       c:dos.sys
+ 0088  %fe861f58  8000 ffa6 0000  0000 00  00 00 00 mte       c:testcfg.sys
+ 008a  %fe860f9c  8000 ffa6 0000  0000 00  00 00 00 mte       c:pmshapim.dll
+ 0091  %7b9c484c  8000 ffcb ff79  0000 00  00 00 00 ptda 0003 c:pmshell.exe
+ 0096  %fe721fb8  8000 ffa6 0000  0000 00  00 00 00 mte       c:clock01.sys
+ 0097  %fe721f1c  8000 ffa6 0000  0000 00  00 00 00 mte       c:screen01.sys
+ 0098  %fe721eb0  8000 ffa6 0000  0000 00  00 00 00 mte       c:kbd01.sys
+ 0099  %fe7246bc  8000 ffa6 0000  0000 00  00 00 00 mte       c:print01.sys
+ 009f  %fe724f84  8000 ffa6 0000  0000 00  00 00 00 mte       c:ibm1flpy.add
+ 00a1  %fe725f88  8000 ffa6 0000  0000 00  00 00 00 mte       c:ibm1s506.add
+
+#
+
+&gt;&gt;&gt; Pseudo-objects apply to four types of control block but in general
+&gt;&gt;&gt; we will only be concerned with the PTDA and the MTE.
+&gt;&gt;&gt; The pseudo-object record is distinugished by the presence of the
+&gt;&gt;&gt; 'va' field. The control block name is shown in column 11.
+&gt;&gt;&gt;  |                                               |
+&gt;&gt;&gt;  .......                                         |
+&gt;&gt;&gt;        |                                         |
+&gt;&gt;&gt;        V                                         V
+# .mo 91
+ hob       va     flgs own  hmte  sown,cnt lt st xf
+ 0091  %7b9c484c  8000 ffcb ff79  0000 00  00 00 00 ptda 0003 c:pmshell.exe
+
+&gt;&gt;&gt; The 'va' field gives the address of the object itself. In this
+&gt;&gt;&gt; it's a PTDA address. We can find the thread slots which correspond
+&gt;&gt;&gt; to this PTDA either by using .P and looking for a match in the
+&gt;&gt;&gt; pPTDA field or directly:
+
+# dw %7b9c484c+pid-ptda_start l1
+%7b9c5042  0003
+&gt;&gt;&gt; This is the pid. Note .mo 91 extracts this for us - the pid appears
+&gt;&gt;&gt; after 'ptda'
+
+# dd %7b9c484c+ptda_pTCBHead-ptda_start l1
+%7b9c486c  <!-- entering slot 254 -->7b9a8a70
+&gt;&gt;&gt; This is the head of the TCB tree for pid 3.
+
+# dw 7b9a8a70 l2
+%7b9a8a70  0001 0008
+&gt;&gt;&gt; Words 0 and 1 of the TCB contain the thread ordinal and its slot
+&gt;&gt;&gt; number. This is tid 1 in slot 8.
+
+# .p8
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 0008  0003 0001 0003 0001 rdy 061f 7b7b6000 7b9c484c 7b9a8a70 1eb8 01 PMSHL32
+
+&gt;&gt;&gt; The PTDA for slot 8 has pid 3, is at %7b9c484c which is hob 91.
+&gt;&gt;&gt; The handle of the PTDA (hptda) is defined to be the hob of the
+&gt;&gt;&gt; object it occupies. Thus this ptda is also identified by hptda=91
+
+&gt;&gt;&gt; The other most frequently encountered pseudo-object is the mte.
+
+ hob       va     flgs own  hmte  sown,cnt lt st xf
+ 0193  %fe722dec  8000 ffa6 0000  0000 00  00 00 00 mte       c:pmshell.exe
+
+&gt;&gt;&gt; The MTE represents a loaded module. In this case the MTE control
+&gt;&gt;&gt; block is located at %fe722dec and is assigned the mte handle of its
+&gt;&gt;&gt; hob. In this case the MTE at %fe722dec is also referred to as
+&gt;&gt;&gt; hmte=193. The .LM command will respond to either hmte or MTE address
+&gt;&gt;&gt; and format the MTE for us ...
+# .lm 193
+hmte=0193 pmte=%fe722dec mflags=84903150 c:\os2\pmshell.exe
+
+&gt;&gt;&gt; .MO extracts the module name from the MTE and displays this to the
+&gt;&gt;&gt; right of 'mte'
+
+&gt;&gt;&gt; In each object record is the 'own' and 'hmte' fields. These are used
+&gt;&gt;&gt; to attribute ownership and associate a module or part of the system
+&gt;&gt;&gt; that was involved with the allocation request. In many cases
+&gt;&gt;&gt; these fields contain hobs of related objects. In some cases
+&gt;&gt;&gt; attribution needs to be made to a system resource. For this a
+&gt;&gt;&gt; number of generic system object Ids have been defined. They all
+&gt;&gt;&gt; are greater then 0xff00. .MO will translate system object Ids into
+&gt;&gt;&gt; a more meaningful text string. For example: in hob 193 the
+&gt;&gt;&gt; owner id ffa6
+# .mo ffa6
+ffa6 ldrmte
+
+&gt;&gt;&gt; Similarly in hob 91 the owner is ffcb
+# .mo ffcb
+ffcb ptda
+
+&gt;&gt;&gt; Both of these give an indication of the type of system object.
+&gt;&gt;&gt; In the first case a load MTE, in the second a PTDA. The 'own' and
+&gt;&gt;&gt; 'hmte' interpretation is used to form the description that appears
+&gt;&gt;&gt; to the right of each .MO line.
+
+
+&gt;&gt;&gt; We now turn our attention to non-pseudo obects or normal
+&gt;&gt;&gt; memory objects:
+
+
+.mon
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 0001  0001 fec8  0000 fff1 0000  0000 00  00 00 00 vmob
+ 0002  0002 fec8  0000 ffe3 0000  0000 00  00 00 00 vmar
+ 0003  0003 fec8  0000 ffec 0000  0000 00  01 00 00 vmkrhrw
+ 0007  0006 0000  0000 ff6d 0000  0000 00  00 00 00 doshlp
+ 0008  0007 0000  0000 ffaa 0006  0000 00  00 00 00 os2krnl
+ 0009  0008 0000  0000 ffaa 0006  0000 00  00 00 00 os2krnl
+ 000a  0009 0000  0000 ffaa 0006  0000 00  00 00 00 os2krnl
+ 000b  000a 0000  0000 ffaa 0006  0000 00  00 00 00 os2krnl
+ 000c  000b 0000  0000 ffaa 0006  0000 00  00 00 00 os2krnl
+ 000d  000c 0000  0325 ffba 0000  0000 00  00 00 00 lock
+ <!-- entering slot 255 -->000e  000d 0000  0000 ffaa 0006  0000 00  00 00 00 os2krnl
+ 000f  000e 0000  0000 ffaa 0006  0000 00  00 00 00 os2krnl
+ 0010  0087 0000  402c 0091 019f  0000 00  00 00 00 priv 0003 c:pmshell.exe
+ 0011  0010 0000  0000 ffaa 0006  0000 00  00 00 00 os2krnl
+ 0012  0011 0000  0000 ffaa 0006  0000 00  00 00 00 os2krnl
+ 0013  0012 0000  0000 ffaa 0006  0000 00  00 00 00 os2krnl
+ .
+ .
+ .
+ .
+ .
+ 009d  0096 0000  0225 ff8c 0000  0000 00  00 00 00 perfview
+ 009e  0097 0000  0524 ff88 ff54  0000 00  00 00 00 ptogdt    dd5
+ 00a0  0098 0000  0524 ff88 ff56  0000 00  00 00 00 ptogdt    dd7
+ 00a3  0099 0000  0524 ff88 ff56  0000 00  00 00 00 ptogdt    dd7
+ 00a4  009a 0000  0524 ff88 ff56  0000 00  00 00 00 ptogdt    dd7
+ 00a5  009b 0000  0524 ff88 ff56  0000 00  00 00 00 ptogdt    dd7
+ 00a6  009c 0000  0524 ff88 ff56  0000 00  00 00 00 ptogdt    dd7
+ .
+ .
+ .
+
+ 00e1  00d5 0000  0324 ff93 0000  0000 00  00 00 00 fsbuf
+ 00e2  00d6 0000  482c fff7 019f  0000 00  00 00 04 giveget
+ 00e3  00d7 0000  0124 ff8f 0000  0000 00  00 00 00 resource
+ 00e4  01c8 0000  0824 0131 0131  0000 00  00 00 00 shared    c:display.dll
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 00e6  00d9 0000  082c 00e5 00e5  0000 00  00 00 00 shared    c:doscall1.dll
+ 00e7  00da 0000  0838 00e5 00e5  0000 00  00 00 00 shared    c:doscall1.dll
+ 00e8  00db 0000  0838 00e5 00e5  0000 00  00 00 00 shared    c:doscall1.dll
+ 00e9  00dc 0000  0838 00e5 00e5  0000 00  00 00 00 shared    c:doscall1.dll
+ 00ea  00dd 0000  0838 00e5 00e5  0000 00  00 00 00 shared    c:doscall1.dll
+ 00eb  00de 0000  0830 00e5 00e5  0000 00  00 00 00 shared    c:doscall1.dll
+ 00ec  00f1 0000  422c 0091 01b0  0000 00  00 00 00 priv 0003 c:pmshell.exe
+ 00ed  010d 0000  402c 0091 01b0  0000 00  00 00 00 priv 0003 c:pmshell.exe
+ 00ee  00e1 0000  082c 00f1 00f1  0000 00  00 00 00 shared    c:os2char.dll
+ 00f2  01c9 0000  0824 0131 0131  0000 00  00 00 00 shared    c:display.dll
+ 00f3  00e3 0000  0838 00f1 00f1  0000 00  00 00 00 shared    c:os2char.dll
+ 00f4  00e4 0000  482c fff7 00f1  0000 00  00 00 00 giveget
+ 00f6  00e5 0000  082c 00fb 00fb  0000 00  00 00 00 shared    c:sesmgr.dll
+ 00fc  00e6 0000  082c 00fb 00fb  0000 00  00 00 00 shared    c:sesmgr.dll
+ 00fd  00e7 0000  0838 00fb 00fb  0000 00  00 00 00 shared    c:sesmgr.dll
+ 00fe  00e8 0000  0838 00fb 00fb  0000 00  00 00 00 shared    c:sesmgr.dll
+ 00ff  00e9 0000  082c 0100 0100  0000 00  00 00 00 shared    c:quecalls.dll
+ 0101  00ea 0000  082c 0100 0100  0000 00  00 00 00 shared    c:quecalls.dll
+ 0102  00eb 0000  082c 0100 0100  0000 00  00 00 00 shared    c:quecalls.dll
+ 0103  00ec 0000  0838 0100 0100  0000 00  00 00 00 shared    c:quecalls.dll
+ 0104  00ed 0000  0838 0100 0100  0000 00  00 00 00 shared    c:quecalls.dll
+ 0105  00ee 0000  0838 0100 0100  0000 00  00 00 00 shared    c:quecalls.dll
+ 0106  01cd 0000  1024 0091 0131  0000 00  00 00 00 priv 0003 c:pmshell.exe
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 0107  00f0 0000  0124 ffc4 0000  0000 00  00 00 00 smdfh
+ 0108  010f 0000  4a2c fff5 01b0  0000 00  00 00 00 give
+ 0109  0085 0000  0524 ff88 ff5b  0000 00  00 00 00 ptogdt    dd12
+ 010b  0084 0000  0524 ff88 ff5b  0000 00  00 00 00 ptogdt    dd12
+ 010c  0083 0000  0524 ff88 ff5b  0000 00  00 00 00 ptogdt    dd12
+ 010d  00f2 0000  0524 ff88 ff5b  0000 00  00 00 00 ptogdt    dd12
+ .
+ .
+ .
+
+#
+
+&gt;&gt;&gt; Many of these objects have a system ID owners but those of current
+&gt;&gt;&gt; interest are objects allocated within the shared and private arenas
+&gt;&gt;&gt; by application programs.
+
+&gt;&gt;&gt; Private arena private data:
+&gt;&gt;&gt; --------------------------
+
+&gt;&gt;&gt; We start by examining hob 10 in more detail.
+
+&gt;&gt;&gt; We list the object and its associated arena record using the 'c'
+&gt;&gt;&gt; parameter of .MO
+# .moc 10
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0087 %feb1fba4 00000010 %00070000 169 01a0 019a 0000 0000 0010 0000 hptda=0091
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 0010  0087 0000  402c 0091 019f  0000 00  00 00 00 priv 0003 c:pmshell.exe
+
+&gt;&gt;&gt; We can tell from its location (%70000) that this is a private
+&gt;&gt;&gt; arena address in process hptda=91. The 'own' field of the object
+&gt;&gt;&gt; record is also hob 91 which again implies an object owned by the
+&gt;&gt;&gt; process. That means the object is either a dynamic allocation or
+&gt;&gt;&gt; a non-shared <!-- entering slot 256 -->segment of the EXE load module, for example it's
+&gt;&gt;&gt; stack segment.
+
+
+# .mo 91
+ hob       va     flgs own  hmte  sown,cnt lt st xf
+ 0091  %7b9c484c  8000 ffcb ff79  0000 00  00 00 00 ptda 0003 c:pmshell.exe
+
+&gt;&gt;&gt; This tells us the owner is a PTDA (that is, a process private arena)
+&gt;&gt;&gt; and the PID is 3, which is executing PMSHELL.EXE
+&gt;&gt;&gt; Note: the PID and executable have been extracted from hob 91 and
+&gt;&gt;&gt; displayed in the description area of hob 10.
+
+&gt;&gt;&gt; Now look at the hmte for hob 10.
+
+# .mo 19f
+ hob       va     flgs own  hmte  sown,cnt lt st xf
+ 019f  %fe8629e0  8000 ffa6 0000  0000 00  00 00 00 mte       c:pmwin.dll
+
+&gt;&gt;&gt; This is the MTE for pmwin.dll.
+
+&gt;&gt;&gt; The 'own' and 'hmte' of hob 10 tell us that hob 10 was allocated in
+&gt;&gt;&gt; the private arena of process PID 3 by pmwin.dll as a result of a
+&gt;&gt;&gt; direct or indirect call to pmwin from pmshell.
+
+&gt;&gt;&gt; The flags in hob 10 can give us more information on the
+&gt;&gt;&gt; characteristics of hob 10
+&gt;&gt;&gt; 4    0    2    c
+    0100 0000 0010 1100
+     '          '  ''
+     '          '  ''. writeable
+     '          '  '...user storage
+     '          '......executable
+     '.................API located
+
+&gt;&gt;&gt; The combination writeable + executable should be interpreted as
+&gt;&gt;&gt; R/W storage rather than executable storage. Looking at the page
+&gt;&gt;&gt; table entry for %7000 in slot 8 (pid 3) will confirm this:
+# .s8
+Current slot number: 0008
+# .p8
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 0008  0003 0001 0003 0001 rdy 061f 7b7b6000 7b9c484c 7b9a8a70 1eb8 01 PMSHL32
+# dp %70000
+ linaddr   frame   pteframe  state res Dc Au CD WT Us rW Pn state
+%00070000* 012f3  frame=0120d  0    0  D  A        U  W  P  pageable
+%00070000  0120d  frame=0120d  0    0  D  A        U  W  P  pageable
+#
+&gt;&gt;&gt; Private arena shared data:
+&gt;&gt;&gt; -------------------------
+
+# .moc 192
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0249 %feb22250 00000010 %00010000 1c9 024a 0247 014e 0000 0192 0000 hptda=02a6
+ 014e %feb20cbe 00000010 %00010000 1d9 014f 008e 0000 0000 0192 0000 hptda=0091
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 0192  0249 0000  0838 0193 0193  0000 00  00 00 00 shared    c:pmshell.exe
+
+&gt;&gt;&gt; Object 192 has two private arena records pointing to it. One
+&gt;&gt;&gt; associated with hptda=2a6 and the other with hptda=91. We established
+&gt;&gt;&gt; earlier that hptda=91 is pid 3 and was running pmshell.exe
+
+#.mo 2a6
+ hob       va     flgs own  hmte  sown,cnt lt st xf
+ 02a6  %7b9c60d0  8000 ffcb 0000  0000 00  00 00 00 ptda 0006 c:pmshell.exe
+
+&gt;&gt;&gt; So hptda=2a6 refers to pid 6, which is <!-- entering slot 257 -->also running pmshell.exe
+&gt;&gt;&gt; Note the use of the 'link' field in har=249 to point to har=14e. The two
+&gt;&gt;&gt; arena records are chained in this way to link all arena records that
+&gt;&gt;&gt; share a private data object. The object record points to the head of
+&gt;&gt;&gt; the chain.
+
+&gt;&gt;&gt; The 'own' and 'hmte' fields both point to object 193. This tells us
+&gt;&gt;&gt; that object 193 is a shared segment of the load module whose
+&gt;&gt;&gt; handle is 193.
+&gt;&gt;&gt; This may be verified as follows...
+
+#.mo 193
+ hob       va     flgs own  hmte  sown,cnt lt st xf
+ 0193  %fe722dec  8000 ffa6 0000  0000 00  00 00 00 mte       c:pmshell.exe
+
+# .lmo 193
+hmte=0193 pmte=%fe722dec mflags=84903150 c:\os2\pmshell.exe
+obj   vsize    vbase    flags   ipagemap cpagemap hob  sel
+0001 00000600 00010000 80002025 00000001 00000001 0192 000f r-x shr big
+0002 0000005c 00020000 80002003 00000002 00000001 0000 0017 rw- big
+0003 0000fa20 00030000 80002003 00000003 00000001 0000 001f rw- big
+
+&gt;&gt;&gt; We actually discover this is object 1 of the pmshell.exe load
+&gt;&gt;&gt; module.
+
+&gt;&gt;&gt; Examining the flags from hob 192 we see:
+&gt;&gt;&gt; 0    8    3    8
+&gt;&gt;&gt; 0000 1000 0011 1000
+&gt;&gt;&gt;      '      '' '
+&gt;&gt;&gt;      '      '' '.... User storage
+&gt;&gt;&gt;      '      ''...... Readable
+&gt;&gt;&gt;      '      '....... Execuable
+&gt;&gt;&gt;      '.............. Shared
+&gt;&gt;&gt;
+&gt;&gt;&gt; This is information summarised in the description field of hob 192.
+
+&gt;&gt;&gt; Finally we take a look at the page table entries for %10000 in pid 3
+&gt;&gt;&gt; and 6. We should see the same real storage frame being accessed by
+&gt;&gt;&gt; both processes:
+# .s8
+Current slot number: 0008
+# .p8
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 0008  0003 0001 0003 0001 rdy 061f 7b7b6000 7b9c484c 7b9a8a70 1eb8 01 PMSHL32
+# dp %10000
+ linaddr   frame   pteframe  state res Dc Au CD WT Us rW Pn state
+%00010000* 012f3  frame=011cb  0    0  c  A        U  r  P  pageable
+%00010000  011cb  frame=011cb  0    0  c  A        U  r  P  pageable
+# .s 1f
+Current slot number: 001f
+# .p 1f
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 001f# 0006 0003 0006 0001 rdy 062f 7b7e4000 7b9c60d0 7b9ab1f8 1eb8 11 PMSHL32
+# dp %10000
+ linaddr   frame   pteframe  state res Dc Au CD WT Us rW Pn state
+%00010000* 0093d  frame=011cb  0    0  c  A        U  r  P  pageable
+%00010000  011cb  frame=011cb  0    0  c  A        U  r  P  pageable
+#
+
+&gt;&gt;&gt; In both processes %00010000 translates to %%011cb000
+
+
+
+&gt;&gt;&gt; Shared Arena, Global Data:
+&gt;&gt;&gt; -------------------------
+
+# .moc e6
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 00d9 %feb202b0 00000010 %1a060000 379 00d8 00da 0000 0000 <!-- entering slot 258 -->00e6 0000  hco=0075d
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 00e6  00d9 0000  082c 00e5 00e5  0000 00  00 00 00 shared    c:doscall1.dll
+ hco=075d pco=fe6804ec  hconext=0084c hptda=050c f=16  pid=0019 e:ipfc.exe
+ hco=084c pco=fe680997  hconext=006de hptda=04c6 f=16  pid=0018 c:epm.exe
+ hco=06de pco=fe680271  hconext=00660 hptda=049c f=16  pid=0013 d:ibmavsd.exe
+ hco=0660 pco=fe67fffb  hconext=00497 hptda=0410 f=16  pid=0012 c:pmdraw.exe
+ hco=0497 pco=fe67f70e  hconext=0036b hptda=0420 f=16  pid=0010 c:cmd.exe
+ hco=036b pco=fe67f132  hconext=00327 hptda=0380 f=16  pid=000d c:pulse.exe
+ hco=0327 pco=fe67efde  hconext=001a0 hptda=036c f=16  pid=000c c:dinfo.exe
+ hco=01a0 pco=fe67e83b  hconext=002c6 hptda=034e f=16  pid=000b c:mrfile32.exe
+ hco=02c6 pco=fe67edf9  hconext=0014c hptda=0317 f=16  pid=000a c:pmdiary.exe
+ hco=014c pco=fe67e697  hconext=000a2 hptda=02a6 f=16  pid=0006 c:pmshell.exe
+ hco=00a2 pco=fe67e345  hconext=00033 hptda=0205 f=16  pid=0004 c:harderr.exe
+ hco=0033 pco=fe67e11a  hconext=00029 hptda=0091 f=16  pid=0003 c:pmshell.exe
+ hco=0029 pco=fe67e0e8  hconext=00000 hptda=0169 f=16  pid=0002 c:logdaem.exe
+
+
+&gt;&gt;&gt; We can tell immediately that this is shared arena global data from the
+&gt;&gt;&gt; presence of hco= in the arena record. The hco is the handle to the
+&gt;&gt;&gt; context record. These record the hptda of the process that is accessing
+&gt;&gt;&gt; shared global data. Each of the VMCOs, that's sharing the same object
+&gt;&gt;&gt; is chained in a single linked list from the arena record.
+&gt;&gt;&gt; The description to the right of each VMCO is derived from the hptda object.
+
+&gt;&gt;&gt; Note: the .MC command formats a VMCO. Under the Dump Formatter the VMCO
+&gt;&gt;&gt; chain is not run to completion so we must run the chain
+&gt;&gt;&gt; manually by using the hconext= field as the VMCO chain pointer.
+
+&gt;&gt;&gt; The 'own' and 'hmte' fields being equal indicate that the object is
+&gt;&gt;&gt; part of DOSCALL1.DLL. We can check out which object in DOSCALL1 using
+&gt;&gt;&gt; .lmo
+
+#.lmo e5
+hmte=00e5 pmte=%fe72dfac mflags=8498b594 c:\os2\dll\doscall1.dll
+obj   vsize    vbase    flags   ipagemap cpagemap hob  sel
+0001 00001354 1a010000 80009025 00000001 00000002 00eb d00e r-x shr alias iopl
+0002 0000ced0 1a020000 80002025 00000003 0000000d 00ea d017 r-x shr big
+0003 00001928 1a030000 80001025 00000010 00000002 00e9 d01f r-x shr alias
+0004 000002ce 1a040000 80001025 00000012 00000001 00e8 d027 r-x shr alias
+0005 000054f8 1a050000 8000d025 00000013 00000006 <!-- entering slot 259 -->00e7 d02e r-x shr alias conf iopl
+0006 00000280 1a060000 80001023 00000019 00000001 00e6 d037 rw- shr alias
+0007 00001b40 1a070000 80001003 0000001a 00000002 0000 d03f rw- alias
+
+&gt;&gt;&gt; hob e6 is load module object 6 of doscall1.dll. Furthermore it is a
+&gt;&gt;&gt; read/write object. We can illustrate this by looking at the page table
+&gt;&gt;&gt; entries for two of the processes that are accessing hob e6.
+
+# .s8
+Current slot number: 0008
+# .p8 Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 0008# 0003 0001 0003 0001 rdy 061f 7b7b6000 7b9c484c 7b9a8a70 1eb8 01 PMSHL32
+# dp %1a060000
+ linaddr   frame   pteframe  state res Dc Au CD WT Us rW Pn state
+%1a060000* 012fe  frame=00e1e  0    0  D  u        U  W  P  pageable
+%1a060000  00e1e  frame=00e1e  0    0  D  u        U  W  P  pageable
+# .s1f
+Current slot number: 001f
+# .p1f
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 001f# 0006 0003 0006 0001 rdy 062f 7b7e4000 7b9c60d0 7b9ab1f8 1eb8 11 PMSHL32
+# dp %1a060000
+ linaddr   frame   pteframe  state res Dc Au CD WT Us rW Pn state
+%1a060000* 0093e  frame=00e1e  0    0  c  A        U  W  P  pageable
+%1a060000  00e1e  frame=00e1e  0    0  c  A        U  W  P  pageable
+#
+&gt;&gt;&gt; As expected the same page frame (00e1e) is being referenced.
+
+&gt;&gt;&gt; Note also: frame e1e of slot 8 is dirty (Dc=D) and unaccessed (Au=u)
+&gt;&gt;&gt; while in slot 1f it is clean and accessed. This tends to suggest
+&gt;&gt;&gt; that frame e1e and therefore page %1a060000 was most recently
+&gt;&gt;&gt; updated by slot 8 and read by slot 1f before the update took place.
+
+&gt;&gt;&gt; Shared Arena, Instance Data:
+&gt;&gt;&gt; ---------------------------
+
+#.moc 5ef
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 01c6 %feb2170e 00000010 %1a890000 139 01c5 01c7 0000 0000 05ef 0000      =0000
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 05ef  01c6 04e8  0024 050c 0131  0000 00  00 00 00 priv 0019 e:ipfc.exe
+ 04e8  01c6 02ec  0024 04c6 0131  0000 00  00 00 00 priv 0018 c:epm.exe
+ 02ec  01c6 0457  0024 049c 0131  0000 00  00 00 00 priv 0013 d:ibmavsd.exe
+ 0457  01c6 0432  0024 0410 0131  0000 00  00 00 00 priv 0012 c:pmdraw.exe
+ 0432  01c6 03d6  0024 0420 0131  0000 00  00 00 00 priv 0010 c:cmd.exe
+ 03d6  01c6 0390  0024 0380 0131  0000 00  00 00 00 priv 000d c:pulse.exe
+ 0390  01c6 03c8  0024 036c 0131  0000 00  00 00 00 priv 000c c:dinfo.exe
+ 03c8  01c6 03a7  0024 034e 0131  0000 00  00 00 00 priv 000b c:mrfile32.exe
+ 03a7  01c6 02c7  0024 0317 0131  0000 00  00 00 00 priv 000a c:pmdiary.exe
+ 02c7  01c6 0112  0024 <!-- entering slot 260 -->02a6 0131  0000 00  00 00 00 priv 0006 c:pmshell.exe
+ 0112  01c6 0000  0024 0091 0131  0000 00  00 00 00 priv 0003 c:pmshell.exe
+
+&gt;&gt;&gt; Object 5ef is an example of shared arena instance data. Each instance
+&gt;&gt;&gt; of the object has its own object record (VMOB), but they all share the
+&gt;&gt;&gt; same arena record. Each of these VMOBs is chained from the 'hob'
+&gt;&gt;&gt; field of the arena record via their 'hobnxt' field.
+&gt;&gt;&gt; The VMOBs appear as private arena objects, but the arena record
+&gt;&gt;&gt; does not point to a specific hptda, which distinguishes this case as
+&gt;&gt;&gt; shared instance data.
+
+&gt;&gt;&gt; As would be expected with shared instance data the owners would differ
+&gt;&gt;&gt; for each instance object. They are infact the hptda's for each owner.
+&gt;&gt;&gt; The hmte's we would expect to be common to all the VMOBs.
+
+#.mo 131
+ hob       va     flgs own  hmte  sown,cnt lt st xf
+ 0131  %fe860978  8000 ffa6 0127  0000 00  00 00 00 mte       c:display.dll
+
+&gt;&gt;&gt; So, %1a890000 has been allocated by display.dll
+
+&gt;&gt;&gt; Again we can illustrate that we are really looking at instance data by
+&gt;&gt;&gt; examining the page tables of two examples:
+
+.s8
+Current slot number: 0008
+# .p8
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 0008# 0003 0001 0003 0001 rdy 061f 7b7b6000 7b9c484c 7b9a8a70 1eb8 01 PMSHL32
+# dp %1a890000
+ linaddr   frame   pteframe  state res Dc Au CD WT Us rW Pn state
+%1a890000* 01291  frame=01066  0    0  D  u        s  W  P  pageable
+%1a890000  01066  frame=01066  0    0  D  u        s  W  P  pageable
+# .s1f
+Current slot number: 001f
+# .p1f
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 001f# 0006 0003 0006 0001 rdy 062f 7b7e4000 7b9c60d0 7b9ab1f8 1eb8 11 PMSHL32
+# dp %1a890000
+ linaddr   frame   pteframe  state res Dc Au CD WT Us rW Pn state
+%1a890000* 0093c  frame=008e4  0    0  D  u        s  W  P  pageable
+%1a890000  008e4  frame=008e4  0    0  D  u        s  W  P  pageable
+#
+&gt;&gt;&gt; In PID 3, %1a890000 translates to physical address %01066000, but
+&gt;&gt;&gt; in PID 6, %1a890000 translates to physical address %008e4000.
+
+</PRE>
+ 
+
+<P><HR>
+
+<A HREF="178_L5_ExploringArenaRecord.html">[Back: Exploring Arena Records]</A> <BR>
+<A HREF="180_L5_FindingWhoOwnsMemory.html">[Next: Finding Who Owns Memory]</A> 
+</BODY>
+</HTML>

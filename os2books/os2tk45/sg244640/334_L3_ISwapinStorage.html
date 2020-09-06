@@ -1,0 +1,132 @@
+<HTML>
+<HEAD>
+<TITLE>.I - Swap in Storage</TITLE>
+</HEAD>
+<BODY>
+<H1>.I - Swap in Storage</H1><!-- entering slot 484 --><!-- Unable to decode bitmap format --><IMG SRC="334_L3_ISwapinStorage_117.gif" WIDTH=32 HEIGHT=32>
+<P>
+Page in a <A HREF="3346_L0_.html">TSD</A> or a Page of Virtual Storage from
+the Swapper file.
+<P>
+<U><I>Syntax:</I></U>
+<PRE>
+
+ÄÄÄÄ.I ÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄ addr ÄÄÄÄÄÄÄÄÄÄÄÄÄ
+              ³          ÃÄÄ B ÄÄ´
+              ³          ÀÄÄ D ÄÄÙ
+              ³
+              ³
+              ÀÄÄ T ÄÄÄÄÄÂÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄ
+                         ÃÄÄ B ÄÄ´       ÀÄÄÄ slot ÄÄÄÙ
+                         ÀÄÄ D ÄÄÙ
+
+
+</PRE>
+
+<P>
+<U><I>Parameters:</I></U><!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B>T</B><!-- lm: 0x11 11 -->
+<UL> When specified it requests the Kernel
+Debugger page in the <A HREF="3346_L0_.html">TSD</A> for a specified thread
+slot.
+<P>
+One TSD is assigned to each thread slot. If the registers for an out-of-<A HREF="3284_L0_.html">context
+</A>thread need to be examined then it may be necessary to swap in the TSD
+for that slot, since the ring 3 stack frame is stored in the TSD when a
+thread enters the Kernel. The presence or absence of the TSD for a given
+slot may be deduced by the presence or absence of a value for the<B> Disp
+</B>field of the <A HREF="378_L3_PDisplayProcessStatu.html">.P</A>  command.
+
+<P>
+If the<B> T</B> option is omitted it requests the Kernel Debugger page in
+the page of virtual storage that encompasses the specified<B> addr</B>.
+ <!-- lm: 0x2 1 -->
+</UL><B>B</B><!-- lm: 0x11 11 -->
+<UL> When specified
+requests that all <A HREF="3286_L0_.html">breakpoints</A> be re-instated,
+including those which the current<B> CS:EIP</B> may be addressing.
+<P>
+This parameter is effectively obsolete since breakpoints at the current
+<B>CS:EIP</B> are correctly handled by the <A HREF="275_L3_BBreakpointCommandFa.html">Breakpoint
+Commands</A>.<!-- lm: 0x2 1 -->
+</UL> D<!-- lm: 0x11 11 -->
+<UL>Specifies
+that a page-in request be scheduled for the Kernel Debugger Daemon thread
+to execute. In most cases a page-in operation may be performed synchronously,
+but under the following conditions it is prohibited:<!-- lm: 0x2 11 -->
+<P>
+<!-- lm: 0x2 26 -->
+<UL>When an interrupt is being handled (that is, not
+at task time)<!-- lm: 0x2 11 -->
+</UL><!-- lm: 0x2 26 -->
+<UL> When a swapping
+operation is pending (<B>TCBfswapping</B> (<B>TCB</B> + 0x1a1) not 0)<!-- lm: 0x2 11 -->
+</UL><!-- lm: 0x2 26 -->
+<UL> When
+a the current thread is blocked (<B>TK_WF_SLEEPING</B> (0x40) is set in
+<B>TCBWakeFlags</B> (<B>TCB</B> + 0x162))<!-- lm: 0x2 11 -->
+</UL><!-- lm: 0x2 26 -->
+<UL> When
+in ring0 and InDos is 0<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL> When
+one of these conditions occurs the page-in request may be scheduled for
+execution asynchronously by the Debugger Daemon thread by use of the<B> D
+</B> parameter. If the request is successfully scheduled the user is invited
+to enter the<B> G</B> command. The system will dispatch the Daemon thread,
+in time, which will attempt the page-in request. The Daemon returns control
+to the debug console using an<B> INT 3</B> interrupt.<!-- lm: 0x2 1 -->
+<P>
+<A HREF="270_L4_AddressSeparatorsand.html"><B><I>addr</B></I></A><!-- lm: 0x11 11 -->
+<UL> This
+specifies the virtual address of the page to be paged in. The address is
+effectively rounded down to the nearest 4K page boundary.
+<P>
+<B>Note: </B> A selector:offset address specification can only be used if
+the selector does not reference the packed area of the LDT. If it does then
+a linear address must be supplied by the user.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL> <A HREF="3320_L0_.html"><B><I>slot
+</B></I></A><!-- lm: 0x11 11 -->
+<UL>Specifies the thread slot number of
+the TSD to be paged in. The default slot is the current slot of the debugger's
+default slot if overridden with the <A HREF="386_L3_SSetorDisplayDefault.html">.S
+</A>command.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<U><I>Results &amp; Notes:</I></U>
+<P>
+When an asynchronous page-in is requested the Kernel Debugger will prompt
+the user with one of the following:
+<PRE>task|addr %nnnn|%nnnnnnnn, LDT entry address %nnnnnnnn queued, G to continue
+
+
+task|addr %nnnn|%nnnnnnnn queued, G to continue
+
+
+TSD for slot s queued, G to continue
+
+</PRE>
+depending upon combination of parameters specified.
+<P>
+On successful completion of a synchronous page-in the user will be prompted
+with the command prompt.
+<P>
+If<B> .I</B> is unable to complete the request the OS/2 system error code
+will be displayed (in decimal) in the following<!-- entering slot 485 --> message:
+
+<PRE>
+    OS/2 error code nt
+
+</PRE>
+
+<P>
+refer to the<B> Control Programming</B> reference or to<B> bseerr.h</B>
+C header file for an interpretation of the error code.
+
+<P><HR>
+
+<A HREF="333_L4_32BitSemaphoreStruct.html">[Back: 32-Bit Semaphore Structures (SEM32, OPENQ and MUXQ)]</A> <BR>
+<A HREF="335_L3_HDisplayDumpFileHead.html">[Next: .H - Display Dump File Header Information]</A> 
+</BODY>
+</HTML>

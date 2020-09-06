@@ -1,0 +1,99 @@
+<HTML>
+<HEAD>
+<TITLE>Loading Appropriate PII Data</TITLE>
+</HEAD>
+<BODY>
+<H1>Loading Appropriate PII Data</H1><!-- entering slot 41 -->
+<PRE>旼컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴커
+쿐xternalize PII from the executable module and load an appropriate PII�
+쿪ccording to the current locale.                                      �
+읕컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴켸
+</PRE>
+
+<P>
+In order to determine which language PII should be used, you can use the
+current locale name by the<B> setlocale()</B> and the<B> nl_langinfo()</B> functions
+(<A HREF="020_L2_DetermininganEnviron.html">Determining an Environment</A>).
+
+<P>
+PII of each language may be stored in:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->the different files and be distinguished by the file
+name or the location (subdirectory).<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->the same file that the application knows its format.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The resource files and IPF files are good examples of the former case. The
+sample program of this primer searches a subdirectory whose name is the
+same as the current locale (language and territory).  Then the program loads
+the resource file, which has been created as the .DLL, by the<B> DosLoadModule()
+</B>API. LoadingGUIresourcefiles( XPRMMAIN . C )
+<BR>
+
+<PRE>...
+static char *prodLocale, *custLocale, *curLocale;     /* locale information*/
+static char acDriveName[26] = {'A','B','C','D','E','F','G','H','I','J','K','L','M',
+                               'N','O','P','Q','R','S','T','U','V','W','X','Y','Z' };
+...
+/*****************************************************************************/
+/* loadResource()                                                            */
+/*      Query the current disk &amp; path name and generate the qualified file   */
+/*      name of the resource file.  If loading the resource is failed, it    */
+/*      loads the default resource.                                          */
+/*****************************************************************************/
+static Boolean loadResource( char* pszResFile )
+{
+int i;
+APIRET ret;
+ULONG ulDriveNum=0;
+ULONG ulDriveMap=0;
+ULONG ulLength = 253;
+char acCurDir[256];
+
+    DosQueryCurrentDisk( &amp;ulDriveNum, &amp;ulDriveMap );
+    for( i=0; i&lt;26; i++ )
+    {
+       if( (i+1) == ulDriveNum )   acCurDir[0] = acDriveName[i];
+    }
+    acCurDir[1] = ':';
+    acCurDir[2] = '\\';
+
+    DosQueryCurrentDir( 0L, &amp;acCurDir[3], &amp;ulLength );
+    strcpy( pszResFile, acCurDir );
+    strcat( pszResFile, "\\" );
+    strcat( pszResFile, curLocale );
+    strcat( pszResFile, pszResName );
+    if( <B>DosLoadModule( NULL, 0, pszResFile, &amp;hModRsrc )</B> != 0 )
+    {
+       strcpy( pszResFile, acCurDir );
+       strcat( pszResFile, pszDefRes );
+       if( (ret=DosLoadModule( NULL, 0, pszResFile, &amp;hModRsrc )) != 0 )
+       {
+          logError( ERR_LOAD_RESOURCE, MPFROMLONG(ret) );
+          return FALSE;
+       }
+    }
+    return TRUE;
+}
+</PRE>
+
+<P>
+Storing PII of each language into one data file is not recommended because
+it may require change in the application logic if the supported languages
+are added. However, this will be useful for supporting the dual languages,
+one is the national language and the other is English. This English facility
+is welcomed by users working at foreign-capitalized companies operating
+in Asian countries.
+<P>
+In the sample program, the products data and customers data files store
+both the national language data and the corresponding English data.
+
+<P><HR>
+
+<A HREF="038_L3_IsolatingPII.html">[Back: Isolating PII]</A> <BR>
+<A HREF="040_L3_FittingDialogWindows.html">[Next: Fitting Dialog Windows into a PM Screen]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,97 @@
+<HTML>
+<HEAD>
+<TITLE>Determining Coordinates of Rectangles in a Region</TITLE>
+</HEAD>
+<BODY>
+<H1>Determining Coordinates of Rectangles in a Region</H1><!-- entering slot 341 -->
+<P>
+If a region consists of more than one rectangle, you can call<A><!-- external link: 1D 05 C4 50 --> GpiQueryRegionRects
+</A>to retrieve the coordinates of the lower-left and upper-right corners
+of each rectangle.
+<P>
+If you use<A><!-- external link: 1D 05 C4 50 --> GpiQueryRegionRects</A> to
+retrieve every rectangle requested to define a region, the function retrieves
+the coordinates of as many contiguous rectangles as required.<A><!-- external link: 1D 05 C4 50 --> GpiQueryRegionRects
+</A>returns the coordinates of the rectangles that define a region to an
+array of<A><!-- external link: 1D 97 C4 80 --> RECTL</A> structures, and
+returns the number of rectangles that were requested for the definition
+to the<I> crcReturned</I> field of the<A><!-- external link: 1D 98 C4 8F --> RGNRECT
+</A>structure. Your<A><!-- external link: 1D 97 C4 80 --> RECTL</A> array
+may not be large enough to hold all of the rectangles. Specify the maximum
+it can accept and request the remainder in subsequent functions if necessary.
+
+<P>
+To determine the coordinates of the rectangles that form a region, follow
+these steps:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Create an array of<A><!-- external link: 1D 97 C4 80 --> RECTL
+</A>structures that will receive the rectangle coordinates. More rectangles
+may be required to define the region than were required to create it.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Fill in the<I> ircStart, crc</I>, and<I> usDirection
+</I>fields of the<A><!-- external link: 1D 98 C4 8F --> RGNRECT</A> structure.
+The<I> crc</I> field can specify more rectangles than will be returned by
+<A><!-- external link: 1D 05 C4 FC -->GpiQueryRegionRects</A>.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Call<A><!-- external link: 1D 05 C4 50 --> GpiQueryRegionRects
+</A>to retrieve the coordinates.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following figure shows how to determine the number of rectangles that
+define a region, the coordinates of the rectangles in that region, and how
+to create a new region using those coordinates.
+<PRE>#define INCL_GPIREGIONS#include &lt;os2.h&gt;
+void fncREGN05(void){
+    RGNRECT rgnrc;               /* Structure for region rectangles       */
+    RECTL arcl1[5];              /* Array for determining rectangle count */
+    PRECTL parcl;                /* Array for rectangle coordinates       */
+    ULONG cRects = 0;            /* Total number of rectangles in region  */
+    HPS hps;
+    HRGN hrgn3;
+
+    rgnrc.ircStart = 1;          /* Rectangle to start with               */
+    rgnrc.crc = 5;               /* Number of rectangles to query         */
+    rgnrc.ulDirection = RECTDIR_LFRT_BOTTOP;      /* Direction to query   */
+
+    /**********************************************************************/
+    /*  Determine the total number of rectangles in the region by         */
+    /*  repeatedly calling GpiQueryRegionRects with an array of 5 RECTL   */
+    /*  structures. The loop terminates when the function retrieves less  */
+    /*  than 5 rectangles.                                                */
+    /**********************************************************************/
+    do {
+        GpiQueryRegionRects(hps, /* Handle of presentation space          */
+            hrgn3,               /* Region to query                       */
+            (PRECTL) NULL,       /* Gets all rectangles in region         */
+            &amp;rgnrc,              /* Structure with rectangle data         */
+            arcl1);              /* Array of structures for coordinates   */
+
+        cRects += rgnrc.crcReturned;
+    } while (rgnrc.crcReturned == rgnrc.crc); /* While 5 rects retrieved  */
+
+    //cRects = rgnrc.crcReturned + (rgnrc.ircStart - 1);
+
+    rgnrc.ircStart = 0;                  /* Rectangle to start with       */
+    rgnrc.crc = cRects;                  /* Number of rectangles to query */
+
+    /* Allocate enough memory for all RECTL structures.                   */
+    parcl = (PRECTL) malloc(cRects * sizeof(RECTL));
+
+    /* Fill array with coordinates of all rectangles.                     */
+    GpiQueryRegionRects(hps,     /* Handle of presentation space          */
+        hrgn3,                   /* Region to query                       */
+        (PRECTL) NULL,           /* Gets all rectangles in region         */
+        &amp;rgnrc,                  /* Structure with rectangle data         */
+        parcl);                  /* Array of structures for coordinates   */
+} /* fncREGN05 */
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="327_L3_LocatingaPointwithRe.html">[Back: Locating a Point with Respect to a Region]</A> <BR>
+<A HREF="329_L1_Notices.html">[Next: Notices]</A> 
+</BODY>
+</HTML>

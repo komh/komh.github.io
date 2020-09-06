@@ -1,0 +1,108 @@
+<HTML>
+<HEAD>
+<TITLE>TSF Format</TITLE>
+</HEAD>
+<BODY>
+<H1>TSF Format</H1><!-- entering slot 451 -->
+<P>
+The layout of a trace source file is:
+<PRE>
+                ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                ³        Header          ³
+                ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+                ³  Type List Definition  ³
+                ³       (optional)       ³
+                ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+                ³  Group List Definition ³
+                ³       (optional)       ³
+                ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+                ³                        ³
+                ³                        ³
+                ³ Tracepoint Definitions ³
+                ³                        ³
+                ³                        ³
+                ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+</PRE>
+
+<P>
+
+<P>
+<B>Note: </B><!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Comments may be freely inserted anywhere in the trace
+source file. A comment is identified by a<B> ;</B> or by using C syntax
+comments anywhere in the file.  A C comment has start and end delimiters,
+namely<B> /*</B> and<B> */</B>. C type comments may span lines, and may
+be nested.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Below are sample TSF files. See <A HREF="461_L2_SampleTraceSourceFil.html">Sample
+Trace Source Files</A> for more examples.<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+
+<P>
+
+<PRE>;  Sample trace source file depicting dynamic tracing for OS calls compiled;  with 32-bit addressing
+
+      MODNAME = doscall1.dll
+      MAJOR   = 100  /* this is decimal, would be 0x64 if specified hex */
+      MAXDATALENGTH = 200 /* max bytes logged per tracepoint is 200 */
+
+      TYPELIST NAME=PRE,ID=1,
+               NAME=SYS,ID=0x40,
+               NAME=API,ID=128,     /* decimal, if hex would be 0x80 */
+               NAME=POST,ID=0x8000
+
+      GROUPLIST NAME=MEM,ID=2,
+                NAME=FS,ID=0x5,
+                NAME=MOU,ID=13,
+                NAME=DOS,ID=0x2B    /* would be 43 if decimal */
+
+      TRACE   MINOR=0x0001,
+              TP=.DosOpen,          /* Pre-invocation tracing on DosOpen */
+              TYPE=(PRE,API),
+              GROUP=DOS,
+              DESC="(OS) DosOpen    Pre-Invocation",
+              FMT="Major = %X  Minor = %Y",
+              FMT="            EAX = %D",
+              FMT="            FileName = /usr/cmvc/family/pubdoc/vc/0/1/2/2/s.69S",
+              REGS=(EAX),
+              ASCIIZ32=(.FileName,DIRECT,128)
+
+      TRACE   MINOR=0x7001,         /* Puts tracept on code at line 28 */
+                                    /*   of file dosopen1.c.  Debug    */
+              TP=@dosopen1.c,28,    /*   info is needed to use this.   */
+              TYPE=(API),
+              GROUP=DOS,
+              DESC="(OS) CheckParm  After Createhandle",
+              FMT="                 New handle = /usr/cmvc/family/pubdoc/vc/0/1/2/2/s.69W",
+              MEM32=(.handle,DIRECT,2)
+
+      TRACE   MINOR=0x8001,         /* Post-invocation tracing at         */
+              TP=.DosOpenC,RETEP,   /*   procedure DosOpenC return point. */
+              TYPE=(API,POST),      /*   Debug    info is needed to use   */
+              GROUP=DOS,            /*   this type of tracepoint.         */
+              DESC="(OS) DosOpenC   Post-Invocation",
+              FMT="                 Return Code = /usr/cmvc/family/pubdoc/vc/0/1/2/2/s.69W",
+              FMT="                 Variable Rec= /usr/cmvc/family/pubdoc/vc/0/1/2/2/s.69U",
+              MEM32=(.retcode,DIRECT,2),
+              /* The following will log a variable length structure.  The */
+              /*   second field in the structure is the length of the     */
+              /*   record(position var_struct+2).  This LEN parameter must*/
+              /*   immediately precede the memory specification defining  */
+              /*   the variable length record.                            */
+              LEN=(var_struct+2,DIRECT),
+              MEM32=(.var_struct,DIRECT,LEN)
+</PRE>
+
+<P>
+
+
+<P><HR>
+
+<A HREF="436_L2_TraceSourceFile.html">[Back: Trace Source File]</A> <BR>
+<A HREF="438_L3_TSFHeader.html">[Next: TSF Header]</A> 
+</BODY>
+</HTML>

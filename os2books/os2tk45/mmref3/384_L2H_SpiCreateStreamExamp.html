@@ -1,0 +1,92 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>SpiCreateStream - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>SpiCreateStream - Example Code</H1><!-- entering slot 384 -->
+<P>
+The following code illustrates how to create a stream handler between a
+source and target stream handler.
+<PRE>#include        "os2.h"
+#include        "os2me.h"
+#include        "string.h"
+
+  ULONG         ulRC;             /* Error return code */
+  HID           hidSource,        /* Source handler ID */
+                hidTarget,        /* Target handler ID */
+                hidunused;        /* Dummy handler ID  */
+  SPCBKEY       spcbkey;          /* Data type to stream */
+  DCB_AUDIOSH   dcb;        /* Audio device driver information */
+  PDCB          pdcbTgt;          /* Pointer to DCB */
+  IMPL_EVCB     evcb;       /* Event control block for
+                                  /*  implicit events */
+  HSTREAM       hStream;          /* Stream handle */
+  HEVENT        hEvent;           /* Event handle for implicit */
+                                  /* events */
+                            .
+                            .
+                            .
+/*--------------------------------------------------------*/
+/*  Initialize the audio card and get the                 */
+/*  dcb.hSysFileNum for "AUDIO01$".                       */
+/*--------------------------------------------------------*/
+                            .
+                            .
+                            .
+/*--------------------------------------------------------*/
+/*  Get the stream handler ID for the file stream handler.*/
+/*--------------------------------------------------------*/
+  if (ulRC = SpiGetHandler("FSSH",&amp;hidSource, &amp;hidunused))
+     return(ulRC);          /* error! */
+
+/*--------------------------------------------------*/
+/*  Get the stream handler ID for the digital audio */
+/*  stream handler.                                 */
+/*--------------------------------------------------*/
+  if (ulRC = SpiGetHandler("AUDIOSH$",&amp;hidunused, &amp;hidTarget))
+     return(ulRC);          /* error! */
+
+/*----------------------------------------------------*/
+/*  Create a data stream from the file system to      */
+/*  the digital audio card connected to the speakers. */
+/*----------------------------------------------------*/
+  spcbkey.ulDataType    = DATATYPE_WAVEFORM;
+  spcbkey.ulDataSubType = WAVE_FORMAT_4S16;
+  spcbkey.ulIntKey       = 0;
+  strcpy(dcb.szDevName,"AUDIO01$");
+  pdcbTgt = (PDCB)&amp;dcb;
+
+  if (ulRC = SpiCreateStream (hidSource,
+                            hidTarget,
+                            &amp;spcbkey,
+                            NULL,
+                            pdcbTgt,
+                            &amp;evcb,
+                            (PEVFN) EventsRtn,
+                            0,
+                            &amp;hStream,
+                            &amp;hEvent))
+    return(ulRC);   /* error! */
+
+/*-----------------------------------------------------*/
+/*  Event routine                                      */
+/*-----------------------------------------------------*/
+
+ ULONG APIENTRY EventsRtn(PEVCB pevcb)
+ {
+                            .
+                            .
+                      Process events.
+                            .
+                            .
+     return(0);
+ }
+</PRE>
+
+
+<P><HR>
+
+<A HREF="383_L2H_SpiCreateStreamRelat.html">[Back: SpiCreateStream - Related Messages]</A> <BR>
+<A HREF="385_L2H_SpiCreateStreamTopic.html">[Next: SpiCreateStream - Topics]</A> 
+</BODY>
+</HTML>

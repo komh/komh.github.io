@@ -1,0 +1,218 @@
+<HTML>
+<HEAD>
+<TITLE>OpenGL Sample</TITLE>
+</HEAD>
+<BODY>
+<H1>OpenGL Sample</H1><!-- entering slot 185 -->
+<P>
+The following sample code draws a gouraud shaded octahedron.
+<P>
+
+<PRE>/* sample code for using OpenGL and PGL  */
+/* Draws a gouraud shaded octahedron     */
+
+#include &lt;stdio.h&gt;
+#include "pgl.h"     /* PGL calls    */
+#include "gl.h"      /* OpenGL calls */
+#define PM_ESCAPE 0x0f
+#define MSGBOXID 22
+#define SQRT2  1.414
+
+/* attributes passed into pglChooseConfig */
+int attriblist[] = {
+  PGL_DOUBLEBUFFER,  /* request doublebuffered visual config   */
+  PGL_RGBA,          /* request rgb (true color) visual config */
+  None               /* always end list with this              */
+};
+
+HAB hab;
+
+void DispError(PSZ errstr)
+{
+  char buffer[256];
+  sprintf(buffer, "Error (0x%x) in SAMPOGL.EXE:", WinGetLastError(hab));
+  WinMessageBox(HWND_DESKTOP,HWND_DESKTOP,errstr,buffer,
+                MSGBOXID,MB_MOVEABLE!MB_CUACRITICAL!MB_CANCEL);
+  exit(0);
+}
+
+void Setup()
+{
+  glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
+  glDepthMask(GL_FALSE);
+  glEnable(GL_CULL_FACE);
+}
+
+float verts[][3] = {
+  { 0.0, 0.0, (1.0/SQRT2)},
+  { 0.5, 0.5, 0.0},
+  {-0.5, 0.5, 0.0},
+  {-0.5,-0.5, 0.0},
+  { 0.5,-0.5, 0.0},
+  { 0.0, 0.0, -(1.0/SQRT2)}
+};
+
+float colors[][3] = {
+  {1.0, 1.0, 1.0},
+  {1.0, 0.0, 0.0},
+  {0.0, 1.0, 0.0},
+  {0.0, 0.0, 1.0},
+  {1.0, 0.0, 1.0},
+  {0.0, 1.0, 1.0},
+};
+
+MRESULT EXPENTRY WindowProc(HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2)
+{
+  static float t = 0.0;
+  static SWP clientsize;
+  static USHORT mycode;
+  static UCHAR key;
+
+  switch(msg) {
+  case WM_SIZE:
+    /* Upon a resize, query new window size and set OpenGL viewport */
+    WinQueryWindowPos(hwnd,&amp;clientsize);
+    glViewport(0, 0, clientsize.cx, clientsize.cy);
+    return WinDefWindowProc(hwnd, msg, mp1, mp2);
+  case WM_TIMER:
+    /* Upon getting a timer message, the invalidate rectangle call  */
+    /* will cause a WM_PAINT message to be sent, enabling animation */
+    WinInvalidateRect(hwnd, NULLHANDLE, NULL);
+    return WinDefWindowProc(hwnd, msg, mp1, mp2);
+  case WM_PAINT:
+    /* This is what is done for every frame of the animation        */
+    t += 1.0;
+    glClear(GL_COLOR_BUFFER_BIT ! GL_DEPTH_BUFFER_BIT);
+    glPushMatrix();
+    glRotatef(t, 1.0, 1.0, 1.0);
+    glBegin(GL_TRIANGLE_FAN);
+      glColor3fv(colors[0]);
+      glVertex3fv(verts[0]);
+      glColor3fv(colors[1]);
+      glVertex3fv(verts[1]);
+      glColor3fv(colors[2]);
+      glVertex3fv(verts[2]);
+      glColor3fv(colors[3]);
+      glVertex3fv(verts[3]);
+      glColor3fv(colors[4]);
+      glVertex3fv(verts[4]);
+      glColor3fv(colors[1]);
+      glVertex3fv(verts[1]);
+    glEnd();
+    glBegin(GL_TRIANGLE_FAN);
+      glColor3fv(colors[5]);
+      glVertex3fv(verts[5]);
+      glColor3fv(colors[1]);
+      glVertex3fv(verts[1]);
+      glColor3fv(colors[4]);
+      glVertex3fv(verts[4]);
+      glColor3fv(colors[3]);
+      glVertex3fv(verts[3]);
+      glColor3fv(colors[2]);
+      glVertex3fv(verts[2]);
+      glColor3fv(colors[1]);
+      glVertex3fv(verts[1]);
+    glEnd();
+    glPopMatrix();
+    pglSwapBuffers(hab, hwnd);
+    return WinDefWindowProc(hwnd, msg, mp1, mp2);
+  case WM_CHAR:
+    mycode = (USHORT)SHORT1FROMMP(mp1);
+    if ((mycode &amp; KC_CHAR) &amp;&amp; !(mycode &amp; KC_KEYUP))
+      key = CHAR1FROMMP(mp2);
+    else if ((mycode &amp; KC_VIRTUALKEY) &amp;&amp; !(mycode &amp; KC_KEYUP))
+      key = CHAR3FROMMP(mp2);
+    if (key == PM_ESCAPE)
+      WinPostMsg(hwnd, WM_CLOSE, (MPARAM)0, (MPARAM)0);
+    return WinDefWindowProc(hwnd, msg, mp1, mp2);
+  default:
+    return WinDefWindowProc(hwnd, msg, mp1, mp2);
+  }
+}
+main(int argc, char **argv)
+{
+  PVISUALCONFIG vishead; /* visual configuration             */
+  HMQ hmq;               /* message queue                    */
+  HWND hwnd;
+  HWND hwndFrame;
+  ULONG createflags = FCF_TITLEBAR !
+                      FCF_SYSMENU  !
+                      FCF_MINMAX   !
+                      FCF_SIZEBORDER;
+  QMSG qmsg;             /* message                          */
+  HGC hgc;               /* OpenGL context                   */
+  int  major, minor;     /* OpenGL version                   */
+  int err;
+
+  hab = WinInitialize(0);
+  hmq = WinCreateMsgQueue(hab, 0);
+  if (!hmq)
+    DispError("Couldn't create a message queue!\n");
+
+  /* <!-- entering slot 186 -->Check to see if OpenGL exists */
+  if (pglQueryCapability(hab)) {
+    pglQueryVersion(hab, &amp;major, &amp;minor);
+    /* Version 1.0                */
+    if ((major == 1) &amp;&amp; (minor == 0)) {
+      /* Choose a visual configuration that matches desired  */
+      /* attributes in attriblist                            */
+      vishead = pglChooseConfig(hab, attriblist);
+      if (!vishead)
+        DispError("Couldn't find a visual!\n");
+      if (WinRegisterClass(
+            hab,
+            (PSZ)"PGLtest",
+            WindowProc,
+            CS_SIZEREDRAW ! CS_MOVENOTIFY, /* Need at least this! */
+            0))
+      {
+        hwndFrame = WinCreateStdWindow (
+                      HWND_DESKTOP,            /* Child of the desktop    */
+                      WS_VISIBLE,              /* Frame style             */
+                      &amp;createflags,        /* min FCF_MENU!FCF_MINMAX */
+                      (PSZ)"PGLtest",  /* class name              */
+                      "OpenGL Sample", /* window title            */
+                      WS_VISIBLE,              /* client style            */
+                      0,                       /* resource handle         */
+                      1,                       /* Resource ID             */
+                      &amp;hwnd);              /* Window handle           */
+        if (!hwndFrame)
+          DispError("Couldn't create a window!\n");
+        /* you must set window size before you call pglMakeCurrent */
+        if (!WinSetWindowPos(
+               hwndFrame,
+               HWND_TOP,
+               0,
+               0,
+               300,
+               300,
+               SWP_ACTIVATE ! SWP_SIZE ! SWP_MOVE ! SWP_SHOW))
+          DispError("Couldn't position window!\n");
+        hgc = pglCreateContext(hab,  /* anchor block handle    */
+                 vishead,            /* visual configuration   */
+                 (HGC)NULL,          /* (no) shared contexts   */
+                 (BOOL)TRUE);        /* direct (fast) context  */
+        if (!hgc)
+          DispError("Couldn't create an OpenGL context!\n");
+        if(!pglMakeCurrent(hab, hgc, hwnd))
+          DispError("Could not bind OpenGL context to window!\n");
+        /* Don't subclass your window past here! */
+        Setup();
+        /* Start timer to cause WM_TIMER messages to be sent   */
+        /* periodically.  This is used to animate.             */
+        WinStartTimer(hab, hwnd, 0L, 0L);
+        while (WinGetMsg(hab, &amp;qmsg, NULLHANDLE, 0, 0))
+          WinDispatchMsg(hab, &amp;qmsg);
+      }
+    }
+  }
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="184_L2H_VISUALCONFIGFieldnex.html">[Back: VISUALCONFIG Field - next]</A> <BR>
+<A HREF="186_L1_Notices.html">[Next: Notices]</A> 
+</BODY>
+</HTML>

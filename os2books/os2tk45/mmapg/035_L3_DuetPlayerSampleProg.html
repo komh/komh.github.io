@@ -1,0 +1,95 @@
+<HTML>
+<HEAD>
+<TITLE>Duet Player Sample Program Example</TITLE>
+</HEAD>
+<BODY>
+<H1>Duet Player Sample Program Example</H1><!-- entering slot 43 -->
+<P>
+The following code fragment illustrates the creation of a device group in
+the Duet Player I sample program. An array is filled with the IDs of opened
+devices to be associated in the group.  The application then calls MCI_GROUP
+to create the group and return a handle.
+<PRE>
+  /* If this is the first time through this routine, then we need to
+   * open the devices and make the group.
+   *
+   * On subsequent calls to this routine, the devices are already open
+   * and the group is already made, so we only need to load the
+   * appropriate files onto the devices.
+   */
+  {
+  /*
+   * Open one part of the duet. The first step is to initialize an
+   * MCI_OPEN_PARMS data structure with the appropriate information,
+   * then issue the MCI_OPEN command with the mciSendCommand function.
+   * We will be using an open with only the element name specified.
+   * This will cause the default connection, as specified in the
+   * MMPM.INI file, for the data type.
+   */
+  mopDuetPart.hwndCallback   =  hwnd;     /* For MM_MCIPASSDEVICE   */
+  mopDuetPart.usDeviceID     = (USHORT) NULL; /* this is returned   */
+  mopDuetPart.pszDeviceType  = (PSZ) NULL;    /* using default conn.*/
+  mopDuetPart.pszElementName = (PSZ) aDuet[sDuet].achPart1;
+
+  ulError = mciSendCommand( (USHORT) 0,
+                            MCI_OPEN,
+                            MCI_WAIT | MCI_OPEN_ELEMENT |
+                            MCI_OPEN_SHAREABLE | MCI_READONLY,
+                            (PVOID) &amp;mopDuetPart,
+                            UP_OPEN);
+
+  if (!ulError)  /* if we opened part 1 */
+  {
+     usDuetPart1ID = mopDuetPart.usDeviceID;
+
+     /*
+      * Now, open the other part.
+      */
+     mopDuetPart.pszElementName    = (PSZ)   aDuet[sDuet].achPart2;
+
+     ulError = mciSendCommand( (USHORT) 0,
+                               MCI_OPEN,
+                               MCI_WAIT | MCI_OPEN_ELEMENT |
+                               MCI_OPEN_SHAREABLE | MCI_READONLY,
+                               (PVOID) &amp;mopDuetPart,
+                               UP_OPEN);
+
+  if (!ulError)  /* if we opened part 2 */
+  {
+     usDuetPart2ID = mopDuetPart.usDeviceID;
+
+ /*
+  * Now we need to create a group.  To do this,
+  * we need to fill an array with the IDs of the already open
+  * devices that we want to group.  Then we call MCI_GROUP to
+  * create the group and return a handle to it.
+  */
+
+ ulDeviceList[0] = (ULONG)usDuetPart1ID;
+ ulDeviceList[1] = (ULONG)usDuetPart2ID;
+
+ mgpGroupParms.hwndC  lback = (HWND) NULL;     /* Not needed -
+                                                  we're waiting     */
+ mgpGroupParms.ulNumDevices = NUM_PARTS;       /* Count of devices  */
+ mgpGroupParms.paulDeviceID = (PULONG)&amp;ulDeviceList; /* Array of
+                                                        devices     */
+ mgpGroupParms.ulStructLength = sizeof (mgpGroupParms);
+
+ulError = mciSendCommand( (USHORT) 0,
+                           MCI_GROUP,
+                           MCI_WAIT | MCI_GROUP_MAKE|
+                           MCI_NOPIECEMEAL,
+                           (PVOID) &amp;mgpGroupParms,
+                           UP_GROUP);
+
+ fFirstPlay = FALSE;
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="034_L2_DeviceGroups.html">[Back: Device Groups]</A> <BR>
+<A HREF="036_L3_ResourceAllocation.html">[Next: Resource Allocation]</A> 
+</BODY>
+</HTML>

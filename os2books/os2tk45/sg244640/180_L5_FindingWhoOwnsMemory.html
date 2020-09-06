@@ -1,0 +1,147 @@
+<HTML>
+<HEAD>
+<TITLE>Finding Who Owns Memory</TITLE>
+</HEAD>
+<BODY>
+<H1>Finding Who Owns Memory</H1><!-- entering slot 261 --> 
+<P>
+Having examined various types of arena, object and context record we now
+turn our attention to a more commonly asked question:  "Who owns a particular
+location of memory?"  To answer this we need to explore the match parameter
+of the .MA command.
+<P>
+.MAM seach for arena records that encompass a given address: 
+<PRE>
+# .mam %123456
+ har     par      cpg        va    flg next prev link hash hob   hal
+ 008c %feb1fc12 00000080 %00110000 169 00f1 0073 0000 0000 008f 0000 hptda=0091
+ 023b %feb2211c 00001000 %000c0000 1e9 0238 0266 0000 0000 029f 0000 hptda=02a6
+ 02fc %feb231b2 00000010 %00120000 169 02fd 02a2 0000 0000 0318 0000 hptda=036c
+ 0306 %feb2328e 00000010 %00120000 169 0309 0321 0000 0000 03ba 0000 hptda=0380
+ 0312 %feb23396 00000010 %00120000 169 0313 0311 0000 0000 03cd 0000 hptda=034e
+ 032f %feb23614 00000080 %00110000 169 034b 02fa 0000 0000 03e4 0000 hptda=0317
+ 0393 %feb23eac 00000010 %00120000 169 0394 038d 0000 0000 0452 0000 hptda=0410
+ 0412 %feb24996 00000010 %00120000 169 0414 0411 0000 0000 04ef 0000 hptda=04c6
+ 0517 %feb26004 00000010 %00120000 169 0519 0516 0000 0000 05f7 0000 hptda=050c
+
+
+&gt;&gt;&gt; Dump Formatter "hard-wires" the 'A' parameter so .mam=.mama (or .maam)
+&gt;&gt;&gt; Kernel Debugger needs 'A' explicitly if all contexts are to be searched.
+&gt;&gt;&gt; This only affects results from searching private arena addresses.
+&gt;&gt;&gt; Note: after fix pack 29 for Warp 3.0 and GA 4.0, .mam under the
+&gt;&gt;&gt; Dump Formatter behaves correctly. That is, the 'A' parameter is no longer
+&gt;&gt;&gt; "hard-wired".
+
+
+&gt;&gt;&gt; We can also add the 'C' parameter to chain through the related VMOBs
+&gt;&gt;&gt; and VMCOs at the same time.
+
+# .mamc %123456
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 008c %feb1fc12 00000080 %00110000 169 00f1 0073 0000 0000 008f 0000 hptda=0091
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 008f  008c 0000  422c 0091 01c0  0000 00  00 00 00 priv 0003 c:pmshell.exe
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 023b %feb2211c 00001000 %000c0000 1e9 0238 0266 0000 0000 029f 0000 hptda=02a6
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 029f  023b 0000  423c 02a6 01d7  0000 00  00 00 00 priv 0006 c:pmshell.exe
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 02fc %feb231b2 00000010 %00120000 169 02fd 02a2 0000 0000 0318 0000 hptda=036c
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 0318  02fc 0000  422c 036c 0371  0000 00  00 00 00 priv 000c c:dinfo.exe
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0306 %feb2328e 00000010 %00120000 169 0309 0321 0000 0000 03ba 0000 hptda=0380
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 03ba  0306 0000  422c 0380 035c  0000 00  00 00 00 priv 000d c:pulse.exe
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0312 %feb23396 00000010 %00120000 169 0313 0311 0000 0000 03cd 0000 hptda=034e
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 03cd  0312 0000  422c 034e 0354  0000 00  00 00 00 priv 000b c:mrfile32.exe
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 032f %feb23614 00000080 %00110000 169 034b 02fa 0000 0000 03e4 0000 hptda=0317
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 03e4  032f 0000  422c 0317 01c0  0000 00  00 00 00 priv 000a c:pmdiary.exe
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0393 %feb23eac 00000010 %00120000 169 0394 038d 0000 0000 0452 0000 hptda=0410
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 0452  0393 0000  402c 0410 ff3e  0000 00  00 00 00 priv 0012 c:pmdraw.exe
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0412 %feb24996 00000010 %00120000 169 0414 0411 0000 0000 04ef 0000 hptda=04c6
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 04ef  0412 0000  422c 04c6 04f3  0000 00  00 00 00 priv 0018 c:epm.exe
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0517 %feb26004 00000010 %00120000 169 0519 0516 0000 0000 05f7 0000 hptda=050c
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 05f7  0517 0000  422c 050c 05de  0000 00  00 00 00 priv 0019 e:ipfc.exe
+
+&gt;&gt;&gt; .MAMC is such a <!-- entering slot 262 -->frequently used command that it is made the default
+&gt;&gt;&gt; specification for .M
+&gt;&gt;&gt; Further more, .M will take the default CS:EIP as the match
+&gt;&gt;&gt; address if no address is given.
+
+&gt;&gt;&gt; Suppose we wish to find out what code is being currently executed in
+&gt;&gt;&gt; in slot 39...
+
+# .s 39
+Current slot number: 0039
+# .p #
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 0039  0019 0010 0019 0001 rdy 061f 7b818000 7b9ca230 7b9adea8 1f0c 12 IPFC
+# .r
+eax=00000000 ebx=00307d90 ecx=00320000 edx=00000000 esi=00001000 edi=00001000
+eip=1a022240 esp=0004d098 ebp=0004d0b4 iopl=2 -- -- -- nv up ei pl nz na pe nc
+cs=005b ss=0053 ds=0053 es=0053 fs=150b gs=0000  cr2=00000000  cr3=001d6000
+005b:1a022240 83c418         add     esp,+18
+# ln
+No Symbols Found
+# .m
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 00dd %feb20308 00000010 %1a020000 3d9 00dc 00de 0000 0000 00ea 0000  hco=007ba
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 00ea  00dd 0000  0838 00e5 00e5  0000 00  00 00 00 shared    c:doscall1.dll
+ hco=07ba pco=fe6806bd  hconext=00822 hptda=050c f=1c  pid=0019 e:ipfc.exe
+
+&gt;&gt;&gt; The current cs:eip for slot 39 is executing in doscall1.dll and
+&gt;&gt;&gt; has been called either directly or indirectly by ipfc.exe
+
+
+</PRE>
+ 
+<P>
+Finally in this section we answer, "What is the hptda given the PTDA address?"
+
+<P>
+This required the use of the match parameter with .MO.
+<P>
+.MOM is more restrictive and .MAM. It will only return a result if the supplied
+address is a precise match for the beginning of a pseudo-object. Since the
+PTDA is a pseudo-object we can use its address with .MOM: 
+<PRE>
+# .p 2a
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 002a  0006 0003 0006 000c blk 021f 7b7fa000 7b9c60d0 7b9ac4e0 1eac 11 PMSHL32
+# .mom %7b9c60d0
+ hob       va     flgs own  hmte  sown,cnt lt st xf
+ 02a6  %7b9c60d0  8000 ffcb 0000  0000 00  00 00 00 ptda 0006 c:<!-- entering slot 263 -->pmshell.exe
+
+&gt;&gt;&gt; The hptda for Pid 6 is therefore 2a6.
+
+</PRE>
+  
+
+<P><HR>
+
+<A HREF="179_L5_ExploringObjectRecor.html">[Back: Exploring Object Records]</A> <BR>
+<A HREF="181_L4_HowtoCorrelateNamedM.html">[Next: How to Correlate Named Memory With its Address]</A> 
+</BODY>
+</HTML>

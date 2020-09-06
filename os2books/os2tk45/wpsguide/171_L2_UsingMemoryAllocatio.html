@@ -1,0 +1,146 @@
+<HTML>
+<HEAD>
+<TITLE>Using Memory Allocation Methods</TITLE>
+</HEAD>
+<BODY>
+<H1>Using Memory Allocation Methods</H1><!-- entering slot 185 -->
+<P>
+As an example of the way these methods may be utilized, consider the definition
+of a WPAbstract subclass, Stack, with the Push() and Pop() methods. The
+following sample code fragments show the Push() and Pop() methods using
+the memory allocation methods. Push() allocates space for the new item,
+initializes its contents and places it on the stack while Pop() removes
+the top item from the stack, and returns its contents. The stack is implemented
+as a linked list of entries with the head of the list being the top of the
+stack. Assume the existence of methods, Lock() and Unlock(), which protect
+the stack linked list in a multithread environment.
+<P>
+<B>Note: </B> The sample code fragments in this section are part of a complete
+program that provides a new object class, Stack, whose instances implement
+standard programming push down stacks. The program is illustrated in "Sample
+Code for Setup/Cleanup Methods".<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<PRE>#include "stack.ih"
+
+typedef struct _STACKENTRY
+  {
+    PSTACKENTRY pNext;
+    BYTE        ReserveZeros[8];
+    ULONG       cbEntry;
+    BYTE        Entry[1];
+  } STACKENTRY; *PSTACKENTRY;
+
+/************************  wpAllocMem Method  ************************/
+
+SOM_Scope BOOL SOMLINK stk_Push(
+          Stack *somSelf,     // In - pointer to the object
+          PVOID pNewItem,     // In - pointer to the item to push
+          ULONG cbNewItem)    // In - size in bytes of item to push
+
+// The method returns the value:
+//     TRUE  = successful
+//     FALSE = error
+{
+  BOOL        bSem;
+  PSTACKENTRY pNewEntry;
+  BOOL        bStatus = FALSE;
+  StackData  *somThis = StackGetData(somSelf);
+  StackMethodDebug("Stack","stk_Push");
+
+  pNewEntry = (PSTACKENTRY)_wpAllocMem(somSelf,
+              cbNewItem +
+              sizeof(STACKENTRY) -
+              sizeof(BYTE),
+              NULL);
+
+  if (pNewEntry)
+  {
+    /*
+     * pStackTop is an instance variable, initialized to NULL,
+     * which points to the top (first) entry
+     * on the stack (list)
+     */
+    memset(pNewEntry, 0, sizeof(STACKENTRY));
+    bSem = _Lock(somSelf);  // Semaphore that protects the stack chain
+    pNewEntry-&gt;Next = _pStackTop;
+    _pStackTop = pNewEntry;
+
+    if (pNewItem &amp;&amp; cbNewItem)
+    {
+      pNewEntry-&gt;cbEntry = cbNewItem;
+      memcpy(pNewEntry-&gt;Entry, pNewItem, cbNewItem);
+    } /* Endif */
+
+    if (bSem) _Unlock(somSelf);
+    bStatus = TRUE;
+  } /* Endif */
+  return(bStatus);
+} /* End stk_Push */
+
+
+/************************  wpFreeMem Method  *************************/
+
+SOM_Scope BOOL SOMLINK stk_Pop(
+          Stack *somSelf,   // In    - pointer to the object
+          PVOID  pBuffer,   // In    - pointer to buffer for popped item,
+                            //         NULL means return size of buffer
+          PULONG pcbBuffer) // InOut - size in bytes of pop buffer,
+                            //         size actually returned
+
+// The method returns the value:
+//     TRUE  = successful
+//     FALSE = error
+{
+  BOOL        bSem;
+  PSTACKENTRY pNextEntry;
+  BOOL        bStatus = FALSE;
+  StackData  *somThis = StackGetData(somSelf);
+  StackMethodDebug("Stack","stk_Pop");
+
+  /*
+   * pStackTop is an instance variable, initialized to NULL,
+   * which points to the top (first) entry
+   * on the stack (list).
+   */
+  bSem = _Lock(somSelf);  // Semaphore that protects the stack chain
+
+  if (_pStackTop)
+  {
+    if (pBuffer)
+    {
+      if (*pcbBuffer &gt;= _pStackTop-&gt;cbEntry)
+      {
+        memcpy(pBuffer, _pStackTop-&gt;Entry, _pStackTop-&gt;cbEntry);
+        *pcbBuffer = _pStackTop-&gt;cbEntry;
+
+        pNextEntry = _pStackTop-&gt;Next;
+        bStatus    = _wpFreeMem(somSelf, (PBYTE)_pStackTop);
+        if (bStatus)
+        {
+          _pStackTop = pNextEntry;
+        } /* Endif */
+      } /* Endif */
+
+    } /* Endthen */
+    else
+    {
+      *pcbBuffer = _pStackTop-&gt;cbEntry;
+      bStatus    = TRUE;
+    } /* Endif */
+  } /* Endif */
+
+  if (bSem) _Unlock(somSelf);
+  return(bStatus);
+} // End stk_Pop
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="170_L2_AboutMemoryAllocatio.html">[Back: About Memory Allocation Methods]</A> <BR>
+<A HREF="172_L1_ObjectMobilityDirect.html">[Next: Object Mobility: Direct Manipulation Methods]</A> 
+</BODY>
+</HTML>

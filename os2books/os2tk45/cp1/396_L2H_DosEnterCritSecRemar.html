@@ -1,0 +1,62 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosEnterCritSec - Remarks</TITLE>
+</HEAD>
+<BODY>
+<H1>DosEnterCritSec - Remarks</H1><!-- entering slot 400 -->
+<P>
+DosEnterCritSec causes all other threads in the process to block themselves
+and give up their time slice. After a DosEnterCritSec request is made, no
+functions should be called that depend on another thread to do processing
+until <A HREF="470_L2_DosExitCritSec.html">DosExitCritSec</A> has completed.
+ Great care should be taken when using compiler runtime functions and other
+OS/2 functions after a DosEnterCritSec request has been made, since the
+underlying processing of the called function may require processing by another
+thread and thus cause a deadlock.
+<P>
+A thread can also execute code without having to give up time slices to
+other threads in its process if it requests a priority class that is higher
+than those of the other threads. A thread's priority is examined with <A HREF="618_L2_DosGetInfoBlocks.html">DosGetInfoBlocks</A>,
+and changed with <A HREF="1713_L2_DosSetPriority.html">DosSetPriority</A>.
+
+<P>
+A count is maintained of the number of times DosEnterCritSec is issued without
+a corresponding <A HREF="470_L2_DosExitCritSec.html">DosExitCritSec</A>.
+The count is incremented by DosEnterCritSec and decremented by <A HREF="470_L2_DosExitCritSec.html">DosExitCritSec</A>.
+Normal thread dispatching is not restored until the count is zero. The outstanding
+DosEnterCritSec count is maintained in a word. If an overflow occurs, the
+count is set to the maximum value, no operation is performed, and the request
+returns with ERROR_CRITSEC_OVERFLOW.
+<P>
+If a signal occurs, thread 1 begins execution to process the signal even
+though another thread in the process has a DosEnterCritSec active. Thread
+1 of a process is its initial thread of execution, not a thread created
+with <A HREF="285_L2_DosCreateThread.html">DosCreateThread</A>. Any processing
+done by thread 1 to satisfy the signal must not include accessing the critical
+resource intended to be protected by DosEnterCritSec.
+<P>
+<B>Note: </B><B> This function is very powerful and must be used with caution!
+</B>It should be used only in a most cooperative environment where the state
+of all threads in known.  While in the critical section, do not call other
+compiler runtime or OS/2 functions that could start another thread that
+it would depend on running before being able to return.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+<A HREF="1384_L2_DosQueryThreadContex.html">DosQueryThreadContext</A> can
+be used to obtain the context of other threads in the process once they
+have been blocked by DosEnterCritSec.
+<P>
+ERROR_INVALID_THREADID is returned when an invalid attempt is made to enter
+a critical section of code in a signal handler or exception handler.
+<P>
+ERROR_INVALID_THREADID is also returned when a dynamic link library (DLL)
+routine incorrectly issues DosEnterCritSec.
+
+<P><HR>
+
+<A HREF="395_L2H_DosEnterCritSecParam.html">[Back: DosEnterCritSec - Parameters]</A> <BR>
+<A HREF="397_L2H_DosEnterCritSecRelat.html">[Next: DosEnterCritSec - Related Functions]</A> 
+</BODY>
+</HTML>

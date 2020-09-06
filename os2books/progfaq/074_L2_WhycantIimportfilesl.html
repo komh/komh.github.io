@@ -1,0 +1,85 @@
+<HTML>
+<HEAD>
+<TITLE>Why can't I import files larger than 64KB into my MLE?</TITLE>
+</HEAD>
+<BODY>
+<H1>Why can't I import files larger than 64KB into my MLE?</H1><!-- entering slot 88 -->
+<P>
+A MLE can not import or export text in bigger chunks than 64K. The below
+code shows how to solve this. 
+<PRE>void Editor::impTxt(const char *filename)
+{
+  FILE *ptr;
+  long dummy=-1;
+  long result;
+
+  ptr = fopen(filename,"rb");
+  fseek(ptr,0,SEEK_END);
+  unsigned long size = ftell(ptr);
+
+  fseek(ptr,0,SEEK_SET);
+  void *buf = malloc(0xF000);
+
+  mle-&gt;sendEvent(MLM_SETIMPORTEXPORT, buf, (unsigned long)  0xF000);
+
+  mle-&gt;sendEvent(MLM_FORMAT, MLFIE_CFTEXT, NULL);
+
+  while (feof(ptr) == 0) {
+    result = fread(buf, 1, 0xE000, ptr);
+    mle-&gt;sendEvent(MLM_IMPORT, &amp;dummy, result);
+  }
+  fclose(ptr);
+  free(buf);
+}
+</PRE>
+
+<P>
+The same applies to export. If the MLE contains &gt;64K text you have to
+export the text in chunks like this: 
+<PRE>void Editor::saveFile(void)
+{
+  IString filename;
+  IEventData rc;
+  IFileDialog::Settings settings;
+
+  settings.setTitle("Save textfile");
+  settings.setFileName(fname);
+  settings.setOKButtonText("Save file");
+  settings.setSaveAsDialog();
+
+  IFileDialog file(desktopWindow(),this,settings,
+                   IFileDialog::defaultStyle()
+                   | IFileDialog::selectableListbox);
+  if (file.pressedOK() == false)
+    return ;
+  filename = file.fileName();
+  if (filename.size() == 0)
+    return;
+  mle-&gt;exportToFile(filename);
+
+  void *buf = malloc(0xF000);
+  long ppt=0;
+
+  mle-&gt;sendEvent(MLM_SETIMPORTEXPORT, buf, (unsigned long)  0xF000);
+
+  mle-&gt;sendEvent(MLM_FORMAT, MLFIE_NOTRANS, NULL);
+  ofstream fil(filename);
+
+  do
+    {
+      long amount = 0xE000;
+      rc = mle-&gt;sendEvent(MLM_EXPORT, &amp;ppt, &amp;amount);
+      fil.write((char *) buf, rc.asUnsignedLong());
+    } while (rc.asUnsignedLong() &gt; 0);
+}
+</PRE>
+
+<P>
+Credit: Ivar E. Hosteng 
+
+<P><HR>
+
+<A HREF="073_L2_HowdoIchangethefonti.html">[Back: How do I change the font in an MLE?]</A> <BR>
+<A HREF="075_L2_HowdoIgetPMscreensiz.html">[Next: How do I get PM screen size?]</A> 
+</BODY>
+</HTML>

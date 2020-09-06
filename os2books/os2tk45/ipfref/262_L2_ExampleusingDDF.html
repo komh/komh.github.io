@@ -1,0 +1,198 @@
+<HTML>
+<HEAD>
+<TITLE>Example using DDF</TITLE>
+</HEAD>
+<BODY>
+<H1>Example using DDF</H1><!-- entering slot 278 -->
+<PRE>/* DDF Sample */
+
+#define INCL_GPIPRIMITIVES
+#define INCL_WINHELP
+#define INCL_WIN
+#define INCL_DDF
+#include &lt;os2.h&gt;
+#include "ddf.h"
+
+MRESULT EXPENTRY ClientWndProc( HWND, USHORT, MPARAM, MPARAM );
+VOID HelpInit( HAB hab );
+
+HWND hwndHelpInstance;
+
+HELPSUBTABLE helpSubTableMAIN[ ] =
+{
+   2, 0, 0
+};
+
+HELPTABLE helpTableMAIN[ ] =
+{
+      ID_PRIMWIN, helpSubTableMAIN, EXT_HELP_PANEL,
+};
+
+VOID main()
+{
+   static ULONG flFrameFlags = FCF_TITLEBAR | FCF_SYSMENU | FCF_TASKLIST |
+                               FCF_SIZEBORDER  | FCF_SHELLPOSITION |
+                               FCF_MINBUTTON | FCF_MAXBUTTON;
+
+
+   HAB hab;
+   HMQ hmq;
+   QMSG qmsg;
+   HWND hwndFrame, hwndClient;
+   BOOL bReturnCode;
+
+   hab = WinInitialize( 0 );             /* Get anchor block */
+   hmq = WinCreateMsgQueue( hab, 0 );    /* Create message queue */
+
+   bReturnCode = WinRegisterClass( hab,                   /* Anchor Block */
+                                   "ClientWindow",        /* Class name   */
+                                   (PFNWP) ClientWndProc, /* Window Proc  */
+                                   CS_SIZEREDRAW,         /* Classstyles  */
+                                   0 );                   /* Extra data   */
+   hwndFrame = WinCreateStdWindow( HWND_DESKTOP,           /* parent */
+                                   WS_VISIBLE,             /* window styles */
+                                   &amp;flFrameFlags,         /* FCF values */
+                                   "ClientWindow",        /* class */
+                                   "Press F1 for a DDF Sample", /* titlebar text */
+                                   0L,                    /* client styles */
+                                   NULLHANDLE,            /* resource handle */
+                                   ID_PRIMWIN,            /* ID */
+                                   &amp;hwndClient );         /* return client */
+
+   /* Initialize Help */
+   HelpInit( hab );
+   /* Associate the help instance with the window */
+   WinAssociateHelpInstance( hwndHelpInstance, hwndFrame );
+
+   while ( WinGetMsg( hab, &amp;qmsg, NULLHANDLE, 0, 0 ) )    /* message loop */
+       WinDispatchMsg( hab, &amp;qmsg );
+
+   /* Destroy the help instance */
+   WinDestroyHelpInstance( hwndHelpInstance );
+
+   WinDestroyWindow( hwndFrame );      /* destroy window        */
+   WinDestroyMsgQueue( hmq );          /* destroy message queue */
+   WinTerminate( hab );                /* return anchor block   */
+}
+
+MRESULT EXPENTRY ClientWndProc( HWND hwnd, USHORT msg, MPARAM mp1, MPARAM mp2)
+{
+   HPS hps;
+   ULONG ulResID;
+   HDDF hDDF;
+   HBITMAP hbm;
+   APIRET returncode;
+   ERRORID errcode;
+
+   switch ( msg ) {
+      case HM_INFORM:
+         switch (SHORT1FROMMP(mp1)) {
+         case 1:
+            WinMessageBox( HWND_DESKTOP, HWND_DESKTOP, "You clicked on the link",
+                          "DDF Sample", 0, MB_OK);
+            break;
+         default:
+            WinMessageBox( HWND_DESKTOP, HWND_DESKTOP, "Unknown Inform link",
+                          "DDF Sample", 0, MB_OK);
+           break;
+         } /* endswitch */
+      break;
+      case HM_QUERY_DDF_DATA:
+         ulResID = LONGFROMMP( mp2 );
+         /* Initialize DDF */
+         hDDF = DdfInitialize( hwndHelpInstance, 0L, 0L);
+         /* Check res id to see which DDF line */
+         switch (ulResID) {
+            case 1:
+               DdfPara( hDDF);
+               DdfText( hDDF, "This text was placed by DDF");
+               DdfPara( hDDF);
+               DdfText( hDDF, "You can use ");
+               DdfSetFontStyle( hDDF, FM_SEL_ITALIC);
+               DdfText( hDDF, "italic, ");
+               DdfSetFontStyle( hDDF, FM_SEL_BOLD);
+               DdfText( hDDF, "bold, ");
+               DdfSetFontStyle( hDDF, FM_SEL_UNDERSCORE);
+               DdfText( hDDF, "underscore, ");
+               DdfSetFontStyle( hDDF, FM_SEL_UNDERSCORE | FM_SEL_ITALIC | FM_SEL_BOLD );
+               DdfText( hDDF, "or all three!");
+               DdfSetFontStyle( hDDF, 0);
+               DdfPara( hDDF);
+               DdfText( hDDF, "How about some color?");
+               DdfPara( hDDF);
+               DdfSetColor( hDDF, CLR_BLUE, CLR_RED);
+               DdfText( hDDF, "Red on Blue\n");
+               DdfSetColor( hDDF, CLR_BLACK, CLR_PALEGRAY);
+               DdfText( hDDF, "Pale Gray on Black\n");
+               DdfSetColor( hDDF, CLR_DEFAULT, CLR_DEFAULT);
+               DdfPara( hDDF);
+               DdfSetFont( hDDF, "Courier", 100, 100);
+               DdfText( hDDF, "Or a font change?");
+               DdfSetFont( hDDF, NULL, 1, 1);
+               DdfPara( hDDF);
+               DdfSetTextAlign( hDDF, TA_CENTER);
+               DdfSetFormat( hDDF, FALSE);
+               DdfText( hDDF, "We can\ncenter text");
+               DdfSetFormat( hDDF, TRUE);
+               DdfSetTextAlign( hDDF, TA_LEFT);
+               hbm = WinGetSysBitmap( HWND_DESKTOP, <!-- entering slot 279 -->SBMP_FOLDER);
+               DdfPara( hDDF);
+               DdfBitmap( hDDF, hbm, ART_RUNIN );
+               DdfText( hDDF, "Perhaps a bitmap?" );
+               DdfPara( hDDF);
+               DdfText( hDDF, "Or a list?");
+               DdfBeginList(hDDF, 15, HMBT_FIT, HMLS7us.SINGLELINE);
+               DdfListItem( hDDF, "Item 1", "Item 1 Description");
+               DdfListItem( hDDF, "Item 2", "Item 2 Description");
+               DdfEndList( hDDF);
+               DdfPara( hDDF);
+               DdfText( hDDF, "You can even create a " );
+               DdfHyperText( hDDF, "link to a panel ", "2", REFERENCE_BY_RES );
+               DdfText( hDDF, "or an " );
+               DdfInform( hDDF, "inform link", 1 );
+               /* Return the DDF handle you just created */
+               return (MRESULT) hDDF;
+               break;
+         } /* endswitch */
+         break;
+      case WM_PAINT:
+         hps = WinBeginPaint( hwnd, NULLHANDLE, NULL );
+         GpiErase( hps );
+         WinEndPaint( hps );
+         return 0;
+         break;
+   } /* endswitch */
+   return WinDefWindowProc( hwnd, msg, mp1, mp2 );
+}
+
+VOID HelpInit( HAB hab )
+{
+   HELPINIT helpinit;
+
+   helpinit.cb = sizeof( HELPINIT );
+   helpinit.ulReturnCode = 0L;
+   helpinit.pszTutorialName = NULL;
+   helpinit.phtHelpTable = (PVOID) helpTableMAIN;
+   helpinit.hmodHelpTableModule = 0;
+   helpinit.hmodAccelActionBarModule = 0;
+   helpinit.idAccelTable = 0;
+   helpinit.idActionBar = 0;
+   helpinit.pszHelpWindowTitle = "Help for DDF Sample\0";
+   helpinit.fShowPanelId = CMIC_HIDE_PANEL_ID;
+   helpinit.pszHelpLibraryName = "DDF.HLP";
+
+   hwndHelpInstance = WinCreateHelpInstance( hab, &amp;helpinit );
+   if (!hwndHelpInstance)
+      WinMessageBox( HWND_DESKTOP, HWND_DESKTOP, "Help could not be initialized",
+                    "DDF Sample", 0, MB_OK | MB_ERROR);
+   return;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="261_L2_DDFandOnlineDocument.html">[Back: DDF and Online Documents]</A> <BR>
+<A HREF="263_L1_CreatingMasterIndexe.html">[Next: Creating Master Indexes and Glossaries with Applications]</A> 
+</BODY>
+</HTML>

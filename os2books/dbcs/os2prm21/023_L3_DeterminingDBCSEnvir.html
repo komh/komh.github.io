@@ -1,0 +1,143 @@
+<HTML>
+<HEAD>
+<TITLE>Determining DBCS Environment Vector</TITLE>
+</HEAD>
+<BODY>
+<H1>Determining DBCS Environment Vector</H1><!-- entering slot 25 -->
+<P>
+There are many APIs provided by OS/2 to obtain the runtime environment.
+This chapter describes some of these APIs used to determine environment
+information that are unique to each country.
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³DosQueryDBCSEnv is to:                                                ³
+³                                                                      ³
+³ check whether the runtime code page is an SBCS one or a combined    ³
+³one.                                                                  ³
+³                                                                      ³
+³ find the valid code range for the first byte of DBCS at the current ³
+³code page setting.                                                    ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+The first step toward the DBCS enabling is to determine whether your program
+should expect DBCS data or not.  If the program is running at a combined
+code page, you should expect DBCS data to come in and should start activating
+DBCS-support capability of the program before it processes the first datum.
+
+<P>
+The<B> DosQueryDBCSEnv</B> (changed from DosGetDBCSEv) serves for the determination
+to obtain the DBCS environment vector. The syntax of the API is as follows:
+<!-- lm: 0x2 5 -->
+<UL>
+<P>
+<LI><LI><LI><LI><LI><LI><LI><LI><LI><LI> Function Syntax
+<PRE>APIRET DosQueryDBCSEnv ( ULONG ulLength, PCOUNTRYCODE pCountry,
+                         PCHAR pMemoryBuffer );
+</PRE>
+
+<P>
+---------- End of  Function Syntax<!-- lm: 0x2 1 -->
+</UL> Set 0 to are
+members of COUNTRYCODE, to obtain the DBCS environment vector of the runtime
+code page.
+<P>
+Check the obtained environment vector until it terminates with two bytes
+of binary 0.  One of the following DBCS environment vectors, which tells
+you a valid code range of the first byte of DBCS at the runtime code page,
+is retuned from the operating system. If the value of the vector is 0000H,
+it means the program is running at a SBCS code page:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Code page           ³Env. vector         ³The 1st byte of DBCS³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Japanese (932 and   ³819FE0FC0000H       ³81H-9FH, E0-FCH     ³
+³942)                ³                    ³                    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Korean (949)        ³8FFE0000H           ³8FH-FEH             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Simplified Chinese  ³8CFE0000H           ³8CH-FEH             ³
+³(1381)              ³                    ³                    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Traditional Chinese ³81FE0000H           ³81H-FEH             ³
+³(950)               ³                    ³                    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Traditional Chinese ³81FC0000H           ³81H-FCH             ³
+³(938 and 948)       ³                    ³                    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Others              ³0000H               ³None                ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+The valid code range of the first byte of DBCS should be stored in a table.
+The table is used afterwards to determine whether a byte in process is a
+SBCS character or a part of a DBCS character.
+<P>
+The following example shows how to obtain and store the valid code range.
+
+<PRE>...
+#define    INCL_DOSNLS
+
+#include   &lt;os2.h&gt;
+#include   &lt;stdlib.h&gt;
+#include   &lt;stdio.h&gt;
+#include   &lt;string.h&gt;              // STRING.H now includes MemXXX
+#include   &lt;time.h&gt;
+#include   "ordent.h"
+#include   "dbcs.h"
+
+COUNTRYINFO   ctryInfo;
+USHORT flDbcsCp;
+
+/*--------------------------------------------------------------------*/
+/*  Table to identify if one byte data is in the range of             */
+/*  DBCS 1st byte of the current environment.                         */
+/*    If c is in the 1st byte range dbcsTable[c] == DBCS_1ST (== 1)   */
+/*    else                          dbcsTable[c] == SBCS     (== 0)   */
+/*--------------------------------------------------------------------*/
+static USHORT dbcsTable[256];
+
+USHORT InitDBCSTable( void );
+USHORT isDBCS1st( UCHAR );
+USHORT getCharType( UCHAR *, USHORT );
+USHORT dbcsStrValidate( UCHAR *, USHORT *, USHORT );
+
+
+/**********************************************************************/
+/*    Set up a DBCS table with the DBCS environmental vector.         */
+/**********************************************************************/
+USHORT InitDBCSTable()
+{
+  UCHAR  dbcsEv[12];
+  USHORT i, j;
+  COUNTRYCODE ctryCode;
+
+  /*--- Initialization of variables --------------------------*/
+  ctryCode.country = 0;
+  ctryCode.codepage = 0;
+  for (i = 0; i &lt; 256; i++) dbcsTable[i] = SBCS;
+
+  /*--- System call to obtain the DBCS environmental vector --*/
+  <B>DosQueryDBCSEnv(12, <!-- entering slot 26 -->&amp;ctryCode, dbcsEv);</B>
+
+  for (j = 0; dbcsEv[j] | dbcsEv[j + 1]; j += 2)
+    for (i = dbcsEv[j]; i &lt;= dbcsEv[j + 1]; i++)
+      dbcsTable[i] = DBCS_1ST;
+  /*----------------------------------------------------------*/
+  /*   Returns DBCS_CP if the DBCS 1st byte range is defined, */
+  /*   else returns NON_DBCS_CP.                              */
+  /*----------------------------------------------------------*/
+  return flDbcsCp = (dbcsEv[0] | dbcsEv[1] ? DBCS_CP : NON_DBCS_CP);
+}
+...
+</PRE>
+
+<BR>
+Obtaining DBCS environment vector (source: NLSSUB.C)
+
+<P><HR>
+
+<A HREF="022_L2_RecognizingDBCSOS2fr.html">[Back: Recognizing DBCS OS/2 from your program]</A> <BR>
+<A HREF="024_L3_Determiningruntimeco.html">[Next: Determining runtime code page and country code]</A> 
+</BODY>
+</HTML>

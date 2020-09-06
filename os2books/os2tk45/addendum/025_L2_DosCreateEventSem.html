@@ -1,0 +1,176 @@
+<HTML>
+<HEAD>
+<TITLE>DosCreateEventSem</TITLE>
+</HEAD>
+<BODY>
+<H1>DosCreateEventSem</H1><!-- entering slot 31 -->
+<P>
+<B>Purpose</B>
+<P>
+DosCreateEventSem creates an event semaphore.
+<P>
+<B>Syntax</B>
+<PRE>#define INCL DOSSEMAPHORES
+#include  os2.h 
+</PRE>
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+APIRET DosCreateEventSem<!-- lm: 0x2 11 -->
+<UL><B> (PSZ pszName, PHEV phev,
+ULONG flAttr, BOOL32 fState)</B><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Parameters</B><!-- lm: 0x2 1 -->
+<P>
+pszName  PSZ)  input<!-- lm: 0x11 11 -->
+<UL> A pointer to the ASCIIZ name
+of the semaphore.
+<P>
+Semaphore names are validated by the file system, and must include the prefix
+\SEM32\. A maximum of 255 characters is allowed. If these requirements are
+not met, ERROR_INVALID_NAME is returned. If the semaphore already exists,
+ERROR_DUPLICATE_NAME is returned.
+<P>
+If this field is null, the semaphore is unnamed. Unnamed event semaphores
+can be either private or shared, depending on<I> flAttr</I>. They are identified
+by the semaphore handle that<I> phev</I> points to.
+<P>
+By default, all named semaphores are shared.<!-- lm: 0x2 1 -->
+</UL> phev
+ PHEV)  output<!-- lm: 0x11 11 -->
+<UL> A pointer to the handle of the event
+semaphore.<!-- lm: 0x2 1 -->
+</UL> flAttr  ULONG)  input<!-- lm: 0x11 11 -->
+<UL> A
+set of flags that specify the attributes of the event semaphore.<!-- lm: 0x2 11 -->
+<P>
+DC_SEM_SHARED<!-- lm: 0x2 26 -->
+<UL> If the DC_SEM_SHARED bit is set, the
+semaphore is shared. Otherwise, this flag should be set to 0L. This bit
+is checked only if the semaphore is unnamed (that is, if<I> pszName</I> is
+null), because all named semaphores are shared.<!-- lm: 0x2 11 -->
+</UL> DCE_AUTORESET
+(0x1000)<!-- lm: 0x2 26 -->
+<UL> Causes the semaphore to be reset automatically
+at the time it is posted. 0x1000<!-- lm: 0x2 11 -->
+</UL> DCE_POSTONE (0x0800)
+<!-- lm: 0x2 26 -->
+<UL>Causes one thread only to be posted where multiple
+threads are waiting on an event semaphore created with this attribut. DCE_POSTONE
+also causes the semaphore to be reset automatically when it is posted.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL> fState
+ BOOL32)  input<!-- lm: 0x11 11 -->
+<UL> Initial state of the semaphore.
+
+<P>
+Possible values are defined in the list below <!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 20 -->FALSE
+<P>
+The initial state of the semaphore is  reset. <!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 20 -->TRUE
+<P>
+The initial state of the semaphore is  posted. <!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Returns</B><!-- lm: 0x2 1 -->
+<P>
+ulrc  APIRET)  returns<!-- lm: 0x11 11 -->
+<UL> Return Code.
+<P>
+DosCreateEventSem returns one of the following values <!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->NO_ERROR<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->ERROR_NOT_ENOUGH_MEMORY<!-- lm: 0x2 11 -->
+<P>
+87<!-- lm: 0x2 26 -->
+<UL> ERROR_INVALID_PARAMETER<!-- lm: 0x2 11 -->
+</UL> 123
+<!-- lm: 0x2 26 -->
+<UL>ERROR_INVALID_NAME<!-- lm: 0x2 11 -->
+</UL> 285
+<!-- lm: 0x2 26 -->
+<UL>ERROR_DUPLICATE_NAME<!-- lm: 0x2 11 -->
+</UL> 290
+<!-- lm: 0x2 26 -->
+<UL>ERROR_TOO_MANY_HANDLES<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->DosCloseEventSem<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosOpenEventSem<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosPostEventSem<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosQueryEventSem<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosResetEventSem<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosWaitEventSem<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Example Code</B>
+<P>
+This example creates an event semaphore, and the asynchronous timer posts
+to it when its time interval expires. Finally, the event semaphore is closed.
+
+<PRE>#define INCL_DOSSEMAPHORES   /* Semaphore values */#define INCL_DOSDATETIME     /* Timer support    */
+#define INCL_DOSERRORS       /* DOS error values */
+#include  os2.h 
+#include  stdio.h 
+
+int main(VOID)  
+
+PSZ     szSemName  = "\\SEM32\\TIMER\\THREAD1\\EVENT1"; /* Semaphore name */
+HEV     hevEvent1     = 0;                   /* Event semaphore handle    */
+HTIMER  htimerEvent1  = 0;                   /* Timer handle              */
+APIRET  rc            = NO_ERROR;            /* Return code               */
+
+rc = DosCreateEventSem(szSemName,      /* Name of semaphore to create  */
+ hevEvent1,     /* Handle of semaphore returned */
+DC_SEM_SHARED,  /* Shared semaphore             */
+FALSE);         /* Semaphore is in RESET state  */
+if (rc != NO_ERROR)  
+printf("DosCreateEventSem error  return code = %u\n", rc);
+return 1;        
+
+rc = DosAsyncTimer(7000L,    /* 7 second interval            */
+(HSEM) hevEvent1,            /* Semaphore to post            */
+ htimerEvent1);              /* Timer handler (returned)     */
+if (rc != NO_ERROR)  
+printf("DosAsyncTimer error  return code = %u\n", rc);
+return 1;
+  else  
+printf("Timer will expire in about 7 seconds...\n");
+ 
+
+/* ... add your other processing here... */
+
+rc = DosWaitEventSem(hevEvent1,            /* Wait <!-- entering slot 32 -->for AsyncTimer event */
+(ULONG) SEM_INDEFINITE_WAIT);              /* As long as it takes       */
+if (rc != NO_ERROR)  
+printf("DosWaitEventSem error  return code = %u\n", rc);
+return 1;
+ 
+
+rc = DosCloseEventSem(hevEvent1);      /* Get rid of semaphore       */
+if (rc != NO_ERROR)  
+printf("DosCloseEventSem error  return code = %u", rc);
+return 1;
+ 
+
+return NO_ERROR;
+ 
+</PRE>
+
+
+<P><HR>
+
+<A HREF="024_L2_DosClose.html">[Back: DosClose]</A> <BR>
+<A HREF="026_L2_DosCreateThread2.html">[Next: DosCreateThread2]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,85 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>wpQueryRealName - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>wpQueryRealName - Example Code</H1><!-- entering slot 2936 -->
+<P>
+
+<P>
+This example overrides _wpSetup, specifies setup strings, does some initialization,
+and writes some default data to the object's real filename. This will provide
+something to look at if the user drag/drops on an editor or selects the
+open/editor view.
+<PRE>
+SOM_Scope BOOL   SOMLINK myf_wpSetup(MYFILE *somSelf,
+                 PSZ pszSetupString)
+{
+    MYFILEData *somThis = MYFILEGetData(somSelf);
+    ULONG  cbBytesWritten;            /* Number of bytes written */
+    APIRET rc;                        /* Return code */
+    BOOL   fSuccess;                  /* Success flag */
+    HFILE  hf;                        /* File handle */
+    ULONG  ulAction;                  /* Action taken by DosOpen */
+    CHAR   szObjectFilename[CCHMAXPATH];    /* Buffer for wpQueryRealName() */
+    ULONG  cb  = sizeof(szObjectFilename);  /* Size of object */
+    PSZ    pszDefaultText;            /* Default text */
+    BOOL   rcParentCall;              /* Result of parent's method */
+    CHAR   szValue[CCHMAXPATH+1];
+    ULONG  cbBuffer;
+    MYFILEMethodDebug("MYFILE","myf_wpSetup");
+
+   /*   When the object is created from scratch, put some default
+        text into the file on the hard disk                         */
+
+   fSuccess =
+   _wpQueryRealName(                 /* query full-pathname of object's file */
+      somSelf,                                     /* pointer to this object */
+      szObjectFilename,                                     /* return buffer */
+      &amp;cb,                                                  /* sizeof buffer */
+      TRUE);                            /* request fully qualified pathname? */
+
+
+   if (fSuccess)
+   {
+      rc = DosOpen(szObjectFilename, &amp;hf, &amp;ulAction, 20L, FILE_NORMAL,
+                   FILE_OPEN | FILE_CREATE,
+                   OPEN_ACCESS_READWRITE | OPEN_SHARE_DENYNONE,
+                   NULL);
+
+      if (rc == NO_ERROR) {
+
+         pszDefaultText = _clsQueryDefaultFileText(_MYFILE);
+         DosWrite(hf, pszDefaultText, strlen(pszDefaultText), &amp;cbBytesWritten);
+         DosClose(hf);
+      } /* endif */
+
+
+   } else {
+      _wpclsSetError( somSelf, MYFILE_QRN_FAILED );
+   } /* endif (fSuccess) */
+
+   rcParentCall = parent_wpSetup(somSelf,pszSetupString);
+
+            /* Process setup strings we understand */
+
+   cbBuffer = CCHMAXPATH;
+   if ( _wpScanSetupString(somSelf, pszSetupString, "SOUND",
+                           szValue,&amp;cbBuffer) )
+   {
+      if ((szValue[0] == 'Y') &amp;&amp; (szValue[1] == 'E') &amp;&amp; (szValue[2] == 'S')) {
+         _soundAlarm(somSelf);
+      } /* endif */
+   } /* endif */
+
+  return( rcParentCall );
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="2935_L2H_wpQueryRealNameRelat.html">[Back: wpQueryRealName - Related Methods]</A> <BR>
+<A HREF="2937_L2H_wpQueryRealNameTopic.html">[Next: wpQueryRealName - Topics]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,67 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosCreateEventSem - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosCreateEventSem - Example Code</H1><!-- entering slot 227 -->
+<P>
+This example creates an event semaphore, and the asyncronous timer posts
+to it when its time interval expires. Finally, the event semaphore is closed.
+
+<PRE> #define INCL_DOSSEMAPHORES   /* Semaphore values */
+ #define INCL_DOSDATETIME     /* Timer support    */
+ #define INCL_DOSERRORS       /* DOS error values */
+ #include &lt;os2.h&gt;
+ #include &lt;stdio.h&gt;
+
+ int main(VOID) {
+
+ PSZ     szSemName  = "\\SEM32\\TIMER\\THREAD1\\EVENT1"; /* Semaphore name */
+ HEV     hevEvent1     = 0;                   /* Event semaphore handle    */
+ HTIMER  htimerEvent1  = 0;                   /* Timer handle              */
+ APIRET  rc            = NO_ERROR;            /* Return code               */
+
+    rc = DosCreateEventSem(szSemName,      /* Name of semaphore to create  */
+                           &amp;hevEvent1,     /* Handle of semaphore returned */
+                           DC_SEM_SHARED,  /* Shared semaphore             */
+                           FALSE);         /* Semaphore is in RESET state  */
+    if (rc != NO_ERROR) {
+        printf("DosCreateEventSem error: return code = %u\n", rc);
+        return 1;       }
+
+    rc = DosAsyncTimer(7000L,              /* 7 second interval            */
+                       (HSEM) hevEvent1,   /* Semaphore to post            */
+                       &amp;htimerEvent1);     /* Timer handler (returned)     */
+    if (rc != NO_ERROR) {
+        printf("DosAsyncTimer error: return code = %u\n", rc);
+        return 1;
+    } else {
+        printf("Timer will expire in about 7 seconds...\n");
+    }
+
+           /* ... add your other processing here... */
+
+    rc = DosWaitEventSem(hevEvent1,            /* Wait for AsyncTimer event */
+                 (ULONG) SEM_INDEFINITE_WAIT); /* As long as it takes       */
+    if (rc != NO_ERROR) {
+        printf("DosWaitEventSem error: return code = %u\n", rc);
+        return 1;
+    }
+
+    rc = DosCloseEventSem(hevEvent1);      /* Get rid of semaphore       */
+    if (rc != NO_ERROR) {
+        printf("DosCloseEventSem error: return code = %u", rc);
+        return 1;
+    }
+
+return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="223_L2H_DosCreateEventSemRel.html">[Back: DosCreateEventSem - Related Functions]</A> <BR>
+<A HREF="225_L2H_DosCreateEventSemTop.html">[Next: DosCreateEventSem - Topics]</A> 
+</BODY>
+</HTML>

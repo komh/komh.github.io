@@ -1,0 +1,206 @@
+<HTML>
+<HEAD>
+<TITLE>Window Procedures</TITLE>
+</HEAD>
+<BODY>
+<H1>Window Procedures</H1><!-- entering slot 227 -->
+<P>
+It has already been mentioned that each window class within an application,
+whether a display window or an object window, is associated with a window
+procedure, which receives all messages intended for windows within that
+class.  The window procedure contains the methods used to perform actions
+upon the data object to which the window pertains, and thus contains the
+application logic for the manipulation of data objects.  It may thus be
+said that window procedures form the "heart" of a Presentation Manager application.
+
+<P>
+Upon invocation, the window procedure determines the type of message passed
+to it, and may either process the message explicitly or pass it on to a
+default window procedure supplied by Presentation Manager for standard processing.
+ A window procedure is essentially an extended CASE statement, as illustrated
+in <A HREF="014_L2_StructureofaWindowPr.html">Figure "Structure of a Window
+Procedure"</A>.  Each case within the window procedure contains a set of
+application statements and/or routines necessary to perform a particular
+action.  Thus in object-oriented terminology, each case is a method in its
+own right.
+<P>
+A window procedure is declared to return the type MRESULT, which is a 32-bit
+data type declaration provided by Presentation Manager, and indicates the
+nature of the window procedure's return value. Note that in the above example,
+the returned values differ depending upon the message class; see Returning
+from a Window Procedure below for further discussion.  Note also that in
+the default case shown in <A HREF="014_L2_StructureofaWindowPr.html">Figure
+"Structure of a Window Procedure"</A>, the window procedure did not decide
+the return value itself, but used the value returned by the Presentation
+Manager-supplied default window procedure. This is an established Presentation
+Manager convention.
+<P>
+A window procedure should always be declared with the<I> system</I> linkage
+convention; this is typically achieved by declaring the function to be of
+type EXPENTRY.  This type identifier is defined in the system header file
+<I>OS2DEF.H</I>, and simply specifies use of the<I> system</I> linkage convention.
+ Use of the<I> system</I> linkage convention is required since a window
+procedure is invoked by Presentation Manager on the application's behalf,
+rather than directly by the application.  Note that under previous versions
+of OS/2, the EXPENTRY keyword resulted in use of the<I> pascal</I> linkage
+convention, for precisely the same reason.
+<P>
+Subject to programming language conventions, a window procedure has the
+ability to define a data object or instance data, or to establish access
+to an existing data object as part of its initialization processing.  When
+a window is created by Presentation Manager in response to an application's
+request, Presentation Manager immediately dispatches a message of the system-defined
+class WM_CREATE to that window (see <A HREF="014_L2_StructureofaWindowPr.html">Figure
+"Structure of a Window Procedure"</A>).  The window procedure may process
+this message in order to define instance data or establish access to data
+objects.  Typically, a window procedure requests the allocation of a memory
+object as a control block for its instance data.  Initial values for the
+instance data are then placed in the control block, and a pointer to the
+control block is stored in the window words.  A window procedure thus supports
+the object-oriented concept of encapsulation, by allowing the dynamic allocation
+of and establishment of access to data objects, within a single application
+object.
+<P>
+Note that prior to allocating instance data or performing any other processing
+for the WM_CREATE message, a window procedure should invoke the default
+message processing provided by Presentation Manager in the<B> WinDefWindowProc()
+</B>function.  This ensures that the initialization of Presentation Manager's
+control data for the window is completed prior to WM_CREATE processing by
+the window procedure.  This in turn ensures that the window handle, window
+words, etc., will be available during the window procedure's WM_CREATE processing.
+
+<P>
+<B>Invoking a Window Procedure</B>
+<P>
+A window procedure is invoked by dispatching a message to a window of the
+class with which the window procedure is associated.  Messages passed to
+a window are typically initiated as the result of user interaction or application
+events, or by Presentation Manager to indicate system events.
+<P>
+While window procedures may be invoked directly<!-- entering slot 228 --> using
+a normal subroutine call, it is recommended that messages be used for<I> all
+</I>communication between window procedures.  This conforms to standard
+object-oriented practice, in that an object should be accessible only via
+a message passed to it.
+<P>
+Messages may be used to invoke a window procedure in two ways:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->A message may be<I> sent</I> directly to the window
+procedure using the<B> WinSendMsg()</B> call, in which case the window procedure
+executes synchronously, and control does not return to the calling procedure
+until processing is completed.  This method of invocation is similar to
+a normal subroutine call, but preserves the message-driven structure of
+the application.  Note that since the message is sent directly to the window
+procedure and not placed on a queue, the normal serialization of message
+processing is disturbed.  This may cause different results from those intended
+by the user; thus<B> WinSendMsg()</B> should be used with care.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->A window procedure may also be invoked by<I> posting
+</I>a message to a queue associated with the window procedure, using the
+<B>WinPostMsg()</B> call.  With this call the window procedure executes
+asynchronously, and control returns to the calling procedure immediately
+after the message is placed in the queue.  This method of invocation provides
+a convenient and powerful means for serialized and yet asynchronous processing.
+ It then becomes the responsibility of the application developer to ensure
+synchronization between different window procedures.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+Invoking a window procedure by posting a message to it via a queue has an
+advantage over the use of<B> WinSendMsg()</B> or a direct subroutine call
+in that, where multiple windows are passing messages to a single receiving
+window, these messages are queued by Presentation Manager and dispatched
+to the receiving object in the order in which they were initiated.  Provided
+all sending windows obey the established conventions and post messages to
+queues, this ensures the correct sequencing of message processing by the
+receiving window, helps preserve the user's intention and facilitates maintaining
+the integrity of data objects.
+<P>
+A window procedure accepts four parameters upon invocation; these correspond
+to the four attributes of a message as described in <A HREF="209_L2_Messages.html">Messages
+</A>and to the parameters of the<B> WinSendMsg()</B> and<B> WinPostMsg()
+</B>functions, and are as follows:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The handle of the window for which the message
+was intended<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->A message-class identifier<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Two 32-bit message parameters.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+Note that the behavior of a window procedure, and the result obtained from
+processing by a window procedure, are dependent upon the class and contents
+of the message sent to it.  Similarly, the same message class may be interpreted
+in a different manner by window procedures belonging to different window
+classes.  In this way, a window procedure supports the object-oriented concept
+of polymorphism.
+<P>
+<B>Window Procedure Processing</B>
+<P>
+A window procedure will normally determine the message class, and take action
+based upon that class and the contents of the message parameters.  Where
+the action involves the manipulation of data objects and/or instance data,
+the window procedure typically obtains access to the window's control block
+by retrieving its pointer from the window words.  The window procedure then
+has access to the data values, resource handles, etc., required to complete
+the action.
+<P>
+Note that the example given earlier in this chapter contains explicit processing
+options for only four types of messages; the application allows Presentation
+Manager to handle all other types of messages, by passing the message to
+the system-supplied default window procedure using the<B> WinDefWindowProc()
+</B>function.  This illustrates one of the basic principles of a Presentation
+Manager application; the window procedure processes<I> only</I> those messages
+with which it is<!-- entering slot 229 --> explicitly concerned, and passes
+<I>all</I> other messages to Presentation Manager for default processing.
+ A window procedure<I> must</I> pass such messages on to Presentation Manager,
+or unpredictable results may occur.
+<P>
+This "catchall" approach to implementation also allows the stepwise implementation
+of methods during application development.  An application developer may
+code a window procedure such that all command messages are, by default,
+passed to a routine that displays a message informing the user that the
+requested action is not yet implemented.  As the method for each action
+is designed and coded, a case for that action may be added to the window
+procedure.  Thus implementation of methods for an object proceeds in a stepwise
+and independent fashion until all necessary methods are implemented.
+<P>
+As mentioned earlier in this chapter and illustrated in <A HREF="014_L2_StructureofaWindowPr.html">Figure
+"Structure of a Window Procedure"</A>, a window procedure may process messages
+of any type, including the WM_DESTROY message, which is posted to a window
+upon termination.  A window procedure may explicitly process this message
+in order to close files and terminate access to data objects in an orderly
+manner, thus preserving the integrity of those data objects.  This ability
+allows the window procedure to further support the principle of encapsulation.
+
+<P>
+<B>Returning from a Window Procedure</B>
+<P>
+By convention, a window procedure typically returns a Boolean value (type
+MRESULT) to its caller, to indicate the result of message processing for
+that message.  The value returned is significant, since Presentation Manager
+takes action depending upon that value.  The defined return values for each
+system-defined message class, along with the default processing provided
+by Presentation Manager for each class, are given in the<I> IBM OS/2 Version
+2.0 Presentation Manager Reference</I>.  Naturally, the return values for
+user-defined message classes are defined by the application developer.
+<P>
+If the window procedure has been invoked synchronously using<B> WinSendMsg()</B>,
+the result is returned by Presentation Manager to the calling window procedure,
+which may interrogate and act upon it.  If the window procedure has been
+invoked asynchronously using the<B> WinPostMsg()</B> function, the result
+is returned to Presentation Manager<I> only</I>.  Presentation Manager then
+uses this result to determine whether any post-processing should be carried
+out for the message.  Note that while the<B> WinPostMsg()</B> function call
+also provides a Boolean return code to the caller, this code only indicates
+whether the message was successfully posted to the queue, and<I> not</I> the
+successful processing of the message by the target window procedure.
+
+<P><HR>
+
+<A HREF="214_L3_MainRoutine.html">[Back: Main Routine]</A> <BR>
+<A HREF="216_L3_DialogProcedures.html">[Next: Dialog Procedures]</A> 
+</BODY>
+</HTML>

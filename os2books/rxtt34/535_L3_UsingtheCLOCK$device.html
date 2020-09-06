@@ -1,0 +1,88 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Using the CLOCK$ device</TITLE>
+</HEAD>
+<BODY>
+<H1>Using the CLOCK$ device</H1><!-- entering slot 560 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+You may read and write to the CLOCK$ device to get or set the current date
+and time.
+<P>
+<B>Warning: </B> Be careful when writing to the CLOCK$ device! There seems
+to be no parameter checking at all!<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+Example:
+<PRE> 
+/*                                                                    */
+/* Sample REXX code to read from the CLOCK$ device                    */
+/*                                                                    */
+/* The CLOCK$ device returns the time and date in 6 bytes with the    */
+/* following format:                                                  */
+/*                                                                    */
+/* Byte 1-2 : No. of days since 01.01.1980 in INTEL format            */
+/* Byte  3  : Minutes                                                 */
+/* Byte  4  : Hours                                                   */
+/* Byte  5  : Hundreds of Seconds                                     */
+/* Byte  6  : Seconds                                                 */
+/*                                                                    */
+/* Note:                                                              */
+/*                                                                    */
+/* To change the date or time via the CLOCK$ device, you can also     */
+/* write to the CLOCK$ device. This is very useful to set the date    */
+/* to today +/- n days. But use this technique with care!             */
+/*                                                                    */
+
+
+                    /* get the current time with the TIME() function  */
+                    /* (only needed to test the results)              */
+  timeResult = time( "L" )
+
+                    /* read the current time from the CLOCK$ device   */
+  clockResult = CharIn( "CLOCK$", , 6 )
+
+                    /* close the CLOCK$ device                        */
+                    /* Note that you MUST close the device between    */
+                    /* reading and writing to it!                     */
+  call stream "CLOCK$", "c", "CLOSE"
+
+                    /* date("B") for the 01.01.1980                   */
+                    /* (only needed to test the results)              */
+  date01_01_1980 = 722814
+
+                    /* convert the date                               */
+  iDate = c2d( translate( '21', substr( clockResult,1, 2 ), '12' ) )
+
+                    /* convert the time                               */
+  iHours    = right( c2d( substr( clockResult, 4, 1 ) ), 2, "0" )
+  iMinutes  = right( c2d( substr( clockResult, 3, 1 ) ), 2, "0" )
+  iSeconds  = right( c2d( substr( clockResult, 6, 1 ) ), 2, "0" )
+  iHundreds = right( c2d( substr( clockResult, 5, 1 ) ), 2, "0" )
+
+                    /* show the results                               */
+  say "Today is the day no " || idate || " after the 01.01.1980."
+  say "(According to DATE() the number must be: " || ,
+        date("B") - date01_01_1980 || ", DATE(U) returns " || ,
+        date( "U" ) || ")."
+
+  say "Time is " || iHours   || ":" || ,
+                    iMinutes || ":" || ,
+                    iSeconds || ":" || ,
+                    iHundreds ,
+                    "(time(L) reports: " || timeResult || ")"
+exit
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="534_L3_Simpleparameterparsi.html">[Back: Simple parameter parsing routine]</A> <BR>
+<A HREF="536_L3_MATCHfunctioninREXX.html">[Next: MATCH function in REXX]</A> 
+</BODY>
+</HTML>

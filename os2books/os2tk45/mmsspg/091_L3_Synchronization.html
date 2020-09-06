@@ -1,0 +1,71 @@
+<HTML>
+<HEAD>
+<TITLE>Synchronization</TITLE>
+</HEAD>
+<BODY>
+<H1>Synchronization</H1><!-- entering slot 113 -->
+<P>
+Each stream handler may, or may not, be able to generate or receive sync
+pulses. This capability for each stream handler is defined in the SPCB for
+that stream handler. Synchronization pulses are passed as an event from
+the master stream handler.
+<P>
+Synchronization pulses are distributed by the Sync/Stream Manager based
+on the synchronization relationship of the programmed stream. This distribution
+is effective for both DLL and device driver stream handlers. Device driver
+stream handlers receive sync pulses through their sync pulse SYNC_EVCB.
+Each slave stream handler must regularly update the sync pulse SYNC_EVCB
+with its calculated stream time. The Sync/Stream Manager checks this slave-handler
+stream time against the master stream time and decides whether to send a
+sync pulse to this handler. The device driver stream handler checks for
+sync pulses from the Sync/Stream Manager by polling a flag in the sync pulse
+SYNC_EVCB. The Sync/Stream Manager sets the flag to indicate a sync pulse
+and updates the current master stream time. Typically, the PDD slave handler
+polls the flag once during interrupt processing and adjusts the stream usage
+accordingly. Refer to the following example for an example of how device
+driver stream handlers support synchronization.
+<PRE>/*****************************************************************/
+/* If we are the master, then report the time so that the slaves */
+/* can adjust their time and be in sync with the master.         */
+/*****************************************************************/
+
+if ((pSTREAM)-&gt;ulStateFlg &amp; STREAM_MASTER_SYNC) {
+        (pSTREAM)-&gt;SyncEvcb.mmtimeMaster = mmtimeCurrStreamTime;
+        RptEvent.ulFunction = SMH_REPORTEVENT;
+        RptEvent.hid = (pSTREAM)-&gt;hid;
+        RptEvent.hevent = 0;          /* must be 0 for implicit events */
+        RptEvent.pevcbEvent = (PEVCB)&amp;((pSTREAM)-&gt;SyncEvcb);
+        VideoSH.pSMHEntryPoint(&amp;RptEvent); /* report master time */
+}
+/**************************************************************/
+/* If we are the slave, then update slave time                */
+/* and determine if this slave stream is too slow or too fast */
+/* with respect to the master.                                */
+/**************************************************************/
+
+if ((pSTREAM)-&gt;ulStateFlg &amp; STREAM_SLAVE_SYNC) {
+        (pSTREAM)-&gt;SyncEvcb.mmtimeSlave = mmtimeCurrStreamTime;
+        if ((pSTREAM)-&gt;SyncEvcb.ulStatus &amp; SYNCPOLLING) {
+             if (mmtimeCurrStreamTime &gt; (pSTREAM)-&gt;SyncEvcb.mmtimeMaster)
+                     /* I need to slow my stream */
+                     ;
+             if (mmtimeCurrStreamTime &lt; (pSTREAM)-&gt;SyncEvcb.mmtimeMaster)
+                     /* I need to speed up my stream */
+                     ;
+        }
+</PRE>
+
+<P>
+<B>Note: </B> See <A HREF="060_L2_SynchronizationFeatu.html">Synchronization
+Features</A> for more information on sync pulse generation and processing.
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+
+<P><HR>
+
+<A HREF="090_L3_ErrorDetection.html">[Back: Error Detection]</A> <BR>
+<A HREF="092_L2_InterdeviceDriverCom.html">[Next: Inter-device Driver Communications (IDC)]</A> 
+</BODY>
+</HTML>

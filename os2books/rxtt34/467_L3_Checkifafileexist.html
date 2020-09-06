@@ -1,0 +1,113 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Check if a file exist</TITLE>
+</HEAD>
+<BODY>
+<H1>Check if a file exist</H1><!-- entering slot 485 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* example code to check if a file exists. This function also checks, */
+/* if the name is already used by a directory or a device (e.g. CON)  */
+/* Note that this routine won't find hidden or system files.          */
+
+  do until fileName = ""
+    call charOut, "Enter a filename to check: "
+    fileName = lineIN()
+    say "The result of FileExist(" || fileName || ") is: " || ,
+        FileExist( fileName )                                /* v2.60 */
+  end /* do until iLIne = "" */
+
+exit 0
+
+/* ------------------------------------------------------------------ */
+/* function: Check if a file exists                                   */
+/*                                                                    */
+/* call:     FileExist fileToTest                                     */
+/*                                                                    */
+/* where:    fileToTest - name of the file to test                    */
+/*                                                                    */
+/* returns:  -2 - invalid parameter                                   */
+/*           -1 - cannot detect (e.g. the drive is not ready)         */
+/*            0 - neither a file, a device nor a directory with this  */
+/*                name exist                                          */
+/*            1 - the file exist                                      */
+/*            2 - a device driver with the name exists                */
+/*            3 - a directory with the name exists                    */
+/*                                                                    */
+FileExist: PROCEDURE
+  parse arg fileName                                         /* v2.90 */
+
+                        /* install temporary error handler            */
+  SIGNAL ON NOTREADY NAME FileExistError
+  SIGNAL ON FAILURE  NAME FileExistError
+  SIGNAL ON ERROR    NAME FileExistError
+
+  thisRC = -2           /* rc = -2 -&gt;&gt; invalid parameter              */
+
+                        /* check the parameter                        */
+  if strip( fileName ) &lt;&gt; "" then
+  do
+    thisRC = -1         /* rc = -1 -&gt;&gt; cannot detect the result       */
+
+                        /* check if the drive with the file is ready  */
+    call stream fileName
+                        /* turn of some error handling so we can      */
+                        /* determine if the given name is the name of */
+                        /* a device (for example "LPT1")              */
+    SIGNAL OFF NOTREADY
+
+    if stream( fileName, "c", "QUERY EXISTS" ) &lt;&gt; "" then
+    do
+                        /* seems that the file exists -- check if     */
+                        /* it is a device                             */
+      if stream( fileName, "c", "QUERY DATETIME" ) == "" then
+        thisRC = 2      /* rc = 2 -&gt;&gt; this is a device name           */
+      else
+        thisRC = 1      /* rc = 1 -&gt;&gt; this is a file name             */
+    end /* if stream( ... */
+    else
+    do
+                        /* seems that the file does not exist --      */
+                        /* check if a directory with the name for the */
+                        /* file exist                                 */
+
+                        /* save the current directory of the current  */
+                        /* drive                                      */
+      thisDir = directory()
+                        /* save the current directory of the drive    */
+                        /* with the file to check                     */
+      tempDir = directory( fileSpec( "Drive", fileName ) )
+
+      if directory( fileName ) &lt;&gt; "" then
+        thisRC = 3      /* rc = 3 -&gt;&gt; a dir with this name exists     */
+      else
+        thisRC = 0      /* rc = 0 -&gt;&gt; neither a file, a device nor a  */
+                        /*            dir with this name exists       */
+
+                        /* restore the current directory of the drive */
+                        /* with the directory to check                */
+      call directory tempDir
+                        /* restore the current directory of the       */
+                        /* current drive                              */
+      call directory thisDir
+    end /* else */
+  end /* if strip( fileName ) &lt;&gt; "" then */
+
+FileExistError:
+
+RETURN thisRC
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="466_L3_Checkifanamedescribe.html">[Back: Check if a name describes a device or a file]</A> <BR>
+<A HREF="468_L3_Getanameforatemporar.html">[Next: Get a name for a temporary file]</A> 
+</BODY>
+</HTML>

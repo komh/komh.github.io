@@ -1,0 +1,208 @@
+<HTML>
+<HEAD>
+<TITLE>Installing an I/O Procedure</TITLE>
+</HEAD>
+<BODY>
+<H1>Installing an I/O Procedure</H1><!-- entering slot 194 -->
+<P>
+Certain factors must be considered when installing an IOProc; for example,
+the number of processes that use the IOProc might help you decide which
+method you use to install an IOProc.  Depending on the requirements of your
+application, you can choose to install an IOProc on a temporary, semipermanent,
+or permanent basis.
+<P>
+The following MMIO functions allow you to install an IOProc:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Function                      ³Description                   ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³mmioOpen                      ³Temporarily installs an I/O   ³
+³                              ³procedure.                    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³mmioInstallIOProc             ³Adds, replaces, finds, or     ³
+³                              ³removes an entry in the MMIO  ³
+³                              ³IOProc table.                 ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³mmioIniFileHandler            ³Adds, replaces, finds, or     ³
+³                              ³removes an entry in the       ³
+³                              ³initialization file           ³
+³                              ³(MMPMMMIO.INI).               ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+<B>Temporary Installation Using mmioOpen</B>
+<P>
+You can temporarily install an I/O procedure using mmioOpen.  In this case,
+the IOProc is only used when a file opened by the MMIO Manager does not
+install the IOProc in the I/O procedure table.
+<P>
+To specify an I/O procedure when you open a file using mmioOpen, use the
+<I>pmmioinfo</I> parameter to reference an MMIOINFO structure as follows:
+<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Load the DLL using the DosLoadModule and DosQueryProcAddr
+functions to install and obtain the procedure address of the IOProc as shown
+in the following code fragment.
+<PRE>strcpy( acMMIOProcName,
+        acStringBuffer[ IDS_MMIO_INSTALLPROC_NAME - 1 ] );
+
+ldosAPIRc =
+  DosLoadModule(
+   &amp;acFailureNameBuffer[ 0 ],    /* Object name if failure occurs.  */
+   FILE_NAME_SIZE,               /* Size of the name buffer.        */
+   acStringBuffer[ IDS_MMIO_INSTALLPROC_DLL_NAME - 1 ], /* DLL Name.*/
+   &amp;hmModHandle );               /* Handle to the module.           */
+     .
+     .
+     .
+
+ldosAPIRc =
+  DosQueryProcAddr(
+   hmModHandle,                /* Handle to the DLL module.         */
+   (ULONG) NULL,               /* NULL gives the entry point.       */
+   acMMIOProcName,             /* Name of the Installable procedure.*/
+   (PFN *) &amp;pmmioprocIoProc ); /* Pointer to the Installable proc.  */
+</PRE>
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->In the MMIOINFO structure passed to mmioOpen,
+store the procedure address of the IOProc type in the<I> pIOProc</I> field.
+ Set the<I> fccIOProc</I> field to NULL.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Call mmioOpen to use the IOProc with a file,
+passing the MMIOINFO structure in as the second parameter.  This sends a
+MMIOM_OPEN message to the temporary IOProc.  (Note that this does not make
+the IOProc available for use with other files.)<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Set all other fields to 0 (unless you are opening
+a memory file, or directly reading or writing to the file I/O buffer).<!-- lm: 0x2 1 -->
+</UL>
+<P>
+This strategy allows a file format IOProc to replace a default IOProc (such
+as the DOS IOProc), simply by using the address of a replacement custom
+routine.
+<P>
+
+<P>
+<B>Semipermanent Installation Using mmioInstallIOProc</B>
+<P>
+You can install an IOProc during run-time from your application. This method
+is semipermanent because the IOProc can only be called while the process
+is active.  When the process terminates, it is removed from the IOProc table.
+ Once the DLL is removed from memory, the next loading of the MMIO DLL does
+not load this IOProc.  Because this IOProc is installed by specifically
+calling mmioInstallIOProc, as shown in the following figure, the IOProc
+is available for any files opened within that process.
+<PRE>PMMIOPROC  pmmioprocSpecialIOProc; /* Pointer once IOProc                                      is installed.       */
+
+
+ pmmioprocSpecialIOProc =
+   mmioInstallIOProc(
+    fccIOProc,          /* The identifier (FOURCC) of the procedure.*/
+    pmmioprocIoProc,    /* Pointer to the installable procedure.    */
+    MMIO_INSTALLPROC ); /* Flag to install the procedure.           */
+</PRE>
+
+<P>
+The mmioInstallIOProc function<!-- entering slot 195 --> maintains a separate
+list of installed I/O procedures for each OS/2 application that uses MMIO.
+ This allows different applications to use the same I/O procedure identifier
+for different I/O procedures without causing conflict.  When you install
+an I/O procedure using mmioInstallIOProc, the procedure remains installed
+until you remove it.  The mmioInstallIOProc function does not prevent an
+application from installing two different I/O procedures with the same identifier,
+or installing an I/O procedure with the same identifier as a internal I/O
+procedure (DOS, MEM, or CF).  When mmioInstallIOProc is called with the
+MMIO_REMOVEPROC flag set, as shown in the following code fragment, the most
+recently installed procedure is the first one to be removed.
+<PRE>PMMIOPROC  pmmioprocSpecialIOProc; /* Pointer once IOProc
+                                      is installed.               */
+
+ pmmioprocSpecialIOProc =
+   mmioInstallIOProc(
+     fccIOProc,               /* The identifier of the procedure. */
+     pmmioprocIoProc,         /* Pointer to the Installable proc. */
+     MMIO_REMOVEPROC );       /* Flag to deinstall the proc.      */
+
+</PRE>
+
+<P>
+<B>Permanent Installation Using mmioIniFileHandler</B>
+<P>
+You can permanently install an IOProc in your system by identifying the
+IOProc in the initialization file (MMPMMMIO.INI) when you start your system.
+ This method allows the IOProc to be used by any process because it is installed
+in the IOProc table for every process (like the internal I/O procedures).
+ Therefore, a call to mmioInstallIOProc is not necessary every time the
+IOProc is needed.
+<P>
+The advantage of installing I/O procedures in the MMPMMMIO.INI file is to
+achieve application transparency; I/O procedures become built-in as soon
+as you restart your system.  Note that the IOProc must be contained in a
+DLL file, although more than one IOProc can be contained in the DLL if necessary.
+
+<P>
+To permanently install an IOProc, an IOProc entry is added to the MMPMMMIO.INI
+file.  This is accomplished by either writing an INI change control file
+or writing an application using the mmioIniFileHandler function with the
+MMIO_INSTALLPROC specified.  The IOProc is installed in the IOProc table
+ahead of the MMIO default IOProcs (DOS, MEM, and CF).
+<P>
+The following code fragment is an example of how an application uses the
+mmioIniFileHandler function to permanently install the OS/2 1.3 PM bitmap
+image IOProc.
+<PRE>#define FOURCC_OS13   mmioFOURCC( 'O', 'S', '1', '3' )
+
+#pragma linkage( mmioIniFileHandler, system )
+
+void main ()
+{
+ ULONG   ul;
+ MMINIFILEINFO  mminifileinfo;
+ mminifileinfo.fccIOProc = FOURCC_OS13;
+ strcpy (mminifileinfo.szDLLName, "OS13PROC");
+ strcpy (mminifileinfo.szProcName, "OS13BITMAPIOPROC");
+ mminifileinfo.ulExtendLen = 16L;
+ mminifileinfo.ulFlags = 0L;
+ mminifileinfo.ulMediaType = MMIO_MEDIA_IMAGE;
+ mminifileinfo.ulIOProcType = MMIO_IOPROC_FILEFORMAT;
+ strcpy (mmioinifileinfo.szDefExt, "");
+
+ printf ("Installing OS/2 PM Bitmap (V1.3) IOProc\n");
+
+ rc = mmioIniFileHandler (&amp;mminifileinfo, MMIO_INSTALLPROC);
+ switch (rc)
+ {
+ case MMIO_SUCCESS:
+  printf ("Installing Complete\n");
+  break;
+ case MMIOERR_INVALID_PARAMETER:
+  printf ("Error in this install program\n");
+  break;
+ case MMIOERR_INTERNAL_SYSTEM:
+  printf ("OS/2 MPM System Error\n");
+  break;
+ case MMIOERR_NO_CORE:
+  printf ("Memory unavailable for this IOProc\n");
+  break;
+ case MMIOERR_INI_OPEN:
+  printf ("Unable to access the OS/2 MMPMMMIO.INI file\n");
+  break;
+ case MMIOERR_INVALID_FILENAME:
+  printf ("Cannot find the file : OS13PROC.DLL\n");
+  break;
+ default:
+  printf ("Unknown error attempting to install OS/2 Bitmap V(1.3)\n");
+  break;
+ }
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="178_L3_FileFormatIOProcedur.html">[Back: File Format I/O Procedures Provided With OS/2 Multimedia]</A> <BR>
+<A HREF="180_L2_CODECProcedures.html">[Next: CODEC Procedures]</A> 
+</BODY>
+</HTML>

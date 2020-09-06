@@ -1,0 +1,141 @@
+<HTML>
+<HEAD>
+<TITLE>I/O Procedure Type</TITLE>
+</HEAD>
+<BODY>
+<H1>I/O Procedure Type</H1><!-- entering slot 125 -->
+<P>
+Certain MMIO functions operate on a specific IOProc type.  There are two
+types of I/O procedures:<I> file format</I> and<I> storage system</I>.  A
+<I>file format</I> IOProc operates on the contents of a file, and calls
+other MMIO services when required.  In contrast, a<I> storage system</I> IOProc
+operates on the storage presentation of the media object, and calls base
+operating system services.
+<P>
+To indicate an I/O procedure type during initialization, set the<I> ulIOProcType
+</I>field in the MMFORMATINFO structure to either MMIO_IOPROC_FILEFORMAT
+for file format IOProcs or MMIO_IOPROC_STORAGESYSTEM for storage system
+IOProcs.  You should also have a resource file, which specifies the NLS
+name used to describe the I/O procedure.  You must bind the RC file to the
+DLL if the I/O procedure is to be used in multiple countries.  The IOProc
+needs to handle the GETFORMATINFO and GETFORMATNAME messages to provide
+the above information.
+<BR>
+File Format I/O Procedure
+<P>
+A file format IOProc should support all MMIO system messages (with the exception
+of RIFF compound file messages).  It should also handle any user-defined
+messages created by the application.  For example, a file format IOProc
+needs to support the MMIOM_GETFORMATINFO message, because the MMIO Manager
+internally issues this message to an IOProc when it is being installed.
+ If the MMIOM_GETFORMATINFO message is not supported, a blank MMFORMATINFO
+structure is placed on the MMIO internal IOProc table for that specific
+IOProc, except for the FOURCC.
+<P>
+In addition, system messages should be supported by a default message handler,
+which reports back to MMIO that the message is unsupported.  This message
+handler should attempt to pass any message it cannot support to a subsequent
+child IOProc.  For example, a message is passed from a file format IOProc
+to a storage system IOProc as shown in the following example.
+<PRE>default:
+    {
+     /*
+      * Declare Local Variables.
+      */
+     PMMFILESTATUS       pVidInfo;
+     LONG                lRC;
+     /************************************************************
+      * Check for valid MMIOINFO block.
+      ************************************************************/
+     if (!pmmioinfo)
+         return (MMIO_ERROR);
+     /************************************************************
+      * Set up our working variable MMFILESTATUS.
+      ************************************************************/
+     pVidInfo = (PMMFILESTATUS) pmmioinfo-&gt;pExtraInfoStruct;
+
+     if (pVidInfo != NULL &amp;&amp; pVidInfo-&gt;hmmioSS)
+        {
+         lRC = mmioSendMessage (pVidInfo-&gt;hmmioSS,
+                                usMsg,
+                                lParam1,
+                                lParam2);
+         if (!lRC)
+            pmmioinfo-&gt;ulErrorRet = mmioGetLastError (pVidInfo-&gt;hmmioSS);
+         return (lRC);
+        }
+    else
+       {
+        if (pmmioinfo != NULL)
+           pmmioinfo-&gt;ulErrorRet = MMIOERR_UNSUPPORTED_MESSAGE;
+        return (MMIOERR_UNSUPPORTED_MESSAGE);
+       }
+
+    }   /* end case of Default */
+</PRE>
+
+<P>
+If you write a custom IOProc that supports translation, the following messages
+need to consider the translate flags:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->MMIOM_OPEN<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->MMIOM_READ<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->MMIOM_WRITE<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->MMIOM_SEEK<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->MMIOM_CLOSE<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->MMIOM_GETHEADER<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->MMIOM_SETHEADER<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->MMIOM_QUERYHEADER<!-- lm: 0x2 1 -->
+</UL>Storage System I/O Procedure
+<P>
+A storage system IOProc typically handles a subset of the system-defined
+messages that operate on the storage system.  For example, the DOS and MEM
+IOProcs handle the following messages:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->MMIOM_OPEN<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->MMIOM_READ<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->MMIOM_WRITE<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->MMIOM_SEEK<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->MMIOM_CLOSE<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->MMIOM_GETFORMATNAME<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->MMIOM_GETFORMATINFO<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->MMIOM_IDENTIFYFILE<!-- lm: 0x2 1 -->
+</UL>
+<P>
+A message specific to the storage system IOProc, such as extended attributes
+of a file, would pass through the default handler of the file format IOProc
+to the storage system IOProc for processing.
+<P>
+
+<P>
+<B>Note: </B> The RIFF compound file (CF) IOProc installed with OS/2 multimedia
+only supports MMIOM_IDENTIFYFILE, MMIOM_GETFORMATINFO, and MMIOM_GETFORMATNAME.
+ The compound file (CF) IOProc does not need to support additional MMIO
+messages because the bundle (<!-- entering slot 126 --> BND) IOProc performs
+the direct file I/O operations.  These two IOProcs can be viewed as one
+logical compound file IOProc.<!-- lm: 0x2 1 -->
+<P>
+
+
+<P><HR>
+
+<A HREF="102_L3_IOProcedureIdentifie.html">[Back: I/O Procedure Identifier (FOURCC)]</A> <BR>
+<A HREF="104_L2_DataTranslationandFi.html">[Next: Data Translation and File Conversion]</A> 
+</BODY>
+</HTML>

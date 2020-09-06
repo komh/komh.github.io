@@ -1,0 +1,42 @@
+<HTML>
+<HEAD>
+<TITLE>Interprocess Communication Using Named Pipes (Part 1)</TITLE>
+</HEAD>
+<BODY>
+<H1>Interprocess Communication Using Named Pipes (Part 1)</H1><!-- entering slot 99 -->
+<PRE>#define  NPIPE_NAME   "\\PIPE\\SRVPIPE"         /* Pipe name             */
+
+void RequestThread(TRANS *Trans)                /* Requester thread      */
+{
+     ULONG      ulBytes;                        /* Bytes read/written    */
+     APIRET     rc;                             /* Return code           */
+
+     rc = DosWaitNPipe(NPIPE_NAME,              /* Wait on named pipe    */
+                       NP_WAIT_INDEFINITELY);   /* Wait indefinitely     */
+
+     rc = DosCallNPipe(NPIPE_NAME,              /* Pipe name             */
+                       Trans-&gt;Request,          /* Request buffer ptr    */
+                       sizeof(REQUEST),         /* Size of buffer        */
+                       Trans-&gt;Reply,            /* Reply buffer ptr      */
+                       sizeof(REPLY),           /* Size of buffer        */
+                       &amp;ulBytes,                /* No. of bytes read     */
+                       10000);                  /* Timeout period        */
+
+     WinPostMsg(Trans-&gt;hReturn,                 /* Notify calling window */
+                WMP_REQUESTCOMPLETE,            /* Request is complete   */
+                (MPARAM)Trans,                  /* Transaction structure */
+                0);
+     DosExit(0);
+}
+</PRE>
+
+<P>
+This example shows a secondary thread in a "requester" process, writing
+to and reading from a named pipe.
+
+<P><HR>
+
+<A HREF="096_L2_InterprocessCommunic.html">[Back: Interprocess Communication Using Queues (Part 3)]</A> <BR>
+<A HREF="098_L2_InterprocessCommunic.html">[Next: Interprocess Communication Using Named Pipes (Part 2)]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,59 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosProtectEnumAttribute - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosProtectEnumAttribute - Example Code</H1><!-- entering slot 921 -->
+<P>
+This sample gets all the extended attributes (EAs) from a file named "ATTRIB.EXE"
+in the OS2 directory, and displays the names.
+<PRE> #define INCL_DOSFILEMGR   /* File Manager values */
+ #define INCL_DOSERRORS    /* DOS error values    */
+ #include &lt;os2.h&gt;
+ #include &lt;stdio.h&gt;
+
+int main(VOID) {
+   UCHAR    EnumBuf[200] = {0};      /* Data Buffer */
+   ULONG    ulEnumCnt    = 0;        /* Count of entries to return */
+   FEA2     *ptr         = NULL;     /* Pointer to data items returned */
+   ULONG    ulTemp       = 0;
+   APIRET   rc           = NO_ERROR; /* Return code  */
+   ULONG    i            = 0;        /* Loop index */
+   FHLOCK FileHandleLock = 0;        /* File handle lock   */
+
+   ulEnumCnt = (ULONG)-1; /* Request as many attributes as will fit in buffer */
+
+   rc = DosProtectEnumAttribute(ENUMEA_REFTYPE_PATH,   /* ASCIIZ string       */
+                         "c:\\os2\\attrib.exe", /* Name of file               */
+                         1L,                    /* Start with first attribute */
+                         (PVOID)&amp;EnumBuf,       /* Buffer for information     */
+                         sizeof(EnumBuf),
+                         &amp;ulEnumCnt,
+                         ENUMEA_LEVEL_NO_VALUE,  /* Request level 1 info      */
+                         FileHandleLock);       /* File handle lock           */
+   if (rc != NO_ERROR) {
+      printf("DosProtectEnumAttribute error: return code = %u\n", rc);
+      return 1;
+   }
+
+   ptr = (FEA2 *)EnumBuf; /* Mask the buffer pointer to an FEA2 structure */
+
+   printf ("Attributes found = %u\n", ulEnumCnt);
+
+   for (i = 0; i &lt; ulEnumCnt; i++) {
+      printf ("name = %s\n", ptr-&gt;szName);       /* increment the ptr */
+      ulTemp = ptr-&gt;oNextEntryOffset + (ULONG)ptr; /* with the value in */
+      ptr = (FEA2 *)ulTemp;                      /* oNextEntryOffset  */
+   } /* endfor */                                /* to access next record */
+
+   return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="908_L2H_DosProtectEnumAttrib.html">[Back: DosProtectEnumAttribute - Related Functions]</A> <BR>
+<A HREF="910_L2H_DosProtectEnumAttrib.html">[Next: DosProtectEnumAttribute - Topics]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,68 @@
+<HTML>
+<HEAD>
+<TITLE>TSF Using Mix of 16-bit and 32-bit Addressing</TITLE>
+</HEAD>
+<BODY>
+<H1>TSF Using Mix of 16-bit and 32-bit Addressing</H1><!-- entering slot 482 -->
+<P>
+
+<PRE>;  Trace source file for the MIXED dynalink.
+;    Parts were compiled with 16-bit compiler, some with 32-bit compiler.
+;    The developer must know how the parameters being sent in are
+;    to be addressed, whether they are segmented or flat addresses.
+
+     MODNAME=MIXCALLS.DLL
+     MAJOR=250
+     MAXDATALEN=200
+;  We will want to trace up to 200 bytes in any one trace call.
+
+     TYPELIST NAME=API,ID=08,
+              NAME=SYS,ID=04,
+              NAME=PRE,ID=02,
+              NAME=POST,ID=64
+
+     GROUPLIST NAME=MEM,ID=1,
+               NAME=FS,ID=3
+
+              /* The following tracepoint is for the routine MixStub.
+                 This was compiled using segmented addressing and
+                 one of the parameters to it is a pointer to a control
+                 block called mix_ctrl.  This pointer, found at SS:SP,
+                 is a flat address because the routine that sent it was
+                 compiled with the flat addressing specification.
+                 This logs the mix_ctrl block for 6 bytes. */
+
+     TRACE    MINOR=95, TP=.MixStub,
+              TYPE=(API,PRE),
+              GROUP=MEM,
+              DESC="(OS) MixStub     Pre-Invocation",
+              FMT ="                             mix_ctrl = /usr/cmvc/family/pubdoc/vc/0/1/2/2/s.69W %W %W",
+              MEM=(RSS+SP,IF,6)    /* is an indirect flat address */
+
+
+              /* The following is for the routine FlatStub.  This was
+                 compiled using 32-bit flat addresses.  A parameter to
+                 flatstub is a pointer called p_seg_info.  This
+                 pointer is a segmented address because the routine
+                 calling flatstub was compiled using 16-bit segmented
+                 addressing.  Log where p_seg_info points for 2 bytes. */
+
+      TRACE   MINOR=0xf0, TP=.FlatStub,
+              TYPE=(SYS),
+              GROUP=FS,
+              DESC="(OS) FlatStub Pre-Invocation",
+              FMT="                     seg_info = /usr/cmvc/family/pubdoc/vc/0/1/2/2/s.69W",
+              MEM32=(.p_seg_info,IS,2)   /* value p_seg_info is a 16-bit */
+                                         /*  segmented address           */
+
+</PRE>
+
+<P>
+
+
+<P><HR>
+
+<A HREF="463_L3_TSFUsing32bitAddress.html">[Back: TSF Using 32-bit Addressing]</A> <BR>
+<A HREF="465_L2_TraceCustomizerMessa.html">[Next: Trace Customizer Messages]</A> 
+</BODY>
+</HTML>

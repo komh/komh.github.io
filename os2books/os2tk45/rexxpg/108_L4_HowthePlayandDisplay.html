@@ -1,0 +1,119 @@
+<HTML>
+<HEAD>
+<TITLE>How the "Play and Display" File Works</TITLE>
+</HEAD>
+<BODY>
+<H1>How the "Play and Display" File Works</H1><!-- entering slot 114 -->
+<P>
+Now let's take a look at how CDNOTES uses the classes. CDNOTES reads a script
+file as input. The script file contains lines of text and the amount of
+time (in seconds) that must pass before each line is displayed. For our
+example, we used "Digging in the Dirt" from Peter Gabriel's "Us" CD. We
+determined the times for each line by playing back the CD using OS/2's CD
+player, and jotting down the displayed time when each line started.
+<P>
+CDNOTES also has a ::REQUIRES directive for the OREXXMM.CMD, which contains
+the class definitions for Multimedia and Script.
+<P>
+CDNOTES accepts one argument: a number of a track on the CD to play. It
+uses the track number as an extension for the file identifier. Thus GABRIEL.7
+(for track 7) is used as the file name in the sample.
+<P>
+After retrieving the command line argument, CDNOTES creates a multimedia
+script by sending a NEW message to the Script class:
+<PRE>script=.script~new('gabriel.'||track)  /* Create script      */
+</PRE>
+
+<P>
+The name of the file containing the script is passed as an argument on the
+NEW message.
+<P>
+Next CDNOTES creates an instance of the Multimedia class. The NEW message
+invokes the INIT method of the Multimedia class. The INIT method expects
+to be passed the type of multimedia object being opened. In our case, it
+is CDAUDIO:
+<PRE>cd=.multimedia~new('cdaudio')    /* Create CDAUDIO object  */
+</PRE>
+
+<P>
+The next few lines of code determine where the end of the track is. The
+SET and STATUS messages cause REXX to run the UNKNOWN method of the Multimedia
+class. The UNKNOWN method builds the appropriate MCI string command.
+<PRE>cd~set('time format milliseconds')          /* Set the time format  */
+startloc=cd~status('position track' track)   /* Set start point      */
+if track=cd~status('number of tracks') then  /* Last track?          */
+   endloc=''                                 /* Set stop point...    */
+else
+   endloc='to' cd~status('position track' track+1)
+</PRE>
+
+<P>
+Now CDNOTES becomes a bit more interesting. To play the CD, we use the START
+method of the Object class:
+<PRE>done=cd~start('play','from' startloc endloc 'wait')
+</PRE>
+
+<P>
+The START method sends a message, which is specified in the arguments, to
+the CD object. The first argument on the START message is the message to
+be sent. The second argument on START are the arguments for the message
+being sent. In this case, the message is PLAY, and the argument that is
+passed on the PLAY method is the result of the expression:
+<PRE>'from' startloc endloc 'wait'
+</PRE>
+
+<P>
+The START method sends the message and then immediately returns control
+to CDNOTES. The PLAY message causes the UNKNOWN method to be processed.
+UNKNOWN builds an MCI PLAY instruction to start the CD. We didn't send the
+PLAY message directly to the CD object because control wouldn't return to
+the CDNOTES program until the CD track finished playing--we wouldn't be
+able to synchronize the display of the text.
+<P>
+After starting the CD, CDNOTES starts the synchronized text display by sending
+the START message to the script object:
+<PRE>script~start
+</PRE>
+
+<P>
+START creates message objects and alarm objects for every line in the song,
+and returns control immediately to CDNOTES. START is an example of polymorphism.
+In the Object class, START sends a message and returns immediately. In the
+Script class, START creates message and alarm objects, and returns immediately.
+Since the functions are similar, they have the same name.
+<P>
+Notice that we don't account for processing delays that may occur in creating
+the alarm objects or in starting the audio playback. Consequently, the synchronization
+won't be perfect. In a real<!-- entering slot 115 --> application, you might
+want to adjust the timings in the script file or add an adjustment factor
+when creating the alarm objects.
+<P>
+START doesn't wait for the alarm objects to process before returning to
+its caller. Consequently, START returns to CDNOTES well before the CD track
+has completed playback. The next line of code closes the CD:
+<PRE>cd~close
+</PRE>
+
+<P>
+So if the CD is still playing, why doesn't CLOSE stop it prematurely? CLOSE
+causes REXX to run the UNKNOWN method. The UNKNOWN method runs on the same
+object (CD) using the same object variables that are in use because of the
+PLAY method. REXX senses that another method is using the object variable,
+and blocks the CLOSE until PLAY completes. (You can check this by placing
+SAY instructions around the line containing the CLOSE.)
+<P>
+After closing the CD, CDNOTES frees multimedia resources by sending the
+FREE message to the Multimedia class. FREE is a class method.
+<P>
+As this brief sample shows, REXX's object-oriented features greatly extend
+what you can do with the language. And they do so while maintaining the
+simplicity and brevity of the traditional REXX. CDNOTES uses objects, concurrent
+programming, and multimedia to create a simple computer karaoke in about
+70 lines of code.
+
+<P><HR>
+
+<A HREF="107_L5_FourMethodsfortheMul.html">[Back: Four Methods for the Multimedia Class]</A> <BR>
+<A HREF="109_L1_Commands.html">[Next: Commands]</A> 
+</BODY>
+</HTML>

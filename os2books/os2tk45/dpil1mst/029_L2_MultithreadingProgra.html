@@ -1,0 +1,95 @@
+<HTML>
+<HEAD>
+<TITLE>Multithreading Programming Considerations</TITLE>
+</HEAD>
+<BODY>
+<H1>Multithreading Programming Considerations</H1><!-- entering slot 29 -->
+<P>
+The DPI Version 2.0 DLL for OS/2 (DPI20DLL.DLL file) has been compiled with
+the /Gm+ compiler flag.  This enables it to be used by both single and multithreaded
+subagents.  However, even a single threaded subagent must be compiled with
+the /Gm+ compiler flag.
+<P>
+There are several static buffers in the DPI code.  For compatibility reasons,
+that cannot be changed.  Real multithread support will probably mean several
+potentially incompatible changes to the DPI 2.0 API.
+<P>
+<B>Use a Locking Mechanism</B>
+<P>
+If your subagent will be a multithreaded process, then you must always use
+some locking mechanism of your own around the use of the static buffers.
+ Otherwise, one thread maybe writing into the static buffer while another
+is writing into the same buffer at the same time. There are two static buffers.
+ One buffer is for building the serialized DPI packet before sending it
+out and the other buffer is for receiving incoming DPI packets.
+<P>
+Basically, all DPI functions that return a pointer to an unsigned char are
+the DPI functions that write into the static buffer to create a serialized
+DPI packet:
+<PRE>mkDPIAreYouThere()
+mkDPIopen()
+mkDPIregister()
+mkDPIunregister()
+mkDPItrap()
+mkDPIresponse()
+mkDPIpacket()
+mkDPIclose ()
+</PRE>
+
+<P>
+After you have called the DPIsend_packet_to_agent() function for the buffer,
+which is pointed to by the pointer returned by one of the above functions,
+it is free to use again.
+<P>
+There is one function that reads the static input buffer:
+<PRE>pDPIpacket()
+</PRE>
+
+<P>
+The input buffer gets filled by the DPIawait_packet_from_agent() function.
+ You get a pointer to the static input buffer upon return from the await.
+ The pDPIpacket() function parses the static input buffer and returns a
+pointer to dynamically allocated memory. Therefore, after the pDPIparse()
+call, the buffer is available for use again.
+<P>
+The current situation is such that if multiple threads are waiting at the
+same time and for different handles, there is the risk that two incoming
+DPI packets will overlay each other.
+<P>
+If multiple threads are waiting for the same handle, when data arrives both
+threads come out of the wait.  If one of them issues another wait before
+the other one is finished parsing the input buffer, the buffer may get overlaid
+by a new packet before the second one gets a chance to parse the packet.
+
+<P>
+The DPI internal handle structures and control blocks used by the underlying
+code to send and receive data to and from the agent are also static data
+areas.  You must make sure that you use your own locking mechanism around
+the functions that add, change, or delete data in those static structures.
+ The functions that change those internal static structures are:
+<PRE>DPIconnect_to_agentTCP()
+DPIconnect_to_agentSHM()
+DPIconnect_to_agentUDP()
+DPIdisconnect_from_agent()
+</PRE>
+
+<P>
+The other functions that access those static structures which must be assured
+that the structure is not being changed while they are referencing it during
+their execution are:
+<PRE>DPIawait_packet_from_agent()
+DPIsend_packet_to_agent()
+DPIget_fd_for_handle()
+</PRE>
+
+<P>
+While the last 3 functions can be executed concurrently in different threads,
+you must ensure that no other thread is adding or deleting handles during
+this process.
+
+<P><HR>
+
+<A HREF="028_L2_ARE_YOU_THERERequest.html">[Back: ARE_YOU_THERE Request]</A> <BR>
+<A HREF="030_L1_BasicDPIAPIFunctions.html">[Next: Basic DPI API Functions]</A> 
+</BODY>
+</HTML>

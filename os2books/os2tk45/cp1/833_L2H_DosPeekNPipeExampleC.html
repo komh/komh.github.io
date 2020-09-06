@@ -1,0 +1,91 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosPeekNPipe - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosPeekNPipe - Example Code</H1><!-- entering slot 845 -->
+<P>
+This example handles the client side of a pipe. It opens an existing named
+pipe, queries the pipe handle type and pipe state, sends a message to the
+host, reads the host reply, and finally closes the pipe.
+<P>
+Before running this example, compile and run the example code shown in the
+DosConnectNPipe, DosCreateNPipe, DosDisConnectNPipe, or DosSetNPipeSem functions,
+which handles the host side of the pipe.
+<PRE>#define INCL_DOSFILEMGR       /* DOS File Manager values */
+#define INCL_DOSNMPIPES       /* DOS Named Pipes values */
+#define INCL_DOSSEMAPHORES    /* DOS Semaphore values */
+#define INCL_DOSERRORS        /* DOS Error values */
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+
+int main(VOID) {
+   APIRET   rc                     = NO_ERROR;   /* Return code */
+   CHAR     message[256]           = "";         /* Message buffer */
+   HFILE    PipeHandle             = NULLHANDLE; /* Pipe handle */
+   PIPEINFO PipeBuffer[4]          = {{0}};
+   struct   _AVAILDATA  BytesAvail = {0};
+   UCHAR    Buffer[200]            = {0};
+   ULONG    bytes                  = 0;
+   ULONG    Action                 = 0;
+   ULONG    PipeState              = 0;
+   ULONG    HandType               = 0;
+   ULONG    FlagWord               = 0;
+   ULONG    BytesRead              = 0;
+
+   rc = DosOpen("\\PIPE\\EXAMPLE", &amp;PipeHandle, &amp;Action, 0, 0, FILE_OPEN,
+                OPEN_ACCESS_READWRITE | OPEN_SHARE_DENYREADWRITE |
+                OPEN_FLAGS_FAIL_ON_ERROR, NULL);
+   if (rc != NO_ERROR) {
+      printf("DosOpen error: error code = %u\n", rc);
+      return 1;
+   }  else printf("Connected to pipe.\n");
+   rc = DosQueryHType(PipeHandle, &amp;HandType, &amp;FlagWord);
+   if (rc != NO_ERROR) {
+      printf("DosQueryHType error: error code = %u\n", rc);
+      return 1;
+   }  else printf("Handle type value is %u\n", HandType);
+
+   rc = DosPeekNPipe(PipeHandle, Buffer, sizeof(Buffer),
+                     &amp;BytesRead, &amp;BytesAvail, &amp;PipeState);
+   if (rc != NO_ERROR) {
+      printf("DosPeekNPipe error: error code = %u\n", rc);
+      return 1;
+   }  else printf("Pipe status value is %u\n\n", PipeState);
+
+   printf("Enter message to send to PIPEHOST: ");
+
+   fflush(NULL);   /* Flush above printf out to display */
+   gets(message);
+
+   rc = DosWrite(PipeHandle, message, strlen(message), &amp;bytes);
+   if (rc != NO_ERROR) {
+      printf("DosWrite error: error code = %u\n", rc);
+      return 1;
+   }
+
+   rc = DosRead(PipeHandle, message, sizeof(message), &amp;bytes);
+   if (rc != NO_ERROR) {
+      printf("DosRead error: error code = %u\n", rc);
+      return 1;
+   }
+
+   printf("\nMessage received from PIPEHOST: %s\n\n", message);
+
+   rc = DosClose(PipeHandle);
+   /* Should check if (rc != NO_ERROR) here... */
+
+   printf("...Disconnected\n");
+   return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="832_L2H_DosPeekNPipeRelatedF.html">[Back: DosPeekNPipe - Related Functions]</A> <BR>
+<A HREF="834_L2H_DosPeekNPipeTopics.html">[Next: DosPeekNPipe - Topics]</A> 
+</BODY>
+</HTML>

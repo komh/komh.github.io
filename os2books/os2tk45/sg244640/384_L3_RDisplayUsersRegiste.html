@@ -1,0 +1,431 @@
+<HTML>
+<HEAD>
+<TITLE>.R - Display User's Registers</TITLE>
+</HEAD>
+<BODY>
+<H1>.R - Display User's Registers</H1><!-- entering slot 555 --><!-- Unable to decode bitmap format --><IMG SRC="384_L3_RDisplayUsersRegiste_154.gif" WIDTH=32 HEIGHT=32><!-- Unable to decode bitmap format --><IMG SRC="384_L3_RDisplayUsersRegiste_155.gif" WIDTH=32 HEIGHT=32>
+<P>
+Display the user registers for a given <A HREF="3320_L0_.html">thread slot</A>.
+Set default addresses for <A HREF="297_L3_EEnterDataIntoMemory.html">E command</A>,
+<A HREF="285_L3_DDisplayMemory.html">D command</A>, <A HREF="285_L3_DDisplayMemory.html">K
+command</A> and <A HREF="312_L3_UUnassemble.html">U command.</A>
+<P>
+Applicable to the Dump Formatter only, the default adressing mode is not
+set according to the<B> VM</B> flags of the<B> EFLAGS</B> register but is
+assumed always to be in protect mode. This has been corrected from fix pack
+29 of Wapr 3.0 and base Warp 4.0.
+<P>
+<U><I>Syntax:</I></U>
+<PRE>
+
+ÄÄÄÄ.R ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+                                ÃÄÄ #    ÄÄ´
+                                ÃÄÄ *    ÄÄ´
+                                ÀÄÄ slot ÄÄÙ
+
+
+</PRE>
+
+<P>
+<U><I>Parameters:</I></U><!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B><I>slot</B></I><!-- lm: 0x11 11 -->
+<UL> Display user registers for <A HREF="3320_L0_.html">thread
+slot</A><B><I> slot</B></I>. This option is valid<B> only</B> under the
+Kernel Debugger.
+<P>
+The following short-hand may be used for the slot number:<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->The current (last) thread the dispatcher gave control
+to. This value is taken from the word a global label:
+<PRE>     <B>_TaskNumber</B>
+</PRE>
+<!-- lm: 0x2 11 -->
+<BR>
+<LI><!-- lm: 0x2 26 -->The debugger default thread slot. This defaults to
+the current slot unless overridden by the <A HREF="386_L3_SSetorDisplayDefault.html">.S
+command</A>.<!-- lm: 0x2 11 -->
+<P>
+If no slot number is given then the debugger's default slot number is assumed.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<U><I>Results &amp; Notes:</I></U>
+<P>
+Registers are displayed and register mnemonics are assigned the values displayed
+for use in address expressions and operands of other Kernel Debugger and
+Dump Formatter commands.
+<P>
+The register information is obtained as follows:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+Under the Kernel Debugger, if the displayed slot is the current system slot
+and the system is not in kernel mode (that is,<B> Indos</B>ª=1) then the
+ hardware register values save by the debugger are displayed.<!-- lm: 0x2 6 -->
+<P>
+Otherwise the registers are extracted from the from the ring 0 stack frame
+base pointed to by<B> TCB_pFrameBase</B> (<B>TCB</B> + 0x3c) for the thread
+slot in question.
+<P>
+The ring 0 stack frame base is created when the threads makes a transition
+from ring 2 or 3 to ring 0. This happens for a variety of reasons, such
+as issuing a call gate, trapping, pre-emption, interrupt, etc.. The format
+of the stack frame base depends on the reason for the ring 0 transition.
+<B>TCB_pcriFrameType</B> (<B>TCB</B> + 0x38) points to the <A HREF="3283_L0_.html">CRI</A>,
+which contains a table of <A HREF="3282_L0_.html">RIPs</A>. Each<B> RIP
+</B>entry is associated with a specific hardware register. The<B> RIP</B> contains
+the offset and length of the associated register saved in the stack frame
+base. See <A HREF="3193_L3_SystemStackFramesCli.html">Client Register Information
+and Stack Frames</A> for details of the<B> CRI</B> and<B> RIP</B> formats.
+
+<P>
+<B>Note: </B>
+<P>
+If the thread has never run out of kernel mode, as is the case with some
+internal threads, then the<B> CRI</B> is never updated. The<B> .R</B> command
+is not able to format the user registers. For these threads the <A HREF="309_L3_RSetorDisplayCurrent.html">R
+command</A> should be used, but only when the thread in question is the
+current system thread. Because the<B> R</B> command is an alias to the<B> .R
+</B>under the Dump Formatter, there is no way the display the current registers
+for an internal thread under the Dump Formatter. The only recourse is to
+display the<B> TSD</B> for the thread and attempt to unravel the stack manually.
+<!-- lm: 0x2 6 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+If an invalid <A HREF="3320_L0_.html">thread slot number</A> is given the
+the Kernel Debugger issues the following message: prompted with the command
+prompt.
+<PRE>    Invalid task number: <B><I>nnnn</B></I>
+
+</PRE>
+
+<P>
+The format of the<B> .R</B> command output depends on whether the <A HREF="309_L3_RSetorDisplayCurrent.html">RT
+command</A> has been used to toggle register display to full or short form
+and also whether the <A HREF="315_L3_YSetorDisplayDumpFor.html">Y<!-- entering slot 556 --> 386ENV
+command</A> has been used to toggle register interpretation into 286 or
+386 mode. Examples of the various forms follow:
+<PRE>
+##rt
+##.r 2c
+eax=f110099f ebx=00000001 ecx=0133fe4c edx=00000007 esi=0133ffec edi=00000000
+eip=00000626 esp=0133fe20 ebp=0133fe88 iopl=2 -- -- -- nv up ei ng nz na pe nc
+cs=d02f ss=099f ds=0053 es=0053 fs=150b gs=0000  cr2=1581928c  cr3=001d0000
+gdtr=7c3e5000 1fff  idtr=ffe00df0 03ff  tr=0010 ldtr=0028 cr0=pg et ts em mp --
+dr0=00000000 --e1-  dr1=00000000 --e1-  dr2=00000000 --e1-  dr3=00000000 --e1-
+tr6=00000 v=0 d=00 u=00 w=00 c=w  tr7=00000 ht=0 rep=0  dr6=-- -- --  dr7=-- --
+002c|d02f:00000626 66ead77a021a5b00 jmp     005b:1a027ad7
+
+##rt
+##.r
+eax=00000000 ebx=00000014 ecx=0000abd7 edx=0000abd7 esi=00080bff edi=00080007
+eip=0000272d esp=0000a668 ebp=0008a670 iopl=2 -- -- -- nv up ei ng nz na pe nc
+cs=d02f ss=0047 ds=abd7 es=d137 fs=150b gs=0000  cr2=1581928c  cr3=001d0000
+doscall1:CONFORM16:postDOSSEMWAIT:
+d02f:0000272d c9             leave
+
+
+##y 386env
+##.r 2c
+ax=099f  bx=0001  cx=fe4c  dx=0007  sp=fe20  bp=fe88  si=ffec  di=0000
+ip=0626  cs=d02f  ds=0053  es=0053  ss=099f  -- nv up ei ng nz na pe nc
+002c|d02f:0626 66ead77a021a5b00 jmp     005b:1a027ad7
+##
+
+
+##rt
+##.r 2c
+ax=099f  bx=0001  cx=fe4c  dx=0007  sp=fe20  bp=fe88  si=ffec  di=0000
+ip=0626  cs=d02f  ds=0053  es=0053  ss=099f  -- nv up ei ng nz na pe nc
+gdtr=3e5000 1fff  idtr=e00df0 03ff  tr=0010  ldtr=0028 iopl=2 msw=ts em mp
+002c|d02f:0626 66ead77a021a5b00 jmp     005b:1a027ad7
+##
+</PRE>
+
+<P>
+Following the formatted register display, one line of disassembled code
+is displayed at the default disassembley address. <A HREF="312_L3_UUnassemble.html">See
+the U command</A> for details on disassembling code.
+<P>
+Each of the fields has the following meaning:<!-- lm: 0x2 1 -->
+<P>
+<B><I>General Registers</B></I><!-- lm: 0x11 11 -->
+<UL> These comprise
+the following registers:
+<P>
+<B>  </B>
+<P>
+ax, bc, cx, dx, sp, bp, si, di
+<P>
+eax, ebx, ecx, edx, esp, ebp, esi, edi<!-- lm: 0x2 11 -->
+<P>
+Each is displayed with its value in hexadecimal.<!-- lm: 0x2 1 -->
+</UL><B><I> Segment
+Registers</B></I><!-- lm: 0x11 11 -->
+<UL> These comprise the following
+registers:
+<P>
+<B>  </B>
+<P>
+cs, ds, es, fs, gs, ss<!-- lm: 0x2 11 -->
+<P>
+Each is displayed with its selector value in hexadecimal.<!-- lm: 0x2 1 -->
+</UL><B><I> Instruction
+Pointers</B></I><!-- lm: 0x11 11 -->
+<UL> These comprise the following registers:
+
+<P>
+<B>  </B>
+<P>
+ip &amp; eip<!-- lm: 0x2 11 -->
+<P>
+Each is displayed with its value in hexadecimal.<!-- lm: 0x2 1 -->
+</UL><B><I> Flag
+registers</B></I><!-- lm: 0x11 11 -->
+<UL> These comprise the following
+registers:
+<P>
+<B>  </B>
+<P>
+flags &amp; eflags<!-- lm: 0x2 11 -->
+<P>
+These have their bit setting interpreted as follows:
+<PRE>ÚÄÄÄÄÂÄÄÄÄÄÄÂÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³<I>Bit</I> ³<I>Value</I> ³<I>Flag</I>³<I>Description</I>                   ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³17  ³1     ³VM  ³Virtual 8086 Mode (EFLAGS     ³
+³    ³      ³    ³only)                         ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³16  ³0     ³RF  ³Resume Flag - Disable Debug   ³
+³    ³      ³    ³Exceptions (EFLAGS only)      ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³14  ³1     ³NT  ³Nested Task                   ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³11  ³1     ³OV  ³Overflow                      ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³11  ³0     ³NV  ³ªOverflow                     ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³10  ³1     ³<!-- entering slot 557 -->DN  ³Direction Down                ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³10  ³0     ³UP  ³Direction Up                  ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³9   ³1     ³EI  ³Enable Interrupts             ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³9   ³0     ³DI  ³Disable Interrupts            ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³7   ³1     ³NG  ³Negative Sign                 ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³7   ³0     ³PL  ³Plus Sign                     ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³6   ³1     ³ZR  ³Zero Result                   ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³6   ³0     ³NZ  ³Non-zero Result               ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³4   ³1     ³AC  ³Auxiliary Carry               ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³4   ³0     ³NA  ³ªAuxiliary Carry              ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³2   ³1     ³PE  ³Parity Even                   ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³2   ³0     ³PO  ³Parity Odd                    ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³0   ³1     ³CY  ³Carry                         ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³0   ³0     ³NC  ³ªCarry                        ³
+ÀÄÄÄÄÁÄÄÄÄÄÄÁÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+Bits 12 and 13 are the I/O Privilege Level bits. These are formatted as
+<B>iopl=</B><B><I>level</B></I>.
+<P>
+Flags 14, 16 and 17 when reset are indicated by<B> --</B>.<!-- lm: 0x2 1 -->
+</UL><B><I> Memory
+Management Registers</B></I><!-- lm: 0x11 11 -->
+<UL><!-- lm: 0x2 11 -->
+<P>
+<B>gdtr=</B><B><I>xxxxxxxx yyyy</B></I><!-- lm: 0x11 26 -->
+<UL> Global
+Descriptor Table Register base address (<B><I>xxxxxxxx</B></I>) and limit
+(<B><I>yyyy</B></I>)<!-- lm: 0x2 11 -->
+</UL><B> idtr=</B><B><I>xxxxxxxx
+yyyy</B></I><!-- lm: 0x11 26 -->
+<UL> Interrupt Descriptor Table Register
+base address (<B><I>xxxxxxxx</B></I>) and limit (<B><I>yyyy</B></I>)<!-- lm: 0x2 11 -->
+</UL><B> ldtr=</B><B><I>xxxx
+</B></I><!-- lm: 0x11 26 -->
+<UL>Local Descriptor Table Register GDT selector
+(<B><I>xxxx</B></I>).<!-- lm: 0x2 11 -->
+</UL><B> tr=</B><B><I>xxxx</B></I><!-- lm: 0x11 26 -->
+<UL> Task
+Register GDT selector (<B><I>xxxx</B></I>).<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL><B><I> Control
+Registers</B></I><!-- lm: 0x11 11 -->
+<UL><!-- lm: 0x2 11 -->
+<P>
+<B>cr0=</B><!-- lm: 0x11 26 -->
+<UL> System control flags and Machine Status
+Word.
+<P>
+These have their bit setting interpreted as follows:
+<PRE>ÚÄÄÄÄÂÄÄÄÄÄÄÂÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³<I>Bit</I> ³<I>Value</I> ³<I>Flag</I>³<I>Description</I>                   ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³31  ³1     ³PG  ³Paging Enabled                ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³4   ³1     ³ET  ³Extension Type Flag - x87     ³
+³    ³      ³    ³support                       ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³3   ³1     ³TS  ³Task Switch Flag              ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³2   ³1     ³EM  ³Emulation exception           ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³1   ³1     ³MP  ³Math Present                  ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³0   ³1     ³PM  ³Protect Mode Enabled          ³
+ÀÄÄÄÄÁÄÄÄÄÄÄÁÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+Reset flag bit are shown with<B> --</B>.<!-- lm: 0x2 11 -->
+</UL><B> cr2=
+</B><!-- lm: 0x11 26 -->
+<UL>Page fault linear address.<!-- lm: 0x2 11 -->
+</UL><B> cr3=
+</B><!-- lm: 0x11 26 -->
+<UL>Page Directory Base Register (<B>PDBR</B>).
+<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL><B><I>Debug Registers</B></I><!-- lm: 0x11 11 -->
+<UL><!-- lm: 0x2 11 -->
+<P>
+<B>dr0</B> to<B> dr3</B><!-- lm: 0x11 26 -->
+<UL> These are formatted as
+follows:
+<PRE><B>dr0=</B><B><I>llllllll glxnb</B></I>
+<B>dr1=</B><B><I>llllllll glxnb</B></I>
+<B>dr2=</B><B><I>llllllll glxnb</B></I>
+<B>dr3=</B><B><I>llllllll glxnb</B></I>
+</PRE>
+
+<P>
+where<B><I> llllllll</B></I> is the breakpoint linear address and<B><I> glxnb
+</B></I>are<B> dr7</B> and<B> dr6</B> related flags.
+<P>
+The flags have th following interpretations:<!-- lm: 0x2 26 -->
+<P>
+<B><I>g</B></I><!-- lm: 0x2 33 -->
+<UL><B> G</B> indicates a globally enabled
+breakpoint.<!-- lm: 0x2 26 -->
+</UL><B><I> l</B></I><!-- lm: 0x2 33 -->
+<UL><B> L
+</B>indicates a locally enabled breakpoint.<!-- lm: 0x2 26 -->
+</UL><B><I> x
+</B></I><!-- lm: 0x2 33 -->
+<UL><B>E</B> indicates an execute breakpoint
+
+<P>
+<B>R</B> indicates an read breakpoint
+<P>
+<B>W</B> indicates an write breakpoint<!-- lm: 0x2 26 -->
+</UL><B><I> n
+</B></I><!-- lm: 0x2 33 -->
+<UL>The number of bytes tested (1, 2 or 4)<!-- lm: 0x2 26 -->
+</UL><B><I> b
+</B></I><!-- lm: 0x2 33 -->
+<UL><B>B</B> indicates a that a debug exception
+was generated that matched this breakpoint. This is the<B> B</B><B><I>n
+</B></I>value of<B> dr6</B>.<!-- lm: 0x2 26 -->
+</UL><B> -</B> indicates
+a flag bit reset.<!-- lm: 0x2 11 -->
+</UL><B> dr6=</B><!-- lm: 0x11 26 -->
+<UL> The
+control bits 13-15 are interpreted as follows:
+<PRE>ÚÄÄÄÄÂÄÄÄÄÄÄÂÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³<I>Bit</I> ³<I>Value</I> ³<I>Flag</I>³<I>Description</I>                   ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³15  ³1     ³BT  ³Breakpoint triggered on task  ³
+³    ³      ³    ³switch                        ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³14  ³1     ³BS  ³Breakpoint triggered on single³
+³    ³      ³    ³step.                         ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³13  ³1     ³BD  ³Breakpoint on debug register  ³
+³    ³      ³    ³access/update.                ³
+ÀÄÄÄÄÁÄÄÄÄÄÄÁÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+Flag bits not set are indicated by<B> --</B><!-- lm: 0x2 11 -->
+</UL><B> dr7=
+</B><!-- lm: 0x11 26 -->
+<UL>The control bits 8 and 9 are interpreted as
+follows:
+<PRE>ÚÄÄÄÄÂÄÄÄÄÄÄÂÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³<I>Bit</I> ³<I>Value</I> ³<I>Flag</I>³<I>Description</I>                   ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³9   ³1     ³GE  ³Exact data matching enabled   ³
+³    ³      ³    ³for global breakpoints        ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³8   ³1     ³LE  ³Exact data matching matching  ³
+³    ³      ³    ³for <!-- entering slot 558 -->local breakpoints         ³
+ÀÄÄÄÄÁÄÄÄÄÄÄÁÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+Flag bits not set are indicated by<B> --</B><!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL><B><I> Test
+Registers</B></I><!-- lm: 0x2 11 -->
+<UL>
+<P>
+<B>tr6=</B><B><I>lllll</B></I><B> v=</B><B><I>v</B></I><B> d=</B><B><I>dd
+</B></I><B>u=</B><B><I>uu</B></I><B> w=</B><B><I>ww</B></I><B> c=</B><B><I>c
+</B></I><!-- lm: 0x11 26 -->
+<UL>
+<P>
+<B><I>lllll</B></I> is the linear page address.
+<P>
+<B><I>v</B></I> is<B> tr6</B> flag bit 11, the<B> valid bit.</B>
+<P>
+<B><I>dd</B></I> are<B> tr6</B> flag bits 10 and 9.
+<P>
+<B><I>uu</B></I> are<B> tr6</B> flag bits 8 and 7.
+<P>
+<B><I>w</B></I> are<B> tr6</B> flag bits 6 and 5.
+<P>
+<B><I>c</B></I> is set as follows:<!-- lm: 0x2 26 -->
+<P>
+<B>r</B><!-- lm: 0x2 33 -->
+<UL><B> tr6</B> flag bit 0 set. <A HREF="3308_L0_.html">TLB
+</A>read command.<!-- lm: 0x2 26 -->
+</UL><B> w</B><!-- lm: 0x2 33 -->
+<UL><B> tr6
+</B>flag bit 1 reset. TLB write command.<!-- lm: 0x2 26 --><!-- lm: 0x2 11 -->
+</UL><B> tr7=</B><B><I>ppppp
+</B></I><B>ht=</B><B><I>h</B></I><B> rep=</B><B><I>r</B></I><!-- lm: 0x11 26 -->
+<UL>
+<P>
+<B><I>ppppp</B></I> is the<B> tr7</B> physical frame address.
+<P>
+<B><I>h</B></I> is flag bit 4 value. This is the<B> hit</B> or<B> PL</B> bit.
+
+<P>
+<B><I>r</B></I> are<B> tr7</B> flag bits 3 and 2. These are the<B> report
+</B>or<B> REP</B> bits.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following<B> INTEL(R)</B> publications should be consulted for definitive
+information on processor registers:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+<B>Intel486(TM) Microprocessor Family Programmer's Reference Manual</B><!-- lm: 0x2 6 -->
+<P>
+<B>Pentium(TM) Processor User's Manual</B><!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="383_L3_PUDisplayThreadUserS.html">[Back: .PU - Display Thread User Space Information]</A> <BR>
+<A HREF="385_L3_REBOOTRestarttheSyst.html">[Next: .REBOOT - Restart the System]</A> 
+</BODY>
+</HTML>

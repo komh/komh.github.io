@@ -1,0 +1,200 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Detecting the LIBPATH values</TITLE>
+</HEAD>
+<BODY>
+<H1>Detecting the LIBPATH values</H1><!-- entering slot 978 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* sample REXX routine to get the values of LIBPATH, BEGINLIBPATH     */
+/* and ENDLIBPATH                                                     */
+/*                                                                    */
+/* RXT'T v3.20: Changed code to get BEGINLIBPATH and ENDLIBPATH       */
+/*              new code tested with WARP 4 US Fixpack #15            */
+/*                                                                    */
+
+  say "Detecting the values of LIBPATH, BEGINLIBPATH and ENDLIBPATH ..."
+
+  BootDrive = "C:"
+  thisRC = GetLibPath( bootDrive )
+
+  select
+
+    when thisRC = 0 then
+    do
+      say "  LIBPATH = " || LIBPATH
+      say "  BEGINLIBPATH = " || BEGINLIBPATH
+      say "  ENDLIBPATH = " || ENDLIBPATH
+    end /* when */
+
+    when thisRC = 2 then
+    do
+      say "  LIBPATH = "
+      say "    -&gt; File " || BootDrive || "\CONFIG.SYS not found!"
+      say "  BEGINLIBPATH = " || BEGINLIBPATH
+      say "  ENDLIBPATH = " || ENDLIBPATH
+    end /* when */
+
+    otherwise
+    do
+      say "Unexpected return code " || thisRC || "!"
+    end /* otherwise */
+
+  end /* select */
+
+exit
+
+/* ------------------------------------------------------------------ */
+/* function: Get the value for LIBPATH, BEGINLIBPATH and ENDLIBPATH   */
+/*                                                                    */
+/* Usage:    GetLibPath bootDrive                                     */
+/*                                                                    */
+/* where:    bootDrive - boot drive (e.g. "C:")                       */
+/*                                                                    */
+/* returns:   0 - ok                                                  */
+/*            2 - config.sys not found                                */
+/*           -1 - parameter missing                                   */
+/*           -2 - error reading the CONFIG.SYS                  v3.20 */
+/*                                                                    */
+/* output:   LIBPATH - value of LIBPATH entry or empty string         */
+/*           BEGINLIBPATH - value of BEGINLIBPATH or empty string     */
+/*           ENDLIBPATH - value of ENDLIBPATH or empty string         */
+/*                                                                    */
+GetLibPath: PROCEDURE expose LIBPATH BEGINLIBPATH ENDLIBPATH
+  parse arg bootDrive .
+
+                    /* init the return code                           */
+  thisRC = 0
+
+  LIBPATH = ''                                               /* v3.20 */
+  BEGINLIBPATH = ''                                          /* v3.20 */
+  ENDLIBPATH = ''                                            /* v3.20 */
+
+                    /* check the parameter                            */
+  if bootDrive &lt;&gt; "" then
+  do
+                    /* get the LIBPATH value                          */
+    configSys = left( bootDrive,1 ) || ":\CONFIG.SYS"
+
+    lineSeparator = "0D0A"x
+    libpathStmt = lineSeparator || "LIBPATH="
+
+    if stream( configSys, "c", "QUERY EXISTS" ) &lt;&gt; "" then
+    do
+      configSysLength = chars( configSys )
+                                                             /* v3.20 */
+      if stream( configSys, "c", "OPEN READ" ) = 'READY:' then
+      do
+        configSYS = CharIn( configSys, 1, configSysLength )
+        call stream configSys, "c", "CLOSE"
+
+        parse upper var ConfigSYS . (libPathStmt) LIBPATH (lineSeparator) .
+        LIBPATH = strip( LIBPATH )
+      end /* if */
+      else
+      do
+                                                             /* v3.20 */
+                              /* error opening the CONFIG.SYS         */
+        thisRC = -2
+      end /* else */
+    end
+    else
+      thisRC = -1
+
+                    /* get BEGINLIBPATH and ENDLIBPATH                */
+    call GetDynamicLibPath
+
+  end /* if bootDrive &lt;&gt; "" then */
+  else
+    thisRC = -1
+
+RETURN thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: Get the value for BEGINLIBPATH and ENDLIBPATH            */
+/*                                                                    */
+/* Usage:    GetDynamicLibPath                                        */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:   -                                                       */
+/*                                                                    */
+/* output:                                                            */
+/*           BEGINLIBPATH - value of BEGINLIBPATH or empty string     */
+/*           ENDLIBPATH - value of ENDLIBPATH or empty string         */
+/*                                                                    */
+GetDynamicLibPath: PROCEDURE expose BEGINLIBPATH ENDLIBPATH
+
+                    /*                                                */
+
+                    /* save the OS/2 environment                      */
+  '@SETLOCAL'
+
+                    /* copy the value of BEGINLIBPATH and ENDLIBPATH  */
+                    /* into "normal" environment variables            */
+  '@SET val1=%BEGINLIBPATH%'
+  '@SET val2=%ENDLIBPATH%'
+
+                    /* retrieve the "normal" env variables            */
+  beginlibpath = value( 'val1',, 'OS2ENVIRONMENT' )
+  endlibpath = value( 'val2',, 'OS2ENVIRONMENT' )
+
+                    /* restore the OS/2 environment                   */
+  '@ENDLOCAL'
+return ''
+
+/* ------------------------------------------------------------------ */
+/* function: Get the value for BEGINLIBPATH and ENDLIBPATH            */
+/*                                                                    */
+/* Usage:    GetDynamicLibPath                                        */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:   -                                                       */
+/*                                                                    */
+/* output:                                                            */
+/*           BEGINLIBPATH - value of BEGINLIBPATH or empty string     */
+/*           ENDLIBPATH - value of ENDLIBPATH or empty string         */
+/*                                                                    */
+/* notes:    Use this method if the routine above does not work.      */
+/*                                                                    */
+/*                                                                    */
+Old_GetDynamicLibPath: PROCEDURE expose BEGINLIBPATH ENDLIBPATH
+
+                    /* get the value of BEGINLIBPATH and ENDLIBPATH   */
+  '@SET BEGINLIBPATH 2&gt;NUL | rxqueue'
+  '@SET ENDLIBPATH 2&gt;NUL | rxqueue'
+
+  if queued() &lt;&gt; 0 then
+  do
+    parse pull BEGINLIBPATH
+    if BEGINLIBPATH = "(null)" then
+        BEGINLIBPATH = ""
+  end /* if queued() &lt;&gt; 0 then */
+  else
+    BEGINLIBPATH = ""
+
+  if queued() &lt;&gt; 0 then
+  do
+    parse pull ENDLIBPATH
+    if ENDLIBPATH = "(null)" then
+      ENDLIBPATH = ""
+  end /* if queued() &lt;&gt; 0 then */
+  else
+    ENDLIBPATH = ""
+
+return ''
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="922_L3_BEGINLIBPATHENDLIBPA.html">[Back: BEGINLIBPATH/ENDLIBPATH]</A> <BR>
+<A HREF="924_L2_DetectingsomecommonS.html">[Next: Detecting some common SCSI adapters]</A> 
+</BODY>
+</HTML>

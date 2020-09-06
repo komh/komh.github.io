@@ -1,0 +1,98 @@
+<HTML>
+<HEAD>
+<TITLE>svc_getargs()</TITLE>
+</HEAD>
+<BODY>
+<H1>svc_getargs()</H1><!-- entering slot 348 -->
+<P>
+The svc_getargs() call uses the XDR routine<I> inproc</I> to decode the
+arguments of an RPC request associated with the RPC service transport handle
+<I>xprt</I>. The results are placed at address<I> in</I>.
+<P>
+<B>Syntax</B>
+<PRE>#include &lt;rpc\rpc.h&gt;
+
+bool_t
+svc_getargs(<I>xprt</I>, <I>inproc</I>, <I>in</I>)
+SVCXPRT *<I>xprt</I>;
+xdrproc_t <I>inproc</I>;
+char *<I>in</I>;
+</PRE>
+
+<P>
+<B>Parameters</B><!-- lm: 0x2 0 -->
+<P>
+<I>xprt</I><!-- lm: 0x11 2 -->
+<UL> Pointer to the service transport handle.
+<!-- lm: 0x2 0 -->
+</UL><I>inproc</I><!-- lm: 0x11 2 -->
+<UL> XDR routine
+that decodes the arguments.<!-- lm: 0x2 0 -->
+</UL><I> in</I><!-- lm: 0x11 2 -->
+<UL> Pointer
+to the decoded arguments.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>Return Values</B>
+<P>
+The value 1 indicates success; the value 0 indicates an error.
+<P>
+<B>Examples</B>
+<PRE>#define RMTPROGNUM   (u_long)0x3fffffffL#define RMTPROGVER   (u_long)0x1L
+
+...
+
+SVCXPRT *transp;
+
+transp = svcudp_create(RPC_ANYSOCK);
+if (transp == NULL)
+   {
+    fprintf(stderr, "can't create an RPC server transport\n");
+    exit(-1);
+   }
+pmap_unset(RMTPROGNUM, RMTPROGVER);
+if (!svc_register(transp, RMTPROGNUM, RMTPROGVER, rmtprog, IPPROTO_UDP))
+   {
+    fprintf(stderr, "can't register rmtprog() service\n");
+    exit(-1);
+   }
+printf("rmtprog() service registered.\n");
+
+svc_run();
+printf("Error:svc_run should never reach this point \n");
+exit(1);
+...
+</PRE>
+ 
+<PRE>rmtprog(rqstp, transp)
+struct svc_req *rqstp;
+SVCXPRT *transp;
+{
+    int intrecv;
+
+    switch((int)rqstp-&gt;rq_proc)
+       {
+           case PROCNUM1:
+                    svc_getargs(transp, xdr_int, &amp;intrecv);
+                      ...
+                    return;
+           case PROCNUM2:
+             ...
+       }
+...
+}
+</PRE>
+
+<P>
+<B>Related Calls</B><!-- lm: 0x2 5 -->
+<UL>
+<P>
+<A HREF="309_L2_svc_freeargs.html">svc_freeargs()</A><!-- lm: 0x2 0 -->
+</UL>
+
+<P><HR>
+
+<A HREF="309_L2_svc_freeargs.html">[Back: svc_freeargs()]</A> <BR>
+<A HREF="311_L2_svc_getcaller.html">[Next: svc_getcaller()]</A> 
+</BODY>
+</HTML>

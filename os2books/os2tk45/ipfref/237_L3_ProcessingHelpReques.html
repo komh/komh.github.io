@@ -1,0 +1,85 @@
+<HTML>
+<HEAD>
+<TITLE>Processing Help Requests for a Child Window</TITLE>
+</HEAD>
+<BODY>
+<H1>Processing Help Requests for a Child Window</H1><!-- entering slot 249 -->
+<P>
+In the Presentation Manager, parent and child windows are active at the
+same time.  Therefore, when a help instance is associated with a window,
+its descendants are included in the association.  However, only the parent
+window is the active help window.
+<P>
+<B>Note: </B> Do not confuse child windows with dialog, message boxes, and
+other windows which the application may own but are actually children of
+the desktop.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+For IPF to process help requests for a child window, an application must
+send IPF HM_SET_ACTIVE_WINDOW messages to set the active help window.  Until
+this happens, IPF continues to satisfy help requests for the child window
+from the help subtable for the parent window.
+<P>
+The HM_SET_ACTIVE_WINDOW message should be sent by ALL windows in response
+to the WM_ACTIVATE and WM_INITMENU messages as shown in the following example.
+
+<PRE>   switch( usMsg )
+   {
+                               ú
+                               ú
+                               ú
+   case WM_ACTIVATE:
+      if( SHORT1FROMMP( mp1 ) )
+      {
+         /*
+          * Set active help window to this window's parent when
+          * activated
+          */
+         WinSendMsg( WinQueryHelpInstance( hWnd ),
+                     HM_SET_ACTIVE_WINDOW,
+                     WinQueryWindow( hWnd, QW_PARENT ),
+                     WinQueryWindow( hWnd, QW_PARENT ) );
+      }
+      else
+      {
+         /*
+          * Clear active help window when this window is
+          * deactivated - necessary for message box help, etc.
+          * to work properly.
+          */
+         WinSendMsg( WinQueryHelpInstance( hWnd ),
+                     HM_SET_ACTIVE_WINDOW,
+                     NULL,
+                     NULL );
+      }
+      break;
+
+   case WM_INITMENU:
+      /*
+       * Set active window to this window's parent here so that
+       * the menu id will be found in the proper subtable.
+       * Activation and deactivation of the help window will
+       * take care of setting the help window back to the
+       * active window.
+       */
+      WinSendMsg( WinQueryHelpInstance( hWnd ),
+                  HM_SET_ACTIVE_WINDOW,
+                  WinQueryWindow( hWnd, QW_PARENT ),
+                  WinQueryWindow( hWnd, QW_PARENT ) );
+      break;
+
+                                ú
+                                ú
+                                ú
+   }
+</PRE>
+
+
+<P><HR>
+
+<A HREF="236_L3_ProcessingaKeysHelpR.html">[Back: Processing a "Keys Help" Request]</A> <BR>
+<A HREF="238_L3_WhenNoHelpIsAvailabl.html">[Next: When No Help Is Available]</A> 
+</BODY>
+</HTML>

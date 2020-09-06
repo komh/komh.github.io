@@ -1,0 +1,175 @@
+<HTML>
+<HEAD>
+<TITLE>VioPopUp</TITLE>
+</HEAD>
+<BODY>
+<H1>VioPopUp</H1><!-- entering slot 721 -->Bindings:  <A HREF="714_L2H_VioPopUp.html">C</A>,
+<A HREF="758_L2H_VioPopUp.html">MASM</A>
+<BR>
+
+<P>
+This call is issued by an application process when it requires a temporary
+screen to display a momentary message to the user.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+VioPopUp<!-- lm: 0x2 13 -->
+<UL> (Options, VioHandle)<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+<B>Options</B> (PUSHORT) - input<!-- lm: 0x11 4 -->
+<UL> Address of the
+bit flags that indicate which options to the application are being selected.
+<!-- lm: 0x2 4 -->
+<P>
+Bit<!-- lm: 0x12 14 -->
+<UL> Description<!-- lm: 0x2 4 -->
+</UL> 15-2<!-- lm: 0x12 14 -->
+<UL> Reserved,
+set to zero.<!-- lm: 0x2 4 -->
+</UL> 1<!-- lm: 0x12 14 -->
+<UL> 0 = Non-transparent
+operation.  The video mode is set to text-mode 3, 3*, 3+, 7, or 7+. The
+highest resolution supported by the primary display adapter configured in
+the system is selected.  The screen is cleared, and the cursor is positioned
+in the upper left corner of the display.
+<P>
+1 = Transparent operation.  If the video mode of the outgoing foreground
+session is text (mode 2, 3, 7, or one of the * or + variations of these
+modes), no mode change occurs.  The screen is not cleared, and the cursor
+remains in its current position.  If transparent operation is selected,
+and if the video mode of the outgoing foreground session is not text (or
+if the outgoing foreground session has a <A HREF="677_L2_VioSavRedrawWait.html">VioSavRedrawWait
+</A>thread), the pop-up request is refused. A unique error code ERROR_VIO_TRANSPARENT_POPUP
+is returned in this case.
+<P>
+OS/2 is responsible for saving and restoring the physical display buffer
+of the previous foreground session around a pop-up.  This is true whether
+transparent or non-transparent operation is selected.<!-- lm: 0x2 4 -->
+</UL> 0
+<!-- lm: 0x12 14 -->
+<UL>0 = Return with unique error code ERROR_VIO_EXISTING_POPUP
+if pop-up is not immediately available.
+<P>
+1 = Wait if pop-up is not immediately available.<!-- lm: 0x2 1 -->
+</UL><B> VioHandle
+</B>(HVIO) - input<!-- lm: 0x11 4 -->
+<UL> Reserved words of 0s.<!-- lm: 0x2 1 -->
+</UL><B> rc
+</B>(USHORT) - return<!-- lm: 0x11 4 -->
+<UL> Return code descriptions are:
+<!-- lm: 0x2 4 -->
+<P>
+<LI><!-- lm: 0x2 14 -->NO_ERROR<!-- lm: 0x2 4 --> 405<!-- lm: 0x2 14 -->
+<UL> ERROR_VIO_NO_POPUP
+<!-- lm: 0x2 4 -->
+</UL>406<!-- lm: 0x2 14 -->
+<UL> ERROR_VIO_EXISTING_POPUP<!-- lm: 0x2 4 -->
+</UL>483<!-- lm: 0x2 14 -->
+<UL> ERROR_VIO_TRANSPARENT_POPUP<!-- lm: 0x2 1 -->
+</UL><B>Remarks</B>
+<P>
+VioPopUp is normally issued by the application when it is running in the
+background and wishes to immediately display a message to the user without
+waiting to become the active foreground session.
+<P>
+When an application process issues VioPopUp, it should wait for the return
+from the request.  If the process allows any of its threads to write to
+the screen before VioPopUp returns a successful return code, the screen
+output may be directed to the application's normal video buffer rather than
+to the pop-up screen. If the process allows any of its threads to issue
+keyboard or mouse calls before VioPopUp returns a successful return code,
+the input is directed from the application's normal session. Once the process
+that issued VioPopUp receives a successful return code, video and keyboard
+calls issued by any of the threads in the pop-up process are directed to
+the pop-up screen.  This continues until the process issues <A HREF="656_L2_VioEndPopUp.html">VioEndPopUp</A>.
+At that time video and keyboard calls resume being directed to the application's
+normal video buffer.
+<P>
+There may be only one pop-up in existence at any time.  If a process requests
+a pop-up and a pop-up already exists, the process has the choice of waiting
+for the prior pop-up to complete or receiving an immediate return with an
+error code.  The error code indicates that the operation failed due to an
+existing pop-up having captured the screen.
+<P>
+Video pop-ups provide a mechanism for a background application to notify
+the operator of an abnormal event the operator must take some action.  When
+considering the suitability of using pop-ups in a particular situation,
+the possible disruptive effect of pop-ups to the operator should be considered.
+ If the operator were interrupted frequently by pop-ups issued by background
+applications, the operator would not effectively work with the foreground
+application.
+<P>
+While a video pop-up is in the foreground, the operator cannot use the hot
+key to switch to another application or to the shell<!-- entering slot 722 --> .
+ Before the operator can switch another application or the shell to the
+foreground, the pop-up application must issue <A HREF="656_L2_VioEndPopUp.html">VioEndPopUp</A>.
+
+<P>
+While a video pop-up is in effect, all video calls from the previous foreground
+session are blocked until the process that issued VioPopUp issues <A HREF="656_L2_VioEndPopUp.html">VioEndPopUp</A>.
+
+<P>
+When VioPopUp is issued, only the process within the session that issued
+VioPopUp is brought to the foreground.  Assuming the session was already
+the foreground session, any video calls issued by other processes in that
+session are blocked until the process that issued VioPopUp issues <A HREF="656_L2_VioEndPopUp.html">VioEndPopUp</A>.
+
+<P>
+DosExecPgm may not be issued by a process during a pop-up. The following
+video calls are the only calls that may be issued during the pop-up by the
+process that issued VioPopUp:<!-- lm: 0x2 1 -->
+<P>
+VioEndPopUp<!-- lm: 0x2 21 -->
+<UL> VioScrollLf<!-- lm: 0x2 1 -->
+</UL>VioGetConfig<!-- lm: 0x2 21 -->
+<UL> VioSetCurPos<!-- lm: 0x2 1 -->
+</UL>VioGetCp<!-- lm: 0x2 21 -->
+<UL> VioSetCurType<!-- lm: 0x2 1 -->
+</UL>VioGetFont<!-- lm: 0x2 21 -->
+<UL> VioSetCp<!-- lm: 0x2 1 -->
+</UL>VioGetAnsi<!-- lm: 0x2 21 -->
+<UL> VioSetFont<!-- lm: 0x2 1 -->
+</UL>VioGetState<!-- lm: 0x2 21 -->
+<UL> VioSetState<!-- lm: 0x2 1 -->
+</UL>VioGetCurPos<!-- lm: 0x2 21 -->
+<UL> VioWrtNChar<!-- lm: 0x2 1 -->
+</UL>VioGetCurType<!-- lm: 0x2 21 -->
+<UL> VioWrtNAttr<!-- lm: 0x2 1 -->
+</UL>VioGetMode<!-- lm: 0x2 21 -->
+<UL> VioWrtNCell<!-- lm: 0x2 1 -->
+</UL>VioReadCharStr<!-- lm: 0x2 21 -->
+<UL> VioWrtCharStr<!-- lm: 0x2 1 -->
+</UL>VioReadCellStr<!-- lm: 0x2 21 -->
+<UL> VioWrtCharStrAtt<!-- lm: 0x2 1 -->
+</UL>VioScrollRt<!-- lm: 0x2 21 -->
+<UL> VioWrtCellStr<!-- lm: 0x2 1 -->
+</UL>VioScrollUp<!-- lm: 0x2 21 -->
+<UL> VioWrtTTY<!-- lm: 0x2 1 -->
+</UL>VioScrollDn<!-- lm: 0x2 21 -->
+<UL>  <!-- lm: 0x2 1 -->
+</UL>
+<P>
+Selectors to the physical display buffer that the issuing process obtained
+on a prior <A HREF="665_L2_VioGetPhysBuf.html">VioGetPhysBuf</A> call may
+not be used during the pop-up.
+<P>
+When an application registers a replacement for VioPopUp within a session,
+the registered routine is invoked only when that session is in the foreground.
+ If VioPopUp is issued when that session is in the background, the OS/2
+default routine is invoked. If the application's session is using a keyboard
+or mouse monitor, the monitor does not intercept data while the pop-up is
+active.
+<P>
+<B>PM Considerations</B>
+<P>
+This function can be used from within a PM application.  Kbdxxx, Mouxxx,
+and Vioxxx calls (with a zero handle) are all allowed between VioPopUp and
+<A HREF="656_L2_VioEndPopUp.html">VioEndPopUp</A>, and are directed to the
+pop-up screen.  An error is returned if issued with a non-zero handle.
+
+<P><HR>
+
+<A HREF="669_L2_VioModeWait.html">[Back: VioModeWait]</A> <BR>
+<A HREF="671_L2_VioPrtSc.html">[Next: VioPrtSc]</A> 
+</BODY>
+</HTML>

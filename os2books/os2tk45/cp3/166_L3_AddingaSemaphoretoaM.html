@@ -1,0 +1,77 @@
+<HTML>
+<HEAD>
+<TITLE>Adding a Semaphore to a Muxwait List</TITLE>
+</HEAD>
+<BODY>
+<H1>Adding a Semaphore to a Muxwait List</H1><!-- entering slot 177 -->
+<P>
+An application uses<A><!-- external link: 1D 5D C3 35 --> DosAddMuxWaitSem
+</A>to add semaphores to a muxwait semaphore that has already been created,
+even while threads are waiting on the muxwait semaphore.
+<P>
+Any thread in the process that created a muxwait semaphore can add a mutex
+semaphore or an event semaphore to the muxwait list by calling<A><!-- external link: 1D 5D C3 FC --> DosAddMuxWaitSem</A>.
+Threads in other processes can also use this function, but they must first
+gain access to the semaphore by calling<A><!-- external link: 1D A2 C3 FC --> DosOpenMuxWaitSem</A>.
+
+<P>
+A maximum of 64 semaphores can be included in a muxwait-semaphore list.
+If an attempt is made to exceed this maximum, ERROR_TOO_MANY_SEMAPHORES
+is returned.
+<P>
+All of the semaphores in a muxwait-semaphore list must be of the same type.
+That is, if a mutex semaphore is being added, then the other semaphores
+in the list must be mutex semaphores. If an event semaphore is being added,
+then the other semaphores in the list must be event semaphores. A shared
+muxwait semaphore can contain only shared semaphores in its list. A private
+muxwait semaphore can contain both private and shared semaphores. If any
+of these conditions is violated, ERROR_WRONG_TYPE is returned.
+<P>
+If the semaphore is successfully added to the muxwait list,<A><!-- external link: 1D 5D C3 35 --> DosAddMuxWaitSem
+</A>checks to see whether each thread that is waiting for the muxwait semaphore
+has the newly added semaphore open in its process. The muxwait semaphore
+is invalid for any waiting threads that do not have the newly added semaphore
+open in their process; these threads are unblocked with a return code of
+ERROR_INVALID_HANDLE. Any processes that opened the muxwait semaphore before
+the add operation and that do not have the new semaphore open, will have
+to open the new semaphore before making any further use of the muxwait semaphore.
+Any future calls concerning the muxwait semaphore by processes that do not
+have the new semaphore open will have ERROR_INVALID_HANDLE returned until
+the new semaphore is opened.
+<P>
+A thread that receives a return code of ERROR_INVALID_HANDLE can take the
+following corrective action:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->First, the thread can obtain the records of all
+the semaphores in the muxwait list by calling<A><!-- external link: 1D CB C3 FC --> DosQueryMuxWaitSem</A>.
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Next, it can query each semaphore in the muxwait
+list, using<A><!-- external link: 1D CA C3 3A --> DosQueryMutexSem</A> or
+<A><!-- external link: 1D BF C3 FC -->DosQueryEventSem</A>, to find out
+which semaphore is not open to its process.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Finally, it can open the semaphores that are
+not open by calling<A><!-- external link: 1D A1 C3 37 --> DosOpenMutexSem
+</A>or<A><!-- external link: 1D A0 C3 FC --> DosOpenEventSem</A>.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+As soon as this semaphore is opened, the muxwait semaphore becomes valid
+again for the process, as long as no other changes have been made to the
+muxwait list to make it invalid. However, in order to successfully wait
+for the muxwait semaphore, the process must call<A><!-- external link: 1D 0C C4 3C --> DosWaitMuxWaitSem
+</A>again.
+<P>
+A semaphore must be open for a process before the process can add that semaphore
+to a muxwait semaphore. If it is not open and a thread is waiting on the
+muxwait semaphore,<A><!-- external link: 1D 5D C3 35 --> DosAddMuxWaitSem
+</A>returns ERROR_INVALID_HANDLE to the process adding the new semaphore,
+and the waiting thread continues waiting.
+
+<P><HR>
+
+<A HREF="165_L3_WaitingforaMuxwaitSe.html">[Back: Waiting for a Muxwait Semaphore]</A> <BR>
+<A HREF="167_L3_DeletingaSemaphorefr.html">[Next: Deleting a Semaphore from a Muxwait List]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,129 @@
+<HTML>
+<HEAD>
+<TITLE>LOCAL (Define Local Procedure Variables)</TITLE>
+</HEAD>
+<BODY>
+<H1>LOCAL (Define Local Procedure Variables)</H1><!-- entering slot 755 -->
+<P>
+The<B> LOCAL</B> directive defines local stack variables from within a code
+procedure.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B>Syntax</B><!-- lm: 0x2 11 -->
+<UL>
+<P>
+
+<PRE><B>LOCAL</B> <I>Local-Spec</I> [, [<I>LineBreak</I>] <I>Local-Spec</I> ...]
+</PRE>
+<!-- lm: 0x2 16 -->
+<UL>
+<P>
+<B><I>Local-Spec:</B></I><!-- lm: 0x2 21 -->
+<UL>
+<BR>
+<I>Local-Name</I> [:<A HREF="256_L2_TypeDeclarations.html"><I>Type-Declaration</I></A>]
+<!-- lm: 0x2 21 -->
+<BR>
+<I>Local-Name[Count]</I> [:<A HREF="256_L2_TypeDeclarations.html"><I>Type-Declaration</I></A>]
+<!-- lm: 0x2 21 -->
+<BR>
+<!-- lm: 0x2 16 --><!-- lm: 0x2 11 -->
+</UL>The optional<I> LineBreak</I> entry
+allows you to end a<I> Local-Spec</I> entry with a comma, enter an optional
+<A HREF="663_L3_Comments.html"><I>EndOfLine-Comment</I></A> followed by
+a physical<I> NewLine</I> character, then continue with a new<I> Local-Spec
+</I>on the next line.<!-- lm: 0x2 1 -->
+</UL><B> Remarks</B><!-- lm: 0x2 11 -->
+<UL>
+<P>
+The<B> LOCAL</B> assembler directive can only appear within the body of
+a procedure.  If used, the<B> LOCAL</B> directive(s) must immediately follow
+the<B> PROC</B> statement that encloses them, and they must appear before
+any instructions, code labels, or directives that modify the location counter.
+Multiple<B> LOCAL</B> directives may appear in succession.
+<P>
+Each<I> Local-Name</I> is defined as a <A HREF="162_L5_NumericEquateName.html"><I>Numeric-EquateName
+</I></A>that is visible only from within the body of the procedure.  The
+value assigned to the variable name is an expression that defines the type
+of the variable and its location on the stack relative to the value of the
+<I>frame pointer</I> (the BP or EBP register).  The assembler reserves space
+on the stack for each local variable and automatically calculates their
+locations.  After all<I> Local-Spec</I> entries have been processed, the
+assembler allocates the space by generating instructions to adjust the stack
+pointer.  The assembler also generates instructions to restore the state
+of the stack and frame pointers when the procedure exits.
+<P>
+The optional<I> [Count]</I> entry can be used to indicate that the variable
+is a simple "array" of values, where<I> Count</I> is a constant expression.
+ If used, the square brackets surrounding the<I> Count</I> must be specified.
+ Use of this notation is discouraged however, because it does not associate
+a "true array" data type with the variable, and cannot be viewed as such
+from within a symbolic debugger.  ALP allows the variable to be associated
+with a "true array" data type through use of the native <A HREF="256_L2_TypeDeclarations.html"><I>Type-Declaration
+</I></A>syntax.
+<P>
+The <A HREF="256_L2_TypeDeclarations.html"><I>Type-Declaration</I></A> field
+specifies the data type to be associated with the<I> Local-Name</I>.  If
+this field is omitted, the data type defaults to<B> WORD</B> if the procedure
+is defined within a<B> USE16</B> segment, and<B> DWORD</B> if the procedure
+is defined within a<B> USE32</B> segment.<!-- lm: 0x2 1 -->
+</UL><B> Example
+</B><!-- lm: 0x2 11 -->
+<UL>
+<PRE>; bootdrv.asm : Returns value of OS/2 boot drive as exit code
+; assemble as : alp +Od bootdrv.asm
+; link as     : link386 /de bootdrv;
+
+        .386                        ; Assemble for 32-bit processors
+        .model flat,syscall         ; OS/2 flat model/calling convention
+        .stack 4096
+
+        EXTERN DosExit:PROC         ; OS/2 DosExit() API
+        EXTERN DosQuerySysInfo:PROC ; OS/2 DosQuerySysInfo() API
+        INCLUDELIB os2386.lib       ; link with these routines
+
+; These are values taken from OS/2 API headers.  See the OS/2 Toolkit
+; Control Program Programming Guide and Reference for more information.
+
+EXIT_PROCESS    EQU  1              ; for DosExit
+QSV_BOOT_DRIVE  EQU  5              ; For DosQuerySysInfo
+
+ULONG   <!-- entering slot 756 -->TYPEDEF DWORD               ; use OS/2 type convention
+
+        .code                       ; open code segment
+
+main    PROC
+        LOCAL BootDrive:ULONG       ; place to put value of boot drive
+
+        ; Push parameters to DosQuerySysInfo onto the stack
+
+        PUSH  sizeof BootDrive      ; arg 4: size of output buffer
+        LEA   EAX,BootDrive         ; arg 3: Address of buffer
+        PUSH  EAX
+        PUSH  QSV_BOOT_DRIVE        ; arg 2: last ordinal value to return
+        PUSH  QSV_BOOT_DRIVE        ; arg 1: first ordinal, same as last
+        CALL  DosQuerySysInfo       ; invoke API
+        ADD   ESP,DWORD * 4         ; remove the parameters from the stack
+
+        CMP   EAX,0                 ; Did the API succeed?
+        MOV   EAX,0                 ;   if not, use zero as a return code
+        JNZ   SomeKindOfError       ;   and skip around to the exit logic
+        MOV   EAX,BootDrive         ; else, return the boot drive value
+SomeKindOfError:
+        push  EAX                   ; exit code
+        push  EXIT_PROCESS          ; terminates all threads
+        call  DosExit               ; exit to calling process
+        RET                         ; never executed
+main    ENDP
+
+        END   main
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="748_L4_ParameterList.html">[Back: Parameter List]</A> <BR>
+<A HREF="750_L3_ENDPCloseaProcedureD.html">[Next: ENDP (Close a Procedure Definition Block)]</A> 
+</BODY>
+</HTML>

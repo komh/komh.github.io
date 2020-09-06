@@ -1,0 +1,109 @@
+<HTML>
+<HEAD>
+<TITLE>Creating MIDI Memory Files</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating MIDI Memory Files</H1><!-- entering slot 100 -->
+<P>
+Applications that access memory buffers to store and access MIDI data can
+use the memory I/O features of the multimedia input/output (MMIO) file services.
+ This technique consists of opening a memory file using mmioOpen.  mmioOpen
+has a pointer to the buffer of MIDI data as a parameter.  This buffer can
+then be operated on by MCI and MMIO as if it were a file.
+<P>
+The details of opening the file and setting up the MIDI buffer varies depending
+on an application's requirements. For example, the memory buffer can be
+allocated by the MMIO system and filled subsequently by the application,
+or the memory buffer can be allocated by the application and passed to MMIO.
+ The buffer can be filled in different ways such as mmioRead, mmioWrite,
+and mmioAdvance.
+<P>
+Care must be taken when calling MMIO functions and sending MCI messages
+to the same memory file.  MMIO and MCI are independent subsystems linked
+only through the MMIO memory handle passed to MCI_OPEN.  There is for example,
+no relationship between MCI_SEEK and mmioSeek.  Each subsystem keeps its
+own set of relevant files and stream pointers.  If one subsystem changes
+the data in memory, but the memory had previously been cued with MCI_CUE,
+the change of data will not be recognized by MCI until a call to reload
+the streams has been issued.
+<P>
+The following code fragment shows the opening of a memory file with a user-supplied
+MIDI buffer of untranslated (format 0 or 1) data and the playing of that
+data through MCI.
+<PRE>
+{
+   /* variable for IOProc */
+   PMMIOPROC  pIOProc;
+   HMODULE    hModMidiio;
+
+   /* variables for memory file */
+   MMIOINFO  mmioInfo;
+   CHAR      UserBuffer[SIZE_OF_BUFFER];
+   HMMIO     hmmio;
+
+   /* variables for MCI commands */
+   MCI_OPEN_PARMS  mop;
+   MCI_PLAY_PARMS  mpp;
+
+
+   /* Open memory file. Provide MIDI-filled data buffer to MMIO, so
+    * data buffer becomes file image in memory.  Also specify that
+    * the data will need to be translated.
+    */
+
+ mmioInfo.pchBuffer = UserBuffer; /* Filled with untranslated
+                                     MIDI data                */
+ mmioInfo.cchBuffer = SIZE_OF_BUFFER; /* User-defined         */
+ mmioInfo.ulTranslate = MMIO_TRANSLATEDATA | MMIO_TRANSLATEHEADER;
+                                 /* Need to translate data    */
+ mmioInfo.fccIOProc = mmioFOURCC( 'M', 'I', 'D', 'I');/* Data
+                                                          format */
+ mmioMemInfo.fccChildIOProc = FOURCC_MEM;        /* Storage type */
+ hmmio = mmioOpen ( NULL, mmioInfo, MMIO_READWRITE );
+
+    /* open MIDI device */
+
+    mop.pszElementName = (PSZ) hmmiomem;
+
+    mciSendCommand(
+         0,                        /* We don't know the device yet. */
+         MCI_OPEN,                 /* MCI message                   */
+         MCI_WAIT | MCI_OPEN_MMIO |
+         MCI_OPEN_TYPE_ID | MCI_OPEN_SHAREABLE
+         (ULONG) &amp;mop,         /* Parameters for the message    */
+         0 );                      /* Parameter for notify message  */
+
+    /* play MIDI memory file for 1 second */
+
+    mpp.ulFrom=0;
+    mpp.ulTo=3000;    /* default is MMTIME units (1/3000 second) */
+    mciSendCommand(
+            mop.usDeviceID,        /* Device to play the data    */
+            MCI_PLAY,              /* MCI message                */
+            MCI_WAIT |
+            MCI_FROM | MCI_TO,     /* <!-- entering slot 101 -->Flags for the MCI message  */
+            (ULONG) &amp;mpp,          /* Parameters for the message */
+            0 );                   /* No parm necessary          */
+
+     /* close device */
+
+     mciSendCommand(
+            mop.usDeviceID,        /* Device to play this          */
+            MCI_CLOSE,             /* MCI message                  */
+            MCI_WAIT,              /* Flags for the MCI message    */
+            (ULONG) NULL,          /* Parameters for the message   */
+            (ULONG) NULL );        /* Parameter for notify message */
+
+}
+
+</PRE>
+
+<P>
+
+
+<P><HR>
+
+<A HREF="089_L3_PlayingAMIDISong.html">[Back: Playing A MIDI Song]</A> <BR>
+<A HREF="091_L2_SequencerCommandMess.html">[Next: Sequencer Command Messages]</A> 
+</BODY>
+</HTML>

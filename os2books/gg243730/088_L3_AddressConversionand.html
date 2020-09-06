@@ -1,0 +1,100 @@
+<HTML>
+<HEAD>
+<TITLE>Address Conversion and Translation</TITLE>
+</HEAD>
+<BODY>
+<H1>Address Conversion and Translation</H1><!-- entering slot 94 -->
+<P>
+Under previous versions of OS/2, an application addressed memory using the
+segmented memory model, which was translated to physical memory addresses
+by the operating system using a local descriptor table (LDT), with one LDT
+per process.  Under OS/2 Version 2.0, 16:16 references (see <A HREF="076_L2_FlatMemoryModel.html">Flat
+Memory Model</A>) are managed by a technique called<B> LDT tiling</B>, which
+provides compatibility for 16-bit applications and provides a mechanism
+for 32-bit applications to utilize 16-bit libraries.
+<P>
+A tiled LDT contains up to 8192 descriptors, where the segment base address
+in each descriptor is a multiple of 64KB, and each descriptor therefore
+points to a 64KB region of memory.  Contiguous descriptors map into a contiguous
+linear address space, thereby using a potential maximum of 512MB, and allowing
+a 16-bit application to address the 512MB of the process address space in
+the compatibility region. <A HREF="013_L2_Mapping1616MemoryRef.html">Figure
+"Mapping 16:16 Memory References"</A> shows the way in which memory addresses
+within the tiled LDT are mapped into the process address space.
+<P>
+The addresses within the process address space may be referenced by applications
+or modules using the 16:16 addressing scheme, in a similar manner to previous
+versions of OS/2.  However, the same physical memory locations may also
+be accessed by 32-bit applications and modules using the 0:32 addressing
+scheme.  Both the LDT entries used by the 16:16 scheme and the page table
+entries used by the 0:32 scheme may translate to the same memory locations.
+This translation enables 32-bit applications to make use of 16-bit modules
+and resources, and allows 32-bit and 16-bit applications to coexist and
+communicate with one another.
+<P>
+LDTs are managed in a different way from previous versions of OS/2.  Each
+LDT is allocated as a sparse object until descriptors are inserted upon
+loading an application.  Descriptors for shared memory objects are inserted
+downwards commencing at the top of the LDT, whereas private memory object
+descriptors are inserted upwards commencing at the bottom of the LDT. This
+order reflects the management of the linear address space by the operating
+system.  Therefore the minimum LDT size is 8KB, using one page for the shared
+descriptors and one page for the private descriptors.  Note that each code
+or data selector reserves a full 64KB of linear address space to be able
+to handle an eventual reallocation of segments to the maximum size of 64KB.
+ See <A HREF="013_L2_Mapping1616MemoryRef.html">Figure "Mapping 16:16 Memory
+References"</A>.
+<P>
+The following memory objects use LDT descriptors:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->16-bit .EXE files<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->16-bit .DLL files<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B>DosAllocSeg()</B> calls<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B>DosAllocMem()</B> calls with tiling<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->32-bit .EXE files with tiling<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->32-bit .DLL files with tiling.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+This use of descriptors is effectively equivalent to the implementation
+used in the previous versions of OS/2.  It must be noted, however, that
+a memory object greater than 64KB may not be handled in an orderly manner
+by a 16-bit application.
+<P>
+A memory object allocated in the compatibility region has both a 16:16 address
+(far16)<I> and</I> a 0:32 address (near32), allowing access by applications
+using either addressing scheme.  The two types of addresses are related
+by the following arithmetic functions:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B><I>near32 = SEL (far16) &gt;&gt; 3 &lt;&lt; 16
++ OFFSET(far16)</B></I><!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B><I>far16  = MAKEP (HIGH (near32) &lt;&lt; 3 + 7,
+LOW (near32) ).</B></I><!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+The term<I> near32</I> refers to the fact that all 0:32 calls are of type
+<A HREF="324_L2_near.html"><I>near</I></A> (based on offset only).  The
+term<I> far16</I> refers to the fact that 16:16 calls are based on the segment
+selector and offset used in combination.  Bit shift right is shown as &gt;&gt;,
+and bit shift left is shown as &lt;&lt;.
+<P>
+32-bit executable modules can therefore create 16:16 aliases for memory
+objects in the compatibility region and conversely, 16-bit modules may create
+0:32 bit aliases.  As these conversions are arithmetically based, a high
+performance address conversion layer may be implemented, assuring<!-- entering slot 95 --> automatic
+address conversion between 16:16 and 0:32 memory objects.  See <A HREF="089_L3_Thunking.html">Thunking</A>.
+
+
+<P><HR>
+
+<A HREF="087_L2_16BitApplicationsina.html">[Back: 16-Bit Applications in a 32-Bit Environment]</A> <BR>
+<A HREF="089_L3_Thunking.html">[Next: Thunking]</A> 
+</BODY>
+</HTML>

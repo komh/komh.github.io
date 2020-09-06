@@ -1,0 +1,111 @@
+<HTML>
+<HEAD>
+<TITLE>Timing Repeated Intervals</TITLE>
+</HEAD>
+<BODY>
+<H1>Timing Repeated Intervals</H1><!-- entering slot 187 -->To count an interval repeatedly, an application
+can use<A><!-- external link: 1D FC C3 FC --> DosStartTimer</A>. This function
+starts a repeated-interval timer.
+<P>
+Unlike<A><!-- external link: 1D 61 C3 FC --> DosAsyncTimer</A>,<A><!-- external link: 1D FC C3 4C --> DosStartTimer
+</A>does not stop after the first interval is counted. The timer runs asynchronously
+to the calling thread, enabling the thread to perform other operations while
+it is waiting for the specified time intervals to expire. The system notifies
+the application of the timer's expirations by posting an event semaphore.
+
+<P>
+The application resets the semaphore before starting the timer and whenever
+the system posts the semaphore. The application can use the value returned
+in the post-counting parameter by<A><!-- external link: 1D DD C3 4B --> DosResetEventSem
+</A>to assure the semaphore was posted only once before it was reset.
+<P>
+The following code fragment starts a timer and then waits on and resets
+the associated event semaphore. Assume that the handle of the targeted event
+semaphore has been placed into<I> SemHandle</I>.
+<PRE>    #define INCL_DOSDATETIME   /* Date and time values */
+    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+
+    ULONG    ulTimeInterval;   /* Interval (milliseconds) */
+    HSEM     hsemSemHandle;    /* Event-semaphore handle  */
+    HTIMER   hHandle;          /* Timer handle (returned) */
+    APIRET   ulrc;             /* Return code             */
+
+    ulTimeInterval = 30000;    /* Set the periodic time interval to */
+                               /* elapse every 30 seconds           */
+
+    ulrc = DosStartTimer(ulTimeInterval,
+                         hsemSemHandle,
+                         &amp;hHandle);
+
+    if (ulrc != 0) {
+        printf("DosStartTimer error: return code = %ld",
+               ulrc);
+        return;
+    }
+
+</PRE>
+
+<P>
+On successful return,<I> Handle</I> will contain the handle of this periodic
+timer.<A><!-- external link: 1D FE C3 4D --> DosStopTimer</A> can be used
+later to stop the periodic timer.
+<P>
+A repeated timer will continue to count the interval and post the semaphore
+until the application terminates or the application uses<A><!-- external link: 1D FE C3 4D --> DosStopTimer
+</A>to stop the timer explicitly. The following code fragment shows how
+to stop a periodic timer that has been started previously with<A><!-- external link: 1D FC C3 FC --> DosStartTimer</A>:
+
+<PRE>    #define INCL_DOSDATETIME   /* Date and time values */
+    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+
+    HTIMER   hHandle;     /* Handle of the timer */
+    APIRET   ulrc;        /* Return code         */
+
+    ulrc = DosStopTimer(hHandle);
+
+    if (ulrc != 0) {
+        printf("DosStopTimer error: return code = %ld",
+               ulrc);
+        return;
+    }
+
+</PRE>
+
+<P>
+Before starting the timer, the event semaphore must be reset. If the semaphore
+does not exist, the thread can create it with<A><!-- external link: 1D 6E C3 FC --> DosCreateEventSem</A>,
+specifying its initial state as reset. If the semaphore was previously created
+by the same process, the thread resets it by calling<A><!-- external link: 1D DD C3 FC --> DosResetEventSem</A>.
+If the semaphore was previously created by another process, then the thread
+calls<A><!-- external link: 1D A0 C3 4A --> DosOpenEventSem</A> to gain
+access to the semaphore before calling<A><!-- external link: 1D DD C3 FC --> DosResetEventSem</A>.
+
+<P>
+Next, the thread calls<A><!-- external link: 1D FC C3 FC --> DosStartTimer</A>,
+specifying the handle of the event semaphore and the desired time interval.
+The thread can then perform other tasks. However, in order for the application
+to be notified of the timer's expirations, one or more threads in the application
+must call<A><!-- external link: 1D 0B C4 FC --> DosWaitEventSem</A>.
+<P>
+When the time interval expires, the system posts the semaphore, and any
+threads that were blocked on<A><!-- external link: 1D 0B C4 4E --> DosWaitEventSem
+</A>requests can resume their execution. Each time the semaphore is posted,
+it must be reset with<A><!-- external link: 1D DD C3 4B --> DosResetEventSem
+</A>before the next timer expiration.<A><!-- external link: 1D 0B C4 4E --> DosWaitEventSem
+</A>must also be called to wait for the semaphore to be posted again.
+<P>
+In addition to resetting the event semaphore,<A><!-- external link: 1D DD C3 4B --> DosResetEventSem
+</A>returns the semaphore's post count (the number of times the semaphore
+has been posted since the last time it was in the set state). An application
+can use the post count to ensure that it has not missed a timer interval;
+if the post count is greater than one, the application missed a timer interval.
+
+
+<P><HR>
+
+<A HREF="175_L3_TimingaSingleInterva.html">[Back: Timing a Single Interval]</A> <BR>
+<A HREF="177_L1_Glossary.html">[Next: Glossary]</A> 
+</BODY>
+</HTML>

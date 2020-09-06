@@ -1,0 +1,83 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>SplQueryDevice - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>SplQueryDevice - Example Code</H1><!-- entering slot 1500 -->
+<P>
+This sample code returns information for the device name that is entered
+at the command line. The local workstation is selected. The query is done
+for level 3 information.
+<PRE>#define INCL_BASE
+#define INCL_DOSMEMMGR
+#define INCL_SPL
+#define INCL_SPLDOSPRINT
+#define INCL_SPLERRORS
+
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+
+INT main (argc, argv)
+    INT argc;
+    CHAR *argv[];
+{
+    SPLERR splerr  ;
+    ULONG  cbBuf;
+    ULONG  cbNeeded ;
+    ULONG  ulLevel ;
+    PSZ    pszComputerName ;
+    PSZ    pszPrintDeviceName ;
+    PVOID  pBuf ;
+    PPRDINFO3 pprd3 ;
+
+    if (argc != 2)
+    {
+       printf("Syntax:  sdqry   DeviceName  \n");
+       DosExit( EXIT_PROCESS , 0 ) ;
+    }
+
+    pszComputerName = (PSZ)NULL ;
+    pszPrintDeviceName = argv[1];
+    ulLevel = 3;
+    splerr = SplQueryDevice(pszComputerName, pszPrintDeviceName,
+                            ulLevel, (PVOID)NULL, 0L, &amp;cbNeeded );
+    if (splerr != NERR_BufTooSmall)
+    {
+       printf("SplQueryDevice Err=%ld, cbNeeded=%ld\n",splerr, cbNeeded) ;
+       DosExit( EXIT_PROCESS , 0 ) ;
+    }
+    if (!DosAllocMem( &amp;pBuf, cbNeeded,
+                      PAG_READ|PAG_WRITE|PAG_COMMIT) ){
+       cbBuf= cbNeeded ;
+       splerr = SplQueryDevice(pszComputerName, pszPrintDeviceName,
+                              ulLevel, pBuf, cbBuf, &amp;cbNeeded) ;
+
+       printf("SplQueryDevice Error=%ld, Bytes Needed=%ld\n", splerr,
+                              cbNeeded) ;
+
+       pprd3=(PPRDINFO3)pBuf;
+
+       printf("Print Device info: name - %s\n", pprd3-&gt;pszPrinterName) ;
+       printf("User Name      = %s\n", pprd3-&gt;pszUserName) ;
+       printf("Logical Address= %s\n", pprd3-&gt;pszLogAddr) ;
+       printf("Job ID         = %d\n", pprd3-&gt;uJobId) ;
+       printf("Status         = %d\n", pprd3-&gt;fsStatus) ;
+       printf("Status Comment = %s\n", pprd3-&gt;pszStatus) ;
+       printf("Comment        = %s\n", pprd3-&gt;pszComment) ;
+       printf("Drivers        = %s\n", pprd3-&gt;pszDrivers) ;
+       printf("Time           = %d\n", pprd3-&gt;time) ;
+       printf("Time Out       = %d\n", pprd3-&gt;usTimeOut) ;
+       DosFreeMem(pBuf) ;
+    }
+    DosExit( EXIT_PROCESS , 0 ) ;
+    return (splerr);
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1488_L2H_SplQueryDeviceRelate.html">[Back: SplQueryDevice - Related Functions]</A> <BR>
+<A HREF="1490_L2H_SplQueryDeviceTopics.html">[Next: SplQueryDevice - Topics]</A> 
+</BODY>
+</HTML>

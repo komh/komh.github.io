@@ -1,0 +1,352 @@
+<HTML>
+<HEAD>
+<TITLE>Target Application Sample Code</TITLE>
+</HEAD>
+<BODY>
+<H1>Target Application Sample Code</H1><!-- entering slot 1469 -->
+<P>
+The target application includes the following files:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Target.C<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Target.RC<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Target.H<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Target.DEF<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Target.LNK<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following sample shows the target application code:
+<PRE>================TARGET.C
+================
+#define  INCL_WIN
+#define  INCL_GPI
+
+#include &lt;os2.h&gt;
+#include "target.h"
+
+#pragma  linkage (main,optlink)
+INT      main(VOID);
+
+/***********************************************************************/
+/*  Main() - program entry point.                                      */
+/*  This program accepts drops from EPM.                               */
+/***********************************************************************/
+MRESULT EXPENTRY LocalWndProc(HWND, ULONG, MPARAM, MPARAM);
+
+HAB     hab;
+HWND    hFrameWnd;
+PFNWP   SysWndProc;
+
+INT main (VOID)
+{
+   HMQ         hmq;
+   HPOINTER    hPtr;
+   FRAMECDATA  fcd;
+   QMSG        qmsg;
+
+   if (!(hab = WinInitialize(0)))
+     return FALSE;
+
+   if (!(hmq = WinCreateMsgQueue(hab, 0)))
+     return FALSE;
+
+/***********************************************************************/
+/*  Set up the frame control data for the frame window.                */
+/***********************************************************************/
+   fcd.cb = sizeof(FRAMECDATA);
+   fcd.flCreateFlags = FCF_TITLEBAR |
+                       FCF_SYSMENU |
+                       FCF_SIZEBORDER |
+                       FCF_SHELLPOSITION |
+                       FCF_MINMAX |
+                       FCF_TASKLIST;
+   fcd.hmodResources = NULLHANDLE;
+   fcd.idResources = 0;
+
+/***********************************************************************/
+/*  Create the frame window.                                           */
+/***********************************************************************/
+   hFrameWnd = WinCreateWindow(HWND_DESKTOP,
+                               WC_FRAME,
+                               "Target",
+                               0,
+                               0, 0, 0, 0,
+                               NULLHANDLE,
+                               HWND_TOP,
+                               0,
+                               &amp;fcd,
+                               NULL);
+
+/***********************************************************************/
+/*  Verify that the frame was created; otherwise, stop.                */
+/***********************************************************************/
+   if (!hFrameWnd)
+     return FALSE;
+   hPtr = WinLoadPointer(HWND_DESKTOP,
+                         NULLHANDLE,
+                         TRASHCAN);
+
+/***********************************************************************/
+/*  Set an icon for the frame window.                                  */
+/***********************************************************************/
+   WinSendMsg(hFrameWnd,
+              WM_SETICON,
+              (MPARAM)hPtr,
+              NULL);
+
+/***********************************************************************/
+/*  We must intercept the frame window's messages                      */
+/*  (to capture any input from the container control).                 */
+/*  We save the return value (the current WndProc),                    */
+/*  so we can pass it all the other messages the frame gets.           */
+/***********************************************************************/
+   SysWndProc = WinSubclassWindow(hFrameWnd, (PFNWP)LocalWndProc);
+
+   WinShowWindow(hFrameWnd, TRUE);
+
+/***********************************************************************/
+/*  Standard PM message loop - get it, dispatch it.                    */
+/***********************************************************************/
+   while (WinGetMsg(hab, &amp;qmsg, NULLHANDLE, 0, 0))
+       WinDispatchMsg(hab, &amp;qmsg);
+
+/***********************************************************************/
+/*  Clean up on the way out.                                           */
+/***********************************************************************/
+   WinDestroyMsgQueue(hmq);
+   WinTerminate(hab);
+
+   return TRUE;
+}
+
+/***********************************************************************/
+/*  LocalWndProc() - window procedure for the frame window.            */
+/*  Called by PM whenever a message is sent to the frame.              */
+/***********************************************************************/
+MRESULT EXPENTRY LocalWndProc(HWND hwnd,ULONG msg,MPARAM mp1,MPARAM mp2)
+{
+   char        szDir[CCHMAXPATH];
+   char        szBuffer[256];
+   PDRAGINFO   dragInfo;
+   PDRAGITEM   dragItem;
+   USHORT      usOp;
+   USHORT      usIndicator, cItems, i;
+   ULONG       ulBytes;
+
+   switch(msg)
+   {
+
+/***********************************************************************/
+/*  Someone's dragging an object over us.                              */
+/***********************************************************************/
+     case DM_DRAGOVER:
+     dragInfo = (PDRAGINFO)mp1;
+
+     /* Get access to the DRAGINFO data structure */
+     DrgAccessDraginfo(dragInfo);
+
+     /* Can we accept this drop? */
+     switch (dragInfo-&gt;usOperation)
+     {
+
+        /* Return DOR_NODROPOP if current operation */
+        /* is link or unknown                       */
+        case DO_UNKNOWN:
+           DrgFreeDraginfo(dragInfo);
+           return (MRFROM2SHORT (DOR_NODROPOP, 0));
+           break;
+
+        /* Our default operation is Move */
+        case DO_DEFAULT:
+           dragItem = DrgQueryDragitemPtr(dragInfo, 0);
+            ulBytes = DrgQueryStrName(dragItem-&gt;hstrContainerName,
+                                      sizeof(szDir),
+                                      szDir);
+           if (!ulBytes)
+             return (MRFROM2SHORT (DOR_NODROPOP, 0));
+           else
+             usOp =  DO_MOVE;
+           break;
+
+        /* <!-- entering slot 1470 -->Do the requested specific operation */
+        case DO_MOVE:
+        case DO_COPY:
+           usOp = dragInfo-&gt;usOperation;
+           break;
+     }
+
+     usIndicator = DOR_DROP;
+     cItems = DrgQueryDragitemCount(dragInfo);
+
+     /* Now, we need to look at each item in turn */
+     for (i = 0; i &lt; cItems; i++)
+
+     {
+        dragItem = DrgQueryDragitemPtr(dragInfo, i);
+
+        /* Make sure we can move for a Move request */
+        /* or copy for a Copy                       */
+        if (((dragItem-&gt;fsSupportedOps &amp; DO_COPYABLE)   &amp;&amp;
+             (usOp == (USHORT)DO_COPY))                 ||
+            ((dragItem-&gt;fsSupportedOps &amp; DO_MOVEABLE)   &amp;&amp;
+             (usOp == (USHORT)DO_MOVE)))
+
+        {
+           /* Check the rendering format */
+           if (DrgVerifyRMF(dragItem, "DRM_OS2FILE", "DRF_UNKNOWN"))
+              usIndicator = DOR_DROP;
+           else
+              usIndicator = DOR_NEVERDROP;
+        }
+        else
+           usIndicator = DOR_NODROPOP;
+     }
+
+     /* Release the draginfo data structure */
+     DrgFreeDraginfo(dragInfo);
+
+     return (MRFROM2SHORT(usIndicator, usOp));
+     break;
+
+     /* Dragged object just left */
+     case DM_DRAGLEAVE:
+        return (MRESULT)FALSE;
+        break;
+
+     /* Drop the object on us (receive the object) */
+     case DM_DROP:
+
+     /* Get access to the DRAGINFO data structure */
+     DrgAccessDraginfo(dragInfo);
+
+     /* Can we accept this drop? */
+     switch (dragInfo-&gt;usOperation)
+
+     {
+        /* Return DOR_NODROPOP if current operation */
+        /* is link or unknown                       */
+        case DO_UNKNOWN:
+           DrgFreeDraginfo(dragInfo);
+           return (MRFROM2SHORT (DOR_NODROPOP, 0));
+           break;
+
+        /* Our default operation is Move */
+        case DO_DEFAULT:
+           dragItem = DrgQueryDragitemPtr(dragInfo, 0);
+           ulBytes  = DrgQueryStrName(dragItem-&gt;hstrContainerName,
+                                      sizeof(szDir),
+                                      szDir);
+
+           if (!ulBytes)
+             return (MRFROM2SHORT (DOR_NODROPOP, 0));
+           usOp = (USHORT)DO_MOVE;
+           break;
+
+        /* Do the requested specific operation */
+        case DO_MOVE:
+        case DO_COPY:
+           usOp = dragInfo-&gt;usOperation;
+           break;
+     }
+
+     usIndicator = DOR_DROP;
+     cItems = DrgQueryDragitemCount(dragInfo);
+
+     /* Now, we need to look at each item in turn */
+     for (i = 0; i &lt; cItems; i++)
+     {
+        dragItem = DrgQueryDragitemPtr(dragInfo, i);
+
+        /* Make sure we can move for a Move request */
+        /* or copy for a Copy                       */
+        if (((dragItem-&gt;fsSupportedOps &amp; DO_COPYABLE)   &amp;&amp;
+             (usOp == (USHORT)DO_COPY))                 ||
+            ((dragItem-&gt;fsSupportedOps &amp; DO_MOVEABLE)   &amp;&amp;
+             (usOp == (USHORT)DO_MOVE)))
+
+        {
+           /* Check the rendering format */
+           if (DrgVerifyRMF(dragItem, "DRM_OS2FILE", "DRF_UNKNOWN"))
+              usIndicator = DOR_DROP;
+           else
+              usIndicator = DOR_NEVERDROP;
+        }
+        else
+           usIndicator = DOR_NODROPOP;
+
+/***********************************************************************/
+/*  This is where we would actually move or copy the file,             */
+/*  but we just display the name instead.                              */
+/***********************************************************************/
+        DrgQueryStrName(dragItem-&gt;hstrSourceName, 255, szBuffer);
+        WinMessageBox(HWND_DESKTOP,
+                      HWND_DESKTOP,
+                      szBuffer,
+                      "Dropped",
+                      0,
+                      MB_OK);
+     }
+
+     /* Release the draginfo data structure */
+     DrgFreeDraginfo(dragInfo);
+
+     return (MRFROM2SHORT(usIndicator, usOp));
+     break;
+
+     /* Send the message to the usual WC_FRAME WndProc */
+     default:
+        return (*SysWndProc)(hwnd, msg, mp1, mp2);
+        break;
+   }
+   return (*SysWndProc)(hwnd, msg, mp1, mp2);
+}
+
+================
+TARGET.RC
+================
+#include &lt;os2.h&gt;
+#include "target.h"
+
+ICON TRASHCAN    trashcan.ico
+
+================
+TARGET.H
+================
+#define TRASHCAN 100
+
+================
+TARGET.DEF
+================
+NAME    TARGET   WINDOWAPI
+
+DESCRIPTION 'PM Drag and Drop Sample'
+
+CODE      MOVEABLE
+DATA      MOVEABLE MULTIPLE
+
+STACKSIZE 24576
+HEAPSIZE  10240
+
+PROTMODE
+
+================
+TARGET.LNK
+================
+target.obj
+target.exe
+target.map
+target.def
+
+</PRE>
+ 
+
+<P><HR>
+
+<A HREF="1441_L3_SourceApplicationSam.html">[Back: Source Application Sample Code]</A> <BR>
+<A HREF="1443_L1_DrawinginWindows.html">[Next: Drawing in Windows]</A> 
+</BODY>
+</HTML>

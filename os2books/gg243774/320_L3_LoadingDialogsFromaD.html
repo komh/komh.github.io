@@ -1,0 +1,77 @@
+<HTML>
+<HEAD>
+<TITLE>Loading Dialogs From a DLL</TITLE>
+</HEAD>
+<BODY>
+<H1>Loading Dialogs From a DLL</H1><!-- entering slot 353 -->
+<P>
+The<B> WinDlgBox()</B> function also allows a DLL module handle to be specified,
+and thus enables dialog template definitions to be loaded from a DLL. For
+instance, to load and create a dialog box from a dialog template resource
+DC_001 defined in a DLL module named WINDLL.DLL, the following call sequence
+is used:
+<PRE>rc = DosLoadModule(NULL,                  /* No object name           */
+                   0,                     /* No object length         */
+                   "MYDLL",               /* DLL module name          */
+                   hModule);              /* DLL handle (returned)    */
+
+rc = WinDlgBox(hDesktop,                  /* Desktop is parent        */
+               hFrame,                    /* Frame is owner           */
+               dpProc001,                 /* Dialog procedure address */
+               hModule,                   /* DLL module handle        */
+               DC_001,                    /* Resource ID within DLL   */
+               NULL);                     /* No create parameters     */
+</PRE>
+
+<P>
+Note that if the dialog procedure<I> dpProc001</I> to be associated with
+this dialog box is also defined within the DLL module, the address of this
+procedure must be obtained by the application before the<B> WinDlgBox()
+</B>call is issued.  This is achieved using the<B> DosGetProcAddr()</B> function,
+which returns the address of the required function, as shown in the following
+example:
+<PRE>rc = DosGetProcAddr(hModule,
+                    "Proc1",
+                    dpProc001);
+</PRE>
+
+<P>
+In this case,<I> Proc1</I> is the name of the required entry point in the
+DLL module, and<I> dpProc001</I> is a variable of type PFNWP which contains
+the address of the procedure returned by the<B> DosGetProcAddr()</B> call.
+ While the address of the dialog procedure could have been supplied implicitly
+by using load-time rather than run-time dynamic linking, run-time dynamic
+linking is necessary to load the dialog box resource, and it is logical
+to place the resource and its associated dialog procedure in the same DLL
+module.  An example of the complete procedure required to load a dialog
+box from a DLL is given in <A HREF="082_L2_LoadingaDialogResour.html">Figure
+"Loading a Dialog Resource From a DLL"</A>.
+<P>
+When loading dialogs from DLL modules, it is recommended that a combination
+of load-time and run-time dynamic linking techniques be used.  A calling
+routine should be placed in the DLL which, in response to an application
+request, loads and obtains the appropriate module handle, obtains the required
+dialog procedure address and executes the dialog.  This relieves the application
+of the responsibility for loading the dynamically-linked resources and routines.
+ An example of such a routine is given in <A HREF="082_L2_LoadingaDialogResour.html">Figure
+"Loading a Dialog Resource From a DLL"</A>.  The calling routine<I> CustInfoDlg
+</I>is defined as an entry point within the DLL module, since it will be
+called from the application's main executable module.  An import library
+is then built for the DLL, and linked with the application code using standard
+conventions for load-time dynamic linking.
+<P>
+When<I> CustInfoDlg</I> is invoked by the application, it obtains a module
+handle for its own DLL module, which has already been loaded when the call
+to<I> CustInfoDlg</I> was made, and uses this handle to obtain the address
+of the required dialog procedure using standard run-time dynamic linking
+conventions.  It then issues a<B> WinDlgBox()</B> call to load and process
+the dialog box, and returns the result to the application.  This example
+illustrates the combination of load-time and run-time dynamic linking conventions.
+
+
+<P><HR>
+
+<A HREF="319_L3_LoadingResourcesFrom.html">[Back: Loading Resources From a DLL]</A> <BR>
+<A HREF="321_L2_ResourcesandNational.html">[Next: Resources and National Language Support]</A> 
+</BODY>
+</HTML>

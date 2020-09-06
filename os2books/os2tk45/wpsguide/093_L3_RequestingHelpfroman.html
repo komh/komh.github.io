@@ -1,0 +1,96 @@
+<HTML>
+<HEAD>
+<TITLE>Requesting Help from an Application Window</TITLE>
+</HEAD>
+<BODY>
+<H1>Requesting Help from an Application Window</H1><!-- entering slot 99 -->
+<P>
+When a user requests help from an application window by pressing the F1
+key, the wpclsQueryDefaultHelp method should be overridden, as shown in
+the following figure:
+<PRE>wpclsQueryDefaultHelp(M_MYOBJECT *somSelf,
+                      PULONG pHelpPanelId,
+                      PSZ HelpLibrary)
+
+where
+       pHelpPanelId  - Pointer to the help panel ID
+       HelpLibrary   - Help library name returned in the buffer
+
+</PRE>
+
+<P>
+This method is called to allow the class object to specify its default help
+panel for its instances. This class method is called during the default
+processing of wpQueryDefaultHelp. It can be called at any time in order
+to determine the default help panel for the object class. The WPObject class
+does not process this method other than returning FALSE. Derived classes
+can override this method to provide the default help panel ID and help module
+name for their object instances. All classes should override this method
+to tell the system what help they want displayed when the user selects the
+F1 key. In this case, also, the value of ID_HELP_DEFAULT should be the same
+as the resid for the default help for MYOBJECT class in the IPF file. The
+three following sample codes show how to override wpclsQueryDefaultHelp.
+They present the class interface definition (IDL), source code (C), and
+make (MAK) files, respectively.
+<PRE>passthru: C.ih;
+    .
+    .
+  #define ID_HELP_DEFAULT  256
+    .
+    .
+
+endpassthru;
+
+//# Class modifiers
+    .
+    .
+wpclsQueryDefaultHelp: override;
+    .
+    .
+
+</PRE>
+
+<P>
+The following sample code shows the source code of MYOBJECT when overriding
+wpclsQueryDefaultHelp:
+<PRE>/*
+ *  METHOD: wpclsQueryDefaultHelp
+ *
+ *  DESCRIPTION:
+ *
+ *    Process input from the help submenu item that was added.
+ */
+SOM_Scope BOOL SOMLINK myobjM_wpclsQueryDefaultHelp(M_MYOBJECT *somSelf,
+                                                    PULONG pHelpPanelId,
+                                                    PSZ pszHelpLibrary)
+
+{
+  /* M_MYOBJECTData *somThis = M_MYOBJECTGetData(somSelf); */
+  M_MYOBJECTMethodDebug("M_MYOBJECT","myobjM_wpclsQueryDefaultHelp");
+
+  if (pHelpPanelId)    /* Set the default help panel ID */
+    *pHelpPanelId = ID_HELP_DEFAULT;
+
+  if (pszHelpLibrary)  /* Copy the help file name */
+    strcpy(pszHelpLibrary, szHelpLibrary);
+
+  return (TRUE);
+}
+
+</PRE>
+
+<P>
+The help library can be created by using the IPFC compiler. The following
+figure shows the make file of MYOBJECT:
+<PRE>myobject.hlp:  $$(@B).ipf
+               ipfc $*.ipf
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="092_L3_DisplayingtheHelpDia.html">[Back: Displaying the Help Dialog for a Pop-Up Menu Item]</A> <BR>
+<A HREF="094_L1_ObjectContainersCont.html">[Next: Object Containers: Container Methods]</A> 
+</BODY>
+</HTML>

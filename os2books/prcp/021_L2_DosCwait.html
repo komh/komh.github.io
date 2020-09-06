@@ -1,0 +1,129 @@
+<HTML>
+<HEAD>
+<TITLE>DosCwait</TITLE>
+</HEAD>
+<BODY>
+<H1>DosCwait</H1><!-- entering slot 23 -->Bindings:  <A HREF="196_L2H_DosCwait.html">C</A>,
+<A HREF="371_L2H_DosCwait.html">MASM</A>
+<BR>
+
+<P>
+This call places the current thread in a wait state until an asynchronous
+child process ends.  When the process ends, its process ID and termination
+code are returned to the caller.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+DosCwait<!-- lm: 0x2 13 -->
+<UL> (ActionCode, WaitOption, ReturnCodes, ProcessIDWord,
+ProcessID)<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+<B>ActionCode</B> (USHORT) - input<!-- lm: 0x11 4 -->
+<UL> The process whose
+termination is being waited for.<!-- lm: 0x2 4 -->
+<P>
+Value<!-- lm: 0x2 14 -->
+<UL> Definition<!-- lm: 0x2 4 -->
+</UL>0<!-- lm: 0x2 14 -->
+<UL> The child process indicated by ProcessID.
+<!-- lm: 0x2 4 -->
+</UL>1<!-- lm: 0x2 14 -->
+<UL> The last descendant of the child process
+indicated by ProcessID.<!-- lm: 0x2 1 -->
+</UL><B> WaitOption</B> (USHORT)
+- input<!-- lm: 0x11 4 -->
+<UL> Return if no child process ends.<!-- lm: 0x2 4 -->
+<P>
+Value<!-- lm: 0x2 14 -->
+<UL> Definition<!-- lm: 0x2 4 -->
+</UL>0<!-- lm: 0x2 14 -->
+<UL> Wait if no child process ends or until no
+child processes are outstanding.<!-- lm: 0x2 4 -->
+</UL>1<!-- lm: 0x2 14 -->
+<UL> Do not wait for child processes to end.
+<P>
+<!-- lm: 0x2 1 -->
+</UL><B>ReturnCodes</B> (PRESULTCODES) - output<!-- lm: 0x11 4 -->
+<UL> Address
+of the structure containing the termination code and the result code indicating
+the reason for the child's termination.<!-- lm: 0x2 4 -->
+<P>
+<B>codeTerminate</B> (USHORT)<!-- lm: 0x11 7 -->
+<UL> The termination code
+furnished by the system describing why the child terminated.<!-- lm: 0x2 7 -->
+<P>
+Value<!-- lm: 0x2 17 -->
+<UL> Definition<!-- lm: 0x2 7 -->
+</UL>0<!-- lm: 0x2 17 -->
+<UL> EXIT (normal)<!-- lm: 0x2 7 -->
+</UL>1<!-- lm: 0x2 17 -->
+<UL> Hard error abort<!-- lm: 0x2 7 -->
+</UL>2<!-- lm: 0x2 17 -->
+<UL> Trap operation<!-- lm: 0x2 7 -->
+</UL>3<!-- lm: 0x2 17 -->
+<UL> Unintercepted <A HREF="075_L2_DosKillProcess.html">DosKillProcess
+</A><!-- lm: 0x2 4 -->
+</UL><B>codeResult</B> (USHORT)<!-- lm: 0x11 7 -->
+<UL> Result
+code specified by the terminating process on its last <A HREF="034_L2_DosExit.html">DosExit
+</A>call.<!-- lm: 0x2 1 -->
+</UL><B> ProcessIDWord</B> (PPID) - output<!-- lm: 0x11 4 -->
+<UL> Address
+of the process ID of the ending process.<!-- lm: 0x2 1 -->
+</UL><B> ProcessID
+</B>(PID) - input<!-- lm: 0x11 4 -->
+<UL> ID of the process whose termination
+is being waited for:<!-- lm: 0x2 4 -->
+<P>
+Value<!-- lm: 0x2 14 -->
+<UL> Definition<!-- lm: 0x2 4 -->
+</UL>  0<!-- lm: 0x2 14 -->
+<UL> Any child process.<!-- lm: 0x2 4 -->
+</UL>&lt;&gt; 0<!-- lm: 0x2 14 -->
+<UL> The indicated child process and
+all its descendants.<!-- lm: 0x2 1 -->
+</UL><B> rc</B> (USHORT) - return
+<!-- lm: 0x11 4 -->
+<UL>Return code descriptions are:<!-- lm: 0x2 4 -->
+<P>
+<LI><!-- lm: 0x2 14 -->NO_ERROR<!-- lm: 0x2 4 --> 13<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_DATA
+<!-- lm: 0x2 4 -->
+</UL>128<!-- lm: 0x2 14 -->
+<UL> ERROR_WAIT_NO_CHILDREN<!-- lm: 0x2 4 -->
+</UL>129<!-- lm: 0x2 14 -->
+<UL> ERROR_CHILD_NOT_COMPLETE<!-- lm: 0x2 4 -->
+</UL>184<!-- lm: 0x2 14 -->
+<UL> ERROR_NO_CHILD_PROCESS<!-- lm: 0x2 4 -->
+</UL>303<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_PROCID<!-- lm: 0x2 1 -->
+</UL><B>Remarks</B>
+<P>
+DosCwait waits for completion of a child process, whose execution is asynchronous
+to that of its parent process. The child process is created by a <A HREF="033_L2_DosExecPgm.html">DosExecPgm
+</A>request with ExecFlags=2 specified. If the child process has multiple
+threads, the result code returned by DosCwait is the one passed to it by
+the <A HREF="034_L2_DosExit.html">DosExit</A> request that terminates the
+process.
+<P>
+DosCwait can also wait for the descendant processes of a child process to
+complete before it returns. However, it does not report status for descendant
+processes.
+<P>
+To wait for all child processes and descendant processes to end, issue DosCwait
+repeatedly, with ActionCode=1 andProcessID=0 specified, until ERROR_NO_CHILD_PROCESS
+is returned. The contents of ProcessIDWord can be examined to determine
+which child the termination codes are from.
+<P>
+If no child processes were started, DosCwait returns with an error. If no
+child processes terminate, DosCwait can wait until one terminates before
+returning to the parent, or it can return immediately if it specifies WaitOption=1.
+This parameter is used to return the result code of a child process that
+has already ended.
+
+<P><HR>
+
+<A HREF="020_L2_DosCreateThread.html">[Back: DosCreateThread]</A> <BR>
+<A HREF="022_L2_DosDelete.html">[Next: DosDelete]</A> 
+</BODY>
+</HTML>

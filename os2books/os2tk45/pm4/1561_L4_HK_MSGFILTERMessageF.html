@@ -1,0 +1,79 @@
+<HTML>
+<HEAD>
+<TITLE>HK_MSGFILTER - Message Filter Hook</TITLE>
+</HEAD>
+<BODY>
+<H1>HK_MSGFILTER - Message Filter Hook</H1><!-- entering slot 1595 -->
+<P>
+The<I> message-filter hook</I> allows an application to provide input filtering
+(such as monitoring hot keys) during system-modal loops. The system calls
+a message-filter hook function while tracking the window size and movement,
+displaying a modal dialog window or message box, tracking a scroll bar,
+and during window-enumeration operations. The following code shows the syntax
+for a message-filter hook function:
+<PRE>BOOL EXPENTRY MsgFilterHook(HAB hab, PQMSG pQmsg, ULONG msgf)
+
+</PRE>
+
+<P>
+The<I> msgf</I> parameter can have one of the three values shown in the
+following table:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Parameter Value     ³Description                             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³MSGF_DIALOGBOX      ³Message originated while processing a   ³
+³                    ³modal dialog window or a message box.   ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³MSGF_MESSAGEBOX     ³Message originated while processing a   ³
+³                    ³message box.                            ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³MSGF_TRACK          ³Message originated while tracking a     ³
+³                    ³control (such as a scroll bar).         ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+The<I> pQmsg</I> parameter of MsgFilterHook is a pointer to a QMSG data
+structure containing information about the message.
+<P>
+If a message-filter hook function returns TRUE, the system does not pass
+the message to the rest of the hook chain or to the application. If the
+function returns FALSE, the system passes the message to the next hook function
+in the chain or to the application if no other functions exist.
+<P>
+This hook enables applications to perform message filtering during modal
+loops that is equivalent to the typical filtering for the main message loop.
+For example, applications often examine a new message in the main event
+loop between the time they retrieve the message from the queue and the time
+they dispatch it, performing special processing as appropriate. An application
+usually cannot do this sort of filtering during a modal loop, because the
+system runs the loop created by WinGetMsg and WinDispatchMsg. If an application
+installs a message-filter hook function, the system calls the function between
+WinGetMsg and WinDispatchMsg in the modal processing loop.
+<P>
+An application can also call the message-filter hook function directly by
+calling WinCallMsgFilter. With this function, the application can use the
+same code as the main message loop to filter messages during modal loops.
+To do so, the application encapsulates the filtering operations in a message-filter
+hook function and calls WinCallMsgFilter between WinGetMsg and WinDispatchMsg
+calls, as shown in the following code fragment:
+<PRE>while (WinGetMsg(hab, (PQMSG) &amp;qmsg, (HWND) NULL, 0, 0))
+{
+   if (!WinCallMsgFilter(hab, (PQMSG) &amp;qmsg, 0))
+     WinDispatchMsg(hab, (PQMSG) &amp;qmsg);
+}
+
+</PRE>
+
+<P>
+The last argument of WinCallMsgFilter is passed to the hook function; the
+application can enter any value. By defining a constant such as MSGF_MAINLOOP,
+the hook function can use that value to determine from where the function
+was called.
+
+<P><HR>
+
+<A HREF="1560_L4_HK_MSGCONTROLMessage.html">[Back: HK_MSGCONTROL - Message Control Hook]</A> <BR>
+<A HREF="1562_L4_HK_MSGINPUTMessageIn.html">[Next: HK_MSGINPUT - Message Input Hook]</A> 
+</BODY>
+</HTML>

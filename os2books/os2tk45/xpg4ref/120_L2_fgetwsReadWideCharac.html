@@ -1,0 +1,138 @@
+<HTML>
+<HEAD>
+<TITLE>fgetws - Read Wide-Character String from Stream</TITLE>
+</HEAD>
+<BODY>
+<H1>fgetws - Read Wide-Character String from Stream</H1><!-- entering slot 125 -->fgetws - Read Wide-Character String from Stream
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>#include &lt;stdio.h&gt;
+#include &lt;wchar.h&gt;
+wchar_t *fgetws(wchar_t *<I>wcs</I>, int <I>n</I>, FILE *<I>stream</I>);
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Description
+<P>
+<!-- lm: 0x2 10 -->
+<UL>fgetws reads wide characters from the<I> stream
+</I>into the array pointed to by<I> wcs</I>. At most,<I> n</I> - 1 wide
+characters are read. fgetws stops reading characters after WEOF, or after
+it reads a new-line wide character (which is retained). It adds a null wide
+character immediately after the last wide character read into the array.
+
+<P>
+fgetws advances the file position unless there is an error. If an error
+occurs, the file position is undefined.
+<P>
+The behavior of fgetws is affected by the LC_CTYPE category of the current
+locale. If you change the category between subsequent read operations on
+the same stream, undefined results can occur.
+<P>
+After calling fgetws, flush the buffer or reposition the stream pointer
+before calling a write function for the stream, unless WEOF has been reached.
+After a write operation on the stream, flush the buffer or reposition the
+stream pointer before calling fgetws.<!-- lm: 0x2 1 -->
+</UL> Returns
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+If successful, fgetws returns a pointer to the wide-character string<I> wcs</I>.
+If WEOF is encountered before any wide characters have been read into<I> wcs</I>,
+the contents of<I> wcs</I> remain unchanged and fgetws returns a null pointer.
+If WEOF is reached after data has already been read into the string buffer,
+fgetws returns a pointer to the string buffer to indicate success. A subsequent
+call would return NULL because WEOF would be reached without any data being
+read.
+<P>
+If a read error occurs, the contents of<I> wcs</I> are indeterminate and
+fgetws returns NULL. If an encoding error occurs (in converting a wide character
+to a multibyte character), fgetws sets errno to EILSEQ and returns NULL.
+
+<P>
+If<I> n</I> equals 1, the<I> wcs</I> buffer has only room for the terminating
+null character and nothing is read from the stream. (Such an operation is
+still considered a read operation, so it cannot immediately follow a write
+operation unless the buffer is flushed or the stream pointer repositioned
+first.)
+<P>
+If<I> n</I> is greater than 1, fgetws fails only if an I/O error occurs
+or if WEOF is reached before data is read from the stream. Use ferror and
+feof to distinguish between a read error and a WEOF. WEOF is only reached
+when an attempt is made to read past the last byte of data. Reading up to
+and including the last byte of data does not turn on the WEOF indicator.
+<!-- lm: 0x2 1 -->
+</UL>Example Code
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+This example opens a file, reads in the file contents using fgetws, then
+prints the file contents.
+<PRE>#include &lt;errno.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;wchar.h&gt;
+
+int main(void)
+{
+   FILE    *stream;
+   wchar_t  wcs[100];
+
+   if (NULL == (stream = fopen("fgetws.dat", "r"))) {
+      printf("Unable to open: \"fgetws.dat\"\n");
+      exit(1);
+   }
+
+   errno = 0;
+   if (NULL == fgetws(wcs, 100, stream)) {
+      if (EILSEQ == errno) {
+         printf("An invalid wide character was encountered.\n");
+         exit(1);
+      }
+      else if (feof(stream))
+              printf("End of file reached.\n");
+           else
+              perror("Read error.\n");
+   }
+   printf("wcs = \"%ls\"\n", wcs);
+   fclose(stream);
+   return 0;
+
+   /****************************************************************************
+      Assuming the file fgetws.dat contains:
+
+      This test string should not return -1
+
+      The output should be similar to:
+
+      wcs = "This test string should not return -1"
+   ****************************************************************************/
+}
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Related Information
+<P>
+<!-- lm: 0x2 10 -->
+<UL><!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 --><A HREF="118_L2_fgetsReadaString.html">fgets</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="119_L2_fgetwcReadWideCharac.html">fgetwc
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="131_L2_fputwsWriteWideChara.html">fputws</A>.
+<!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="119_L2_fgetwcReadWideCharac.html">[Back: fgetwc - Read Wide Character from Stream]</A> <BR>
+<A HREF="121_L2__filelengthDetermine.html">[Next: _filelength - Determine File Length]</A> 
+</BODY>
+</HTML>

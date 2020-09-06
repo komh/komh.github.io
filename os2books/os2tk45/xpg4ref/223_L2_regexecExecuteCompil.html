@@ -1,0 +1,162 @@
+<HTML>
+<HEAD>
+<TITLE>regexec - Execute Compiled Regular Expression</TITLE>
+</HEAD>
+<BODY>
+<H1>regexec - Execute Compiled Regular Expression</H1><!-- entering slot 236 -->regexec - Execute Compiled Regular Expression
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>#include &lt;sys/types.h&gt;
+#include &lt;regex.h&gt;
+int regexec(const regex_t *<I>preg</I>, const char *<I>string</I>,
+            size_t <I>nmatch</I>, regmatch_t *<I>pmatch</I>, int <I>eflags</I>);
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Description
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+regexec compares the null-terminated<I> string</I> against the compiled
+regular expression<I> preg</I> to find a match between the two. (Regular
+expressions are described in "Regular Expressions" in the<I> VisualAge C++
+Programming Guide</I>.)
+<P>
+<I>nmatch</I> is the number of substrings in<I> string</I> that regexec
+should try to match with subexpressions in<I> preg</I>. The array you supply
+for<I> pmatch</I> must have at least<I> nmatch</I> elements.
+<P>
+regexec fills in the elements of the array<I> pmatch</I> with offsets of
+the substrings in<I> string</I> that correspond to the parenthesized subexpressions
+of the original pattern given to regcomp to create<I> preg</I>. The zeroth
+element of the array corresponds to the entire pattern.  If there are more
+than<I> nmatch</I> subexpressions, only the first<I> nmatch</I> - 1 are
+stored. If<I> nmatch</I> is 0, or if the REG_NOSUB flag was set when<I> preg
+</I>was created with regcomp, regexec ignores the<I> pmatch</I> argument.
+
+<P>
+The<I> eflags</I> flag defines customizable behavior of regexec:<!-- lm: 0x2 10 -->
+<P>
+REG_NOTBOL<!-- lm: 0x11 15 -->
+<UL> Indicates that the first character of
+<I>string</I> is not the beginning of line.<!-- lm: 0x2 10 -->
+</UL> REG_NOTEOL
+<!-- lm: 0x11 15 -->
+<UL>Indicates that the first character of<I> string
+</I>is not the end of line.<!-- lm: 0x2 10 -->
+</UL>
+<P>
+When a basic or extended regular expression is matched, any given parenthesized
+subexpression of the original pattern could participate in the match of
+several different substrings of<I> string</I>. The following rules determine
+which substrings are reported in<I> pmatch.</I>:<!-- lm: 0x2 11 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 15 -->If a subexpression participated in a match several
+times, regexec stores the offset of the last matching substring in<I> pmatch</I>.
+<!-- lm: 0x2 11 -->
+<P>
+ <LI><LI><!-- lm: 0x2 15 -->If a subexpression did not match in the source
+<I>string</I>, regexec sets the offset shown in<I> pmatch</I> to -1.<!-- lm: 0x2 11 -->
+<P>
+ <LI><LI><!-- lm: 0x2 15 -->If a subexpression contains subexpressions,
+the data in<I> pmatch</I> refers to the last such subexpression.<!-- lm: 0x2 11 -->
+<P>
+ <LI><LI><!-- lm: 0x2 15 -->If a subexpression matches a zero-length string,
+the offsets in<I> pmatch</I> refer to the byte immediately following the
+matching string.<!-- lm: 0x2 10 -->
+</UL>
+<P>
+If the REG_NOSUB flag was set when<I> preg</I> was created by regcomp, the
+contents of<I> pmatch</I> are unspecified. If the REG_NEWLINE flag was not
+set when<I> preg</I> was created, new-line characters are allowed in<I> string</I>.
+<!-- lm: 0x2 1 -->
+</UL>Returns
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+If a match is found, regexec returns 0. Otherwise, it returns a nonzero
+value indicating either no match or an error.<!-- lm: 0x2 1 -->
+</UL> Example
+Code
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+This example compiles an expression and matches a string against it. The
+first substring uses the full pattern. The second substring uses the sub-expression
+inside the full pattern.
+<PRE>#include &lt;sys/types.h&gt;#include &lt;regex.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+
+int main(void)
+{
+   regex_t    preg;
+   char       *string = "a very simple simple simple string";
+   char       *pattern = "\\(sim[a-z]le\\) \\1";
+   int        rc;
+   size_t     nmatch = 2;
+   regmatch_t pmatch[2];
+
+   if (0 != (rc = regcomp(&amp;preg, pattern, 0))) {
+      printf("regcomp() failed, returning nonzero (%d)\n", rc);
+      exit(EXIT_FAILURE);
+   }
+
+   if (0 != (rc = regexec(&amp;preg, string, nmatch, pmatch, 0))) {
+      printf("Failed to match '%s' with '%s',returning %d.\n",
+      string, pattern, rc);
+   }
+   else {
+      printf("With the whole expression, "
+             "a matched substring \"%.*s\" is found at position %d to %d.\n",
+             pmatch[0].rm_eo - pmatch[0].rm_so, &amp;string[pmatch[0].rm_so],
+             pmatch[0].rm_so, pmatch[0].rm_eo - 1);
+      printf("With the sub-expression, "
+             "a matched substring \"%.*s\" is found at position %d to %d.\n",
+             pmatch[1].rm_eo - pmatch[1].rm_so, &amp;string[pmatch[1].rm_so],
+             pmatch[1].rm_so, pmatch[1].rm_eo - 1);
+   }
+   regfree(&amp;preg);
+   return 0;
+
+   /****************************************************************************
+      The output should be similar to :
+
+      With the whole expression, a matched substring "simple simple" is found
+      at position 7 to <!-- entering slot 237 -->19.
+      With the sub-expression, a matched substring "simple" is found
+      at position 7 to 12.
+   ****************************************************************************/
+}
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Related Information
+<P>
+<!-- lm: 0x2 10 -->
+<UL><!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 --><A HREF="221_L2_regcompCompileRegula.html">regcomp
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="222_L2_regerrorReturnErrorM.html">regerror
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="224_L2_regfreeFreeMemoryfor.html">regfree
+</A><!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="222_L2_regerrorReturnErrorM.html">[Back: regerror - Return Error Message for Regular Expression]</A> <BR>
+<A HREF="224_L2_regfreeFreeMemoryfor.html">[Next: regfree - Free Memory for Regular Expression]</A> 
+</BODY>
+</HTML>

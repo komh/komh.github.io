@@ -1,0 +1,143 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Get the object ID for an object handle</TITLE>
+</HEAD>
+<BODY>
+<H1>Get the object ID for an object handle</H1><!-- entering slot 386 -->
+<PRE> 
+/*                                                                    */
+/*                                                                    */
+/* Get the object ID for an object handle                             */
+/*                                                                    */
+/* Note:                                                              */
+/*                                                                    */
+/* The environment variable WP_OBJHANDLE contains the object handle   */
+/* for an OS/2 session. Note also that all sessions started from      */
+/* an OS/2 session with the START command will inherit the object     */
+/* handle from that session.                                          */
+/*                                                                    */
+/* Author: Wolfram Sperber (see <A HREF="961_L2H_EMailaddressesS.html">EMail Addresses</A>)                      */
+/*                                                                    */
+/* He has developed this method in his program iNFOMAN 2.1, where any */
+/* number of WPS-objects are all starting the same program, through a */
+/* number of different jobs:                                          */
+/*                                                                    */
+/* By identifying the Id of the actual starting object, specific job  */
+/* data can be selected, stored otherwhere, but dedicated to the      */
+/* actual object's run.                                               */
+/*                                                                    */
+/* In general:                                                        */
+/*                                                                    */
+/* If the unique object-Id is known, it can be used, f.e., as a link  */
+/* to a unique set of parameters or data, not stored with the object  */
+/* (thus not in OS2.INI).                                             */
+/*                                                                    */
+/* Advantages:                                                        */
+/* - If a WPS-object is lost or corrupt, the object-specific data     */
+/*   survive.                                                         */
+/* - This kind of association of a programm with its data would also  */
+/*   be more stable than using program parameters for data, or the    */
+/*   object-title as a link to them.                                  */
+/*                                                                    */
+/* iNFOMAN 2.1 is available at BMTMirco (http://www.bmtmicro.com),    */
+/* The name of the archive is IMAN21L.ZIP.                            */
+/*                                                                    */
+
+                    /* load the REXXUTIL functions                    */
+  call rxFuncAdd "SysLoadFuncs", "REXXUTIL", "SysLoadFuncs"
+  call SysLoadFuncs
+
+                    /* get the parameter                              */
+  parse arg objHandle
+
+                    /* default is the handle of this OS/2 session     */
+  if objhandle = '' then
+    objHandle = strip( value( 'WP_OBJHANDLE' , , 'OS2ENVIRONMENT' ) )
+
+  say 'Detecting the object id of the object with the handle "' || ,
+       objHandle || '" ...'
+
+  curID = GetObjectID( objHandle )
+  if curID = '' then
+    say 'Error: Cannot detect the object ID!'
+  else
+    say 'The object ID is "' || curID || '".'
+
+exit (curID = '')
+
+/* ------------------------------------------------------------------ */
+/* function: Get the object ID for an object handle                   */
+/*                                                                    */
+/* call:     objectID = GetObjectID( objectHandle )                   */
+/*                                                                    */
+/* where:    objectHandle - object handle                             */
+/*                                                                    */
+/* returns:  either the object ID or "" if the object doesn't have    */
+/*           an object ID                                             */
+/*                                                                    */
+/* Author:   Wolfram Sperber (see <A HREF="961_L2H_EMailaddressesS.html">EMail Addresses</A>)                    */
+/*                                                                    */
+/*                                                                    */
+GetObjectID: PROCEDURE
+  parse upper arg objectHandle
+
+  thisRC =""
+
+  if objectHandle &lt;&gt; "" &amp; ,
+     verify( objectHandle, '0123456789ABCDEF', 'NOMATCH' ) = 0 then
+  do
+
+                    /* convert handle to HEX                          */
+    HexVal = strip( d2x( objectHandle ) )
+
+                    /* If the handle is in the format "value@20"      */
+                    /* we must remove the prefix                      */
+    if substr( HexVal,2,1 ) = '0' then
+      HexVal = right( HexVal,3 )
+    else
+      HexVal = right( HexVal,4 )
+
+                    /* remove a trailing zero                         */
+    if left(HexVal,1) = '0' then
+      HexVal = substr(HexVal,2)
+
+                    /* Now we should have the Keyname for this object */
+                    /* in the file OS2.INI                            */
+    KeyValue  = Sysini( "USER", "PM_Abstract:Objects", HexVal )
+
+    select
+
+      when KeyValue = 'ERROR:' then
+      do
+                    /* key not found in OS2.INI                       */
+      end /* when */
+
+      when lastpos( '&lt;',KeyValue ) = 0 | lastpos( '&gt;',KeyValue ) = 0 then
+      do
+                    /* object has no object ID                        */
+      end /* when */
+
+      otherwise
+      do
+        id = substr(KeyValue,lastpos('&lt;',KeyValue) , ,
+             (pos('&gt;',KeyValue, lastpos('&lt;',KeyValue) +1))-(lastpos('&lt;',KeyValue))+1)
+
+        if id &lt;&gt; '' then
+          thisRC = id
+
+      end /* otherwise */
+    end /* select */
+  end /* if */
+
+return thisRC
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="373_L3_Assigningmorethanone.html">[Back: Assigning more than one object ID to an object]</A> <BR>
+<A HREF="375_L3_Getdefaultobjectsett.html">[Next: Get default object settings]</A> 
+</BODY>
+</HTML>

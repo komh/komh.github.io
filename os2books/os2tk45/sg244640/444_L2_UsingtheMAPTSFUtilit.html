@@ -1,0 +1,242 @@
+<HTML>
+<HEAD>
+<TITLE>Using the MAPTSF Utility</TITLE>
+</HEAD>
+<BODY>
+<H1>Using the MAPTSF Utility</H1><!-- entering slot 627 -->
+<P>
+The MAPTSF utility will generate a TSF from a MAP file. One tracepoint is
+generated for each public code symbol. Optionally a return tracepoint may
+be generated for each public code symbol.
+<P>
+The syntax for MAPTSF is as follows: 
+<PRE>
+
+         MAPTSF map_file [/MAJOR=major_code]
+                         [/MODNAME=name]
+                         [/MAXDATALENGTH=max_data_length]
+                         [/MINORSTART=minor_code]
+                         [/TEMPLATE=template_file]
+                         [/LOGSTACK=stack_bytes]
+                         [/EXCLUDE=string[*][,....]]
+                         [/INCLUDE=string[*][,....]]
+                         [/REGISTERS=reg[,reg]...]
+                         [/LOGRETURN]
+                         [/RETEP]
+                         [/CASESENSITIVE]
+                         [/TYPES]
+                         [/GROUPS=string[,.....]]
+
+</PRE>
+ 
+<P>
+There is only one required parameter:<B> map_file</B>, which specifies the
+input MAP file.  The remaining parameters are optional and have the following
+meaning:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B><LI>MAJOR</B><!-- lm: 0x11 11 -->
+<UL> specifies the major code to be
+used in the MAJOR= statement of the TSF . If omitted, TRCUST will select
+the default major code of 1 when compiling the TSF.<!-- lm: 0x2 1 -->
+</UL><B> /MODNAME
+</B><!-- lm: 0x11 11 -->
+<UL>specifies the module name to be used in the
+MODNAME= statement of the TSF. If omitted, MAPTSF will use the module name
+that appears in the second line of the MAP file. Note, the MAP file excludes
+the module extension. TRCUST will assume an extension of .DLL if not specified.
+<!-- lm: 0x2 1 -->
+</UL><B>/MAXDATALENGTH</B><!-- lm: 0x11 11 -->
+<UL> specifies
+the MAXDATALENGTH= statement of the TSF. If omitted, TRCUST will assume
+the default of 512 when compiling the TSF.<!-- lm: 0x2 1 -->
+</UL><B> /MINORSTART
+</B><!-- lm: 0x11 11 -->
+<UL>specifies the first minor code. Subsequent
+tracepoints have incremental minor codes. If omitted, the MINOR= statement
+is not generated. TRCUST will assume an initial minor code of 1 and increment
+for each tracepoint.<!-- lm: 0x2 1 -->
+</UL><B> /INCLUDE</B><!-- lm: 0x11 11 -->
+<UL> specifies
+a comma delimited list of case insensitive strings used as inclusion criteria
+for public symbols.  An optional trailing * signifies a generic match. If
+both /INCLUDE and /EXCLUDE are specified then the logical OR of their criteria
+is used for selection. For example:<!-- lm: 0x2 16 -->
+<UL>
+<P>
+<LI>I=dos*,strupr inludes all public symbols beginning 'dos' or equal to
+'strupr'.<!-- lm: 0x2 16 -->
+<P>
+<LI>E=s* /I=strupr excludes all public symbols beginning 's' except for
+'strupr' and includes everything else.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL><B> /EXCLUDE
+</B><!-- lm: 0x11 11 -->
+<UL>specifies a comma delimited list of case insensitive
+strings used as exclusion criteria for public symbols.  An optional trailing
+* signifies a generic match. If both /INCLUDE and /EXCLUDE are specified
+then the logical OR of their criteria is used for selection. For example:
+<!-- lm: 0x2 16 -->
+<UL>
+<P>
+<LI>E=_*,dos* excludes all public symbols beginning '_' or 'dos'.<!-- lm: 0x2 16 -->
+<P>
+<LI>E=s* /I=strupr excludes all public symbols beginning 's' except for
+'strupr' and includes everything else.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL><B> /CASESENSITIVE
+</B><!-- lm: 0x11 11 -->
+<UL>switch applies to /INCLUDE and /EXCLUDE. If
+specified then the inculde and exclude strings will be match on a case-sensitve
+basis.<!-- lm: 0x2 1 -->
+</UL><B> /LOGSTACK=n</B><!-- lm: 0x11 11 -->
+<UL> specifies
+the number of bytes of stack to log for entry tracepoints. This causes the
+following TSF statements to be generated for each entry tracepoint:<!-- lm: 0x2 16 -->
+<UL>
+<P>
+for 16-bit code - 
+<PRE>
+
+        REGS=(SP,SS),
+        FMT="Stack pointer SS:SP=%A-&gt;",
+        MEM=(RSS+SP,D,n),
+        FMT="%R%W"
+
+</PRE>
+<!-- lm: 0x2 16 -->
+<P>
+ for 32-bit code -
+<PRE>
+        REGS=(ESP),
+        FMT="Stack pointer ESP=%F-&gt;",
+        MEM32=(FESP,D,n)
+        FMT="%R%F"
+
+</PRE>
+<!-- lm: 0x2 11 --> 
+</UL>If<B> /LOGSTACK</B> is specified without a value
+then 16 bytes is assumed.<!-- lm: 0x2 1 -->
+</UL><B> /LOGRETURN</B><!-- lm: 0x11 11 -->
+<UL> specifies
+that for each return tracepoint, the return value in AX/EAX should be logged.
+This causes the following TSF statements to be generated:<!-- lm: 0x2 16 -->
+<UL>
+<P>
+for 16-bit code:
+<PRE>
+        REGS=(AX)
+        FMT="Returns (ax) %W"
+
+</PRE>
+<!-- lm: 0x2 16 -->
+<P>
+for 32-bit code:
+<PRE>
+        REGS=(EAX)
+        FMT="Returns (eax) %F"
+
+</PRE>
+<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL><B>/REGISTERS</B><!-- lm: 0x11 11 -->
+<UL> specifies
+one or more processor registers to be logged, each separated by a comma.
+ The following register mnemonics are supported: 
+<PRE>
+
+        AX,BX,CX,DX,CS,DS,ES,FS,GS,IP,SI,DI,SP,BP,FLAGS,
+        EAX,EBX,ECX,EDX,EIP,ESI,EDI,ESP,EBP,EFLAGS
+
+</PRE>
+ 
+<P>
+/REGS may be used as a synonym for /REGISTERS.<!-- lm: 0x2 1 -->
+</UL><B> /RETEP
+</B><!-- lm: 0x11 11 -->
+<UL>specifies that for each public entry-point
+in the MAP file, a return tracepoint should be generated using the RETEP
+parameter of the TRACE statement in the TSF.<!-- lm: 0x2 1 -->
+</UL><B> /TYPES
+</B><!-- lm: 0x11 11 -->
+<UL>specifies that generated tracepoints are to
+be assigned one or more of the following pre-defined types:<!-- lm: 0x2 11 -->
+<P>
+<!-- entering slot 628 -->PUB<!-- lm: 0x2 26 -->
+<UL> Public routines -
+names the begin upper case (ignoring leading underscores)<!-- lm: 0x2 11 -->
+</UL> PRIV
+<!-- lm: 0x2 26 -->
+<UL>Private routines - names the begin lower case (ignoring
+leading underscores)<!-- lm: 0x2 11 -->
+</UL> PRE<!-- lm: 0x2 26 -->
+<UL> Entry
+tracepoint.<!-- lm: 0x2 11 -->
+</UL> POST<!-- lm: 0x2 26 -->
+<UL> Exit tracepoint.
+<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL><B>/GROUPS</B><!-- lm: 0x11 11 -->
+<UL> Requests
+that each of the strings listed be used to define a group. Tracepoints are
+assigned to a group according to whether a group name matches the beginning
+of the tracepoint name, ignoring case and leading underscore characters
+<!-- lm: 0x2 1 -->
+</UL><B>/TEMPLATE</B><!-- lm: 0x11 11 -->
+<UL> specifies
+a file where up to four template tracepoint definitions may be specified,
+one for each of the following categories:<!-- lm: 0x2 16 -->
+<UL>
+<P>
+16-bit entry points<!-- lm: 0x2 16 -->
+<P>
+16-bit return points<!-- lm: 0x2 16 -->
+<P>
+32-bit entry points<!-- lm: 0x2 16 -->
+<P>
+32-bit return points<!-- lm: 0x2 11 --> 
+</UL> The definitions are in a
+shortened form of the TRCUST TRACE statement syntax. They are appended to
+each tracepoint of the category to which they apply. All parameters other
+than MINOR and DESC are permissible. TP and RETEP are specified as follows:
+ <!-- lm: 0x2 11 -->
+<P>
+TP=@16<!-- lm: 0x2 26 -->
+<UL> signifies a 16-bit entry-point<!-- lm: 0x2 11 -->
+</UL> TP=@16,RETEP
+<!-- lm: 0x2 26 -->
+<UL>signifies a 16-bit return-point<!-- lm: 0x2 11 -->
+</UL> TP=@32
+<!-- lm: 0x2 26 -->
+<UL>signifies a 32-bit entry-point<!-- lm: 0x2 11 -->
+</UL> TP=@32,RETEP
+<!-- lm: 0x2 26 -->
+<UL>signifies a 32-bit return-point<!-- lm: 0x2 11 -->
+
+</UL>Only TP and RETEP may appear on the same line as the TRACE keyword.
+ 
+<P>
+For example: 
+<PRE>
+
+        TRACE TP=@16
+              MEM=(SS:BP+8,I,0x10)
+              FMT="16-bytes of parameter 1: %R%W"
+
+</PRE>
+ 
+<P>
+will append 
+<PRE>
+
+              MEM=(SS:BP+8,I,0x10)
+              FMT="16-bytes of parameter 1: %R%W"
+
+</PRE>
+ 
+<P>
+to every 16-bit entry tracepoint definition. <!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="443_L2_UsingtheDEBDELUtilit.html">[Back: Using the DEBDEL Utility]</A> <BR>
+<A HREF="445_L1_SystemTracepointsRef.html">[Next: System Tracepoints Reference]</A> 
+</BODY>
+</HTML>

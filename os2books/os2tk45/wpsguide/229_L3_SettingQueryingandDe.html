@@ -1,0 +1,134 @@
+<HTML>
+<HEAD>
+<TITLE>Setting, Querying, and Deleting Keys and Applications</TITLE>
+</HEAD>
+<BODY>
+<H1>Setting, Querying, and Deleting Keys and Applications</H1><!-- entering slot 248 -->
+<P>
+The following figure shows the syntaxes of SysIni:
+<PRE>Syntax - Mode 1:  Setting single key value.
+
+    SysIni([inifile], app, key, val)
+
+Syntax - Mode 2:  Querying single key value.
+
+    SysIni([inifile], app, key)
+
+Syntax - Mode 3:  Deleting a single key.
+
+    SysIni([inifile], app, key, 'DELETE:')
+
+Syntax - Mode 4:  Deleting an application and all associated keys.
+
+    SysIni([inifile], app, ['DELETE:'])
+
+Syntax - Mode 5:  Querying names of all keys associated
+                  with a certain application.
+
+    SysIni([inifile], app, 'ALL:', 'stem')
+
+Syntax - Mode 6:  Querying names of all applications.
+
+    SysIni([inifile], 'ALL:', 'stem')
+
+where
+
+inifile     Name of the INI file that you work with.  This parameter
+            should be a file specification, or one of the following:
+
+            USER       User INI file (usually C:\OS2\OS2.INI).
+                       This is the default.
+            SYSTEM     System INI file
+                       (usually C:\OS2\OS2SYS.INI).
+            BOTH       For querying invocations, both the user and
+                       system INI files are searched.  For setting
+                       invocations, the user INI file is written to.
+
+app         Application name or some other meaningful value with which
+            you would like to store keywords.
+key         Name of a keyword that is used to hold data.
+val         Value to associate with the keyword of the specified
+            application.
+stem        Name of the stem variable to store the resultant
+            information in.  STEM.0 will be set equal to the number of
+            elements.
+
+</PRE>
+
+<P>
+The following sample code shows how you can use the SysIni function. The
+code saves the value entered by the user, displays it, and deletes it.
+<PRE>/***  Save the user-entered vlaue under the  ***/
+/***  key 'NAME' of the 'MYAPP' application, ***/
+/*** display it, then delete it.             ***/
+pull name .
+call SysIni , 'MYAPP', 'NAME', value  /* Save the value               */
+say  SysIni(, 'MYAPP', 'NAME')        /* Query the value              */
+call SysIni , 'MYAPP'                 /* Delete all MYAPP information */
+exit
+
+</PRE>
+
+<P>
+The following sample code displays the application name, keyname, and value
+of each line of the OS2.INI file:
+<PRE>/***  Display all OS2.INI file information to the screen  ****/
+call rxfuncadd sysloadfuncs, rexxutil, sysloadfuncs
+call sysloadfuncs
+call SysIni 'USER', 'All:', 'Apps.'
+
+if Result \= 'ERROR:' then
+  do i=1 to Apps.0
+    call SysIni 'USER', Apps.i, 'All:', 'Keys'
+
+    if Result \= 'ERROR:' then
+      do j=1 to Keys.0
+        val = SysIni('USER', Apps.i, Keys.j)
+        say left(Apps.i, 20) left(Keys.j, 20),
+        'Len=x'''Left(d2x(length(val)),4) left(val, 20)
+      end
+    end
+
+</PRE>
+
+<P>
+The following sample code fragments retrieves a complete list of object
+ID information:
+<PRE>/* */
+call RxFuncAdd 'SysLoadFuncs', 'rexxutil', 'SysLoadFuncs'
+call SysLoadFuncs
+
+/* List of object IDs */
+App='PM_Workplace : Location'
+call RxFuncAdd 'SysLoadFuncs', 'rexxutil', 'SysLoadFuncs'
+call SysLoadFuncs
+
+call SysINI 'USER', App, 'All:', 'Keys'
+if result \= 'Error:' then do
+  call SysCls
+  Say '';Say '';Say 'Listing of object ID information';Say '';
+  parse value SysTextScreenSize() with row col
+  j=row-10
+  do i=1 to Keys.0
+    if trunc(i/j)==i/j then
+    do
+      Say '';Say 'Press any key to display the next screen...'
+      key=SysGetKey()
+      call SysCls
+      Say '';Say '';Say 'Listing of object ID information';Say '';
+    end
+    Say Keys.i
+  end
+end
+else Say 'Error querying for' App
+return
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="228_L3_RetrievingAllRegiste.html">[Back: Retrieving All Registered Object Classes]</A> <BR>
+<A HREF="230_L3_WorkPlaceShellSetupS.html">[Next: WorkPlace Shell Setup Strings]</A> 
+</BODY>
+</HTML>

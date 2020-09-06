@@ -1,0 +1,69 @@
+<HTML>
+<HEAD>
+<TITLE>Posting an Event Semaphore</TITLE>
+</HEAD>
+<BODY>
+<H1>Posting an Event Semaphore</H1><!-- entering slot 159 -->
+<P>
+<A><!-- external link: 1D A9 C3 3B -->DosPostEventSem</A> posts the semaphore,
+if it is not already posted, and increments the post count. All threads
+that have called<A><!-- external link: 1D 0B C4 3F --> DosWaitEventSem</A> for
+this semaphore are unblocked and resume execution. Threads that call<A><!-- external link: 1D 0B C4 3F --> DosWaitEventSem
+</A>after the event semaphore has been posted and before the next time it
+is reset, will return immediately from a call to<A><!-- external link: 1D 0B C4 3F --> DosWaitEventSem
+</A>and continue execution. If the semaphore is subsequently reset, threads
+that call<A><!-- external link: 1D 0B C4 3F --> DosWaitEventSem</A> will
+again be blocked.
+<P>
+Any thread in the process that created an event semaphore can post the semaphore
+by calling<A><!-- external link: 1D A9 C3 FC --> DosPostEventSem</A>. Threads
+in other processes can also call<A><!-- external link: 1D A9 C3 FC --> DosPostEventSem</A>,
+but they must first gain access to the semaphore by calling<A><!-- external link: 1D A0 C3 FC --> DosOpenEventSem</A>.
+
+<P>
+The following code fragment posts a system event semaphore. Assume that
+the handle of the semaphore has been placed into<I><A><!-- external link: 1D 97 C4 52 --> HEV
+</A></I>already.
+<PRE>    #define INCL_DOSSEMAPHORES   /* Semaphore values */
+    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+
+    HEV     hev;     /* Event semaphore handle */
+    APIRET  ulrc;    /* Return code            */
+
+    ulrc = DosPostEventSem(hev);
+
+    if (ulrc != 0) {
+        printf("DosPostEventSem error: return code = %ld",
+               ulrc);
+        return;
+    }
+
+</PRE>
+
+<P>
+OS/2 maintains a post count for each event semaphore. The post count is
+the number of times the semaphore has been posted (with<A><!-- external link: 1D A9 C3 FC --> DosPostEventSem</A>)
+since the last time the semaphore was in the reset state.
+<P>
+If the event semaphore is reset when<A><!-- external link: 1D A9 C3 3B --> DosPostEventSem
+</A>is called, the semaphore is posted and the post count is set to 1. If
+the event semaphore is already posted when<A><!-- external link: 1D A9 C3 3B --> DosPostEventSem
+</A>is called, the post count is incremented, and ERROR_ALREADY_POSTED is
+returned to the calling thread.
+<P>
+The post count is returned as output by<A><!-- external link: 1D DD C3 FC --> DosResetEventSem</A>;
+it can also be obtained by calling<A><!-- external link: 1D BF C3 FC --> DosQueryEventSem</A>.
+
+<P>
+The maximum number of times an event semaphore can be posted is 65535. The
+value of the post count cannot exceed 65535. If an attempt is made to exceed
+this number,<A><!-- external link: 1D A9 C3 3B --> DosPostEventSem</A> returns
+ERROR_TOO_MANY_POSTS.
+
+<P><HR>
+
+<A HREF="150_L3_ResettinganEventSema.html">[Back: Resetting an Event Semaphore]</A> <BR>
+<A HREF="152_L3_WaitingforanEventSem.html">[Next: Waiting for an Event Semaphore]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,78 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>PrfWriteProfileString - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>PrfWriteProfileString - Example Code</H1><!-- entering slot 1081 -->
+<P>
+This function writes and then reads a string written to the profile associated
+with the application STRINGY.EXE.
+<PRE>/* This programs writes and then read string data to a profile.  */
+/* Some error checking has been omitted for brevity.             */
+
+#define INCL_WINSHELLDATA
+#define INCL_WINERRORS
+#define INCL_DOSERRORS
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+INT main(VOID) {
+
+    HAB     hab           = NULLHANDLE;
+    HINI    hini          = NULLHANDLE;
+    PSZ     pszFileName   = "STRINGY.INI";
+    BOOL    rc            = TRUE;
+    ULONG   i             = 0L;
+    PSZ     pszAppName    = "STRINGY.EXE";
+    PSZ     pszKeyName    = "STATUS";
+    PSZ     pszString     = "The string is alive.";
+    PSZ     pszStringRead = NULL;
+    APIRET  ret           = NO_ERROR;
+    ULONG   ulDataSize    = 0L;
+
+    hab = WinInitialize( 0 );
+
+    hini = PrfOpenProfile( hab, pszFileName );
+
+    rc = PrfWriteProfileString( hini, pszAppName, pszKeyName, pszString);
+
+    if(rc == FALSE) {
+        printf("PrfWriteProfileString error code: %X\n", WinGetLastError(hab));
+        return 1;
+    }
+
+    /* Retrieve size of string in profile, and allocate memory for it */
+
+    rc = PrfQueryProfileSize( hini, pszAppName, pszKeyName, &amp;ulDataSize );
+    ret = DosAllocMem( (PPVOID)&amp;pszStringRead, ulDataSize,
+                       (ULONG)PAG_COMMIT | PAG_READ | PAG_WRITE );
+
+    /* Retrieve data string */
+
+    rc = PrfQueryProfileString( hini, pszAppName, pszKeyName,
+                               (PSZ)"Error Retrieving Data",
+                               (PVOID) pszStringRead,
+                               ulDataSize );
+
+    if(rc==FALSE) {
+        printf("PrfQueryProfileData error code: %X\n", WinGetLastError(hab));
+        return 1;
+    }
+
+    printf("Profile String read: '%s'\n", pszStringRead );
+
+    PrfCloseProfile( hini );        /* Close the profile    */
+    DosFreeMem( pszStringRead );    /* Free memory          */
+    return NO_ERROR;             /* Return to the caller */
+
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1069_L2H_PrfWriteProfileStrin.html">[Back: PrfWriteProfileString - Related Functions]</A> <BR>
+<A HREF="1071_L2H_PrfWriteProfileStrin.html">[Next: PrfWriteProfileString - Topics]</A> 
+</BODY>
+</HTML>

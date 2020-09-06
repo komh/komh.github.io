@@ -1,0 +1,124 @@
+<HTML>
+<HEAD>
+<TITLE>DevHlp_OpenFile</TITLE>
+</HEAD>
+<BODY>
+<H1>DevHlp_OpenFile</H1><!-- entering slot 19 -->
+<P>
+DevHlp_OpenFile is used by base device drivers to open a file for read access
+during initalization.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Calling Sequence in Assembler<!-- lm: 0x11 11 -->
+<UL>
+<PRE>
+LES   DI, FileOpen            ; Point to FILEIOINFO structure
+MOV   DL, DevHlp_OpenFile
+
+CALL   [Device_Help]
+</PRE>
+
+<P>
+ES  DI points to a FILEIOINFO structure defined as follows 
+<PRE>FILEIOINFO struc
+length        dw     8    ; length of imbedded fle system operation structure
+;
+FOPEN struc
+name          dd     ?    ; 16 16 pointer to ASCIZ pathname
+fsize         dd     ?    ; returned  size of file
+FOPEN         ends
+;
+FILEIOINFO    ends
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+Results in Assembler<!-- lm: 0x11 11 -->
+<UL>
+<P>
+ C  Clear if file is opened. AX = zero.
+<P>
+ C  Set if error. AX = Error code. Possible errors <!-- lm: 0x2 11 -->
+<P>
+24<B> ERROR_BAD_LENGTH</B><!-- lm: 0x2 26 -->
+<UL> The length in the FILEIOINFO
+structure is invalid.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+Calling Sequence in C<!-- lm: 0x11 11 -->
+<UL>
+<PRE>#include  "dhcalls.h"
+USHORT APIENTRY DevHelp_OpenFile (PFILEIOINFO pFileOpen);
+</PRE>
+<!-- lm: 0x2 11 -->
+<P>
+USHORT APIENTRY DevHlp_OpenFile<!-- lm: 0x2 26 -->
+<UL> ( PFILEIOINFO pFileOpen)
+<!-- lm: 0x2 11 --><!-- lm: 0x2 11 -->
+</UL>pFILEIOINFO  input<!-- lm: 0x2 26 -->
+<UL> Pointer
+to the FILEIOINFO structure defined as follows 
+<PRE>typedef struct FOPEN {
+        PSZ    FileName;   /* (input) pointer to file name */
+        ULONG  FileSize;   /* (output) size of file returned by FileOpen */
+} FILEOPEN;
+
+typedef struct FCLOSE {
+        USHORT  reserved   /* reserved */
+} FILECLOSE;
+
+typedef struct FREAD {
+        PBYTE Buffer;     /* (input) pointer to input buffer */
+        ULONG ReadSize;   /* (input) number of bytes to read fromfile */
+} FILEREAD;
+
+typedef struct FREADAT {
+        PBYTE Buffer;        /* (input) pointer to input buffer */
+        ULONG ReadSize;      /* (input) number of bytes to read from file */
+        ULONG StartPosition  /* (input) starting file position relative to
+                                 the beginning of the file */
+} FILEREADAT;
+
+typedef union FILEIOOP {
+        struct FOPEN FileOpen;
+        struct FCLOSE FileClose;
+        struct FREAD FileRead;
+        struct FREADAT FileReadAt;
+} FILEIOOP;
+
+typedef struc _DDFileIo {
+        USHORT Length; /* (input) length of imbedded structure */
+        FILEIOOP Data; /* (input) imbedded file system operation structure */
+} FILEIOINFO, FAR * PFILEIOINFO
+</PRE>
+<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+Results in C<!-- lm: 0x11 11 -->
+<UL> Success Indicator  0 if file was opened..
+<!-- lm: 0x2 11 -->
+<P>
+24<B> ERROR_BAD_LENGTH</B><!-- lm: 0x2 26 -->
+<UL> Length in the FILEIOINFO
+structure is invalid.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+Remarks<!-- lm: 0x11 11 -->
+<UL> DevHlp_OpenFile may be called at initialization
+time only. It provides a primitive interface to the mini-IFS or micro_IFS
+at initialization time.
+<P>
+Drive and path information is ignored. The system searches for the file
+in the root, \OS2 and \OS2\BOOT directories of the boot drive/device.
+<P>
+Using this interface, one file only may be opened at a time. No handle is
+assigned. Subsequent read and close requests assume the file is the most
+recent opened using DevHlp_OpenFile.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="014_L2_DevHlp_KillProc.html">[Back: DevHlp_KillProc]</A> <BR>
+<A HREF="016_L2_DevHlp_PerfSysTrace.html">[Next: DevHlp_PerfSysTrace]</A> 
+</BODY>
+</HTML>

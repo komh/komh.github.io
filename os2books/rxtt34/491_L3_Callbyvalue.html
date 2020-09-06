@@ -1,0 +1,316 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Call by value</TITLE>
+</HEAD>
+<BODY>
+<H1>Call by value</H1><!-- entering slot 509 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+In classic REXX it is not possible to use a variable as parameter for the
+call statement (in <A HREF="269_L1_HintsforObjectREXX.html">Object-Oriented
+REXX</A> it is; see <A HREF="282_L2_NewfeaturesinObjectR.html">New features
+in Object REXX that are useful in Classic REXX programs also</A>)
+<P>
+To get around this you can use either the interpret statement or a combination
+of the call and the signal statement.
+<P>
+The following code is an example for the usage of the interpret statement.
+This code works for all type of functions and subroutines:
+<PRE> 
+/* example using the interpret statement                              */
+
+/* ------------- example for calling a sub routine ------------------ */
+
+  '@cls'
+                    /* name of the routine to call                    */
+  funcName = 'proc1'
+                    /* names of the global variables used by the      */
+                    /* function                                       */
+  exposeList = ''
+                    /* parameter for the routine                      */
+  parameter1 = '11'
+  parameter2 = '22'
+
+  say ''
+  say '[main] Now calling the routine "' || funcName || '" ...'
+  say '[main] The parameter are "' || parameter1 || '" and "'|| parameter2 || '"'
+
+                    /* now call the routine                           */
+  interpret call funcName parameter1 ',' parameter2
+
+/* ------------- example for calling a function --------------------- */
+
+                    /* name of the function to call                   */
+  funcName = 'Func2'
+                    /* names of the global variables used by the      */
+                    /* function                                       */
+  exposeList = ''
+                    /* parameter for the function                     */
+  parameter1 = '33'
+  parameter2 = '44'
+
+  say ''
+  say '[main] Now calling the function "' || funcName || '" ...'
+  say '[main] The parameter are "' || parameter1 || '" and "'|| parameter2 || '"'
+
+                    /* now call the function                          */
+  interpret 'thisResult = ' funcName || '(' parameter1 ',' parameter2 ')'
+
+  say '[main] The function "' || funcName || '" returned: "' || thisResult || '".'
+
+/* ------------- example for calling a DLL function ----------------- */
+
+                    /* name of the function to call                   */
+  funcName = 'SysCurPos'
+                    /* name of the global variables used by the       */
+                    /* function                                       */
+  exposeList = ''
+                    /* parameter for the DLL function                 */
+  parameter1 = '21'
+  parameter2 = '0'
+
+  say ''
+  say '[main] Now calling the DLL function "' || funcName || '" ...'
+  say '[main] The parameter are "' || parameter1 || '" and "'|| parameter2 || '"'
+
+                    /* now call the DLL function                      */
+  interpret 'thisResult = ' funcName || '(' parameter1 ',' parameter2 ')'
+
+  say '[main] The function "' || funcName || '" returned: "' || thisResult || '".'
+
+
+/* ------------- example for calling a builtin function ------------- */
+
+                    /* name of the function to call                   */
+  funcName = 'abs'
+                    /* names of the global variables used by the      */
+                    /* function                                       */
+  exposeList = ''
+                    /* parameter for the builtin function             */
+  parameter1 = '-2.121'
+
+  say ''
+  say '[main] Now calling the builtin function "' || funcName || '" ...'
+  say '[main] The parameter is "' || parameter1 || '"'
+
+                    /* now call the DLL function                      */
+  interpret 'thisResult = ' funcName || '(' parameter1 ')'
+
+  say '[main] The function "' || funcName || '" returned: "' || thisResult || '".'
+
+exit
+
+/* ------------------------------------------------------------------ */
+/* sample subroutine                                                  */
+/*                                                                    */
+/* Note: The first parameter is the name of the function              */
+/*                                                                    */
+proc1: PROCEDURE expose (exposeList)
+  parse arg arg1, arg2
+  say '[proc1] This is proc1'
+  say '[proc1] The first parameter is "' || arg1 || '"'
+  say '[proc1] The second parameter is "' || arg2 || '"'
+return
+
+/* ------------------------------------------------------------------ */
+/* sample function                                                    */
+/*                                                                    */
+/* Note: The first parameter is the name of the function              */
+/*                                                                    */
+FUNC2: PROCEDURE expose (exposeList)
+  parse arg  arg1, arg2
+  say '[func2] This is func2'
+  say '[func2] The first parameter is "' || arg1 || '"'
+  say '[func2] The second parameter is "' || arg2 || '"'
+return 2
+</PRE>
+
+<P>
+
+<P>
+The following code is an example for the usage of the combination of the
+call and the signal statement. This code works only for functions and sub
+routines in the program, for builtin functions and for functions from a
+DLL (see also <A HREF="222_L2_Redefinitionoffuncti.html">Redefinition of
+functions from a DLL</A> and <A HREF="221_L2_Redefinitionofintern.html">Redefinition
+of internal functions</A>):
+<PRE> 
+/* example using the combination of the call and the signal statement */
+/* (based on code found in a public newsgroup)                        */
+
+/* ------------- example for calling a sub routine ------------------ */
+
+  '@cls'
+                    /* name of the routine to call                    */
+  funcName = 'proc1'
+
+                    /* names of the global variables used by the      */
+                    /* called routine                                 */
+  exposeList = ''
+                    /* parameter for the routine                      */
+  parameter1 = '11'
+  parameter2 = '22'
+
+  say ''
+  say '[main] Now calling the routine "' || funcName || '" ...'
+  say '[main] The parameter are "' || parameter1 || '" and "'|| parameter2 || '"'
+
+                    /* now call the routine                           */
+  call Dispatcher funcName , parameter1 , parameter2
+
+/* ------------- example for calling a function --------------------- */
+
+                    /* name of the function to call                   */
+  funcName = 'func2'
+                    /* names of the global variables used by the      */
+                    /* function                                       */
+  exposeList = ''
+                    /* parameter for the function                     */
+  parameter1 = '33'
+  parameter2 = '44'
+
+  say ''
+  say '[main] Now calling the function "' || funcName || '" ...'
+  say '[main] The parameter are "' || parameter1 || '" and "'|| parameter2 || '"'
+
+                    /* now call the function                          */
+  thisResult = Dispatcher( funcName , parameter1, parameter2 )
+
+  say '[main] The function "' || funcName || '" returned: "' || thisResult || '".'
+
+/* ------------- example for calling a DLL function ----------------- */
+
+                    /* name of the function to call                   */
+  funcName = 'SysCurPos'
+                    /* names of the global variables used by the      */
+                    /* function                                       */
+  exposeList = ''
+                    /* parameter for the DLL function                 */
+  parameter1 = '21'
+  parameter2 = '0'
+
+  say ''
+  say '[main] Now calling the DLL function "' || funcName || '" ...'
+  say '[main] The parameter are "' || parameter1 || '" and "'|| parameter2 || '"'
+
+
+                    /* now call the DLL function                      */
+  thisResult = Dispatcher( funcName , parameter1, parameter2 )
+
+  say '[main] The function "' || funcName || '" returned: "' || thisResult || '".'
+
+/* ------------- example for calling a builtin function ------------- */
+
+                    /* name of the function to call                   */
+  funcName = 'abs'
+                    /* names of the global variables used by the      */
+                    /* function                                       */
+  exposeList = ''
+                    /* parameter for the builtin function             */
+  parameter1 = '-2.121'
+
+  say ''
+  say '[main] Now calling the builtin function "' || funcName || '" ...'
+  say '[main] The parameter is "' || parameter1 || '"'
+
+                    /* now call the builtin function                  */
+  thisResult = Dispatcher( funcName , parameter1, parameter2 )
+
+  say '[main] The function "' || funcName || '" returned: "' || thisResult || '".'
+
+exit
+
+/* ------------------------------------------------------------------ */
+/* help routine                                                       */
+/*                                                                    */
+/* usage: Dispatcher name_of_the_routine {parameter_for_the_routine}  */
+/*                                                                    */
+/* Note: The parameter for the signal statement must be in UPPERCASE! */
+/*                                                                    */
+Dispatcher: PROCEDURE expose (exposeList)
+  parse upper arg label
+  signal value label
+
+/* ------------------------------------------------------------------ */
+/* sample subroutine                                                  */
+/*                                                                    */
+/* Note: The first parameter is the name of the function              */
+/*       You can not use PROCEDUE here!                               */
+/*                                                                    */
+proc1:
+  parse arg , arg1, arg2
+  say '[proc1] This is "' || arg(1)  || '".'
+  say '[proc1] The first parameter is "' || arg1 || '"'
+  say '[proc1] The second parameter is "' || arg2 || '"'
+return
+
+/* ------------------------------------------------------------------ */
+/* sample function                                                    */
+/*                                                                    */
+/* Note: The first parameter is the name of the function              */
+/*       You can not use PROCEDUE here!                               */
+/*                                                                    */
+FUNC2:
+  parse arg , arg1, arg2
+  say '[func2] This is "' || arg(1)  || '".'
+  say '[func2] The first parameter is "' || arg1 || '"'
+  say '[func2] The second parameter is "' || arg2 || '"'
+return 2
+
+/* ------------------------------------------------------------------ */
+/* sample placeholder for builtin function                            */
+/*                                                                    */
+/* Note: The first parameter is the name of the function              */
+/*       You can not use PROCEDUE here!                               */
+/*                                                                    */
+                        /* new SysCurPos function                     */
+SysCurPos:
+  parse arg , p1,p2
+
+  say '[SysCurPos] This is "' || arg(1)  || '".'
+
+  say '[SysCurPos] The first parameter is "' || p1 || '"'
+  say '[SysCurPos] The second parameter is "' || p2 || '"'
+
+                        /* check the type of the parameter            */
+  if datatype( p1 ) &lt;&gt; "NUM" | datatype( p2 ) &lt;&gt; "NUM" then
+    thisRC = "Invalid parameter!"
+  else
+  do
+                        /* load the original function if not already  */
+                        /* loaded                                     */
+    if RxFuncQuery( "SysCurPos" ) then
+      call RxFuncAdd "SysCurPos", "REXXUTIL", "SysCurPos"
+
+                        /* call the original function                 */
+    thisRC = "SYSCURPOS"( p1,p2 )
+  end /* else */
+RETURN thisRC
+
+/* ------------------------------------------------------------------ */
+/* sample placeholder for a builtin function                          */
+/*                                                                    */
+/* Note: The first parameter is the name of the function              */
+/*       You can not use PROCEDUE here!                               */
+/*                                                                    */
+                        /* new abs function                           */
+abs:
+  parse arg , p1
+  say '[abs] This is "' || arg(1)  || '".'
+  say '[abs] The first parameter is "' || p1 || '"'
+
+                        /* note: The name of the builtin functio must */
+                        /*       be in uppercase!                     */
+  return "ABS"(p1)
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="490_L3_CallanotherCMDbyvalu.html">[Back: Call another CMD by value]</A> <BR>
+<A HREF="492_L3_GetthecurrentOS2vers.html">[Next: Get the current OS/2 version (w/o REXXUTIL)]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,59 @@
+<HTML>
+<HEAD>
+<TITLE>MMIOM_QUERYHEADERLENGTH</TITLE>
+</HEAD>
+<BODY>
+<H1>MMIOM_QUERYHEADERLENGTH</H1><!-- entering slot 145 -->
+<P>
+This message requests the IOProc to return the size of the header for the
+current file or file element opened by mmioOpen.  The mmioQueryHeaderLength
+function issues a MMIOM_QUERYHEADERLENGTH message to determine the buffer
+size that is needed by mmioGetHeader to obtain header data.  This is necessary
+because headers vary in length.
+<P>
+To implement this message, save the current file position by using mmioSeek,
+then issue a call to mmioRead to read the size of the header into a buffer.
+ The read can be done without a seek because mmioQueryHeaderLength saves
+the current file position when the call is issued.  It seeks the file to
+its beginning, then seeks it back to the saved file position after the IOProc
+is called.  The use of mmioRead is important here if the file is using buffered
+I/O so that all of MMIO's internal data fields are properly maintained throughout
+the message processing.  It will allow subsequent file reads after this
+message is called to occur at the proper place in the file.
+<P>
+The following example shows an example of how the M-Motion IOProc supports
+the MMIOM_QUERYHEADERLENGTH message.
+<PRE>case MMIOM_QUERYHEADERLENGTH:
+    {
+    /************************************************************
+     * If there is no MMIOINFO block then return an error.
+     ************************************************************/
+    if (!pmmioinfo)
+        return (0);
+
+    /************************************************************
+     * If header is in translated mode then return the media
+     * type specific structure size.
+     ************************************************************/
+    if (pmmioinfo-&gt;ulTranslate &amp; MMIO_TRANSLATEHEADER)
+        return (sizeof (MMIMAGEHEADER));
+
+    else
+        /********************************************************
+         * Header is not in translated mode so return the size
+         * of the M-Motion header.
+         ********************************************************/
+        return (sizeof (MMOTIONHEADER));
+
+    break;
+    } /* end case of MMIOM_QUERYHEADERLENGTH */
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="114_L3_MMIOM_GETFORMATNAME.html">[Back: MMIOM_GETFORMATNAME]</A> <BR>
+<A HREF="116_L3_MMIOM_GETHEADER.html">[Next: MMIOM_GETHEADER]</A> 
+</BODY>
+</HTML>

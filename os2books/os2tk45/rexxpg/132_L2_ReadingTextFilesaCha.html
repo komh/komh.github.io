@@ -1,0 +1,84 @@
+<HTML>
+<HEAD>
+<TITLE>Reading Text Files a Character at a Time</TITLE>
+</HEAD>
+<BODY>
+<H1>Reading Text Files a Character at a Time</H1><!-- entering slot 139 -->
+<P>
+You may be wondering whether you can use the CHARIN and other character
+methods on text files. You can. Because you are reading the file as characters,
+however, CHARIN returns the line-end characters to your program. Line methods,
+you'll recall, don't return the line-end characters to your program.
+<P>
+The line-end characters on OS/2 consist of a carriage return (ASCII value
+of 13) and a line feed (ASCII value of 10). REXX adds these characters to
+the end of every line written using the LINEOUT method. Text-processing
+applications such as the OS/2 Enhanced Editor also add the characters. When
+reading a text file with CHARIN, interpret an ASCII sequence of 13 followed
+by 10 as the end of a line.
+<P>
+To see what we mean, run the following program. It writes lines to a file
+using LINEOUT and then reads those lines using CHARIN. (Yes, you can intermix
+the use of line methods and character methods.) REXX maintains separate
+read and write pointers, so there is no need to close the file or seek to
+another position before reading the lines just written.
+<PRE>/* LINECHAR.CMD -- demonstrate line end characters                  */
+file=.stream~new('test.dat')  /* Create a new stream object         */
+
+file~open('both replace')  /* Open the file for reading and writing */
+do i=1 to 3                /* Write three lines to the file         */
+   file~lineout('Line' i)
+end /* do */
+
+do while file~chars&lt;&gt;0     /* Read the file a character at a time   */
+   byte=file~charin        /* Read a character                      */
+   ascii_value=byte~c2d    /* Convert character to a decimal value  */
+   if ascii_value=13 then        /* Carriage return?                */
+      say 'Carriage return'
+   else if ascii_value=10 then   /* Line feed?                      */
+      say 'Line feed'
+   else say byte ascii_value     /* Ordinary character              */
+end /* do */
+file~close                       /* Close the file                  */
+</PRE>
+
+<P>
+Many text-processing programs also write an end-of-file character (ASCII
+value 26) after the last line. You'll want to check for that character also
+when processing text files with character methods. To see for yourself,
+use the OS/2 Enhanced Editor for Presentation Manager (EPM) to edit the
+TEST.DAT file created by the preceding example. From EPM you don't need
+to make any changes. Simply save and close the file by pressing the F4 key.
+EPM will add the end-of-file character to the file. Then run the following
+program to verify it:
+<PRE>/* EPMCHAR.CMD -- demonstrate end-of-file characters                */
+file=.stream~new('test.dat')  /* Create a new stream object         */
+
+do while file~chars&lt;&gt;0     /* Read the file a character at a time   */
+   byte=file~charin        /* Read a character                      */
+   ascii_value=byte~c2d    /* Convert character to a decimal value  */
+   if ascii_value=13 then        /* Carriage return?                */
+      say 'Carriage return'
+   else if ascii_value=10 then   /* Line feed?                      */
+      say 'Line feed'
+   else if ascii_value=26 then   /* End of file?                    */
+      say 'End of File'
+   else say byte ascii_value     /* Ordinary character              */
+end /* do */
+</PRE>
+
+<P>
+REXX doesn't write end-of-file characters when it closes a file that has
+been opened for writing.
+<P>
+Can you use line methods to read binary files? It's not recommended. Your
+binary file might not contain any new-line characters. And, if it did, the
+characters probably aren't meant to be interpreted as new-line characters.
+
+
+<P><HR>
+
+<A HREF="131_L2_ReadingBinaryFiles.html">[Back: Reading Binary Files]</A> <BR>
+<A HREF="133_L2_WritingBinaryFiles.html">[Next: Writing Binary Files]</A> 
+</BODY>
+</HTML>

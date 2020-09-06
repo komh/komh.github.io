@@ -1,0 +1,130 @@
+<HTML>
+<HEAD>
+<TITLE>Using EHLLAPI</TITLE>
+</HEAD>
+<BODY>
+<H1>Using EHLLAPI</H1><!-- entering slot 57 -->
+<P>
+The OS/2 Emulator High-Level Language Application Programming Interface
+(EHLLAPI) supported in Communication Manager allows OS/2 application programs
+to interact with a host system using 3270 terminal emulation or 5250 Work
+Station Feature.  DBCS unique-considerations on EHLLAPI are:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Operator Information Area (OIA)
+<P>
+Some characters showing the status of a 3270 session or a 5250 session on
+DBCS OS/2 are different from those on SBCS OS/2, because those are not available
+on DBCS code pages.
+<P>
+Some error status indicators are also added to inform a user of a DBCS-related
+status.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Session Options
+<P>
+<B>EAD/NOEAD</B>,<B> SO/NOSO/SPACESO</B> have been added to DBCS OS/2:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+EAD<!-- lm: 0x2 21 -->
+<UL> Extended Attribute for DBCS
+<P>
+Along with the data in presentation space, DBCS-unique display attributes
+are passed to an application program. A program receives additional two
+bytes of information of the attributes on every byte of data.  When you
+specify<B> EAD</B>, a buffer having twice the size of presentation space,
+in addition to a buffer for user's data, is required to receive the DBCS-unique
+display attributes. For example, 3840 bytes are needed to store the DBCS
+unique attributes for 3270 model 2.<!-- lm: 0x2 6 -->
+</UL> NOEAD<!-- lm: 0x2 21 -->
+<UL> negation
+of EAD<!-- lm: 0x2 6 -->
+</UL> SO<!-- lm: 0x2 21 -->
+<UL> Shift-Out (SO)
+and Shift-In (SI) control characters are converted to 0EH and 0FH, and are
+passed to an application program.<!-- lm: 0x2 6 -->
+</UL> NOSO<!-- lm: 0x2 21 -->
+<UL> SO/SI
+control characters are removed from data.<!-- lm: 0x2 6 -->
+</UL> SPACESO
+<!-- lm: 0x2 21 -->
+<UL>SO/SI control characters are converted to 20H, and
+are passed to an application program.<!-- lm: 0x2 6 -->
+</UL><B> EAD/NOEAD
+</B>can be specified with:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 --><B>COPY PRESENTATION SPACE</B><!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 11 --><B>COPY PRESENTATION SPACE TO STRING</B><!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 11 --><B>COPY STRING TO PRESENTATION SPACE</B><!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 11 --><B>COPY STRING TO FIELD</B><!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 11 --><B>COPY FIELD TO STRING</B><!-- lm: 0x2 6 --><B> SO/NOSO/SPACESO
+</B>can be specified with:<!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 11 --><B>COPY PRESENTATION SPACE</B><!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 11 --><B>COPY PRESENTATION SPACE TO STRING</B><!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 11 --><B>COPY FIELD TO STRING</B><!-- lm: 0x2 6 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+Consult<I> DBCS Design Guide for OS/2 Programming (GA18-7284)</I> for more
+information on the DBCS EHLLAPI usage.
+<P>
+The 3270 Screen Capturte program shows you how to copy a host screen having
+DBCS data.  It copies presentation space of the emulator 'A' and shows the
+ contents of the presentation space into a PM window. SO/SI control characters
+are replaced with arrow marks (1EH and 1FH) in the window.
+<P>
+The window is redrawn when the emulator screen changes or when the window
+is re-sized by an operator. When the window is re-sized, the program automatically
+selects appropriate size of DBCS font so that all of the contents will be
+fitted into the window. ExampleofEHLLAPIusage( source :EHLLAPI . C )
+<BR>
+
+<PRE>...
+void GetPS(CHAR *ssprm) {
+...
+   /*--- Connect Presentation Space --------------------------*/
+   fcode = 1;
+   hllapi(&amp;fcode, ssprm, (int far *)0L, &amp;rc);
+
+   /*--- Set Session Parameters ------------------------------*/
+   fcode = 9;
+   pcSprm = "SO";
+   dlen = strlen(pcSprm);
+   hllapi(&amp;fcode, pcSprm, &amp;dlen, &amp;rc);
+
+   /*--- Copy Presentation Space -----------------------------*/
+   fcode = 5;
+   dlen = 0;
+   hllapi(&amp;fcode, tempbuf, &amp;dlen, &amp;rc);
+   for (i = 0; i &lt; SCREENSIZE; ++i) {
+      PS_CHR(i, 0) = tempbuf[i];
+   }
+   /*--- Change SO/SI to pseudo SO/SI ------------------------*/
+   for (i = 0; i &lt; SCREENSIZE; ++i) {
+      switch (PS_CHR(i, 0)) {
+         case 0x0e:
+            /*--- Translate SO(0x0E) into 0x1E(Right Arrow) --*/
+            PS_CHR(i, 0) = 0x1e;
+            break;
+         case 0x0f:
+            /*--- Translate SI(<!-- entering slot 58 -->0x0F) into 0x1F(Left Arrow) ---*/
+            PS_CHR(i, 0) = 0x1f;
+            break;
+      }
+   }
+...
+</PRE>
+
+
+<P><HR>
+
+<A HREF="048_L4_WinCpTranslateString.html">[Back: WinCpTranslateString]</A> <BR>
+<A HREF="050_L1_Supportedcodepageson.html">[Next: Supported code pages on OS/2 V2.1]</A> 
+</BODY>
+</HTML>

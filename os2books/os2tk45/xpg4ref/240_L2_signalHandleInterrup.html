@@ -1,0 +1,203 @@
+<HTML>
+<HEAD>
+<TITLE>signal - Handle Interrupt Signals</TITLE>
+</HEAD>
+<BODY>
+<H1>signal - Handle Interrupt Signals</H1><!-- entering slot 260 -->signal - Handle Interrupt Signals<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>#include &lt;signal.h&gt;
+void ( *signal(int <I>sig</I>, void (*<I>sig_handler</I>)(int)) )(int);
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Description
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+signal function assigns the signal handler<I> sig_handler</I> to handle
+the interrupt signal<I> sig</I>. Signals can be reported as a result of
+a machine interrupt (for example, division by zero) or by an explicit request
+to report a signal by using the raise function.
+<P>
+The<I> sig</I> argument must be one of the signal constants defined in &lt;signal.h&gt;:
+ compact break=fit.<B><!-- lm: 0x2 10 -->
+<P>
+Value<!-- lm: 0x2 26 -->
+<UL> Meaning</B><!-- lm: 0x2 10 -->
+</UL> SIGABRT
+<!-- lm: 0x2 26 -->
+<UL>Abnormal termination signal sent by abort. Default
+action: end the program.<!-- lm: 0x2 10 -->
+</UL> SIGBREAK<!-- lm: 0x2 26 -->
+<UL> Ctrl-Break
+signal. Default action: end the program.<!-- lm: 0x2 10 -->
+</UL> SIGFPE
+<!-- lm: 0x2 26 -->
+<UL>Floating-point exceptions that are not masked, such
+as overflow, division by zero, and invalid operation.  Default action: end
+the program and provide an error message. If machine-state dumps are enabled,
+a dump is also provided.<!-- lm: 0x2 10 -->
+</UL> SIGILL<!-- lm: 0x2 26 -->
+<UL> Instruction
+not allowed.  Default action: end the program and provide an error message.
+If machine-state dumps are enabled, a dump is also provided.<!-- lm: 0x2 10 -->
+</UL> SIGINT
+<!-- lm: 0x2 26 -->
+<UL>Ctrl-C signal. Default action: end the program.
+<!-- lm: 0x2 10 -->
+</UL>SIGSEGV<!-- lm: 0x2 26 -->
+<UL> Access to memory
+not valid. Default action: end the program and provide an error message.
+If machine-state dumps are enabled, a dump is also provided.<!-- lm: 0x2 10 -->
+</UL> SIGTERM
+<!-- lm: 0x2 26 -->
+<UL>Program termination signal sent by the user. Default
+action: end the program.<!-- lm: 0x2 10 -->
+</UL> SIGUSR1<!-- lm: 0x2 26 -->
+<UL> Defined
+by the user. Default action: ignore the signal.<!-- lm: 0x2 10 -->
+</UL> SIGUSR2
+<!-- lm: 0x2 26 -->
+<UL>Defined by the user. Default action: ignore the
+signal.<!-- lm: 0x2 10 -->
+</UL> SIGUSR3<!-- lm: 0x2 26 -->
+<UL> Defined
+by the user. Default action: ignore the signal.<!-- lm: 0x2 10 -->
+</UL>
+<P>
+For<I> sig_handler</I>, you must specify either the SIG_DFL or SIG_IGN constant
+(also defined in &lt;signal.h&gt;), or the address of a function that takes
+an integer argument (the signal). The action taken when the interrupt signal
+is received depends on the value of<I> sig_handler</I>:<B><!-- lm: 0x2 10 -->
+<P>
+Value<!-- lm: 0x2 26 -->
+<UL> Meaning</B><!-- lm: 0x2 10 -->
+</UL> SIG_DFL
+<!-- lm: 0x12 26 -->
+<UL>Perform the default action. This is the initial
+setting for all signals. The default actions are described in the list of
+signals above. All files controlled by the process are closed, but buffers
+are not flushed.<!-- lm: 0x2 10 -->
+</UL> SIG_IGN<!-- lm: 0x12 26 -->
+<UL> Ignore
+the interrupt signal.<!-- lm: 0x2 10 -->
+</UL><I> sig_handler</I><!-- lm: 0x12 26 -->
+<UL> Call
+the function<I> sig_handler</I>, which you provide, to handle the signal
+specified.<!-- lm: 0x2 10 -->
+</UL>
+<P>
+Your signal handler function (<I>sig_handler</I>) must take two integer
+arguments. The first argument is always the signal identifier. The second
+argument is 0, unless the signal is SIG_FPE. For SIG_FPE signals, the second
+argument passed is a floating-point error signal as defined in &lt;float.h&gt;.
+If your<I> sig_handler</I> returns, the calling process resumes running
+immediately following the point at which it received the interrupt signal.
+
+<P>
+After a signal is reported and the<I> sig_handler</I> is called, signal
+handling for that signal is reset to the default. Depending on the purpose
+of the signal handler, you may want to call signal inside<I> sig_handler
+</I>to reestablish<I> sig_handler</I> as the signal handler. You can also
+reset the default handling at any time by calling signal and specifying
+SIG_DFL.
+<P>
+Signals and signal handlers are not shared between threads. If you do not
+establish a handler for a specific signal within a thread, the default signal
+handling is used regardless of what handlers you may have established in
+other concurrent threads.
+<P>
+<B>Note: </B> If an exception occurs in a math or critical library function,
+it is handled by<I> The Developer's Toolkit</I> exception handler. Your
+<I>sig_handler</I> will<B> not</B> be called. For more information about
+signals and exceptions, refer to "Signal and OS/2 Exception Handling" in
+the<I> Programming Guide</I>.<!-- lm: 0x2 10 -->
+<P>
+<!-- lm: 0x2 1 -->
+</UL>Returns
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+All calls to signal return the address of the previous handler for the re-assigned
+signal.
+<P>
+A return value of SIG_ERR (defined in &lt;signal.h&gt;) indicates an error,
+and<!-- entering slot 261 --> errno is set to EINVAL. The possible causes
+of the error are an incorrect<I> sig</I> value or an undefined value for
+<I>sig_handler</I>.<!-- lm: 0x2 1 -->
+</UL> Example Code
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+In the following example, the call to signal in main establishes the function
+handler to process the interrupt signal raised by abort. The handler prints
+a message and returns to the system.
+<PRE>#define INCL_DOSFILEMGR#include &lt;os2.h&gt;
+#include &lt;signal.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+
+void handler(int sig)
+{
+   UCHAR FileData[100];
+   ULONG Wrote;
+
+   strcpy(FileData, "Signal occurred.\n\r");
+   DosWrite(2, (PVOID)FileData, strlen(FileData), &amp;Wrote);
+}
+
+int main(void)
+{
+   if (SIG_ERR == signal(SIGABRT, handler)) {
+      perror("Could not set SIGABRT");
+      return EXIT_FAILURE;
+   }
+   abort();                             /* signal raised by abort             */
+   return 0;                            /* code should not reach here         */
+
+   /****************************************************************************
+      The output should be:
+
+      Signal occurred.
+   ****************************************************************************/
+}
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Related Information
+<P>
+<!-- lm: 0x2 10 -->
+<UL><!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 --><A HREF="056_L2_abortStopaProgram.html">abort</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="064_L2_atexitRecordProgramT.html">atexit
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="105_L2_exitEndProgram.html">exit</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="106_L2__exitEndProcess.html"><LI>exit</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="217_L2_raiseSendSignal.html">raise</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="244_L2__spawnl_spawnvpeStar.html"><LI>spawnl
+- _spawnvpe</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><LI>Signal and OS/2 Exception Handling" in the<I> Programming
+Guide</I><!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="239_L2_setvbufControlBuffer.html">[Back: setvbuf - Control Buffering]</A> <BR>
+<A HREF="241_L2_sinCalculateSine.html">[Next: sin - Calculate Sine]</A> 
+</BODY>
+</HTML>

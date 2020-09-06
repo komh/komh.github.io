@@ -1,0 +1,231 @@
+<HTML>
+<HEAD>
+<TITLE>Inserting External Settings Pages</TITLE>
+</HEAD>
+<BODY>
+<H1>Inserting External Settings Pages</H1><!-- entering slot 188 -->
+<P>
+The following approach shows you how to insert settings pages in the Multimedia
+Setup notebook, where the code for the settings pages exists outside the
+Multimedia Setup program itself.  This is applicable in situations where
+you want to insert an external settings page for configuration items that
+are not strictly related to a particular MCD.  For example, pages that apply
+to the system or to all media control interface devices of a particular
+class.
+<P>
+<B>Note: </B> To insert a settings page for a particular MCD, see <A HREF="057_L2_InsertingPagesintheM.html">Inserting
+Pages in the Multimedia Setup Notebook</A>.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+MDM uses the MMPM2.INI file to maintain a data base of installed multimedia
+components and devices.  MMPM2.INI is initialized by the MINSTALL program.
+ Additional sections in the MMPM2.INI file are initialized based on information
+contained in the keywords in an installation control file, or as requested
+by an application calling MDM to make the change.
+<P>
+You can write an INI change control file containing the ProfileData structure
+to define external pages by following these steps:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Write a function to create the settings page.
+The function should be of the prototype shown in the following example.
+
+<PRE>  HWND InsertExamplePage(PMCI_DEVICESETTINGS_PARMS pMCIDevSettings)
+
+  {
+    HWND  hwndPage;               /* Page window handle    */
+    CHAR  szTabText[CCHMAXPATH];  /* Buffer for tab string */
+    ULONG ulPageId;               /* Page Identifier       */
+
+/*******************************************************************/
+/*   Load a modeless secondary window                              */
+/*******************************************************************/
+    hwndPage    = WinLoadSecondaryWindow(
+                         pMCIDevSettings-&gt;hwndNotebook,
+                         pMCIDevSettings-&gt;hwndNotebook,
+                         ExamplePageDlgProc,
+                         vhmodMRI,
+                         ID_EXAMPLE,
+                         (PVOID)pMCIDevSettings);
+
+    if (!hwndPage) return (NULL);
+
+    ulPageId = (ULONG)WinSendMsg( pMCIDevSettings-&gt;hwndNotebook,
+                         BKM_INSERTPAGE,
+                         (ULONG)NULL,
+                         MPFROM2SHORT( BKA_AUTOPAGESIZE |
+                         BKA_MINOR, BKA_LAST ) );
+/*******************************************************************/
+/*  Associate a secondary window with a notebook page.             */
+/*******************************************************************/
+
+    WinSendMsg(pMCIDevSettings-&gt;hwndNotebook, BKM_SETPAGEWINDOWHWND,
+              MPFROMP( ulPageId ), MPFROMLONG( hwndPage ) );
+
+/*******************************************************************/
+/*  Get Tab Text from DLL                                          */
+/*******************************************************************/
+
+    WinLoadString(WinQueryAnchorBlock( HWND_DESKTOP ), vhmodMRI,
+           (USHORT)IDB_EXAMPLE, CCHMAXPATH, szTabText );
+
+/*******************************************************************/
+/*  Set Tab Text                                                   */
+/*******************************************************************/
+
+    WinSendMsg( pMCIDevSettings-&gt;hwndNotebook, BKM_SETTABTEXT,
+          MPFROMP( ulPageId ), szTabText );
+
+    return( hwndPage );
+
+ }
+
+ typedef struct {
+    HWND hwndHelpInstance;
+ } MMPAGEINFO;
+ typedef MMPAGEINFO * PMMPAGEINFO;
+
+/*******************************************************************/
+/*  Modeless secondary window procedure                            */
+/*******************************************************************/
+
+ MRESULT EXPENTRY ExamplePageDlgProc (HWND hwnd, USHORT msg,
+                                      MPARAM mp1, MPARAM mp2)
+
+ PMMPAGEINFO pMMPageInfo = (PMMPAGEINFO)
+                            WinQueryWindowPtr (hwnd, QWL_USER);
+
+   switch (msg) {
+      case WM_INITDLG:
+         /* Initialize The Page */
+         pMMPageInfo = (PMMPAGEINFO) malloc(sizeof(MMPAGEINFO));
+         WinSetWindowPtr (hwnd, QWL_USER, pMMPageInfo);
+
+         /* Create a Help Instance */
+         pMMPageInfo-&gt;hwndHelpInstance = WinCreateHelpInstance(...);
+         break;
+
+      case WM_DESTROY:
+         /* Clean up page window resources */
+          WinDestroyHelpInstance (pMMPageInfo-&gt;hwndHelpInstance);
+          free (pMMPageInfo);
+          break;
+
+      case WM_COMMAND:
+          /* Process All Commands */
+          return ((MRESULT) FALSE);
+          break;
+
+      case MM_TABHELP:
+          /* Display help for a tab */
+          if (pMMPageInfo-&gt;hwndHelpInstance) {
+              WinSendMsg(
+                  pMMPageInfo-&gt;hwndHelpInstance,
+                  HM_DISPLAY_HELP,
+                  MPFROMSHORT(WinQueryWindowUShort(hwnd, QWS_ID)),
+                  HM_RESOURCEID );
+           }
+           break;
+
+      case WM_CLOSE:
+          return ((MRESULT) FALSE);
+          break;
+
+      case WM_HELP:
+          if (pMMPageInfo-&gt;hwndHelpInstance) {
+              WinSendMsg(
+                   pMMPageInfo-&gt;hwndHelpInstance,
+                   HM_DISPLAY_HELP,
+                   (MPARAM) mp1,
+                   HM_RESOURCEID );
+           }
+           return ((MRESULT)TRUE);
+           break;
+
+      case WM_TRANSLATEACCEL:
+            return (<!-- entering slot 189 -->WinDefWindowProc (hwnd, msg, mp1, mp2));
+            break;
+
+      case HM_QUERY_KEYS_HELP:
+            return((MRESULT) IDH_HELPFORKEYS);
+            break;
+
+      }
+
+      return (WinDefSecondaryWindowProc(hwnd, msg, mp1, mp2));
+   }
+</PRE>
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Create an INI change control file containing
+the ProfileData structure as shown in the following example.
+<PRE>   ProfileData =
+      (
+      ini="$(DIR)0\\MMPM.INI"            /* Name of the INI file    */
+      appname="STPM_SettingsPage:7"      /* External settings pages */
+      keyname="UniqueName"               /* Name of the page        */
+      dll="RESDLLNAME"                   /* Resource DLL name       */
+      id=33L                             /* Resource ID             */
+      )
+</PRE>
+The external settings pages are stored with the<I> appname</I> of STPM_SettingsPage:#,
+where # is the string equivalent of MCI_DEVICETYPE_<I>xxx</I> values.  The
+# value of 0 indicates that the settings page is a system-oriented settings
+page.  The<I> keyname</I> value for an external settings page can be any
+unique name that identifies the page.  The<I> dll</I> value specifies the
+name of the DLL that contains a RCDATA resource with the value specified
+in the<I> id</I> field.  The<I> id</I> field is the resource ID of the RCDATA
+resource.  The value is a LONG numeric value; for example, 33L.
+<P>
+In addition to the INI change control file, you must load a resource DLL
+during installation. The value of the data item is a string that contains
+the module name and the entry point of the DLL that inserts a settings page.
+ The value string in the example shown in the following example is "MakePage,InsertExamplePage".
+
+<PRE>   RCDATA  33
+   BEGIN
+     "MakePage,InsertExamplePage"
+   END
+</PRE>
+
+<P>
+This script format loads a block of data from a RCDATA resource stored in
+a DLL, and writes it to a standard OS/2 INI file using the OS/2 PrfWriteProfileData
+function.  The ProfileData structure is discussed in more detail in <A HREF="138_L4_DefiningChangestoOth.html">Defining
+Changes to Other INI Files</A>.
+<P>
+<B>Note: </B> Entry points that are registered in this way will apply to
+all devices of the declared media control interface device type. Therefore,
+if a settings page is intended to apply to a particular device, then the
+function should verify that it is dealing with the appropriate device.<!-- lm: 0x2 6 -->
+<UL><!-- lm: 0x2 2 -->
+</UL>
+3.<!-- lm: 0x2 6 -->
+<UL>Specify the name of the INI change control file
+created in step 2 in CONTROL.SCR.<!-- lm: 0x2 2 -->
+</UL>  4.<!-- lm: 0x2 6 -->
+<UL>If
+you are writing an installation DLL, an external settings page can be installed
+by calling the OS/2 PrfWriteProfileData function directly as shown in the
+following example.
+<PRE>hini = PrfOpenProfile("c:\mmos2\mmpm.ini");
+PrfWriteProfileData (hini,
+                     "STPM_SettingsPage:7",         /* Appname      */
+                     "UniqueName",                  /* Keyname      */
+                     "MakePage, InsertExamplePage", /* Value        */
+                     "strlen("MakePage, InsertExamplePage")+1);
+                                                    /* Value length */
+PrfCloseProfile(hini);
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Refer to the<I> OS/2 Presentation Manager Guide and Reference</I> for
+more information on the PrfWriteProfileData function.
+
+<P><HR>
+
+<A HREF="146_L2_InstallinganIOProced.html">[Back: Installing an I/O Procedure]</A> <BR>
+<A HREF="148_L2_InstallationLOGFile.html">[Next: Installation LOG File]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,228 @@
+<HTML>
+<HEAD>
+<TITLE>Controlling the System From the Debugging Console</TITLE>
+</HEAD>
+<BODY>
+<H1>Controlling the System From the Debugging Console</H1><!-- entering slot 338 -->
+<P>
+Having set up the Kernel Debugger for a <A HREF="215_L2_KernelDebuggerLocalS.html">Local
+</A>or <A HREF="219_L2_KernelDebuggerRemote.html">Remote</A> debug session
+the system is ready to be controlled from the debugging console. The console
+is used in two modes, which for convenience we refer to as:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+Monitor mode, and<!-- lm: 0x2 6 -->
+<P>
+Command mode<!-- lm: 0x2 1 -->
+</UL>
+<P>
+In Monitor mode the console acts merely as a output device for displaying
+diagnostic messages from the debug kernel and debug versions any other of
+system modules that write messages to the debugger's COM port. In this mode
+it is not possible to enter <A HREF="262_L1_KernelDebuggerandDum.html">Kernel
+Debugger commands</A> without having first switched to command mode. In
+monitor mode the system runs more or less as a retail system except for
+the performance overheads imparted by the additional diagnostic code.
+<P>
+Monitor mode is in effect initially unless a <A HREF="218_L3_TheKDBINIInitialisat.html">KDB.INI
+</A>file is defined.
+<P>
+The console switches to monitor mode after <A HREF="299_L3_GGo.html">G command
+</A>is executed.
+<P>
+In Command mode normal system execution is suspended. The debug component
+of the kernel monitors the debugging console for command input and indicates
+this with using one of the following command prompts:<!-- lm: 0x2 1 -->
+<P>
+<B>&gt;</B><!-- lm: 0x2 7 -->
+<UL> Signifies that the system has been suspended
+while in real mode.<!-- lm: 0x2 1 -->
+</UL><B> #</B><!-- lm: 0x2 7 -->
+<UL> Signifies
+that the system has been suspended while in protect mode with paging disabled.
+<!-- lm: 0x2 1 -->
+</UL><B>-</B><!-- lm: 0x2 7 -->
+<UL> Signifies that the
+system has been suspended while in V86 mode with paging disabled.<!-- lm: 0x2 1 -->
+</UL><B> ##
+</B><!-- lm: 0x2 7 -->
+<UL>Signifies that the system has been suspended
+while in protect mode with paging enabled.<!-- lm: 0x2 1 -->
+</UL><B> --
+</B><!-- lm: 0x2 7 -->
+<UL>Signifies that the system has been suspended
+while in V86 mode with paging enabled.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+In addition to these prompts the Kernel Debugger also uses a data prompt
+when a commands require additional input. This is signified by a single
+colon prompt<B> :</B>. Commands such as <A HREF="309_L3_RSetorDisplayCurrent.html">R
+</A>and <A HREF="297_L3_EEnterDataIntoMemory.html">E</A> may use a data
+prompt.
+<P>
+Command mode is entered when one of the following events occur:<!-- lm: 0x2 1 -->
+<P>
+A fatal exception while executing in ring 0<!-- lm: 0x11 11 -->
+<UL> Any
+unrecoverable exception occurring in a device driver, file system driver
+or the OS/2 kernel will result in a fatal error if it is allowed to be intercepted
+by the system exception handlers. When this occurs it is usually not possible
+to restore the system to a running state.
+<P>
+The <A HREF="313_L3_VExceptionTrapFaultV.html">VTF command</A> may be used
+to intercept potentially fatal exceptions before the system's exception
+handlers receive control. If the exception condition is corrected manually
+then the system may continue to run after the <A HREF="299_L3_GGo.html">G
+command</A> is entered. See <A HREF="240_L2_TrapandExceptionProc.html">Trap
+and Exception Processing</A> for further information.<!-- lm: 0x2 1 -->
+</UL> An
+Internal Processing Error (IPE) occurs.<!-- lm: 0x11 11 -->
+<UL> Internal
+processing errors are unrecoverable conditions that are detected by the
+OS/2 kernel. Some of these are exceptions (described in the previous bullet);
+others are inconsistencies that arise from invalid logical conditions or
+invalid system data. Under the retail kernel IPEs result in the system halting.
+Under the debug kernel the console enters command mode after an error message
+is displayed. IPE messages may be suppressed from displaying as a hard error
+popups by setting the byte at symbol:<B> fDebugOnly</B> to a non-zero value.
+Under the debug kernel some IPEs are generated for recoverable conditions
+and allow the system to continue execution after the <A HREF="299_L3_GGo.html">G
+command</A> is entered. An example of a recoverable IPE is where the loader
+detects a<I> bad</I> or mismatched symbol file for a module it is loading.
+When this occurs the system displays message:
+<PRE>    Internal Symbol Error</PRE>
+
+<P>
+Command mode is entered. If the<B> G</B> command is subsequently issued
+the system will be allowed to continue execution without the<I> bad</I> symbol
+file being activated.<!-- lm: 0x2 1 -->
+</UL> A<I><!-- entering slot 339 --> sticky
+</I><A HREF="3286_L0_.html">breakpoint</A> fires<!-- lm: 0x11 11 -->
+<UL><I> Sticky
+</I>breakpoints are set using the <A HREF="280_L3_BPSetorAlteraBreakpo.html">BP
+</A>and <A HREF="281_L3_BRSetorAlteraDebugRe.html">BR</A> commands. The
+system is may be returned to a running state after the <A HREF="299_L3_GGo.html">G
+command</A> is entered.<!-- lm: 0x2 1 -->
+</UL> An unhandled non-maskable
+interrupt (NMI).<!-- lm: 0x11 11 -->
+<UL> NMIs normally signal hardware
+error conditions. Under the RETAIL kernel these usually result in TRAP 2
+fatal exceptions unless an NMI handler has been registered by a device driver.
+Under the debug kernel, unhandled NMIs cause control to be given to the
+debugging console from which it is possible to return the system to a running
+state using the <A HREF="299_L3_GGo.html">G command</A>.
+<P>
+NMIs are may be generated from several sources, which include:<!-- lm: 0x2 11 -->
+<P>
+Channel Check<!-- lm: 0x11 26 -->
+<UL> This occurs when an I/O card activates
+the channel check signal.<!-- lm: 0x2 11 -->
+</UL> Memory parity error<!-- lm: 0x11 26 -->
+<UL> This
+occurs when memory capable of parity bit generation, detects a parity discrepancy
+as memory is fetched from RAM.<!-- lm: 0x2 11 -->
+</UL> DMA bus time-out.
+<!-- lm: 0x11 26 -->
+<UL>This occurs when a DMA-driven device uses the bus
+for longer than the maximum allowed period of 7.8 microseconds.<!-- lm: 0x2 11 -->
+</UL> The
+watchdog timer interrupt.<!-- lm: 0x11 26 -->
+<UL> This occurs when the
+NMI watchdog (NWD) is enabled and timer interrupts (IRQ 0) are disabled
+causing loss of timer ticks. OS/2 maintains an NWD count, which If exceeds
+a maximum value then an IPE is generated. Some hardware/BIOS also maintains
+an NWD counter, but the precise details of the NWD mechanism are machine
+specific. For some systems the NWD may not be supported. For further information
+refer to the appropriate hardware and BIOS reference literature for the
+machine type under consideration.<!-- lm: 0x2 11 -->
+</UL> Unless the NMI
+is masked off using by setting mask bit 0x80 in I/O port 0x70, the NMI channel
+check provides a means of breaking into the system even when it is disabled
+for (maskable) interrupts, that is, when the<B> CLI</B> instruction has
+been used to clear the interrupt flag in the<B> EFLAGS</B> register. An
+an ISA-bus system a prototype card may be used to implement the following
+circuit, which provides an NMI push-button switch:
+<PRE>               (-IOCHK)
+         A1  ÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                         ³
+                           ÃÄ   (NMI Push switch)
+                         ³
+         B1  ÄÄÄÄÄÄÄÄÄÄÄÄÙ
+               (Ground)
+
+
+</PRE>
+
+<P>
+<B>Note: </B>
+<P>
+OS/2 normally only disables NMIs during system initialisation and when the
+Kernel Debugger is running in command mode. However, the Kernel Debugger
+will allow only one attempt to break in using a channel check NMI, after
+which NMIs are disabled until the system is re-booted.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL> An
+<B>INT 3</B> instruction is executed<!-- lm: 0x11 11 -->
+<UL><B> INT 3</B> instructions
+are used by the system to implement tracing (see <A HREF="389_L1_SystemTraceFacilityU.html">The
+System Trace Facility</A>) and software <A HREF="3286_L0_.html">breakpoints</A>.
+However any program may use<B> INT 3</B> instructions freely under the Kernel
+Debugger to cause system execution to be suspended and the debugging console
+to switch to command mode.
+<P>
+<B>Note: </B>
+<P>
+Under the<B> RETAIL</B> kernel,<B> INT 3</B> instructions other than those
+<!-- entering slot 340 -->implemented by the system for tracing cause code
+to be terminated with a TRAP 3 exception.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL> The
+user enters<B> Ctrl-C</B> from the debugging console.<!-- lm: 0x11 11 -->
+<UL> Unless
+the system is in a disabled state, the user may type<B> Ctrl-C</B> from
+the debugging console at any time to cause immediate suspension of normal
+system execution and the console to switch to command mode.<!-- lm: 0x2 1 -->
+</UL> The
+user holds down the<B> r-key</B> from the debugging console at system initialisation
+time.<!-- lm: 0x11 11 -->
+<UL> If the<B> r-key</B> is held down at system
+initialisation time the debugging console will switch to command mode shortly
+after the OS2KRNL has entered real-mode for the first time. At this time
+no symbols have been loaded, paging has never been enabled and the<B> KDB.INI
+</B>file has not been processed.
+<P>
+<B>Note: </B>
+<P>
+In real-mode many of the Kernel Debugger external commands are not available
+(because the rely on Virtual Memory Management to be initialised). Attempts
+to use them may cause unpredictable results or even total system failure.
+<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>The holds down the<B> p-key</B> at
+the debugging console at system initialisation time.<!-- lm: 0x11 11 -->
+<UL> If
+the<B> p-key</B> is held down at system initialisation time the debugging
+console will switch to command mode shortly after the OS2KRNL has entered
+protect-mode for the first time. At this time no symbols have been loaded,
+paging is disabled and the<B> KDB.INI</B> file has not been processed.<!-- lm: 0x2 1 -->
+</UL> The
+user holds down the<B> Space-bar</B> from the debugging console at system
+initialisation time.<!-- lm: 0x11 11 -->
+<UL> If the<B> space-bar</B> is
+held down at system initialisation time the debugging console will switch
+to command mode shortly after the OS2KRNL has entered protect-mode and fully
+initialised. At this time OS2KRNL symbols have been loaded and paging is
+enabled but the<B> KDB.INI</B> file has not been processed.<!-- lm: 0x2 1 -->
+</UL> The
+<A HREF="218_L3_TheKDBINIInitialisat.html">KDB.INI</A> file is processed.
+<!-- lm: 0x11 11 -->
+<UL>If the<B> KDB.INI</B> file is present then the
+Kernel Debugger effectively enters command mode by executing Kernel Debugger
+commands from the<B> KDB.INI</B> file. After the last command is executed,
+the command prompt appears at the debugging console, unless that last command
+was a<B> G</B> command.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="228_L4_Troubleshooting.html">[Back: Troubleshooting]</A> <BR>
+<A HREF="230_L3_ControllingOutputtot.html">[Next: Controlling Output to the Debugging Console]</A> 
+</BODY>
+</HTML>

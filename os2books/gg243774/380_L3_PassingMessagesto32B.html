@@ -1,0 +1,83 @@
+<HTML>
+<HEAD>
+<TITLE>Passing Messages to 32-Bit Windows</TITLE>
+</HEAD>
+<BODY>
+<H1>Passing Messages to 32-Bit Windows</H1><!-- entering slot 422 -->
+<P>
+The technique described above handles messages passed to a window in a 16-bit
+module.  However, messages passed from that window to the 32-bit module
+may also require thunking.  In order to perform this thunking, the 32-bit
+application may define a<B> thunk procedure</B> and register this procedure
+to Presentation Manager, which then invokes the thunk procedure whenever
+a message is passed from within the window.
+<P>
+This registration is achieved using the<B> WinSetWindowThunkProc()</B> function,
+which is illustrated in <A HREF="116_L2_MixedModelProgrammin.html">Figure
+"Mixed Model Programming - WinSetWindowThunkProc() Function"</A>.
+<P>
+The<B> WinSetWindowThunkProc()</B> function call is made from the 32-bit
+module. Since the window class for the window has been registered in the
+16-bit module, Presentation Manager recognizes that the thunk procedure
+is to handle 16-bit to 32-bit conversion.
+<P>
+A thunk procedure may be deregistered, by issuing a<B> WinSetWindowThunkProc()
+</B>function call with the thunk procedure entry point address set to NULL.
+
+<P>
+Whenever Presentation Manager invokes a thunk procedure for a message, it
+passes the normal four parameters accepted by a window procedure, along
+with the entry point address of the window procedure to which the message
+was to be passed.  This may be the window procedure defined for the destination
+window when its class was registered, or a subclass window procedure defined
+by the application.  Thus thunking may take place, irrespective of whether
+a window has been subclassed.
+<P>
+A sample thunk procedure is shown in <A HREF="117_L2_MixedModelProgrammin.html">Figure
+"Mixed Model Programming - Thunk Procedure"</A>.
+<P>
+The thunk procedure is invoked whenever a message is passed by the window
+in the 16-bit module to a window in the 32-bit module.  The thunk procedure
+is similar in structure to a "normal" window procedure, but need contain
+cases only for application-defined message classes, since thunking for system-defined
+message classes is performed by Presentation Manager.
+<P>
+Note that since the thunk procedure is invoked by Presentation Manager,
+it must use the<I> system</I> linkage convention, and is thus declared using
+the EXPENTRY keyword.
+<P>
+In <A HREF="117_L2_MixedModelProgrammin.html">Figure "Mixed Model Programming
+- Thunk Procedure"</A>, the 16-bit window contains two application-defined
+message classes, WMP_MSG1 and WMP_MSG2.  The first of these contains pointers
+in both parameters, and thus both parameters are thunked by the thunk procedure.
+ The second message class contains a pointer in the first message paramater
+only; the second may contain an integer or some simple value parameter which
+does not require explicit thunking.  Thunking is performed using the<B> DosSeltoFlat()
+</B>function provided by OS/2 Version 2.0.
+<P>
+After performing the necessary thunking, the thunk procedure directly calls
+the window procedure entry point supplied by Presentation Manager when the
+thunk procedure is invoked.  Note that this is one of the few instances
+where direct invocation of a window procedure should be used.  The correct
+sequence of message processing is preserved in this case because the thunk
+procedure itself is invoked either synchronously or asynchronously by Presentation
+Manager, depending upon whether the message was sent or posted by the 16-bit
+window.
+<P>
+An alternative to the use of the<B> DosSeltoFlat()</B> function is the explicit
+use of the Compability Region Mapping Algorithm discussed in<I> OS/2 Version
+2.0 - Volume 1: Control Program</I>.  This algorithm is implemented in the
+subroutine<I> CRMA16to32</I> shown in <A HREF="118_L2_1616to032AddressConv.html">Figure
+"16:16 to 0:32 Address Conversion"</A>.
+<P>
+The use of the<B> DosSeltoFlat()</B> function should be the preferred option,
+since the CRMA routines may fail under certain circumstances.  Explicit
+use of CRMA should be restricted to those situations where special processing
+must be performed on the parameters being passed.
+
+<P><HR>
+
+<A HREF="379_L3_PassingMessagesto16B.html">[Back: Passing Messages to 16-Bit Windows]</A> <BR>
+<A HREF="381_L2_Summary.html">[Next: Summary]</A> 
+</BODY>
+</HTML>

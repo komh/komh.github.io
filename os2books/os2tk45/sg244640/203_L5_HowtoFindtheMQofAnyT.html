@@ -1,0 +1,82 @@
+<HTML>
+<HEAD>
+<TITLE>How to Find the MQ of Any Thread</TITLE>
+</HEAD>
+<BODY>
+<H1>How to Find the MQ of Any Thread</H1><!-- entering slot 300 -->
+<P>
+This example illustates a basic technique for finding the<B> MQ</B> for
+a specific thread.
+<PRE>
+We   find   the  <B> MQ</B>   for   thread   slot   8 :
+# # . p8
+  Slot    Pid    Ppid   Csid   Ord    Sta   Pri    pTSD       pPTDA      pTCB       Disp   SG   Name
+* 0008 #   0004   0001   0004   0001   blk   0500   ab596000   ab9c7020   ab988bf0   1ed0   01   pmshell
+# # dd   % ab988bf0   + 74
+% ab988c64    00000000   00070000   00041304   12d2ca34
+% ab988c74    12d2ded8   00000000   00000000   00000000
+% ab988c84    00000000   00000000   00000000   00000000
+% ab988c94    00000000   00000000   00000000   00000000
+% ab988ca4    00000000   00000000   00000000   00000000
+% ab988cb4    00000000   00000000   00000000   00000000
+% ab988cc4    00000000   00000000   00000000   00000000
+% ab988cd4    00000000   00000000   00000000   00000000
+</PRE>
+
+<P>
+The<B> TCB</B> address is found from the<B> .P</B> output.
+<P>
+Offset +0x74 into the<B> TCB</B> is the saved thread local memory area.
+
+<P>
+Offset +0x08 into the<B> TLMA</B> are the<B> AAB</B> registers.
+<P>
+The first is the last PM error to occur on this thread. In this case severity
+4 error code<B> 1304</B>.
+<P>
+The next double-word is the<B> PMQ</B>.
+<P>
+We can verify this by displaying it and checking the offset +0a4 is the
+same thread slot number.
+<P>
+<B>Notes: </B>
+<P>
+After fix-pack 7 the TCB in WARP is extended by 4 bytes. The<B> TLMA</B> begins
+at<B> TCB</B>+0x78.
+<P>
+Since<B> AAB</B>  is allocated using<B> DosAllocThreadLocalMemory</B>  its
+location in the<B> TLMA</B>  is depended how many<B> TLMA</B>  allocations
+are made prior to PM initialising in the thread.  In practice this is normally
+found at<B> TLMA</B>  offset +0x8, but if the<B> AAB</B>  is displaced it
+can usually be located by searching the<B> TLMA</B>  for the<B> MQ</B>  address
+which is normally in the range<B> 12000000</B>  to<B> 14000000</B>.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<PRE>##dd %12d2ca34
+%12d2ca34  00000000 00000020 00000064 12d2cadc
+%12d2ca44  12d2d75c 12d2cd3c 12d2cd3c 80002fff
+%12d2ca54  80008000 00000004 00000001 00000001
+%12d2ca64  80030038 0032bd01 000000ce 00000050
+%12d2ca74  00000001 00000000 00000000 00000010
+%12d2ca84  12d2c974 00000000 00000000 00000000
+%12d2ca94  00000000 00000000 00000000 00000000
+%12d2caa4  00000000 00000000 80000006 00000006
+##d
+%12d2cab4  00000000 00005453 0000024f 00000000
+%12d2cac4  12d2c910 0bff0c02 00000000 00000000
+%12d2cad4  00000001 00000008 80000007 00002f43
+%12d2cae4  00000004 00000128 0000dc92 00010000
+%12d2caf4  00000000 00000000 80000007 00002f43
+%12d2cb04  00010001 00000128 0001168e 00010000
+%12d2cb14  00000000 00000000 80000007 00002f43
+%12d2cb24  00000004 00000128 0001168e 00010000
+</PRE>
+ 
+
+<P><HR>
+
+<A HREF="202_L5_Example2AHanginaPMAp.html">[Back: Example 2 - A Hang in a PM Application]</A> <BR>
+<A HREF="204_L5_HowtoFindtheMQofaBad.html">[Next: How to Find the MQ of a BadApp Application]</A> 
+</BODY>
+</HTML>

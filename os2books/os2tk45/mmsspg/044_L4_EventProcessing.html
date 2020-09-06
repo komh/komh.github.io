@@ -1,0 +1,70 @@
+<HTML>
+<HEAD>
+<TITLE>Event Processing</TITLE>
+</HEAD>
+<BODY>
+<H1>Event Processing</H1><!-- entering slot 51 -->
+<P>
+Before the stream is created, you can enable event notification for implicit
+and explicit events using the SpiEnableEvent function. The following example
+specifies the EVENT_CUE_TIME_PAUSE flag, which will cause the stream to
+be paused when the cuepoint is reached.  When the stream reaches the event
+during a play or record, the audio stream handler signals the MCD.  Note
+that the stream is only paused (not stopped).
+<PRE>RC CreateToEvent (INSTANCE *ulpInstance, ULONG ulTo)
+{
+/* rename this function CreateToEvent */
+
+
+  ULONG ulrc;
+
+  /*********************************************************
+  * Set up a cue time pause event at the place in
+  * the stream where the caller wants us to play/record
+  * to.  Note: this event will pause the stream and
+  * will be considerably more accurate than just
+  * setting a cue point, receiving the event and stopping
+  * the stream (since a normal cue point will force
+  * bleed over).
+  *********************************************************/
+
+  ulpInstance-&gt;StreamInfo.TimeEvcb.hwndCallback
+       = ulpInstance-&gt;hwndCallBack;
+  ulpInstance-&gt;StreamInfo.TimeEvcb.usDeviceID
+       = ulpInstance-&gt;usWaveDeviceID;
+  ulpInstance-&gt;StreamInfo.TimeEvcb.evcb.ulType
+      = EVENT_CUE_TIME_PAUSE;
+  ulpInstance-&gt;StreamInfo.TimeEvcb.evcb.ulFlags
+      = EVENT_SINGLE;
+  ulpInstance-&gt;StreamInfo.TimeEvcb.evcb.hstream
+      = ulpInstance-&gt;StreamInfo.hStream;
+  ulpInstance-&gt;StreamInfo.TimeEvcb.ulpInstance
+      = (ULONG) ulpInstance;
+  ulpInstance-&gt;StreamInfo.TimeEvcb.evcb.mmtimeStream = ulTo;
+
+  /* Enable the cue time pause event. */
+
+  ulrc = SpiEnableEvent((PEVCB) &amp;ulpInstance-&gt;StreamInfo.TimeEvcb.evcb,
+                        (PHEVENT) &amp;ulpInstance-&gt;StreamInfo.hPlayToEvent);
+
+  return ( ulrc );
+
+} /* CreateToEvent */
+</PRE>
+
+<P>
+If you enable event notification for a particular event, it is equally important
+to remove the event handle for the event so it is not used by subsequent
+commands.  When any given event is reported, it must be removed explicitly
+using the SpiDisableEvent function.  Once an event is removed from the system,
+the event no longer is detected or reported to the application or MCD.
+<PRE>     SpiDisableEvent(ulpInstance-&gt;StreamInfo.hPlayToEvent);
+</PRE>
+
+
+<P><HR>
+
+<A HREF="043_L4_CreatingtheStream.html">[Back: Creating the Stream]</A> <BR>
+<A HREF="045_L4_AssociatingaStream.html">[Next: Associating a Stream]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,130 @@
+<HTML>
+<HEAD>
+<TITLE>Initiating a Drag Operation</TITLE>
+</HEAD>
+<BODY>
+<H1>Initiating a Drag Operation</H1><!-- entering slot 329 -->
+<P>
+A drag operation is initiated by the source window or object.  When the
+user starts the drag operation by pressing and holding down mouse button
+2, Presentation Manager passes a WM_BEGINDRAG message to the window or object
+that is currently under the mouse pointer. In the case of a Presentation
+Manager window, the window procedure for that window may process the WM_BEGINDRAG
+message in order to initialize the DRAGINFO and DRAGITEM structures, and
+start the drag operation.  A Workplace Shell object is notified of a drag
+initiation by the Workplace Shell itself, which invokes the object's<I> _wpFormatDragItem
+</I>method.
+<P>
+The initialization of a drag operation from a container window is shown
+in <A HREF="069_L2_DragInitiationFromaC.html">Figure "Drag Initiation From
+a Container Window"</A>.
+<P>
+The code shown in <A HREF="069_L2_DragInitiationFromaC.html">Figure "Drag
+Initiation From a Container Window"</A> would form part of the window procedure
+for the owner of the container control, since it is this window that would
+receive the WM_CONTROL message from the container.
+<P>
+<B>Initializing Data Structures</B>
+<P>
+When a WM_CONTROL message is received from a container window, a pointer
+to a CNRDRAGINIT structure is passed in the second parameter to the WM_CONTROL
+message.  This structure contains a pointer to the item within the container
+that the user is attempting to drag.  If this pointer is NULL, the user
+has attempted a drag operation while no item in the container was selected.
+ In the current example, the drag operation is ignored and control is immediately
+returned to Presentation Manager.
+<P>
+The source window then allocates a DRAGINFO structure using the<B> DrgAllocDraginfo()
+</B>function.  The DRAGITEM structure is initialized with the appropriate
+values, and its pointer is set in the DRAGINFO structure using the<B> DrgSetDragItem()
+</B>function. All interaction with the DRAGINFO structure is performed using
+Presentation Manager functions, avoiding the necessity for the source window
+procedure to address the DRAGINFO structure directly.
+<P>
+The DRAGIMAGE structure is then initialized with the information relating
+to the icon that will be displayed under the mouse pointer during the drag
+operation.
+<P>
+For a Workplace Shell object, the Workplace Shell itself performs the initialization
+of the DRAGINFO structure.  The object may perform its own initialization
+of the DRAGITEM structure during processing of the<I> _wpFormatDragItem
+</I>method, if class-specific processing is required.  For example, if the
+object class implements a private rendering mechanism, the appropriate information
+must be entered into the correct fields in the DRAGITEM structure as part
+of the<I> _wpFormatDragItem</I> method.
+<P>
+Note that a Workplace Shell object need not allocate the DRAGITEM structure,
+since the structure is already allocated by the Workplace Shell, and a pointer
+to the structure is passed to the<I> _wpFormatDragItem</I> method upon invocation.
+
+<P>
+<B>DrgDrag() Processing</B>
+<P>
+Once all data structures are allocated and initialized, the drag operation
+is initiated using the<B> DrgDrag()</B> function. This function is synchronous;
+it does not return control to the source window procedure until the key
+or mouse button specified in the fifth parameter (VK_ENDDRAG in the example
+above) is detected, and any synchronous message passing has been completed.
+
+<P>
+At this point, the<B> DrgDrag()</B> function returns a window handle.  If
+the dragitem was dropped over a window or object that was able to accept
+the item, the window handle of the target window is returned.  If a drop
+occurred over an object that was unable to accept the item, a NULL window
+handle is returned.
+<P>
+Upon return of control by the<B> DrgDrag()</B> function, the drag operation
+and the drop operation (if any) is complete, and the DRAGINFO structure
+can be released by the source window procedure.
+<P>
+A Workplace Shell object is not required to invoke the<B> DrgDrag()</B> function,
+since this is performed automatically by the Workplace Shell when the object
+completes the processing of its<I> _wpFormatDragItem</I> method.
+<P>
+<B>Synchronous Message Processing During DrgDrag()</B>
+<P>
+When the user drops the dragitem over another window or object that is able
+to accept the item, a DM_DROP message is passed to the target, which then
+processes the drop operation.  Note that the target's DM_DROP message processing
+must complete and return control to Presentation Manager before the<B> DrgDrag()
+</B>function will return control to the source window procedure.  Thus any
+processing that is performed by the target window during its processing
+of the DM_DROP message is synchronous.
+<P>
+The synchronous nature of this processing is necessary in order to ensure
+that the drop operation, and the accompanying transfer of information, is
+completed before the user performs any other operation.  For this reason,
+it is recommended that any messages passed by the target to the source window
+during processing of the DM_DROP message should be passed synchronously
+using the<B> DrgSendTransferMsg()</B> function. This is a departure from
+the normal Presentation Manager guidelines, where messages are processed
+asynchronously, but is required in order to ensure data integrity.
+<P>
+A number of synchronous messages may be sent to the source window<!-- entering slot 330 --> at
+the completion of a drop, prior to the<B> DrgDrag()</B> call returning control
+to the source window.  For example, if the user drops an object on a Workplace
+Shell printer object with the DRM_PRINT rendering mechanism specified, the
+target object sends a DM_PRINTOBJECT message to the source window.  This
+message contains sufficient information for the source window to direct
+a print data stream to the print queue represented by the printer object.
+ The first parameter in the DM_PRINTOBJECT message contains a pointer to
+the DRAGITEM structure that identifies the item being dropped, and the second
+parameter contains the name of the print queue for the printer object.
+<P>
+An example of the way in which the source window procedure may process the
+DM_PRINTOBJECT message is shown in <A HREF="070_L2_ReceivingaDM_PRINTOB.html">Figure
+"Receiving a DM_PRINTOBJECT Message"</A>.
+<P>
+Note that the code that actually performs the printing operation has been
+omitted from <A HREF="070_L2_ReceivingaDM_PRINTOB.html">Figure "Receiving
+a DM_PRINTOBJECT Message"</A>.  Printing under OS/2 Version 2.0 and Presentation
+Manager is discussed in detail in<I> OS/2 Version 2.0 - Volume 5:  Print
+Subsystem</I>, and examples are also provided in the PRTSAMP program included
+in the IBM Developer's Toolkit for OS/2 2.0.
+
+<P><HR>
+
+<A HREF="298_L2_UsingDirectManipulat.html">[Back: Using Direct Manipulation]</A> <BR>
+<A HREF="300_L3_DraggingOveraWindow.html">[Next: Dragging Over a Window]</A> 
+</BODY>
+</HTML>

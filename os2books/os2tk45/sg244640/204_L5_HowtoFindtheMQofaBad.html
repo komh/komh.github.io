@@ -1,0 +1,144 @@
+<HTML>
+<HEAD>
+<TITLE>How to Find the MQ of a BadApp Application</TITLE>
+</HEAD>
+<BODY>
+<H1>How to Find the MQ of a BadApp Application</H1><!-- entering slot 301 -->
+<P>
+This example illustrates how to find the<B> MQ</B> of the application that
+causes the<B> BadApp</B> dialog to appear.
+<P>
+As discussed in <A HREF="192_L5_ApplicationNotRespon.html">Application Not
+Responding to Messages Logic</A><B> pmqsyslock</B>,<B> pmqfocus</B> and
+the<B> User_Sem</B> PM semaphore owner will be reset when the<B> BadApp
+</B>dialog is displayed.
+<P>
+To find the<B> MQ</B> of the bad application under these circumstances we
+look at the Query Hung Process Structure (QHPSTRCUT). 
+<PRE>##db fbadappdialog l1
+9f3f:0000035c 01                                              .
+##dd pmqsyslock l1
+9f3f:0000ed14  00000000
+##dd pmqfocus l1
+9f3f:0000e0fc  12d2b0f0
+##dd %12d2b0f0
+%12d2b0f0  12d2b344 00000020 0000000a 12d2b198
+%12d2b100  12d2b2d8 12d2b198 12d2b198 00002fff
+%12d2b110  00010001 00000004 0000000f 00000001
+%12d2b120  8003004a 0032e98f 00000021 00000157
+%12d2b130  00000001 00000000 00000000 00000000
+%12d2b140  00000000 00000000 00000000 00000000
+%12d2b150  00000000 00000000 00000000 00000000
+%12d2b160  00000000 00000000 80000021 00000000
+##d
+%12d2b170  10ff0000 00005453 0000024f 00000000
+%12d2b180  12d2b08c 0bff0002 00000000 00000000
+%12d2b190  00000000 00000018 00000000 00000000
+%12d2b1a0  00000000 00000000 00000000 00000000
+%12d2b1b0  00000000 00000000 00000000 00000000
+%12d2b1c0  00000000 00000000 00000000 00000000
+%12d2b1d0  00000000 00000000 00000000 00000000
+%12d2b1e0  00000000 00000000 00000000 00000000
+##.p 18
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 0018  0004 0001 0004 000f blk 0500 ab5b6000 ab9c7020 ab98ab70 1ed0 01 pmshell
+</PRE>
+
+<P>
+<B>fbadappdialog</B> is non-zero, which indicates that the<B> BadApp</B> dialog
+has been displayed.
+<P>
+<B>pmqsyslock</B> is not owned.
+<P>
+<B>pmqfocus</B> points to a shell thread, in fact the<B> BadApp</B> dialog
+thread.
+<P>
+So we look at<B> qhpsbadapp</B>
+<PRE>##dw qhpsbadapp l4
+9f3f:0000e490  0002 000e 0008 0016
+
+##.p
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 0001  0001 0000 0000 0001 blk 0100 ffe38000 ffe3aa04 ffe3a80c 1eb4 00 *ager
+ 0002  0001 0000 0000 0002 blk 0200 ab58a000 ffe3aa04 ab988020 1f3c 00 *tsd
+ 0003  0001 0000 0000 0003 blk 0200 ab58c000 ffe3aa04 ab988218 1f50 00 *ctxh
+ 0004  0001 0000 0000 0004 blk 081f ab58e000 ffe3aa04 ab988410 1f48 00 *kdb
+ 0005  0001 0000 0000 0005 blk 0800 ab590000 ffe3aa04 ab988608 1f20 00 *lazyw
+ 0006  0001 0000 0000 0006 blk 0800 ab592000 ffe3aa04 ab988800 1f3c 00 *asyncr
+*0008# 0004 0001 0004 0001 blk 0500 ab596000 ab9c7020 ab988bf0 1ed0 01 pmshell
+ 000a  0004 0001 0004 0002 blk 0800 ab59a000 ab9c7020 ab988fe0 1ed4 01 pmshell
+ 000b  0004 0001 0004 0003 blk 0800 ab59c000 ab9c7020 ab9891d8 1ea8 01 pmshell
+ 000c  0004 0001 0004 0004 blk 0800 ab59e000 ab9c7020 ab9893d0 1ea8 01 pmshell
+ 000d  0004 0001 0004 0005 blk 0800 ab5a0000 ab9c7020 ab9895c8 1eb0 01 pmshell
+ 0010  0004 0001 0004 0006 blk 0200 ab5a6000 ab9c7020 ab989bb0 1edc 01 pmshell
+ 0011  0004 0001 0004 0007 blk 0200 ab5a8000 ab9c7020 ab989da8 1edc 01 pmshell
+ 0012  0004 0001 0004 0008 blk 0200 ab5aa000 ab9c7020 ab989fa0 1eb8 01 pmshell
+ 0007  0004 0001 0004 0009 blk 0200 ab594000 ab9c7020 ab9889f8 1ea8 01 pmshell
+ 0013  0004 0001 0004 000a blk 0800 ab5ac000 ab9c7020 ab98a198 1eb8 01 pmshell
+ 0014  0004 0001 0004 000b blk 0800 ab5ae000 ab9c7020 ab98a390 1eb8 01 pmshell
+ 0015  0004 0001 0004 000c blk 0800 ab5b0000 ab9c7020 ab98a588 1eb8 01 pmshell
+ 0016  0004 0001 0004 000d blk 0804 ab5b2000 ab9c7020 ab98a780 1ea8 01 pmshell
+ 0017  0004 0001 0004 000e blk 0804 ab5b4000 ab9c7020 ab98a978 1eb0 01 pmshell
+ 0018  0004 0001 0004 000f blk 0500 ab5b6000 ab9c7020 ab98ab70 1ea8 01 pmshell
+ 001a  0004 0001 0004 0010 blk 0200 ab5ba000 ab9c7020 ab98af60 1ed0 01 pmshell
+ 0009  0005 0004 0005 0001 blk 0800 <!-- entering slot 302 -->ab598000 ab9c761c ab988de8 1eb4 00 harderr
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 000e  0005 0004 0005 0002 blk 0800 ab5a2000 ab9c761c ab9897c0 1ebc 00 harderr
+ 000f  0005 0004 0005 0003 blk 0800 ab5a4000 ab9c761c ab9899b8 1eb8 00 harderr
+ 0019  0007 0004 0007 0001 blk 0500 ab5b8000 ab9c8214 ab98ad68 1ed0 11 pmshell
+ 001c  0007 0004 0007 0002 blk 0800 ab5be000 ab9c8214 ab98b350 1edc 11 pmshell
+ 001d  0007 0004 0007 0003 blk 080a ab5c0000 ab9c8214 ab98b548 1edc 11 pmshell
+ 001e  0007 0004 0007 0004 blk 0800 ab5c2000 ab9c8214 ab98b740 1ed0 11 pmshell
+ 0020  0007 0004 0007 0005 blk 0800 ab5c6000 ab9c8214 ab98bb30 1edc 11 pmshell
+ 0021  0007 0004 0007 0006 blk 0200 ab5c8000 ab9c8214 ab98bd28 1edc 11 pmshell
+ 0025  0007 0004 0007 0007 blk 0200 ab5d0000 ab9c8214 ab98c508 1ed0 11 pmshell
+ 0026  0007 0004 0007 0008 blk 0200 ab5d2000 ab9c8214 ab98c700 1edc 11 pmshell
+ 0027  0007 0004 0007 0009 blk 0200 ab5d4000 ab9c8214 ab98c8f8 1edc 11 pmshell
+ 0029  0007 0004 0007 000b blk 0300 ab5d8000 ab9c8214 ab98cce8 1ed0 11 pmshell
+ 002a  0007 0004 0007 000c blk 021f ab5da000 ab9c8214 ab98cee0 1eac 11 pmshell
+ 002b  0007 0004 0007 000d blk 0200 ab5dc000 ab9c8214 ab98d0d8 1eb8 11 pmshell
+ 002f  0007 0004 0007 000e blk 0800 ab5e4000 ab9c8214 ab98d8b8 1ed0 11 pmshell
+ 001b  0006 0004 0006 0001 blk 0200 ab5bc000 ab9c7c18 ab98b158 1f00 10 pmspool
+ 001f  0006 0004 0006 0002 blk 0200 ab5c4000 ab9c7c18 ab98b938 1edc 10 pmspool
+ 0022  0006 0004 0006 0003 blk 0200 ab5ca000 ab9c7c18 ab98bf20 1e6c 10 pmspool
+ 0023  0006 0004 0006 0004 blk 0200 ab5cc000 ab9c7c18 ab98c118 1edc 10 pmspool
+ 0024  0006 0004 0006 0005 blk 0200 ab5ce000 ab9c7c18 ab98c310 1edc 10 pmspool
+ 0028  0008 0004 0008 0001 blk 0200 ab5d6000 ab9c8810 ab98caf0 1ed0 12 cometrun
+ 002c  0008 0004 0008 0002 blk 0801 ab5de000 ab9c8810 ab98d2d0 1edc 12 cometrun
+ 002d  0009 0004 0009 0001 blk 0200 ab5e0000 ab9c8e0c ab98d4c8 1ed0 13 fpwmon
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 002e  000b 0004 000b 0001 blk 0400 ab5e2000 ab9c9408 ab98d6c0 1eb8 15 cmd
+ 0030  000e 0004 000e 0001 blk 0200 ab5e6000 ab9c9a04 ab98dab0 1ed0 16 turkey
+ 0034  000e 0004 000e 0002 blk 0200 ab5ee000 ab9c9a04 ab98e290 1ed0 16 turkey
+ 0038  000e 0004 000e 0003 blk 0200 ab5f6000 ab9c9a04 ab98ea70 1ed0 16 turkey
+ 0037  000e 0004 000e 0004 blk 0200 ab5f4000 ab9c9a04 ab98e878 1ed0 16 turkey
+ 0031  000e 0004 000e 0005 blk 0200 ab5e8000 ab9c9a04 ab98dca8 1ed0 16 turkey
+ 0032  000e 0004 000e 0006 blk 0200 ab5ea000 ab9c9a04 ab98dea0 1ed0 16 turkey
+ 0033  000e 0004 000e 0007 blk 0200 ab5ec000 ab9c9a04 ab98e098 1ed0 16 turkey
+ 0035  000e 0004 000e 0008 crt 0500 ab5f0000 ab9c9a04 ab98e488 1f10 16 turkey
+ 0036  000e 0004 000e 0009 blk 0500 ab5f2000 ab9c9a04 ab98e680 1ed0 16 turkey
+ 0039  000e 0004 000e 000a blk 0200 ab5f8000 ab9c9a04 ab98ec68 1ed0 16 turkey
+ 003a  000e 0004 000e 000b blk 0200 ab5fa000 ab9c9a04 ab98ee60 1ed0 16 turkey
+ 003b  000e 0004 000e 000c blk 0200 ab5fc000 ab9c9a04 ab98f058 1ed0 16 turkey
+ 003c  000e 0004 000e 000d blk 0200 ab5fe000 ab9c9a04 ab98f250 1ed0 16 turkey
+ 003d  000e 0004 000e 000e blk 0200 ab600000 ab9c9a04 ab98f448 1ed0 16 turkey
+ 003e  000e 0004 000e 000f blk 0200 ab602000 ab9c9a04 ab98f640 1ed0 16 turkey
+
+
+</PRE>
+
+<P>
+The<B> QHPSTRUCT</B> shows Tid 2, Pid e, flags 6 and SGID 16
+<P>
+.P shows this to be slot 34.
+<P>
+If we use the technique described in <A HREF="203_L5_HowtoFindtheMQofAnyT.html">How
+to find the MQ of any thread</A> we will find the<B> MQ</B> for the bad
+application. 
+
+<P><HR>
+
+<A HREF="203_L5_HowtoFindtheMQofAnyT.html">[Back: How to Find the MQ of Any Thread]</A> <BR>
+<A HREF="205_L5_FindingApplicationan.html">[Next: Finding Application and System Queue Elements]</A> 
+</BODY>
+</HTML>

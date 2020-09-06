@@ -1,0 +1,114 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>SplEnumJob - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>SplEnumJob - Example Code</H1><!-- entering slot 1257 -->
+<P>
+This sample code accepts a queue name from the  command line, and then prints
+out all the information associated with each job in that queue. Level 0
+and 2 are valid; we have chosen to print out level 2 information.
+<PRE>#define INCL_SPL
+#define INCL_SPLDOSPRINT
+#define INCL_SPLERRORS
+
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;      /* for printf function */
+
+INT main (argc, argv)
+  INT argc;
+  CHAR *argv[];
+{
+  ULONG  splerr ;
+  ULONG  cbBuf ;
+  ULONG  cTotal ;
+  ULONG  cReturned ;
+  ULONG  cbNeeded ;
+  ULONG  ulLevel;
+  ULONG  i ;
+  PSZ    pszComputerName ;
+  PSZ    pszQueueName ;
+  PVOID  pBuf = NULL;
+  PPRJINFO2 pprj2 ;
+
+  /* Check that the command line entry was two parameters.                    */
+  if (argc != 2)
+  {
+    printf("Syntax:  enumjob  QueueName\n");
+    DosExit( EXIT_PROCESS , 0 ) ;
+  }
+  /* Either a NULL or a pointer to a NULL specify the local workstation.      */
+  pszComputerName = (PSZ)NULL ;
+
+  /* Set queue name equal to the value entered at the command line.           */
+  pszQueueName = argv[1];
+
+  /* Valid level are 0 and2. Level 2 gives info for a PRJINFO2 structure.     */
+  ulLevel = 2L;
+
+  /* Make the call the first time with cbBuf = zero so that we can get a      */
+  /* return of the number of bytes that are need for pBuf to hold all of      */
+  /* the information. The bytes needed will be returned in cbNeeded.          */
+  splerr = SplEnumJob(pszComputerName,pszQueueName, ulLevel, pBuf,0L,
+                         &amp;cReturned, &amp;cTotal,
+                         &amp;cbNeeded, NULL) ;
+
+  /* Check that the return code is one of the two valid errors at this time.  */
+  if (splerr == ERROR_MORE_DATA || splerr == NERR_BufTooSmall )
+  {
+     /* Allocate memory for pBuf. ( No error checking is done on DosAllocMem  */
+     /* call to keep this sample code simple.)                                */
+     DosAllocMem( &amp;pBuf, cbNeeded,
+                  PAG_READ|PAG_WRITE|PAG_COMMIT );
+
+     /* Set bytes needed for buffer to the value returned by the first call.  */
+     cbBuf = cbNeeded ;
+
+     /* Make the call with all the valid information.                         */
+     SplEnumJob(pszComputerName,pszQueueName, ulLevel,
+                         pBuf, cbBuf, &amp;cReturned,&amp;cTotal,
+                         &amp;cbNeeded,NULL );
+
+     /* Set up a pointer to point to the beginning of the buffer in which we */
+     /* have the returned information                                        */
+     pprj2=(PPRJINFO2)pBuf;
+
+     /* The number of structures in the buffer(pBuf) are returned in cReturned*/
+     /* Implement a for loop to print out the information for each structure. */
+     for (i=0; i&lt;cReturned ;i++ )
+     {
+         printf("Job ID       = %d\n",  pprj2-&gt;uJobId);
+         printf("Job Priority = %d\n",  pprj2-&gt;uPriority);
+         printf("User Name    = %s\n",  pprj2-&gt;pszUserName);
+         printf("Position     = %d\n",  pprj2-&gt;uPosition);
+         printf("Status       = %d\n",  pprj2-&gt;fsStatus);
+         printf("Submitted    = %ld\n", pprj2-&gt;ulSubmitted);
+         printf("Size         = %ld\n", pprj2-&gt;ulSize);
+         printf("Comment      = %s\n",  pprj2-&gt;pszComment);
+         printf("Document     = %s\n\n",pprj2-&gt;pszDocument);
+
+         /* Increment the pointer to point to the next structure in the buffer*/
+         pprj2++;
+     } /* endfor */
+     /* Free the memory that we allocated to make the call.                   */
+     DosFreeMem(pBuf) ;
+  }
+  else
+  {
+  /* If any other error other than ERROR_MORE_DATA or NERR_BufTooSmall, then  */
+  /* print the returned information.                                          */
+     printf("SplEnumJob Error=%ld, Total Jobs=%ld, Returned Jobs=%ld, Bytes Needed=%ld\n",
+             splerr, cTotal, cReturned, cbNeeded) ;
+  }
+  DosExit( EXIT_PROCESS , 0 ) ;
+  return (splerr);
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1245_L2H_SplEnumJobRelatedFun.html">[Back: SplEnumJob - Related Functions]</A> <BR>
+<A HREF="1247_L2H_SplEnumJobTopics.html">[Next: SplEnumJob - Topics]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,166 @@
+<HTML>
+<HEAD>
+<TITLE>ASYNC (RS232-C) Device Driver Features</TITLE>
+</HEAD>
+<BODY>
+<H1>ASYNC (RS232-C) Device Driver Features</H1><!-- entering slot 997 -->
+<P>
+The device driver supports the ASYNC interface in an interrupt-driven manner.
+This allows the multitasking capabilities of the OS/2 operating system to
+be supported while ASYNC data reception and transmission are taking place.
+
+<P>
+<B>Warning:</B> With any supported hardware, the physical device driver
+cannot absolutely guarantee accurate function, as there is a dependency
+on the hardware being driven. It is known, for example, that INS 8250 and
+INS 8250-B UART devices exhibit a number of deviations from their hardware
+specifications. In some cases, these deviations have been compensated for
+in the physical device driver design. Some of these deviations, however,
+cannot be resolved in software. The user must be familiar with the limitations
+and restrictions associated with such hardware.
+<P>
+When data is given to the transmit hardware, it has not yet been physically
+transmitted (at the RS232 interface). The data is considered completely
+transmitted by the transmit hardware at the physical RS232 interface when
+the transmit shift register of the UART is empty. The IOCtl <A HREF="1162_L3_ASYNC_GETLINESTATUS6.html">ASYNC_GETLINESTATUS
+</A>can be used to determine this information.
+<P>
+The device driver<I> transmit</I> queue is a memory buffer between the operating
+system and the<I> transmit</I> hardware. The device driver<I> receive</I> queue
+is a memory buffer between the operating system and the receive hardware.
+Both are considered to be owned by the physical device driver because the
+physical device driver controls the data movement in and out of the transmit
+and receive queues. Algorithms for this data movement can change between
+releases of the physical device driver. Changes in the ASYNC hardware can
+cause changes in the data movement algorithms and external interfaces.
+<P>
+Data that applications send (made available by Write requests) is placed
+in the physical device driver transmit queue. When an interrupt occurs to
+tell the physical device driver that the hardware is ready for more data,
+the driver gives the transmit hardware more data from the transmit queue.
+
+<P>
+When an interrupt occurs to tell the physical device driver that the hardware
+has received data, that data is placed in the physical device driver receive
+queue. When the physical device driver gets a Read request (READ request
+packet) from the application, it fills the Read request from the receive
+queue.
+<P>
+At high bit rates, such as 19200 bits-per-second, a serial device supporting
+full-duplex asynchronous I/O can generate an interrupt every 260 microseconds
+(at 10 bits-per-character and one interrupt-per-character transmitted and
+received). This leads to excessive interrupt-time overhead in the multitasking,
+interrupt-driven, device driver.
+<P>
+To address this problem, serial devices with Extended Hardware Buffering
+capabilities (FIFO or First-In-First-Out buffers) have been developed. However,
+many serially-attached devices that support the RS232-C interface, have
+been designed to operate with specific protocols that assume the system
+processes all data I/O one character at a time. The ASYNC physical device
+driver employs a software mechanism that automatically controls parameters
+to utilize the Extended Hardware Buffering capability, while compatibly
+supporting devices that use existing ASYNC device driver protocols.
+<P>
+The Automatic Protocol Override (system default) mode for Extended Hardware
+Buffering support partially utilizes only these performance advantages,
+while remaining fully compatible with the behavior of existing ASYNC device
+driver protocols (for example, Input Sensitivity using DSR). Applications
+and subsystems can disable certain device driver default settings in order
+to fully use the Extended Hardware Buffering capabilities. This results
+in a<!-- entering slot 998 --> significant reduction of serial device interrupt
+processing overhead, and greatly increases the aggregate bit rates that
+can be supported across multiple active COM ports.
+<P>
+The size of the receive and transmit queues are available from the following
+IOCtls:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Query Number of Characters in Receive Queue (<A HREF="1186_L3_ASYNC_GETINQUECOUNT6.html">ASYNC_GETINQUECOUNT</A>)
+<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Query Number of Characters in Transmit Queue (<A HREF="1195_L3_ASYNC_GETOUTQUECOUNT.html">ASYNC_GETOUTQUECOUNT</A>)
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The physical device driver services each communications port independently.
+Requests issued to a given port have no effect on any other communications
+ports that the physical device driver might be servicing. The physical device
+driver processes READ and WRITE request packets independently for a given
+port. An application can be written to support simultaneous reception and
+transmission of data. In addition, the device driver can process an IOCtl
+request simultaneously with outstanding Read and Write requests.
+<P>
+The physical device driver does not schedule the processing of IOCtl requests.
+It processes the IOCtl request when received, regardless of what else it
+is doing. This can cause unexpected results if, for instance, the bit rate
+is modified while data reception or transmission is taking place. The application
+should issue only one IOCtl request at a time. If it issues another IOCtl
+request before the first IOCtl request is completed, the results are UNDEFINED.
+
+<P>
+The device driver queues multiple READ and WRITE request packets independently
+and always begins processing the READ request packets in the order they
+are received. It also begins processing the WRITE request packets in the
+order they are received.
+<P>
+<B>Note: </B> The operating system does not guarantee that file system requests
+will be delivered to a device driver in the order in which they are issued
+by an application. This means that a request by one thread can get blocked
+in the operating system, thus allowing a subsequent request by a different
+thread for the same function (for example, DosWrite) to pass through and
+arrive ahead of the first thread at the physical device driver. This is
+true for synchronous operations performed by multiple threads or asynchronous
+operations performed by the same thread.<!-- lm: 0x2 1 -->
+<P>
+Because of thread-priority considerations and the system dynamics, the order
+observed by the application of completing requests of the same type might
+not be the order in which they were received by the device driver. The physical
+device driver always keeps the data in the same order in which the READ
+and WRITE request packets (of the same type) were received. There is no
+ordering or timing between different types of request packets.
+<P>
+The concept of a<I> First Level Open</I> is described in the section on
+<A HREF="981_L4_StatesoftheASYNCDevi.html">States of the ASYNC Device Driver</A>.
+A First Level Open occurs when the device driver receives an OPEN request
+packet for the port and the port is not already open (from a previous open
+without a matching close). A CLOSE request packet causing the physical device
+driver to process the next OPEN request packet as a First Level Open is
+called a<I> Last Level Close</I>. Because the requests that an application
+issues sometimes get out of order before they reach the device driver, an
+application cannot consider a close a Last Level Close until the CLOSE completes.
+If the application issues an Open request to the COM port before a previously
+issued Close request is completed, then the results are UNDEFINED.
+<P>
+A Flush request can be completed before all the appropriate request packets
+(which have been queued by the device driver) have been flushed. The appropriate
+request packets eventually are flushed and return to the caller, based on
+their priority and the system dynamics. Once the Flush request has been
+processed, the appropriate request packets do not cause data to be incorrectly
+transmitted (or received data to be moved).
+<P>
+The device driver supports different timeout processing characteristics
+and timeout settings for the Read and Write requests. Only the physical
+device driver is informed of when a given character is<!-- entering slot 999 --> being
+transmitted or received at the hardware interface. Therefore, an application
+cannot expect to provide real-time flow control of data (in the middle of
+data transmission or reception) based on logical characters (XON/XOFF),
+or based on the state of the modem control signals by manually:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Controlling or monitoring those modem control signals
+<!-- lm: 0x2 3 --><!-- lm: 0x2 6 -->
+<UL>Monitoring the queue status<!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL>Monitoring data moving across the link<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Alternatively, the physical device driver provides optional modes of operation
+to control the data flow through the RS232-C port automatically. OS/2 applications
+use IOCtls to select which protocols are to be made active.
+
+<P><HR>
+
+<A HREF="970_L5_SupportedBitRateson1.html">[Back: Supported Bit Rates on 16450 and Compatibles]</A> <BR>
+<A HREF="972_L5_OutputModemControlSi.html">[Next: Output Modem Control Signals]</A> 
+</BODY>
+</HTML>

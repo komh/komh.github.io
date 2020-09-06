@@ -1,0 +1,125 @@
+<HTML>
+<HEAD>
+<TITLE>Forms Selection</TITLE>
+</HEAD>
+<BODY>
+<H1>Forms Selection</H1><!-- entering slot 247 -->
+<P>
+If the user has not chosen a specific printer, the application can supply
+a list of standard form sizes- for example, Letter, Legal, Ledger, A4, and
+A3. The application also must consider, at a minimum, a 0.4 inch (10mm)
+margin on the form to be within the hardware clip limits of most printers.
+See the following table for the common form sizes.
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Form Name           ³Size in inches      ³Size in mm          ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Letter              ³8.5 x 11            ³216 x 279           ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Legal               ³8.5 x 14            ³216 x 356           ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Ledger              ³11 x 17             ³279 x 432           ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³A4                  ³8.3 x 11.7          ³210 x 297           ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³A3                  ³11.7 x 16.5         ³297 x 420           ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+When a printer is chosen, it must be queried, using DevQueryHardcopyCaps
+for the forms it supports and the hardware clip margins. First, however,
+a device context must be created. It is recommended that a OD_INFO context
+be used, because OD_QUEUED can result in the creation of a print job. See
+the following figure for a sample code fragment.
+<PRE>PPRDINFO3    pprd3Device;                     /* From SplQueryDevice   */
+PPRQINFO3    pprq3Queue;                      /* From SplQueryQueue    */
+PSZ          pszTmp;                          /* Temporary pointer     */
+HDC          hdc;                             /* Device context handle */
+DEVOPENSTRUC dopData;                         /* DEVOPEN structure     */
+LONG         clForms;                         /* Number of forms       */
+                                              /* The device            */
+PHCINFO      pchinfo;                         /* Forms information     */
+                                              /* structure             */
+ULONG        ulrc=DEV_OK;                     /* Return code           */
+ 
+/* Fill in data for devopendata for OD_INFO                            */
+dopData.pszLogAddress = pprd3Device-&gt;pszLogAddr;
+pszTmp = strchr(pprq3Queue-&gt;pszDriverName,'.');
+if (pszTmp)
+    *pszTmp = '\0';
+dopData.pszDriverName = pprq3Queue-&gt;pszDriverName;
+dopData.pdriv = pprq3Queue-&gt;pDriverData;
+ 
+/* Open the information device context                                 */
+ 
+hdc = DevOpenDC ( (HAB)0,
+         OD_INFO,                             /* Type                  */
+         "*",                                 /* Default token         */
+         3L,                                  /* Count                 */
+         &amp;dopData,                            /* Pointer to data       */
+         (HDC)0);                             /* Comp dc               */
+ 
+/* Query number of forms available on the device                       */
+clForms = DevQueryHardcopyCaps(hdc,
+                               0L        /* Start at beginning of list */
+                               0L,       /* Get number of forms        */
+                               NULL);
+ 
+/* Allocate memory block for forms                                     */
+if (DosAllocMem((PPVOID(&amp;pchinfo), clForms*sizeof(HCINFO), fALLOC))
+{
+    DevCloseDC(hdc);
+    return(DEV_ERROR);
+}
+ 
+/* Query forms data                                                    */
+ulrc = DevQueryHardcopyCaps(hdc,
+                            0L,          /* Start with first form      */
+                            clForms,     /* Query all forms            */
+                            pchinfo);    /* Structure to hold returned */
+                                         /* data                       */
+ 
+/* Close the information device context                                */
+DevCloseDC (hdc);                        /* Close the information      */
+                                         /* device context             */
+
+/* Now use forms information in pchinfo                                */
+
+</PRE>
+
+<P>
+DevQueryHardcopyCaps returns one<A><!-- external link: 1D 7F C4 74 --> HCINFO
+</A>structure for each form. The contents of the structure are:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->ASCIIZ name of the form (for example, Letter)<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Width and height (in millimeters) of the paper<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Clipping limits (in millimeters) of the paper<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Number of pels between clipping limits<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Whether this form is the one installed currently on
+the device, or whether it is selectable from another paper<!-- entering slot 248 --> bin
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Then the list of forms can be displayed to the user. The form preselected
+in the list should be one of the forms marked with the<A><!-- external link: 1D 7F C4 15 --> HCINFO
+</A>structure flag HCAPS_CURRENT.
+<P>
+It is recommended that an application indicate to the user which forms are
+currently installed in the printer. This is done by including the<A><!-- external link: 1D 7F C4 15 --> HCINFO
+</A>structure flag HCAPS_SELECTABLE. Then users can decide whether they
+want a quick print on a form available from the printer or to install a
+different paper tray in the printer.
+<P>
+
+
+<P><HR>
+
+<A HREF="236_L4_PageSetupDialog.html">[Back: Page Setup Dialog]</A> <BR>
+<A HREF="238_L4_PrinterSetupDialog.html">[Next: Printer Setup Dialog]</A> 
+</BODY>
+</HTML>

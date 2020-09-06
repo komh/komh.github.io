@@ -1,0 +1,325 @@
+<HTML>
+<HEAD>
+<TITLE>Loading the CODEC Procedure</TITLE>
+</HEAD>
+<BODY>
+<H1>Loading the CODEC Procedure</H1><!-- entering slot 154 -->
+<P>
+Once a CODEC procedure is determined, the CODEC DLL is loaded and added
+to the linked list of CODECs currently loaded for this movie instance.  The
+ioLoadCodecDLL routine shown in the following example first checks to see
+that the CODEC procedure is not already loaded in the list.  If it is not
+loaded in the list, it sends a DOSLoadModule function to load the DLL and
+find the entry.  Next, it initializes the CODEC procedure in the ffOpenCodec
+routine shown in the following example.
+<P>
+<B>Note: </B> Refer to the<I> OS/2 Presentation Manager Guide and Reference
+</I>for more information on the DosLoadModule function.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<PRE>
+PCCB ioLoadCodecDLL ( PINSTANCE pinstance,
+                      PCODECINIFILEINFO pcifi,
+                      PULONG phCodec )
+
+{
+   LONG      rc = MMIO_SUCCESS;     /* Return code of IOProc's call. */
+   SZ        szLoadError[260];            /* Error returns. */
+   PCCB      pccbNew;
+   PCCB      pccb;
+   HMODULE   hmod = 0L;
+   PMMIOPROC pmmioproc;
+   ULONG     hCodec = 0L;
+
+
+   /********************************************************************/
+   /* Search if the CCB entry has been created for the passed in       */
+   /* pszDLLName and pszProcName,if yes, then sets pccb pointer of     */
+   /* ptracki to that node.(different track may share a same CCB)      */
+   /********************************************************************/
+   for (pccb = pinstance-&gt;pccbList; pccb; pccb = pccb-&gt;pccbNext) {
+
+      if (!stricmp(pcifi-&gt;szDLLName,pccb-&gt;cifi.szDLLName)) {
+         hCodec = pccb-&gt;hCodec;
+
+         if (!stricmp(pcifi-&gt;szProcName,pccb-&gt;cifi.szProcName)) {
+            /* Proc entry names match */
+            return(pccb);
+            }
+         }
+      } /* end loop */
+
+
+   /*******************************************************************/
+   /* The above searching cannot find the DCIO node; if a same        */
+   /* DLLName was found, query IOProc address directly, else load     */
+   /* module then query I/O address before allocates a new pccb node. */
+   /*******************************************************************/
+   if (DosLoadModule(szLoadError,
+                     (ULONG)sizeof(szLoadError),
+                     pcifi-&gt;szDLLName,
+                     &amp;hmod))   {
+      /* Load Error - MMIOERR_INVALID_DLLNAME */
+      return(NULL);
+      }
+
+   if (DosQueryProcAddr(hmod,
+                        0L,
+                        pcifi-&gt;szProcName,
+                        (PFN *)&amp;pmmioproc))   {
+      /* Query Error - MMIOERR_INVALID_PROCEDURENAME */
+      return(NULL);
+      }
+
+   /********************************************************************/
+   /* The above loading and querying was successful; then create a new */
+   /* node for the DCIO.  If HhpAllocMem fails, call DosFreeModule to  */
+   /* free DCIO module before returning error.                         */
+   /********************************************************************/
+   if (ENTERCRIT(rc)) {
+      return(NULL);
+      }
+
+   pccbNew = (PCCB)HhpAllocMem(hheap,(ULONG)sizeof(CCB));
+
+   EXITCRIT;
+
+   if(!pccbNew) {
+      DosFreeModule(hmod);
+      /* Allocate error - MMIOERR_OUTOFMEMORY */
+      return(NULL);
+      }
+
+   /*********************************************************************/
+   /* Assigns the Decompress IOProc information, which is in record map */
+   /* table, to the new DCIO node.                                      */
+   /*********************************************************************/
+   pccbNew-&gt;cifi = *pcifi;
+   pccbNew-&gt;hmodule = hmod;
+   pccbNew-&gt;pmmioproc = pmmioproc;
+   pccbNew-&gt;hCodec = 0L;
+   pccbNew-&gt;ulLastSrcBuf = 0L;
+   pccbNew-&gt;ulMisc1 = 0L;
+   pccbNew-&gt;ulMisc2 = 0L;
+
+   /******************************************************************/
+   /* Adds new node to the beginning of ccb list.                    */
+   /******************************************************************/
+   pccbNew-&gt;pccbNext = pinstance-&gt;pccbList;
+   pinstance-&gt;pccbList = pccbNew;
+
+   *phCodec = hCodec;
+   return(pccbNew);
+}
+
+
+
+/************************** START OF SPECIFICATIONS *****************/
+/*                                                                  */
+/* SUBROUTINE NAME:  ioLoadCodec                                    */
+/*                                                                  */
+/* DESCRIPTIVE NAME: Load a CODEC IOProc and add it the PCCB list   */
+/*                                                                  */
+/* FUNCTION: This function loads a CODEC IOProc and adds it to the  */
+/*  linked list of CODECs currently loaded for this movie instance. */
+/*                                                                  */
+/* NOTES:                                                           */
+/*                                                                  */
+/* ENTRY POINT: ioLoadCodec                                         */
+/*   LINKAGE:   CALL FAR (00:32)                                    */
+/*                                                                  */
+/* INPUT:                                                           */
+/*             PINSTANCE pinstance     - Instant structure          */
+/*             PTRACKI ptracki         - Track specific information */
+/*             PCODECINIFILEINFO pcifi - CODEC INI file information */
+/*                                                                  */
+/* EXIT-NORMAL:                                                     */
+/*              pccb                                                */
+/*                                                                  */
+/* EXIT-ERROR:                                                      */
+/*              0L                                                  */
+/*                                                                  */
+/* SIDE EFFECTS:                                                    */
+/*                                                                  */
+/*************************** END OF SPECIFICATIONS ******************/
+PCCB ioLoadCodec ( PINSTANCE pinstance,
+                   PTRACKI ptracki,
+                   PCODECINIFILEINFO pcifi )
+
+{
+   LONG      rc = MMIO_SUCCESS; /* Return code of IOProc's call.*/
+   PCCB      pccbNew;
+   ULONG     hCodec = 0L;
+
+
+
+   if (pccbNew = ioLoadCodecDLL(pinstance,pcifi,&amp;hCodec)) {
+
+      /*******************************************************************/
+      /* Open the Codec IOProc and save the hCodec in the pccb structure */
+      /*******************************************************************/
+      if (rc = ffOpenCodec(pinstance, pccbNew, hCodec, ptracki)) {
+
+         pinstance-&gt;pccbList = pccbNew-&gt;pccbNext;   /* unlink from list */
+         ioCloseCodec(pccbNew);
+         pccbNew = NULL;  /* return error condition */
+         }
+      }
+
+   return(pccbNew);
+}
+
+
+
+/************************** START OF SPECIFICATIONS ****************/
+/*                                                                 */
+/* SUBROUTINE NAME:  ioFindCodec                                   */
+/*                                                                 */
+/* DESCRIPTIVE NAME:                                               */
+/*                                                                 */
+/* FUNCTION: This function <!-- entering slot 155 -->finds a compression/decompression       */
+/* control block for this compression type.                        */
+/*                                                                 */
+/* NOTES: None                                                     */
+/*                                                                 */
+/* ENTRY POINT: ioFindCodec                                        */
+/*   LINKAGE:   CALL FAR (00:32)                                   */
+/*                                                                 */
+/* INPUT:                                                          */
+/*           PINSTANCE   pinstance  - Movie instance structure     */
+/*           ULONG       ulCompressType - Compression type         */
+/*                                                                 */
+/*                                                                 */
+/* EXIT-NORMAL:                                                    */
+/*              pccb                                               */
+/*                                                                 */
+/* EXIT-ERROR:                                                     */
+/*              NULL - 0L                                          */
+/*                                                                 */
+/*                                                                 */
+/* SIDE EFFECTS:                                                   */
+/*                                                                 */
+/*************************** END OF SPECIFICATIONS *****************/
+PCCB ioFindCodec ( PINSTANCE pinstance,
+                   ULONG ulCompressType )
+
+{
+   PCCB   pccb;
+
+   for (pccb = pinstance-&gt;pccbList; pccb; pccb = pccb-&gt;pccbNext) {
+      if (pccb-&gt;cifi.ulCompressType == ulCompressType)
+         return(pccb);
+      }
+   return(NULL);  /* not found */
+}
+</PRE>
+
+<P>
+The ffOpenCodec routine shown in the following example opens a CODEC instance
+for a movie instance and creates file format specific header information
+(including a source video header and a destination video header).  Next,
+it calls MMIO services to open the CODEC.
+<PRE>LONG ffOpenCodec ( PINSTANCE pinstance,
+                   PCCB pccb,
+                   ULONG hCodec,
+                   PTRACKI ptracki)
+
+{
+   LONG              rc = MMIO_SUCCESS;/* Return code of IOProc's call. */
+   PMMVIDEOHEADER     pmmVideoHdr;     /* Video header node.      */
+   PCODECVIDEOHEADER  pcodecvidhdr;
+
+   /****************************************************************/
+   /* Fill in necessary information for DC IOProc.                 */
+   /****************************************************************/
+        /* Get standard track header */
+   pmmVideoHdr = (PMMVIDEOHEADER)ptracki-&gt;pTrackHeader;
+   pccb-&gt;codecopen.pControlHdr = NULL;
+     // FOR AVI, fill in from CODEC SPECIFIC DATA SECTION OF HEADER!
+   pccb-&gt;codecopen.pOtherInfo = NULL;
+
+   ENTERCRITX;
+   /********************************************/
+   /* Create Source Video Header               */
+   /********************************************/
+   if (pcodecvidhdr = (PCODECVIDEOHEADER)HhpAllocMem(hheap,(ULONG)
+      sizeof(CODECVIDEOHEADER))) {
+      pccb-&gt;codecopen.pSrcHdr = (PVOID)pcodecvidhdr;
+
+      pcodecvidhdr-&gt;ulStructLen = sizeof(CODECVIDEOHEADER);
+      pcodecvidhdr-&gt;cx = pmmVideoHdr-&gt;ulWidth;
+      pcodecvidhdr-&gt;cy = pmmVideoHdr-&gt;ulHeight;
+      pcodecvidhdr-&gt;cPlanes = 1;                        /* Hardcoded  */
+      pcodecvidhdr-&gt;cBitCount = 16;                     /* Hardcoded  */
+      pcodecvidhdr-&gt;ulColorEncoding = MMIO_COMPRESSED;  /* Hardcoded  */
+
+      /********************************************/
+      /* Create Destination Video Header          */
+      /********************************************/
+      if (pcodecvidhdr = (PCODECVIDEOHEADER)HhpAllocMem(hheap,(ULONG)
+         sizeof(CODECVIDEOHEADER))) {
+         pccb-&gt;codecopen.pDstHdr = (PVOID)pcodecvidhdr;
+
+         pcodecvidhdr-&gt;ulStructLen = sizeof(CODECVIDEOHEADER);
+         pcodecvidhdr-&gt;cx = pmmVideoHdr-&gt;ulWidth;
+         pcodecvidhdr-&gt;cy = pmmVideoHdr-&gt;ulHeight;
+         pcodecvidhdr-&gt;cPlanes = 1;                          // Hardcoded
+
+         /********************************************/
+         /* Initialize the Flags and color encoding  */
+         /********************************************/
+         pccb-&gt;codecopen.ulFlags = pccb-&gt;cifi.ulCapsFlags &amp;
+               (VALID_CODECOPEN_INPUTFLAGS);
+
+         /* Set the color depth for the CODEC we want */
+         if (ulNumColors == 16) {
+            pccb-&gt;codecopen.ulFlags |= CODEC_4_BIT_COLOR;
+            pcodecvidhdr-&gt;cBitCount = 16;
+            pcodecvidhdr-&gt;ulColorEncoding = MMIO_PALETTIZED;
+            }
+         else if (ulNumColors &gt; 256) {
+            pccb-&gt;codecopen.ulFlags |= CODEC_16_BIT_COLOR;
+            pcodecvidhdr-&gt;cBitCount = 256;
+            pcodecvidhdr-&gt;ulColorEncoding = MMIO_RGB_5_6_5;
+            }
+         else { /* 256 and anything else */
+            pccb-&gt;codecopen.ulFlags |= CODEC_8_BIT_COLOR;
+            pcodecvidhdr-&gt;cBitCount = 8;
+            pcodecvidhdr-&gt;ulColorEncoding = MMIO_PALETTIZED;
+            }
+
+         /*****************/
+         /* Open the CODEC
+         /*****************/
+         rc = pccb-&gt;pmmioproc(&amp;hCodec,
+                              MMIOM_CODEC_OPEN,
+                              (LONG)&amp;pccb-&gt;codecopen,
+                              0L);
+         if (!rc) {
+            pccb-&gt;hCodec = hCodec;
+            }
+         }
+      }
+
+   EXITCRIT;
+   return(rc);
+}
+
+
+LONG ffAssociateCodec ( PINSTANCE pinstance,
+                        PMMEXTENDINFO pmmextendinfo )
+{
+   LONG  rc = MMIO_SUCCESS;
+
+   return(rc);
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="121_L4_DeterminingtheCODECP.html">[Back: Determining the CODEC Procedure]</A> <BR>
+<A HREF="123_L3_Compression.html">[Next: Compression]</A> 
+</BODY>
+</HTML>

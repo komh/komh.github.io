@@ -1,0 +1,68 @@
+<HTML>
+<HEAD>
+<TITLE>Address Translation</TITLE>
+</HEAD>
+<BODY>
+<H1>Address Translation</H1><!-- entering slot 89 -->
+<P>
+With paging enabled the 80386 processor maps the linear address using an
+entry in the page directory and an entry in one of the page tables currently
+present in the system.  The page directory and page tables are structures
+created in the linear address space. The address translation process is
+shown in <A HREF="011_L2_AddressTranslationLi.html">Figure "Address Translation
+- Linear Address to Physical Address"</A>. The linear address is split into
+three parts:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B>Page Directory Entry</B> or PDE (10 bits)<!-- lm: 0x2 0 -->
+<BR>
+<LI><!-- lm: 0x2 2 --><B>Page Table Entry</B> or PTE (10 bits)<!-- lm: 0x2 0 -->
+<BR>
+<LI><!-- lm: 0x2 2 --><B>Page Offset</B> or PO (12 bits).<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+OS/2 Version 2.0 maintains a single page directory for the entire system;
+the entries contained within the page directory are unique for each process
+in the system, and are copied into the page directory by the operating system
+when a task switch occurs.  The page directory entries contain pointers
+to the page tables, which in turn point to the memory pages (both shared
+and private) belonging to the current process.  The page directory and each
+page table are defined to be one page (4KB) in size, and are aligned on
+4KB page boundaries.  There is a maximum of 1024 entries per page table,
+and a maximum of 1024 page tables per page directory.  Since each page is
+4KB in size, this means a single page table gives access to 4MB of memory.
+1024 page tables, the maximum, gives access to the full 4GB global address
+space.
+<P>
+The format of page directory entries and page table entries are identical.
+The upper 20 bits in each page directory entry specify the address of the
+page table, and the lower 12 bits are used to store control and status information.
+ This 20-bit address is possible since each page table is aligned on a 4KB
+boundary.  Hence, the lower 12 bits of the address are assumed to be zero
+for addressing purposes; these 12 bits are in fact used to contain control
+and status information.  A page table contains entries pointing to the physical
+memory location of the page.
+<P>
+The address resolution may appear complex, but in fact very little overhead
+is involved since the 80386 maintains a cache buffer for page table entries,
+known as the <A HREF="363_L2_transactionlookaside.html"><B>translation lookaside
+buffer</B> (TLB)</A>. The TLB satisfies most access requests for page tables,
+avoiding the necessity to access system memory for PDEs and PTEs.
+<P>
+When page table entries are changed or during a task switch, the TLB must
+be flushed in order to remove invalid entries. Otherwise, invalid data might
+be used for address translation.
+<P>
+For each page frame, a bit in the page table entry known as the<I> present
+bit</I> indicates whether the address in that page table entry maps to a
+page in physical memory.  When the present bit is set, the page is in memory.
+ When the present bit is clear in either the page directory or in the page
+table, a page fault is generated if an attempt is made to use a page table
+entry for address translation.
+
+<P><HR>
+
+<A HREF="083_L2_PhysicalMemoryManage.html">[Back: Physical Memory Management]</A> <BR>
+<A HREF="085_L3_ManagingPaging.html">[Next: Managing Paging]</A> 
+</BODY>
+</HTML>

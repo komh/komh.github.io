@@ -1,0 +1,69 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Get a list of all printers</TITLE>
+</HEAD>
+<BODY>
+<H1>Get a list of all printers</H1><!-- entering slot 363 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+(see also <A HREF="360_L4_AddnewLPTPorts.html">Add new LPT Ports</A>)
+<PRE> 
+/* captured from a message in a public IBM forum                      */
+
+/**********************************************************************/
+/*                                                                    */
+/* List all printers                                                  */
+/*                                                                    */
+/* Written by: Georg Haschek (see <A HREF="950_L2H_EMailaddressesH.html">EMail Addresses</A>)                    */
+/*                                                                    */
+/* Description: Print a list of all printers to the display           */
+/*                                                                    */
+/**********************************************************************/
+
+  if RxFuncQuery( "SysLoadFuncs" ) then
+  do
+    Call RxFuncAdd "SysLoadFuncs", "REXXUTIL", "SysLoadFuncs"
+    Call SysLoadFuncs
+  end /* if rxFuncQuery( ... */
+
+  call SysIni "BOTH", "PM_SPOOLER_PRINTER", "ALL:", "printers"
+  parse value SysIni( "BOTH", "PM_SPOOLER" , "PRINTER" ) with default ";" .
+
+  default = strip( default )
+  maxlen = 8
+
+  do i = 1 to printers.0
+    val = printers.i
+    parse value SysIni( "BOTH", "PM_SPOOLER_PRINTER_DESCR", val ) ,
+                          With printerd.val ";" .
+    printerd.val = space( translate( printerd.val,"  ","0d0a"x ) )
+    if val == default then
+      printerd.val = printerd.val "[default]"
+    maxlen = max( maxlen ,length( printerd.val ) )
+  end /* do i = 1 to printers.0 */
+
+  title =  "Name"||Copies( " ",maxlen-4 ) "Port     Queue    Printer driver"
+  say title
+  say copies( "-", length( title ) )
+
+  do i = 1 to printers.0
+    val = printers.i
+    parse value SysIni( "BOTH", "PM_SPOOLER_PRINTER", val ) ,
+                          With port ";" driver ";" Queue ";" .
+    say left( printerd.val,maxlen ) left( strip( port ),8 ) ,
+        left( strip( queue ),8) strip( driver )
+  end /* do i = 1 to printers.0 */
+
+exit 0
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="351_L4_Getthedesktopdirecto.html">[Back: Get the desktop directory]</A> <BR>
+<A HREF="353_L4_ChangingtheLockuppag.html">[Next: Changing the Lockup page entry]</A> 
+</BODY>
+</HTML>

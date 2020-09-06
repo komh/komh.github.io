@@ -1,0 +1,163 @@
+<HTML>
+<HEAD>
+<TITLE>iconv - Convert Characters to New Code Set</TITLE>
+</HEAD>
+<BODY>
+<H1>iconv - Convert Characters to New Code Set</H1><!-- entering slot 169 -->iconv - Convert Characters to New Code Set<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>#include &lt;iconv.h&gt;
+size_t iconv(iconv_t <I>cd</I>, char **<I>inbuf</I>, size_t *<I>insize</I>,
+             char **<I>outbuf</I>, size_t *<I>outsize</I>);
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Description
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+iconv converts a sequence of characters in one encoded character set, in
+the array indirectly pointed to by<I> inbuf</I> and converts them to a sequence
+of corresponding characters in another encoded character set. It stores
+the corresponding sequence in the array indirectly pointed to by<I> outbuf</I>.
+<I>cd</I> is the conversion descriptor returned from iconv_open that describes
+which codesets are used in the conversion.
+<P>
+<I>inbuf</I> points to a variable that points to the first character of
+input, and<I> insize</I> indicates the number of bytes of input.<I> outbuf
+</I>points to a variable that points to the first character of output, and
+<I>outsize</I> indicates the number of available bytes for output.
+<P>
+As iconv converts the characters, it updates the variable pointed to by
+<I>inbuf</I> to point to the next byte in the input buffer, and updates
+the variable pointed to by<I> outbut</I> to the byte following the last
+successfully converted character. It also decrements<I> insize</I> and<I> outsize
+</I>to reflect the number of bytes of input remaining and the number of
+bytes still available for output, respectively. If the entire input string
+is converted,<I> insize</I> will be 0; if an error stops the conversion,
+<I>insize</I> will have a nonzero value.
+<P>
+Sharing a conversion descriptor in iconv across multiple threads may result
+in undefined behavior.<!-- lm: 0x2 1 -->
+</UL> Returns
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+iconv returns the number of nonidentical conversions (substitutions). If
+an error occurs, conversion stops after the previous successfully converted
+character; iconv returns (size_t)-1, and sets errno to one of the following
+values:  compact break=fit.<B><!-- lm: 0x2 10 -->
+<P>
+Value<!-- lm: 0x2 22 -->
+<UL> Meaning</B><!-- lm: 0x2 10 -->
+</UL> EILSEQ
+<!-- lm: 0x2 22 -->
+<UL>A sequence of input bytes does not form a valid
+character in the specified encoded character set.<!-- lm: 0x2 10 -->
+</UL> E2BIG
+<!-- lm: 0x2 22 -->
+<UL><I>outbuf</I> is not large enough to hold the converted
+value.<!-- lm: 0x2 10 -->
+</UL> EINVAL<!-- lm: 0x2 22 -->
+<UL> The input
+ends with an incomplete character.<!-- lm: 0x2 10 -->
+</UL> EBADF<!-- lm: 0x2 22 -->
+<UL><I> cd
+</I>is not a valid conversion descriptor.<!-- lm: 0x2 10 -->
+</UL><!-- lm: 0x2 1 -->
+</UL>Example Code
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+This example converts an array of characters coded in encoded character
+set IBM-850 (in in) to an array of characters coded in encoded character
+set IBM-037 (stored in out).
+<PRE>#include &lt;iconv.h&gt;#include &lt;stdlib.h&gt;
+#include &lt;stdio.h&gt;
+
+int main(void)
+{
+   const char   fromcode[] = "IBM-850";
+   const char   tocode[] = "IBM-037";
+   iconv_t      cd;
+   char         in[] = "ABCDEabcde";
+   size_t       in_size;
+   char         *inptr = in;
+   char         out[100];
+   size_t       out_size = sizeof(out);
+   char         *outptr = out;
+   int          i;
+
+   if ((iconv_t)(-1) == (cd = iconv_open(tocode, fromcode))) {
+      printf("Failed to iconv_open %s to %s.\n", fromcode, tocode);
+      exit(EXIT_FAILURE);
+   }
+   /* Convert the first 3 characters in array "in". */
+   in_size = 3;
+   if ((size_t)(-1) == iconv(cd, &amp;inptr, &amp;in_size, &amp;outptr, &amp;out_size)) {
+      printf("Fail to convert first 3 characters to new code set.\n");
+      exit(EXIT_FAILURE);
+   }
+   /* Convert the rest of the characters in array "in". */
+   in_size = sizeof(in) - 3;
+   if ((size_t)(-1) == iconv(cd, &amp;inptr, &amp;in_size, &amp;outptr, &amp;out_size)) {
+      printf("Fail to convert the rest of the characters to new code set.\n");
+      exit(EXIT_FAILURE);
+   }
+   *outptr = '\0';
+   printf("The hex representation of string %s are:\n  In codepage %s ==&gt; ",
+          in, fromcode);
+   for (i = 0; in[i] != '\0'; i++) {
+      printf("0x%02x ", in[i]);
+   }
+   printf("\n  In codepage %s ==&gt; ", tocode);
+   for (i = 0; out[i] != '\0'; i++) {
+      printf("0x%02x ", out[i]);
+   }
+   if (-1 == iconv_close(cd)) {
+      printf("Fail to iconv_close.\n");
+      exit(EXIT_FAILURE);
+   }
+   return 0;
+
+   /****************************************************************************
+      The output should be similar to :
+
+      The hex representation of string ABCDEabcde are:
+        In codepage IBM-850 ==&gt; 0x41 0x42 0x43 0x44 0x45 0x61 0x62 0x63 0x64 0x65
+        In codepage IBM-037 ==&gt; 0xc1 0xc2 0xc3 0xc4 0xc5 0x81 0x82 0x83 0x84 0x85
+   ****************************************************************************/
+}
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Related Information
+<P>
+<!-- lm: 0x2 10 -->
+<UL><!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 --><A HREF="163_L2_iconv_closeRemoveCon.html">iconv_close
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="164_L2_iconv_openCreateConv.html">iconv_open
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="237_L2_setlocaleSettheLocal.html">setlocale
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><LI>Internationalization Services" in the<I> VisualAge
+C++ Programming Guide</I><!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="161_L2_hypotCalculateHypote.html">[Back: hypot - Calculate Hypotenuse]</A> <BR>
+<A HREF="163_L2_iconv_closeRemoveCon.html">[Next: iconv_close - Remove Conversion Descriptor]</A> 
+</BODY>
+</HTML>

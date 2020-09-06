@@ -1,0 +1,156 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Change the WPS archive flag</TITLE>
+</HEAD>
+<BODY>
+<H1>Change the WPS archive flag</H1><!-- entering slot 378 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+The WPS archive flag is saved in the file<B> \OS2\BOOT\ARCHBASE.$$$</B> at
+the offset 0xCF (Use 208 dec. for CharOut</A> in REXX programs. This is
+necessary because REXX counts beginning with 1). To turn the ARCHIVE feature
+on, set this byte to 0x01; to turn it off set it to 0x00 (tested with OS/2
+WARP and OS/2 WARP Connect, see example program below).
+<P>
+The name of the path for the archive is saved as ASCIIZ string in the same
+file at the offset 0x06 (use 7 dec for CharOut</A> in REXX programs). The
+maximum length for the path is 200.
+<BR>
+(see also <A HREF="368_L2_ChangetheOS2recovery.html">Change the OS/2 recovery
+screen options</A>) 
+<P>
+<B>Source: </B> Peter Bunney (see <A HREF="944_L2H_EMailaddressesB.html">EMail
+Addresses</A>)<!-- lm: 0x2 1 -->
+<UL>
+<P>
+ 
+<P>
+<B>Note: </B> According to some messages on Usenet, the offset of these
+bytes is different in various versions of WARP with Fixpacks applied. I
+can't say if that is true or not -- but don't forget that the format of
+this file is<B> not</B> documented!<!-- lm: 0x2 1 -->
+<P>
+ 
+<PRE> 
+/*                                                                    */
+/* Program Title: swBackup.CMD                                        */
+/*                                                                    */
+/* Program Purpose: get, set or clear the archive bit in the          */
+/*                  desktop settings                                  */
+/*                                                                    */
+/* Author: Peter Bunney 100411.20@compuserve.com                      */
+/*         (see <A HREF="944_L2H_EMailaddressesB.html">EMail Addresses</A>)                                      */
+/*                                                                    */
+/* History                                                            */
+/*   Date Written: 16 dec 95                                          */
+/*                                                                    */
+/*   Date Updated: 18 dec 95                                          */
+/*    - added parameter /bs                                           */
+/*    - added some error checking /bs                                 */
+/*    - changed the name to the 8.3 convention                        */
+/*                                                                    */
+/* Usage:                                                             */
+/*   swBackup {ON|OFF|STATUS} {bootDrive}                             */
+/*                                                                    */
+/* Where:                                                             */
+/*   ON        = switch archive feature ON                            */
+/*   OFF       = switch archive feature OFF                           */
+/*   STATUS    = get the current status of the archive feature (def.) */
+/*   bootDrive = boot drive (e.g. "C:")                               */
+/*               def.: use environment variable RUNWORKPLACE          */
+/*                                                                    */
+/* Returns:                                                           */
+/*   parameter ON or OFF: 0 if successful                             */
+/*   parameter STATUS: 0 - archive feature is off,                    */
+/*                     1 - archive feature is on                      */
+/*   else                                                             */
+/*     255 - error                                                    */
+/*                                                                    */
+
+                        /* init the return code                       */
+  retCode = 255
+
+                        /* get the parameter                          */
+  parse arg action bootdrive .
+
+                        /* check the parameter, use defaults if       */
+                        /* necessary                                  */
+  if bootDrive = "" then
+    bootDrive = left( value( "RUNWORKPLACE",, "OS2ENVIRONMENT" ),1 )
+  bootDrive = left( bootDrive,1 ) || ":"
+
+  if action = "" then
+    action = "STATUS"
+  action = translate( action )
+
+                        /* file used by the WPS to save the current   */
+                        /* status                                     */
+  Archivefilename = bootDrive || "\os2\boot\archbase.$$$"
+
+  if stream( ArchiveFileName, "c", "QUERY EXISTS" ) &lt;&gt; "" then
+  do
+                        /* change file attributes                     */
+    "@attrib -r " ArchiveFilename "2&gt;NUL 1&gt;NUL"
+    if rc = 0 then
+    do
+
+                        /* process the appropriate action             */
+      select
+
+        when action = "ON" then
+        do
+                        /* turn the archive feature ON                */
+          if stream( ArchiveFileName, "c", "OPEN WRITE" ) = "READY:" then
+            if charout( ArchiveFilename, x2c( 01 ), 208 ) = 0 then
+              retCode = 0
+          call stream ArchiveFileName, "c", "CLOSE"
+        end /* when */
+
+        when action = "OFF" then
+        do
+                        /* turn the archive feature OFF               */
+          if stream( ArchiveFileName, "c", "OPEN WRITE" ) = "READY:" then
+            if charout( ArchiveFilename, x2c( 00 ), 208 ) = 0 then
+              retCode = 0
+          call stream ArchiveFileName, "c", "CLOSE"
+        end /* when */
+
+        when action = "STATUS" then
+        do
+                        /* get the status of the archive feature      */
+          if stream( ArchiveFileName, "c", "OPEN READ" ) = "READY:" then
+            retCode = c2x( charin( ArchiveFilename,208,1 ) )
+          call stream ArchiveFileName, "c", "CLOSE"
+        end /* when */
+
+        otherwise
+        do
+          say "Error: Invalid action parameter &lt;" || action "&gt; found!"
+          retCode = 255
+        end /* otherwise */
+
+      end /* select */
+
+                          /* reset file attributes                      */
+      "@attrib +r " ArchiveFilename "2&gt;NUL 1&gt;NUL"
+    end /* if rc = 0 then */
+    else
+      say "Error changing the attributes of &lt;" || ArchiveFileName || "&gt;!"
+
+  end /* if stream( ... */
+  else
+    say "<!-- entering slot 379 -->File &lt;" || ArchiveFileName || "&gt; not found!"
+
+exit retCode
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="366_L2_HowtowaitintheSTARTU.html">[Back: How to wait in the STARTUP.CMD until the WPS is up]</A> <BR>
+<A HREF="368_L2_ChangetheOS2recovery.html">[Next: Change the OS/2 recovery screen options]</A> 
+</BODY>
+</HTML>

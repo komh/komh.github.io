@@ -1,0 +1,152 @@
+<HTML>
+<HEAD>
+<TITLE>GROUP (Treat Multiple Segments as a Single Unit)</TITLE>
+</HEAD>
+<BODY>
+<H1>GROUP (Treat Multiple Segments as a Single Unit)</H1><!-- entering slot 790 -->
+<P>
+The<B> GROUP</B> directive associates a group<I> Name</I> with one or more
+segments, and causes all labels and variables defined in the given segments
+to have addresses relative to the beginning of the group, rather than to
+the segments where they are defined.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B>Syntax</B><!-- lm: 0x2 11 -->
+<UL>
+<P>
+
+<PRE><I>Name</I> <B>GROUP</B> <I>Segment-Name</I> [,...]
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL><B>Remarks</B><!-- lm: 0x2 11 -->
+<UL>
+<P>
+Each<I> Segment-Name</I> entry must be a unique segment name assigned by
+the <A HREF="786_L3_SEGMENTOpenaProgramI.html">SEGMENT</A> directive.  A
+<I>Segment-Name</I> entry may be a forward reference to a subsequently declared
+segment name.
+<P>
+An additional occurrence of a given group<I> Name</I> in a subsequent<B> GROUP
+</B>directive does not constitute a redefinition, but instead the effect
+is cumulative.  The group<I> Name</I> itself is declared the first time
+it appears in a<B> GROUP</B> directive, but the group definition is not
+complete until the end of the source module is reached.  The final group
+definition is the cumulative list of all unique segments named in all occurrences
+of a<B> GROUP</B> directive for that group<I> Name</I>.
+<P>
+Segments in a group need not be contiguous.  Segments that do not belong
+to the group can be loaded between segments that do belong to the group.
+ The only restriction is that for USE16 segments the distance (in bytes)
+between the first byte in the first segment of the group and the last byte
+in the last segment must not exceed 65535 bytes.
+<P>
+Group names can be used with the <A HREF="797_L3_ASSUMEInformAssemble.html">ASSUME
+</A>directive and as an operand prefix with the segment override operation
+(:).<!-- lm: 0x2 1 -->
+</UL><B> Example</B><!-- lm: 0x2 11 -->
+<UL>
+<P>
+The following example shows how to use the<B> GROUP</B> directive to combine
+segments:
+<P>
+<B>In Module A:</B>
+<PRE>CGROUP   GROUP    XXX,YYY
+XXX      SEGMENT
+         ASSUME   CS:CGROUP
+         .
+         .
+         .
+XXX      ENDS
+YYY      SEGMENT
+         ASSUME   CS:CGROUP
+         .
+         .
+         .
+YYY      ENDS
+</PRE>
+
+<P>
+<B>In Module B:</B>
+<PRE>CGROUP   GROUP    ZZZ
+ZZZ      SEGMENT
+         ASSUME   CS:CGROUP
+         .
+         .
+         .
+ZZZ      ENDS
+</PRE>
+
+<P>
+The next example shows how to set<B> DS</B> with the paragraph number of
+the group called<B> DGROUP</B>.
+<P>
+<B>As immediate:</B>
+<PRE>MOV      AX,DGROUP
+MOV      DS,AX
+</PRE>
+
+<P>
+<B>In assume:</B>
+<PRE>ASSUME    DS:DGROUP
+</PRE>
+
+<P>
+<B>As an operand prefix:</B>
+<PRE>MOV    BX,OFFSET DGROUP:FOO
+DW     FOO
+DW     DGROUP:FOO
+</PRE>
+
+<P>
+<B>Note:</B><!-- lm: 0x2 12 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 16 --><B>DW FOO</B> returns the offset of the symbol
+within its segment.<!-- lm: 0x2 12 -->
+<P>
+ <LI><LI><!-- lm: 0x2 16 --><B>DW DGROUP:FOO</B> returns the offset of the
+symbol within the group.<!-- lm: 0x2 11 -->
+</UL> The next example shows
+how you can use the<B> GROUP</B> directive to create a<B> .COM</B> file
+type.
+<PRE>PAGE    ,132
+TITLE   GRPCOM - Use GROUP to create a DOS .COM file
+;Use the DOS EXE2BIN utility to convert GRPCOM.EXE to GRPCOM.COM.
+
+CG      GROUP    CSEG,DSEG    ;ALL SEGS IN ONE GROUP
+DISPLAY MACRO    TEXT
+LOCAL   MSG
+DSEG    SEGMENT  BYTE PUBLIC 'DATA'
+MSG     DB       TEXT,13,10,"$"
+DSEG    ENDS
+;;Macro produces partly in DSEG,
+;;partly in CSEG
+        MOV      AH,9
+        MOV      DX,OFFSET CG: MSG
+;;Note use of group name
+;;in producing offset
+        INT 21H
+        ENDM
+DSEG    SEGMENT  BYTE PUBLIC 'DATA'
+;Insert local constants and work areas here
+DSEG    ENDS
+CSEG    SEGMENT BYTE PUBLIC 'CODE'
+  ASSUME  CS:CG,DS:CG,SS:CG,ES:CG ;SET BY LOADER
+        ORG 100H ;Skip to end of the PSP
+ENTPT   PROC     NEAR ;COM file entry at 0100H
+     DISPLAY "USING MORE THAN ONE SEGMENT"
+     DISPLAY "YET STILL OBEYING .COM RULES"
+        RET      ;Near return to DOS
+ENTPT   ENDP
+CSEG    ENDS
+        <!-- entering slot 791 -->END      ENTPT
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="782_L3_FARDATAOpensDefaulto.html">[Back: .FARDATA? (Opens Default or Named Uninitialized Far Data Segment)]</A> <BR>
+<A HREF="784_L3_MODELDefineProgramMe.html">[Next: .MODEL (Define Program Memory Segmentation Model)]</A> 
+</BODY>
+</HTML>

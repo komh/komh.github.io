@@ -1,0 +1,55 @@
+<HTML>
+<HEAD>
+<TITLE>Using Select() with the Alert Socket</TITLE>
+</HEAD>
+<BODY>
+<H1>Using Select() with the Alert Socket</H1><!-- entering slot 176 -->
+<P>
+The alert socket is used to communicate messages from the RSVP daemon to
+the API.  These messages generally turn into events for the program. The
+select() call is used to wait for read data on the alert socket.  Once there
+is read data available, the program must call rapi_dispatch() so that the
+RSVP API can read the data and handle it properly.  Typically, rapi_dispatch()
+will, in turn, call your callback function, possibly more than once.
+<P>
+In the &lt;RSVPRAPI.H&gt; header file, the data type rapi_event_rtn_t is
+declared to be a pointer to a callback function.  The arguments of the function
+are also declared there, so that you can see how to declare your callback
+function arguments.
+<P>
+This example shows a loop with a select() call waiting on the alert socket
+until a path message is received and handled by a callback function:
+<PRE>fd_set readSockets;
+    int rc, rapi_rc;
+    int receivedPathEvent = 0; /* set to 1 by the callback routine */
+
+    while (! receivedPathEvent)
+        {
+        FD_ZERO(&amp;readSockets);
+        FD_SET(alertSoc, &amp;readSockets);
+        if ((rc = select(FD_SETSIZE, &amp;readSockets, NULL, NULL, &amp;timeout)) &lt; 0)
+            {
+            psock_errno("select() on alert socket");
+            exit(1);
+            }
+        if (rc &gt; 0 &amp;&amp; FD_ISSET(alertSoc, &amp;readSockets))
+            {
+            rapi_rc = rapi_dispatch();
+            if (rapi_rc == RAPI_ERR_NORSVP)
+                {
+                printf("Warning! RSVP has gone away.\n");
+                exit(1);
+                }
+            }
+        } /* end while */
+</PRE>
+
+<P>
+Waiting for a reservation message would be handled similarly.
+
+<P><HR>
+
+<A HREF="165_L3_EstablishingtheProgr.html">[Back: Establishing the Program as a Sender]</A> <BR>
+<A HREF="167_L3_CallbackFunctionExam.html">[Next: Callback Function Example]</A> 
+</BODY>
+</HTML>

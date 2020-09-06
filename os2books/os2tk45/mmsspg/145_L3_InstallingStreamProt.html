@@ -1,0 +1,128 @@
+<HTML>
+<HEAD>
+<TITLE>Installing Stream Protocol</TITLE>
+</HEAD>
+<BODY>
+<H1>Installing Stream Protocol</H1><!-- entering slot 185 -->
+<P>
+A stream handler must also support SpiInstallProtocol to be able to receive
+the SPCB's.  For example, suppose an application or media driver wants to
+install another SPCB of the same data type and subtype as an SPCB that it
+already has installed.  The application or media driver will need to assign
+a new internal key value, that is used to differentiate between multiple
+SPCB's of the same data stream type.  All the default SPCBs are installed
+with an internal key value of 0.  Any additional SPCBs that overlap any
+of the data types that are already installed, need to use a different internal
+key value.  Therefore, the stream handler must have code that allows for
+this scenario.
+<P>
+The sample code in the following example illustrates how to install stream
+protocol.
+<PRE>RC ShcInstallProtocol(pipparm)
+PPARM_INSTPROT pipparm;
+
+{ /* Start of ShcInstallProtocol */
+
+RC rc = NO_ERROR;                       /* local return code */
+int notfound = TRUE;
+PESPCB pTempEspcb;
+PESPCB pPrevEspcb;
+
+ /* the ESPCB list is under semaphore control */
+
+ if (!(rc = DosRequestMutexSem(hmtxGlobalData, SEM_INDEFINITE_WAIT)))
+   { /* obtained semaphore */
+     if (pipparm-&gt;ulFlag &amp; SPI_DEINSTALL_PROTOCOL)
+       { /* DeInstall */
+
+         /* To Deinstall, Find the spcb,                  */
+         /*               Take it off the espcb chain,    */
+         /*               Free the espcb memory allocated */
+
+         rc = ERROR_INVALID_SPCBKEY;
+         pPrevEspcb = NULL;
+         pTempEspcb = pESPCB_ListHead;
+         while (pTempEspcb &amp;&amp; notfound)
+           { /* Loop thru espcbs */
+             if ((pipparm-&gt;spcbkey.ulDataType ==
+                           pTempEspcb-&gt;spcb.spcbkey.ulDataType) &amp;&amp;
+                 (pipparm-&gt;spcbkey.ulDataSubType ==
+                           pTempEspcb-&gt;spcb.spcbkey.ulDataSubType) &amp;&amp;
+                 (pipparm-&gt;spcbkey.ulIntKey ==
+                           pTempEspcb-&gt;spcb.spcbkey.ulIntKey))
+               { /* found match */
+                 notfound = FALSE;
+                 rc = NO_ERROR;
+
+                 /* Take the espcb off the chain */
+
+                 if (pPrevEspcb)
+                   {
+                     pPrevEspcb-&gt;pnxtESPCB = pTempEspcb-&gt;pnxtESPCB;
+                   }
+                 else
+                   {
+                     pESPCB_ListHead = pTempEspcb-&gt;pnxtESPCB;
+                   }
+                 HhpFreeMem(hHeap, pTempEspcb);
+
+               } /* found match */
+             else
+               { /* try the next espcb in the chain */
+
+                 pPrevEspcb = pTempEspcb;
+                 pTempEspcb = pTempEspcb-&gt;pnxtESPCB;
+
+               } /* try the next espcb in the chain */
+           } /* Loop thru espcbs */
+       } /* DeInstall */
+     else
+       { /* Install */
+
+         /* If the SPCB already exists then error */
+
+         if (ShFindEspcb(pipparm-&gt;spcbkey))
+           {
+             rc = ERROR_INVALID_SPCBKEY;
+           }
+         else
+           { /* OK to add spcb */
+
+             /* Allocate the espcb and put it on the front of the chain */
+
+             pTempEspcb = (PESPCB)HhpAllocMem(hHeap, sizeof(ESPCB));
+             if (pTempEspcb)
+               {
+                 pTempEspcb-&gt;spcb = *(pipparm-&gt;pspcb);
+                 pTempEspcb-&gt;pnxtESPCB = pESPCB_ListHead;
+                 pESPCB_ListHead = pTempEspcb;
+               }
+             else
+               }
+                 rc = ERROR_ALLOC_RESOURCES;
+               }
+           } /* OK to add spcb */
+       } /* Install */
+
+     DosReleaseMutexSem(hmtxGlobalData);
+
+   } /* obtained semaphore */
+
+ return(rc);
+
+} /* End of ShcInstallProtocol */
+</PRE>
+
+<P>
+<B>Note: </B> For descriptions of the parameters in the SPCB, see <A HREF="058_L1_StreamHandlers.html">Stream
+Handlers</A>.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+
+<P><HR>
+
+<A HREF="144_L3_UpdatingtheSPIINIFil.html">[Back: Updating the SPI.INI File]</A> <BR>
+<A HREF="146_L2_InstallinganIOProced.html">[Next: Installing an I/O Procedure]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,61 @@
+<HTML>
+<HEAD>
+<TITLE>DIVE Image Buffers</TITLE>
+</HEAD>
+<BODY>
+<H1>DIVE Image Buffers</H1><!-- entering slot 159 -->
+<P>
+Because DIVE will use off-screen VRAM where available for acceleration of
+blitting operations, the application should allocate all source blitting
+buffers from DIVE whenever possible.  To allocate a buffer, the application
+would make the following call:
+<PRE>ULONG   ulBufNum;
+FOURCC  fccColorSpace;
+ULONG   ulWidth, ulHeight, ulLineSizeBytes;
+PBYTE   pbImageBuffer;
+
+ulErrorCode = DiveAllocImageBuffer(
+        hDive,          /* DIVE handle  */
+        &amp;ulBufNum,     /* Buffer number (output)       */
+        fccColorSpace,  /* Color format */
+        ulWidth, ulHeight,     /* Size of maximum image        */
+        ulLineSizeBytes,
+        &amp;pbImageBuffer);
+</PRE>
+
+<P>
+A corresponding DiveFreeImageBuffer function call is used to deallocate
+the buffer when it is no longer needed.  The color format of the image buffer
+is described by<I> fccColorSpace</I>. The DIVE interface defines constants
+for a variety of 8-, 16-, and 24-bit color encoding schemes.  After a buffer
+is allocated and before it can be used for blitting, it must be accessed
+as shown in the following example:
+<PRE>PBYTE   pbImageBuffer;
+ULONG   ulBufferScanLineBytes, ulBufferScanLines;
+
+ulErrorCode = DiveBeginImageBufferAccess(
+        hDiveInst,          /* DIVE handle   */
+        ulBufferNumber,       /* Buffer number */
+        &amp;pbImageBuffer,    /* Ptr to image buffer (output) */
+        &amp;ulBufferScanLineBytes);  /* Scan line length (output)    */
+        &amp;ulBufferScanLines);  /* Scan lines (output)    */
+
+</PRE>
+
+<P>
+DIVE calculates the number of bytes per scan line for the image buffer (based
+on the color format) and returns the value in<I> ulBufferScanLineBytes</I>.
+ The application can now write color data into<I> pbImageBuffer</I>.  For
+example, the application could open a bit-map file and read the bit-map
+data directly into the image buffer.  After the data has been written, the
+application calls DiveEndImageBufferAccess to deaccess the buffer. Be sure
+to use scan line bytes (you might have to read a line at a time).
+<P>
+
+
+<P><HR>
+
+<A HREF="147_L2_UsingDive.html">[Back: Using Dive]</A> <BR>
+<A HREF="149_L3_DIVEPalettes.html">[Next: DIVE Palettes]</A> 
+</BODY>
+</HTML>

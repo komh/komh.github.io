@@ -1,0 +1,88 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DdfListItem - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DdfListItem - Example Code</H1><!-- entering slot 429 -->
+<P>
+After initializing a DDF buffer with <A HREF="390_L2_DdfInitialize.html">DdfInitialize</A>,
+the example uses DdfBeginList to indicate the beginning of a definition
+list in the DDF buffer (this corresponds to the IPF dl tag). For a more
+detailed example and discussion of initializing DDF, see the <A HREF="390_L2_DdfInitialize.html">DdfInitialize
+</A>sample.
+<PRE>#define INCL_WINWINDOWMGR       /* General window management    */
+#define INCL_WINMESSAGEMGR      /* Message management           */
+#define INCL_DDF                /* Dynamic Data Facility        */
+#include &lt;os2.h&gt;
+#include &lt;pmhelp.h&gt;
+
+struct _LISTITEM        /* definition list                      */
+{
+    PSZ Term;
+    PSZ Desc;
+} Definition[2] = {{"MVS", "Multiple Virtual System"},
+                   {"VM",  "Virtual Machine"}};
+
+MRESULT WindowProc( HWND hwnd, ULONG ulMsg, MPARAM mp1, MPARAM mp2)
+{
+
+    HWND   hwndParent;
+    HWND   hwndInstance;
+    HDDF   hDdf;            /* DDF handle                           */
+    SHORT i;               /* loop index                           */
+
+    switch( ulMsg )
+    {
+    case HM_QUERY_DDF_DATA:
+        /* get the help instance */
+        hwndParent = WinQueryWindow( hwnd, QW_PARENT );
+        hwndParent = WinQueryWindow( hwndParent, QW_PARENT );
+        hwndInstance = (HWND)WinSendMsg( hwndParent, HM_QUERY,
+                                 MPFROMSHORT( HMQW_INSTANCE ), NULL );
+
+        /* Allocate 1K Buffer (default)  */
+        hDdf = DdfInitialize(
+                   hwndInstance,  /* Handle of help instance */
+                   0L,            /* Default buffer size     */
+                   0L             /* Default increment       */
+                   );
+
+        if (hDdf == NULLHANDLE)       /* Check return code       */
+        {
+            return (MRESULT)FALSE;
+        }
+
+        /* begin definition list */
+        if (!DdfBeginList(hDdf, 3L, HMBT_ALL, HMLS_SINGLELINE))
+        {
+            return (MRESULT)FALSE;
+        }
+
+        /* insert 2 entries into definition list */
+        for (i=0; i &lt; 2; i++)
+        {
+            if (!DdfListItem(hDdf, Definition[i].Term,
+                                   Definition[i].Desc))
+            {
+               return (MRESULT)FALSE;
+            }
+        }
+
+        /* terminate definition list */
+        if (!DdfEndList(hDdf))
+        {
+            return (MRESULT)FALSE;
+        }
+
+        return (MRESULT)hDdf;
+    }
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="410_L2H_DdfListItemRelatedFu.html">[Back: DdfListItem - Related Functions]</A> <BR>
+<A HREF="412_L2H_DdfListItemTopics.html">[Next: DdfListItem - Topics]</A> 
+</BODY>
+</HTML>

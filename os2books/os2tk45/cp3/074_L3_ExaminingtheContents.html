@@ -1,0 +1,75 @@
+<HTML>
+<HEAD>
+<TITLE>Examining the Contents of Named Pipes</TITLE>
+</HEAD>
+<BODY>
+<H1>Examining the Contents of Named Pipes</H1><!-- entering slot 78 -->
+<P>
+<A><!-- external link: 1D A5 C3 4A -->DosPeekNPipe</A> examines the current
+contents of a named pipe.
+<P>
+Named pipes created with the NP_ACCESS_INBOUND access mode cannot use the
+<A><!-- external link: 1D A5 C3 4A -->DosPeekNPipe</A> function. If the
+named pipe's client uses the<A><!-- external link: 1D A5 C3 4A --> DosPeekNPipe
+</A>function, the function returns error code 5 (ERROR_ACCESS_DENIED).
+<P>
+It is similar to<A><!-- external link: 1D D7 C3 FC --> DosRead</A>, except
+that<A><!-- external link: 1D A5 C3 4A --> DosPeekNPipe</A> does not remove
+data from the pipe. In addition,<A><!-- external link: 1D A5 C3 4A --> DosPeekNPipe
+</A>never blocks, even if the pipe is in blocking mode; if the pipe cannot
+be accessed immediately, ERROR_PIPE_BUSY is returned.
+<P>
+Because<A><!-- external link: 1D A5 C3 4A --> DosPeekNPipe</A> does not
+block, it returns only what is currently in the pipe. Thus, if a message
+pipe is being examined, only a portion of a message might be returned, even
+though the specified buffer length could accommodate the entire message.
+
+<P>
+<A><!-- external link: 1D A5 C3 4A -->DosPeekNPipe</A> also returns the
+state of the pipe. A named pipe can be in any of the following states: Connected,
+Disconnected, Listening, Closing.
+<P>
+The following code fragment shows how to use<A><!-- external link: 1D A5 C3 FC --> DosPeekNPipe</A>:
+
+<PRE>    #define INCL_DOSNMPIPES   /* Named-pipe values */
+    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+
+    HPIPE              hpHandle;      /* Pipe handle                */
+    UCHAR              ucBuffer[200]; /* Address of user buffer     */
+    ULONG              ulBufferLen;   /* Buffer length              */
+    ULONG              ulBytesRead;   /* Bytes read (returned)      */
+    struct _AVAILDATA  BytesAvail;    /* Bytes available (returned) */
+    ULONG              ulPipeState;   /* Pipe state (returned)      */
+    APIRET             ulrc;          /* Return code                */
+
+    ulBufferLen = 200;  /* Length of the read buffer */
+
+    ulrc = DosPeekNPipe(hpHandle,
+                        ucBuffer,
+                        ulBufferLen,
+                        &amp;ulBytesRead,
+                        &amp;BytesAvail,
+                        &amp;ulPipeState);
+
+    if (ulrc != 0) {
+        printf("DosPeekNPipe error: return code = %ld",
+               ulrc);
+        return;
+    }
+
+</PRE>
+
+<P>
+On successful return, the input buffer<I> Buffer</I> will contain up to
+the first 200 bytes from the named pipe,<I> BytesRead</I> will contain the
+number of bytes read into<I> Buffer</I>,<I> BytesAvail</I> will contain
+the total number of bytes that were available in the pipe, and<I> PipeState
+</I>will contain a value indicating the state of the named pipe.
+
+<P><HR>
+
+<A HREF="073_L3_DeterminingPipeStatu.html">[Back: Determining Pipe Status]</A> <BR>
+<A HREF="075_L3_ClosingNamedPipes.html">[Next: Closing Named Pipes]</A> 
+</BODY>
+</HTML>

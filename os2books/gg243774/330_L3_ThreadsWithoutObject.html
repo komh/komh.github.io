@@ -1,0 +1,47 @@
+<HTML>
+<HEAD>
+<TITLE>Threads Without Object Windows</TITLE>
+</HEAD>
+<BODY>
+<H1>Threads Without Object Windows</H1><!-- entering slot 364 -->
+<P>
+Secondary threads without object windows are typically created to  perform
+a lengthy processing operation within the scope of a single  event.  A window
+procedure under the control of the primary thread  creates the secondary
+thread to process a particular subroutine, and  the secondary thread terminates
+automatically when this subroutine  reaches an exit point.  However, the
+<B>DosExit()</B> function should be called as the last action in the secondary
+thread, in order  to ensure that the memory allocated for the thread's stack
+is correctly released by the operating system.
+<P>
+However, some checks may be necessary to ensure orderly termination  of
+a secondary thread, particularly where access to data objects is  involved.
+Upon termination of an application's primary thread, all  secondary threads
+that have not already been terminated by the  application are forcibly terminated
+by OS/2.  Where the secondary  thread's processing involves a critical data
+operation such as the  update of a database, the primary thread should ensure
+that the  secondary thread has completed its processing before allowing
+itself to  terminate.
+<P>
+It is recommended that before creating a secondary thread without an object
+window, a window procedure should set an event semaphore, and pass the handle
+of this semaphore to the secondary thread.  The event semaphore is then
+cleared by the secondary thread as the<I> last action</I> before it terminates.
+
+<P>
+Upon receiving a WM_DESTROY message, the window procedure in the primary
+thread should test the state of the event semaphore and wait for the semaphore
+to clear before completing the WM_DESTROY message processing (which should
+include releasing the semaphore) and returning control to Presentation Manager.
+ This will ensure that the secondary thread terminates in an orderly manner
+before the primary thread is terminated.
+<P>
+The use of event semaphores is described in more detail in <A HREF="343_L2_MaintainingSynchroni.html">Maintaining
+Synchronization</A>.
+
+<P><HR>
+
+<A HREF="329_L3_ThreadsContainingObj.html">[Back: Threads Containing Object Windows]</A> <BR>
+<A HREF="331_L3_ForcingTerminationof.html">[Next: Forcing Termination of a Thread]</A> 
+</BODY>
+</HTML>

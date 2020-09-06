@@ -1,0 +1,94 @@
+<HTML>
+<HEAD>
+<TITLE>Waiting for a Thread to End</TITLE>
+</HEAD>
+<BODY>
+<H1>Waiting for a Thread to End</H1><!-- entering slot 117 -->
+<P>
+An application might need to ensure that one thread has finished executing
+before another thread continues with its own task. For example, one thread
+might have to finish reading a disk file into memory before another thread
+can use the information. You can use<A><!-- external link: 1D 0E C4 35 --> DosWaitThread
+</A>to suspend a thread until another thread has ended.
+<P>
+<A><!-- external link: 1D 0E C4 35 -->DosWaitThread</A> places the current
+thread into a wait state until another thread in the current process has
+ended. It then returns the thread identifier of the ending thread.
+<P>
+The following code fragment creates three threads. The thread identifier
+for each thread is returned by<A><!-- external link: 1D 74 C3 33 --> DosCreateThread
+</A>in the<I> atid</I> array. Using<I> &amp;atid[0]</I> as a parameter in
+the call to<A><!-- external link: 1D 0E C4 35 --> DosWaitThread</A> causes
+OS/2 to wait until the thread with that identifier (the thread running Thread2Func)
+ends.
+<PRE>    #define INCL_DOSPROCESS       /* Process and thread values */
+    #include &lt;os2.h&gt;
+
+    #define HF_STDOUT 1           /* Standard output handle    */
+
+    TID tidAtid[3];
+    ULONG ulWritten;
+
+    DosCreateThread(&amp;tidAtid[0],
+                    Thread2Func,
+                    0,
+                    0,
+                    4096);
+
+    DosCreateThread(&amp;tidAtid[1],
+                    Thread3Func,
+                    0,
+                    0,
+                    4096);
+
+    DosCreateThread(&amp;tidAtid[2],
+                    Thread4Func,
+                    0,
+                    0,
+                    4096);
+
+    DosWaitThread(&amp;tidAtid[0],
+                  DCWW_WAIT);
+
+    DosWrite(HF_STDOUT,
+             "The thread has ended\r\n",
+             27,
+             &amp;ulWritten);
+
+</PRE>
+
+<P>
+If you set the<I> tid</I> parameter to 0 in the call to<A><!-- external link: 1D 0E C4 FC --> DosWaitThread</A>,
+OS/2 waits only until the next thread (any thread in the process) ends.
+The identifier for the ended thread is then returned in the<I> tid</I> parameter.
+
+<P>
+After the threads are created as in the preceding example, the following
+code fragment waits until one of the threads ends, and then returns its
+thread identifier:
+<PRE>    #define INCL_DOSPROCESS       /* Process and thread values */
+    #include &lt;os2.h&gt;
+
+    TID tid;
+
+    tid = 0;
+
+    DosWaitThread(&amp;tid,
+                  DCWW_WAIT);
+
+</PRE>
+
+<P>
+The thread identifier of the next thread to end after the<A><!-- external link: 1D 0E C4 35 --> DosWaitThread
+</A>call is returned in the<I> tid</I> parameter.
+<P>
+You can use<A><!-- external link: 1D 0E C4 35 --> DosWaitThread</A> so that
+you can recover thread resources when the thread ends, or to synchronize
+the execution of a thread with the execution of other threads.
+
+<P><HR>
+
+<A HREF="111_L3_EnteringCriticalSect.html">[Back: Entering Critical Sections]</A> <BR>
+<A HREF="113_L3_EndingtheCurrentThre.html">[Next: Ending the Current Thread]</A> 
+</BODY>
+</HTML>

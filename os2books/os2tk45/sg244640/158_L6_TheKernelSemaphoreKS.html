@@ -1,0 +1,86 @@
+<HTML>
+<HEAD>
+<TITLE>The Kernel Semaphore (KSEM)</TITLE>
+</HEAD>
+<BODY>
+<H1>The Kernel Semaphore (KSEM)</H1><!-- entering slot 204 -->
+<P>
+The kernel semaphore is a RAMSEM and EVENT SEM with accountability in-built.
+
+<P>
+Many system control block have imbedded KSEMs. Included among these are
+the PTDA and MFT.
+<P>
+Some KSEMs are allocated out of the kernel heaps and have the owner mnemonic
+<B>KSEM</B>.
+<P>
+When a thread blocks on a KSEM the address (or handle) of the KSEM, or a
+field within the KSEM, is used as the BlockId depending upon the KSEM type.
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+For MUTEX KSEMs<!-- lm: 0x2 17 -->
+<UL> The BlockId is the address of the
+beggining of the <A HREF="3128_L3_KSEMStructuresforOS2.html">KSEM structure</A>.
+<!-- lm: 0x2 1 -->
+</UL>For Shared KSEMs<!-- lm: 0x2 17 -->
+<UL> The BlockId
+is the address of the Pending Readers count field within the <A HREF="3128_L3_KSEMStructuresforOS2.html">KSEM
+structure</A>.<!-- lm: 0x2 1 -->
+</UL> For Exclusive KSEMs<!-- lm: 0x2 17 -->
+<UL> The
+BlockId is the address of the Pending Writers count field within the <A HREF="3128_L3_KSEMStructuresforOS2.html">KSEM
+stucture</A>.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Under the debug (ALLSTRICT) kernel the KSEM contains an additional signature
+'KSEM'.  Always check a BlockId address to see if the 'KSEM' signature is
+present.
+<P>
+<A HREF="327_L4_KernelSemaphoreKSEM.html"><B>.D KSEM</B></A> will format
+the KSEM.
+<P>
+In this example we look at Slot 6c to find out why it will not run.
+<PRE>#.pb 6c Slot  Sta BlockID  Name     Type        Addr        Symbol
+ 006c  blk 7bdfc910 DEMO1
+
+# .m 7bdfc910
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0087 %fef1fba4 00000082 %7bdf5000 121 0085 0088 0000 0000 0089 0000      =0000
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 0089  0087 0000  0325 ffcb 0000  0000 00  00 00 00 ptda
+
+&gt;&gt; This thread is blocked on an address in (its) PTDA. All PTDA
+&gt;&gt; semaphores are KSEMs.
+
+# .d KSEM %7bdfc910
+Signature     : KSEM                        Nest: 0001
+Type          : MUTEX
+Flags         : 00
+Owner         : 0041              PendingWriters: 0001
+
+&gt;&gt; So the owner is Slot 41. Lets look at him to see what he's up to.
+
+# .pb 41
+ Slot  Sta BlockID  Name     Type        Addr        Symbol
+ 0041  blk 04085ca7 DEMO1
+# .m #408:5ca7
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0079 %fef1fa70 00000010 %7bf27000 129 0078 0077 0000 0000 007b 0000   sel=0408
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 007b  0079 0000  0324 ffa1 0000  0000 00  00 00 00 sft
+#
+
+&gt;&gt; Slot 41 is blocked waiting for some file system activity to complete.
+&gt;&gt; We looked at this slot some time ago and found out that it was
+&gt;&gt; waiting to close a device driver.
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="157_L5_StructuredSemaphores.html">[Back: Structured Semaphores]</A> <BR>
+<A HREF="159_L5_The32BitSemaphoreEve.html">[Next: The 32-Bit Semaphore Event and Mutex Semaphores]</A> 
+</BODY>
+</HTML>

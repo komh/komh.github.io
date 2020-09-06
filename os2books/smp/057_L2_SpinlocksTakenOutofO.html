@@ -1,0 +1,63 @@
+<HTML>
+<HEAD>
+<TITLE>Spinlocks Taken Out of Order</TITLE>
+</HEAD>
+<BODY>
+<H1>Spinlocks Taken Out of Order</H1><!-- entering slot 58 -->
+<P>
+One possible cause of deadlock stems from taking spinlocks in different
+orders in different sections of code. Consider the following two sections
+of code, each executing on a separate processor at the same time. For both
+examples all locks are available when the code begins execution.
+<PRE>
+        Code section 1              Code section 2
+
+
+     1  Lock spinlock1           1  Lock spinlock2
+     2  Do some processing       2  Do some processing
+     3  Lock spinlock2           3  Lock spinlock1
+     4  More processing          4  More processing
+     5  Unlock spinlock2         5  Unlock spinlock1
+     6  Unlock spinlock1         6  Unlock spinlock2
+
+</PRE>
+
+<P>
+In section 1 line 1 locks spinlock1.  In section 2 line 1 locks spinlock2.
+Both sections will successfully lock their respective locks and continue
+normally. Now section 1 on line 3 tries to lock spinlock2, which is already
+locked by section 2, so section 1 spins. Now section 2 tries to lock spinlock1
+(line 3), which is already locked by section 1, so section 2 now spins.
+Now each section of code is spinning waiting for a lock that the other owns.
+The result is deadlock. Neither section of code will ever continue executing
+and will therefore never release the spinlock that the other needs. This
+kind of deadlock is very common, but can be avoided by always taking spinlocks
+that are related in the same order.
+<P>
+To fix the above code, code section 2 would be recoded to the following:
+
+<PRE>
+       Code section 2
+
+
+    1  Lock spinlock1
+    2  Lock spinlock2
+    3  Do some processing
+    4  More processing
+    5  Unlock spinlock2
+    6  Unlock spinlock1
+
+</PRE>
+
+<P>
+By taking the locks in the same order as code section 1 the deadlock potential
+is eliminated. Both sections can no longer be waiting on a resource the
+other owns at the same time. It should be noted that spinlocks should be
+released in the reverse order that they are locked.
+
+<P><HR>
+
+<A HREF="056_L2_UseofCLISTI.html">[Back: Use of CLI/STI]</A> <BR>
+<A HREF="058_L2_BlockingWithSpinlock.html">[Next: Blocking With Spinlocks Locked]</A> 
+</BODY>
+</HTML>

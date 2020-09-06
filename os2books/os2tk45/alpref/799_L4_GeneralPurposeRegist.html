@@ -1,0 +1,85 @@
+<HTML>
+<HEAD>
+<TITLE>General-Purpose Register Association</TITLE>
+</HEAD>
+<BODY>
+<H1>General-Purpose Register Association</H1><!-- entering slot 809 -->
+<P>
+A<B><I> General-Purpose-Register-Association</B></I> establishes an assembly-time
+association between a <A HREF="128_L3_ProcessorRegisters.html"><I>General-Purpose-Register
+</I></A>and a <A HREF="256_L2_TypeDeclarations.html"><I>Type-Declaration</I></A>.
+ It allows the programmer to describe for the assembler what type of data
+is being held in the general purpose register at program run-time.
+<P>
+This feature can be very useful when the programmer is treating a general-purpose
+register as a "pointer" to a particular type of storage.  If this "pointer"
+is being utilized many times in the program, (perhaps changing in value
+but never in the type of data to which it points), the<B> ASSUME</B> directive
+can be used to associate the register with the type of data to which it
+points.  This frees the programmer from having to use an explicit <A HREF="467_L4_TypeConversionPTROpe.html">Type
+Conversion (PTR Operator)</A> every time the register is used to access
+memory.
+<P>
+A register may only be associated with a data type whose operand size matches
+that of the register.  For instance, the following construct is illegal:
+
+<PRE>    ASSUME EBX:BYTE          ; Error, EBX is a DWORD register
+</PRE>
+
+<P>
+The most useful situation is for the register to contain a pointer to another
+data type.  In this situation, the <A HREF="579_L4_IndirectionOperator.html">Indirection
+([] Operator)</A> may be used store or retrieve data through the register
+without the need for an explicit conversion operation:
+<PRE>    ASSUME EDI:NOTHING             ; This is the assembler default setting
+    MOV    [EDI], 1                ; What is the size supposed to be?
+    MOV    byte ptr [EDI], 1       ; Fixes the problem, but this can get tiring
+    ASSUME EDI:PTR BYTE            ; EDI is now a pointer to a byte
+    MOV    [EDI], 1                ; assembler knows what to do with this now
+    INC    [EDI]                   ; and this too
+</PRE>
+
+<P>
+The following constructs are legal but not particularly useful since they
+simply restate what is already known about the registers (the operand size),
+and the assembler doesn't enforce a strict level of type checking against
+register operands:
+<PRE>    ASSUME ECX:SDWORD              ; Signed double-word matches size of ECX
+    ASSUME EBX:DWORD               ; Unsigned double-word matches size of EBX
+    MOV    ECX, 0FFFFEEEEh         ; Register type-checking is not strict
+    MOV    EBX, -1                 ;   enough to flag these as errors
+</PRE>
+
+<P>
+In fact, any data type that matches the size of the register may be used;
+the assembler checks the sizes and reports mismatches, but effectively ignores
+any settings that are not pointers to other types.  Consider the following
+example:
+<PRE>    STRUCT_T STRUCT
+      One    BYTE 1
+      Two    BYTE 2
+      Three  BYTE 3
+      Four   BYTE 4
+    STRUCT_T ENDS
+
+    ASSUME EBX:STRUCT_T            ; Ok, STRUCT_T is 4 bytes in size
+    MOV    EBX, -1                 ; Legal, but not very meaningful...
+
+    ; A more useful situation (given that EBX is now holding data of type
+    ; STRUCT_T) would be for the assembler to allow the following notation:
+
+    MOV    EBX, { 4, 3, 2, 1 }     ; Hypothetical (UNSUPPORTED!) syntax...
+
+    ; It would also be nice at this point if the symbolic debugger could
+    ; show us the value of EBX in the appropriate format, but the assembler
+    ; does not support the emitting of context-sensitive symbolic debugging
+    ; information.
+</PRE>
+
+
+<P><HR>
+
+<A HREF="798_L4_SegmentRegisterAssoc.html">[Back: Segment Register Association]</A> <BR>
+<A HREF="800_L3_EQUAssignanExpressio.html">[Next: EQU (Assign an Expression to a Symbolic Constant)]</A> 
+</BODY>
+</HTML>

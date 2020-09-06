@@ -1,0 +1,93 @@
+<HTML>
+<HEAD>
+<TITLE>Font Files and Dynamic-Link Libraries</TITLE>
+</HEAD>
+<BODY>
+<H1>Font Files and Dynamic-Link Libraries</H1><!-- entering slot 125 -->
+<P>
+You can use the Font Editor to alter and customize image-font files. Files
+created with the Font Editor have a .FNT extension. After you create a custom
+font, put it into a dynamic-link library (DLL) that the application can
+load. Once the application loads this library, it can use any of the custom
+fonts the library contains.
+<P>
+DLLs that contain fonts are unique; they contain data segments and empty
+(or useless) code segments. They are unique because they contain no executable
+code, unlike normal DLLs. Also you are able to install the font file as
+a public font if desired;<A><!-- external link: 1D 9B C3 5F --> GpiLoadFonts
+</A>will make it available only as a private font. The operating system
+naming convention for a DLL that contains font information end with a .FON
+extension.
+<P>
+To create a DLL, you must use an assembler, a linker, and the operating
+system Resource Compiler. For this example, assume that your custom font
+file is named NEWFONT.FNT.
+<P>
+After creating your custom font file, you need to create a special assembler
+language file with your editor. Call this file MYFONT.ASM, for example.
+The following figure shows an example of the source code for this file.
+
+<PRE>
+   code segment word      ;Makes dummy code segment aligned on word boundary
+   db "empty_segment"     ;Initializes a string in dummy segment
+   code ends              ;Dummy segment ends here
+   end                    ;Terminates source file
+</PRE>
+
+<P>
+After you have created MYFONT.ASM, assemble it by using the following command:
+
+<PRE>    masm myfont
+</PRE>
+
+<P>
+After assembling the MYFONT.ASM file, create a module-definition file. Call
+this file MYFONT.DEF, for example. It should contain the statements in the
+following figure.
+<PRE>
+    LIBRARY myfont
+    SEGMENTS CODE MOVEABLE
+</PRE>
+
+<P>
+The first statement tells the linker that you are creating a library with
+the module name, MYFONT. The second statement tells the linker that the
+segments in this library are movable code segments.
+<P>
+After creating MYFONT.DEF, start the linker with the command in the following
+figure.
+<PRE>    link myfont,,,,myfont.def
+</PRE>
+
+<P>
+This command creates an empty executable file called MYFONT.EXE.
+<P>
+After creating the empty executable file, which is the template for a DLL,
+create a resource file and call it MYFONT.RC. For example, if your font
+file is called NEWFONT.FNT, you would place the statement in the following
+figure in MYFONT.RC.
+<PRE>    FONT    200     NEWFONT.FNT
+</PRE>
+
+<P>
+This statement assigns the identifier, 200, to the font resource NEWFONT.FNT.
+
+<P>
+Finally, use the Resource Compiler to add the font file (NEWFONT.FNT) to
+the empty DLL as in the following figure.
+<PRE>    rc  myfont.rc
+</PRE>
+
+<P>
+The executable file, MYFONT.EXE, now contains your custom fonts. After you
+have renamed this file, MYFONT.FON, you can load the fonts into your application
+using<A><!-- external link: 1D 9B C3 5F --> GpiLoadFonts</A> and pass it
+a pointer to the path and library name as the second argument-for example,
+c:\os2\dll\myfont.fon.
+
+<P><HR>
+
+<A HREF="121_L3_DrawingaCharacterStr.html">[Back: Drawing a Character String Primitive]</A> <BR>
+<A HREF="123_L2_UsingFonts.html">[Next: Using Fonts]</A> 
+</BODY>
+</HTML>

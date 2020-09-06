@@ -1,0 +1,112 @@
+<HTML>
+<HEAD>
+<TITLE>Preparing to Stream the Waveform Data</TITLE>
+</HEAD>
+<BODY>
+<H1>Preparing to Stream the Waveform Data</H1><!-- entering slot 47 -->
+<P>
+When the waveform audio MCD receives a request to open a device, it issues
+SpiGetHandler and passes the names of the source and target stream handlers
+to the Sync/Stream Manager (SSM), so that it knows which stream handlers
+are going to stream the data.  Data streaming cannot begin until the SSM
+has this information.
+<PRE>  /*********************************************************
+  * Get 'A' stream Handler Handles for Source &amp; target operations
+  * The file system stream handler is the default 'A' handler
+  * but the memory stream handler will be used for playlists.
+  **********************************************************/
+
+
+     if (ulrc = SpiGetHandler((PSZ)DEFAULT_SOURCE_HANDLER_NAME,
+                               &amp;hidASource,
+                               &amp;hidATarget))
+        {
+        return ( ulrc );
+        }
+
+
+  /***********************************************************
+  * Get 'B' stream Handler Handles for Source &amp; target operations
+  * The audio stream handler is considered the B stream handler
+  * since it will usually be the target.
+  *************************************************************/
+
+  ulrc = SpiGetHandler( (PSZ)DEFAULT_TARGET_HANDLER_NAME,
+                        &amp;hidBSource,
+                        &amp;hidBTarget);
+
+  return ( ulrc );
+</PRE>
+
+<P>
+After the waveform audio MCD gets its handler IDs, it must fill in the SPCBKEY
+data structure to tell the SSM what kind of data it is going to stream.
+ SPCBKEY consists of three fields; the data type and two subdata types.
+ For example, it might tell the SSM, "I'm going to stream PCM data at 8
+bits, 22 kHz."
+<P>
+Next, the waveform audio MCD must fill in the device control block (DCB)
+to tell the SSM which device is being streamed to (as shown in the following
+example. The DCB contains two essential items of information:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->ASCII string device name<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Device handle<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The ASCII string device name is obtained from the INI file and passed down
+by MDM.  The device handle is the system file number returned by the IOCtl
+when the open to the device was done from AUDIOIF.
+<PRE>   SysInfo.ulItem       = MCI_SYSINFO_QUERY_NAMES;   SysInfo.usDeviceType  = LOUSHORT(ulDeviceType);
+   SysInfo.pSysInfoParm = &amp;QueryNameParm;
+
+   itoa (HIUSHORT(ulDeviceType), szIndex, 10);
+
+   szIndex[1] = '\0';
+
+   strncat (szAmpMix, szIndex, 2);
+   strcpy (QueryNameParm.szLogicalName, szAmpMix);
+
+   if (rc = mciSendCommand (0,
+                            MCI_SYSINFO,
+                            MCI_SYSINFO_ITEM | MCI_WAIT,
+                            (PVOID) &amp;SysInfo,
+                            0))
+           return (rc);
+
+
+
+
+   /*******************************************
+   * Get PDD associated with our AmpMixer
+   * Device name is in pSysInfoParm-&gt;szPDDName
+   ********************************************/
+
+   SysInfo.ulItem       = MCI_SYSINFO_QUERY_DRIVER;
+   SysInfo.usDeviceType  = (USHORT) ulDeviceType;
+   SysInfo.pSysInfoParm = &amp;SysInfoParm;
+
+   strcpy (SysInfoParm.szInstallName, QueryNameParm.szInstallName);
+
+   if (rc = mciSendCommand (0,
+                            MCI_SYSINFO,
+                            MCI_SYSINFO_ITEM | MCI_WAIT,
+                            (PVOID) &amp;SysInfo,
+                            0))
+       return (rc);
+
+   strcpy (szPDDName, SysInfoParm.szPDDName);
+
+   return ( MCIERR_SUCCESS );
+
+} /* GetPDDName */
+</PRE>
+
+
+<P><HR>
+
+<A HREF="041_L3_SyncStreamOperations.html">[Back: Sync/Stream Operations]</A> <BR>
+<A HREF="043_L4_CreatingtheStream.html">[Next: Creating the Stream]</A> 
+</BODY>
+</HTML>

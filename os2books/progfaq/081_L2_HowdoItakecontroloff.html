@@ -1,0 +1,323 @@
+<HTML>
+<HEAD>
+<TITLE>How do I take control of frame sizing?</TITLE>
+</HEAD>
+<BODY>
+<H1>How do I take control of frame sizing?</H1><!-- entering slot 95 -->
+<P>
+I want to "subclass" the Window Frame Class to allow me to control the size
+of my main window when it's resized by the mouse. I want to control the
+steps it take to resize too, (ie: by 8x8 steps).
+<P>
+--- CUT --- CUT ---- .H file --- CUT ---
+<PRE>HWND APIENTRY WinCreateMBWindow(
+
+  HWND hwndParent,
+  ULONG flStyle,
+  PULONG pflCreateFlags,
+  PSZ pszClientClass,
+  PSZ pszTitle,
+  ULONG styleClient,
+  HMODULE hmod,
+  USHORT idResources,
+  PHWND phwndClient);
+
+
+#define HMODFROMMP(mp) ((USHORT)(ULONG)(mp))
+
+#define MB_CHILD_SIZE  WM_USER+204
+          //Sent from child to frame indicating the new
+          //requested size of the child area.  (high&amp;width in MP1)
+          //If ChildMax is shrinking below current size,
+          // frame is redused, and evt scroll bars is hidden.
+          //If Child is growing
+          //   MP2=True -&gt; grows frame to contain maximized child
+          //   MP2=False-&gt; enables scroll bars, keeps size.
+
+#define MB_FIX_N       0x1 //Fix north border when sizing
+#define MB_FIX_E       0x2 //Fix east  border when sizing
+
+#define MB_FIX_NE       0x3 //Fix north east corner when sizing
+#define MB_FIX_SE       0x2 //Fix south east corner when sizing
+#define MB_FIX_NW       0x1 //Fix north west corner when sizing
+#define MB_FIX_SW       0x0 //Fix south west corner when sizing
+
+#define MB_QCHILD_SIZE_MAX     WM_USER+205
+           //Sent from frame to child to queryw
+           //max size of the child area.  (h&amp;w in MR)
+           //Used when sizing to determin if scroll bars are ness.
+
+#define MB_QCHILD_GRID     WM_USER+206
+           //Sent from frame to child before tracking
+           //Child supposed to return x&amp;y granularity in MR
+
+#define MB_CREATE          WM_USER+207  //Internally shipped command.
+
+typedef struct _FRM_DTA { /* Fram data */
+    PFNWP    oldProc;
+    SHORT    nTrkCnr,nYSclHor,nXSclVer,nTitle;
+    SHORT    xMax,yMax;    //Max size of Client in PIX
+    SHORT    ScrMaxX,ScrMaxY;
+    POINTL   ptlBdr;
+    HWND     hVert,hHori;
+    SHORT    xCur,yCur;    //Current size of Client in PIX
+    SHORT    nCorner;      //Which corner is to be stable
+} FRM_DTA;
+typedef FRM_DTA FAR * PFRM_DTA;
+</PRE>
+
+<P>
+--- CUT --- CUT --- .C file --- CUT --- CUT ---
+<PRE>HWND	APIENTRY WinCreateMBWindow(HWND hParent, ULONG flStyle,
+                                   PULONG pflCreate, PSZ pszClientClass,
+                                   PSZ pszTitle, ULONG styleClient,
+                                   HMODULE hmod,
+                                   USHORT idResources, PHWND phClient)
+{
+  HWND         hFrame;
+  PFRM_DTA     pFrm;
+
+  hFrame = WinCreateStdWindow(hParent,flStyle,pflCreate,pszClientClass,
+                              pszTitle,styleClient,hmod,idResources,phClient);
+
+  //Allocate some storage for local parameters, and initialize it
+  pFrm=malloc(sizeof( FRM_DTA));
+  memset(pFrm,0,sizeof( FRM_DTA));
+
+  WinSetWindowPtr(hFrame,QWL_USER,(PVOID) pFrm);
+
+  pFrm-&gt;oldProc= WinSubclassWindow(hFrame,newFrameProc);
+
+  //Now window is setup:
+
+  WinSendMsg(hFrame,MB_CREATE,MP0,MP0);    //My own WM_CREATE
+
+  WinShowWindow(hFrame,TRUE);
+
+  WinUpdateWindow(hFrame);
+  return hFrame;
+}
+
+VOID GetChildMax(HWND hFrame, PFRM_DTA	pFrm)
+{ MRESULT mr;
+  mr = WinSendMsg(WinWindowFromID(hFrame,FID_CLIENT),
+                  MB_QCHILD_SIZE_MAX,MP0,MP0);
+  pFrm-&gt;xMax=SHORT1FROMMR(mr);
+  pFrm-&gt;yMax=SHORT2FROMMR(mr);
+}
+
+#define CLIENT_PROVIDED  FALSE
+#define FRAME_PROVIDED	 TRUE
+
+<!-- entering slot 96 -->BOOL WinCalcFrameSWP(HWND hwnd, PSWP pSWP, BOOL bFrame)
+{ //    TRUE       Frame rectangle provided
+  //    FALSE      Client-area rectangle provided.
+  RECTL rcl;
+  BOOL bSuccess;
+
+  rcl.xLeft   = pSWP-&gt;x;
+  rcl.yBottom = pSWP-&gt;y;
+  rcl.xRight  = pSWP-&gt;x+pSWP-&gt;cx;
+  rcl.yTop    = pSWP-&gt;y+pSWP-&gt;cy;
+
+  bSuccess = WinCalcFrameRect(hwnd, &amp;rcl, bFrame );
+
+  pSWP-&gt;x  =(SHORT) rcl.xLeft;
+  pSWP-&gt;y  =(SHORT) rcl.yBottom;
+  pSWP-&gt;cx =(SHORT) (rcl.xRight-rcl.xLeft);
+  pSWP-&gt;cy =(SHORT) (rcl.yTop  -rcl.yBottom);
+
+  return(bSuccess);
+}
+
+
+VOID SclBarEnable(HWND hwnd, PSWP pSWP, PFRM_DTA  pFrm)
+{
+
+  .....
+
+</PRE>
+ Your routines to determine and en/disable scroll bars
+<PRE>  .....
+/*    Part of my code */
+  swpClient = *(pSWP);
+  WinCalcFrameSWP(hwnd, &amp;swpClient, FRAME_PROVIDED);
+  if (swpClient.cx &gt;= pFrm-&gt;xMax-1)
+  { //Turn off horisontal scroll bar
+    WinSetParent(pFrm-&gt;hHori,HWND_OBJECT ,FALSE);
+    nUpdt = FCF_HORZSCROLL;
+  }  /* code for enabling left out..... */
+
+  if (nUpdt != 0)
+  {
+    WinSendMsg (hwnd, WM_UPDATEFRAME, MPFROMSHORT(nUpdt), MP0);
+  }
+*/
+}
+
+/***************** Start of frame subclass procedure *****************/
+
+MRESULT  EXPENTRY newFrameProc( HWND hwnd, USHORT msg,
+MPARAM mp1, MPARAM mp2 )
+
+{ PSWP	    pSWP;
+  PFNWP     oldProc;
+  PFRM_DTA  pFrm;
+
+  pFrm=(PFRM_DTA)WinQueryWindowPtr(hwnd,QWL_USER);
+  oldProc=pFrm-&gt;oldProc;
+
+  switch(msg)
+  {
+    case MB_CREATE:
+      //Start hiding scroll bars
+      pFrm-&gt;hVert  = WinWindowFromID(hwnd,FID_VERTSCROLL);
+      WinSetParent(pFrm-&gt;hVert,HWND_OBJECT ,FALSE);
+      pFrm-&gt;nYSclHor = 0;
+    break;
+
+    case WM_MINMAXFRAME:
+    { SWP swpClient;
+      pSWP=(PSWP) PVOIDFROMMP(mp1);
+      pSWP-&gt;fs |= SWP_SIZE;
+
+      GetChildMax(hwnd, pFrm);
+
+      if (pSWP-&gt;fs &amp; SWP_MAXIMIZE) //MaxiMizeing Operation
+      {
+        //tprintf("WM_MINMAXFRAME SWP_MAXIMIZE FS: %Xÿ",pSWP-&gt;fs);
+        if ((0!=pFrm-&gt;xMax) &amp;&amp; (0!=pFrm-&gt;yMax))
+        { //I have no data for all of screen, so act as Windowed OS/2
+
+          memset(&amp;swpClient,0,sizeof(swpClient));
+          swpClient.cx=pFrm-&gt;xMax;
+          swpClient.cy=pFrm-&gt;yMax;
+          WinCalcFrameSWP(hwnd, &amp;swpClient,CLIENT_PROVIDED);
+
+          pSWP-&gt;cx = swpClient.cx;
+          pSWP-&gt;cy = swpClient.cy;
+
+          pSWP-&gt;y  = pFrm-&gt;ScrMaxY - swpClient.cy + (SHORT)pFrm-&gt;ptlBdr.y;
+
+
+          SclBarEnable(hwnd, pSWP, pFrm);
+
+          return MRFROMSHORT(FALSE);
+        }
+      }
+
+      if (pSWP-&gt;fs &amp; SWP_RESTORE) //MiniMizeing Operation
+</PRE>
+
+<P>
+??? (restore i guess)
+<PRE>      {
+        //tprintf("WM_MINMAXFRAME SWP_RESTORE FS: %Xÿ",pSWP-&gt;fs);
+        if ((0!=pFrm-&gt;xMax) &amp;&amp; (0!=pFrm-&gt;yMax))  //Why do I need this?
+        {
+          return MRFROMSHORT(FALSE);
+        }
+      }
+    }
+    return (MRESULT)(*oldProc)(hwnd, msg, mp1, mp2);
+
+
+    case WM_QUERYTRACKINFO:
+    {
+      PTRACKINFO pTI;
+      LONG i;
+
+      if (TF_MOVE &lt;= SHORT1FROMMP(mp1))
+      {
+        pFrm-&gt;nTrkCnr= 0;
+        return (MRESULT)(*oldProc)(hwnd, msg, mp1, mp2);
+      }
+
+      pTI = (PTRACKINFO) PVOIDFROMMP (mp2);  //Get structure pointer;
+      //tprintf("@+WM_QUERYTRACKINFO FS: %Xÿ",pTI-&gt;fs);
+      if ((*oldProc)(hwnd, msg, mp1, mp2)==0) return MRFROMSHORT(FALSE);
+
+      GetChildMax(hwnd, pFrm);
+      if ((0!=pFrm-&gt;xMax) &amp;&amp; (0!=pFrm-&gt;yMax))
+      { //Setup track info structure
+        pTI-&gt;ptlMaxTrackSize.x = (LONG) pFrm-&gt;xMax;
+        pTI-&gt;ptlMaxTrackSize.y = (LONG) pFrm-&gt;yMax;
+
+        WinCalcFrameRect(hwnd, &amp;(pTI-&gt;rclTrack), FRAME_PROVIDED );
+
+        { MRESULT mr;
+          mr = WinSendMsg(WinWindowFromID(hwnd,FID_CLIENT),
+                          MB_QCHILD_GRID,MP0,MP0);
+          if (NULL!=mr)
+          {
+            pTI-&gt;cxGrid  = SHORT1FROMMR(mr);
+            pTI-&gt;cyGrid  = SHORT2FROMMR(mr);
+
+            //Setting height of client to integral cyGrid
+            i = (pTI-&gt;rclTrack.yTop - pTI-&gt;rclTrack.yBottom)/pTI-&gt;cyGrid;
+            pTI-&gt;rclTrack.yTop = i * pTI-&gt;cyGrid + pTI-&gt;rclTrack.yBottom;
+
+            pTI-&gt;fs	|= TF_GRID;
+            pFrm-&gt;nTrkCnr= WM_QUERYTRACKINFO;
+            //Used in WM_ADJUSTWINODWPOS
+          }
+        }
+      }
+      return MRFROMSHORT(TRUE);
+    }
+    break;
+
+    case WM_ADJUSTWINDOWPOS:
+    { RECTL rcl;
+      pSWP=(PSWP) PVOIDFROMMP(mp1);
+
+      if (pSWP-&gt;fs &amp; (SWP_SIZE | SWP_MOVE | SWP_MAXIMIZE))
+      {
+        GetChildMax(hwnd, pFrm);
+        if (WM_QUERYTRACKINFO==pFrm-&gt;nTrkCnr)
+          //As a result of tracking
+        {
+          //Go from client to frame values
+          WinCalcFrameSWP(hwnd, pSWP, CLIENT_PROVIDED);
+        }
+
+        pFrm-&gt;nTrkCnr	 = 0;
+
+        SclBarEnable(hwnd, pSWP, pFrm);
+      }
+      return (MRESULT)(*oldProc)(hwnd, msg, mp1, mp2);
+    }
+    break;
+
+    case MB_CHILD_SIZE:      //xCur,yCur
+    { SWP swp;
+
+</PRE>
+
+<P>
+............. do your actions as responce to client resize request (Change
+of fontsize for instance)
+<PRE>
+      return (MRESULT)TRUE;
+    }
+    break;
+
+    default:
+    break;
+  }
+  return (MRESULT)(*oldProc)(hwnd, msg, mp1, mp2);
+}
+</PRE>
+
+<P>
+A lot is deleted (Som is very application specific), but i hope you get
+the general picture.
+<P>
+Credit:  Henrik Wahlberg 
+
+<P><HR>
+
+<A HREF="080_L2_HowdoIusetheFontdial.html">[Back: How do I use the Font dialog (WinFontDlg)?]</A> <BR>
+<A HREF="082_L2_HowdoIusethe16bitEPM.html">[Next: How do I use the 16-bit EPM toolkit?]</A> 
+</BODY>
+</HTML>

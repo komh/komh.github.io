@@ -1,0 +1,151 @@
+<HTML>
+<HEAD>
+<TITLE>Installing an I/O Procedure</TITLE>
+</HEAD>
+<BODY>
+<H1>Installing an I/O Procedure</H1><!-- entering slot 186 -->
+<P>
+To install an I/O procedure, an IOProc entry is added to the MMPMMMIO.INI
+file.  This is accomplished by either writing an INI change control file
+or writing a program using the mmioIniFileHandler function.  The IOProc
+is installed in the IOProc table ahead of the system-provided storage system
+IOProcs (DOS, MEM, and CF).
+<P>
+The mmioInstall structure shown in the following example allows you to install
+an IOProc in the system.  The MMPMMMIO.INI file is modified with the latest
+mmioInstall data when the MINSTALL program is executed.
+<PRE>mmioInstall =
+    (
+    mmioFourCC        = "<I>fourcc</I>"
+    mmioDllName       = "<I>full path</I>"
+    mmioDllEntryPoint = "<I>entry name</I>"
+    mmioFlags         = "<I>flags</I>"
+    mmioExtendLen     = "<I>extend length</I>"
+    mmioMediaType     = "<I>media type</I>"
+    mmioIOProcType    = "<I>file format</I>"
+    mmioDefExt        = "<I>default extension</I>"
+    )
+</PRE>
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<I>fourcc</I><!-- lm: 0x2 21 -->
+<UL> Specifies the FOURCC of the I/O procedure.
+<!-- lm: 0x2 1 -->
+</UL><I>full path</I><!-- lm: 0x2 21 -->
+<UL> Specifies
+the full path to the file and the file name of the IOProc DLL.  (You can
+use supported macros described in <A HREF="133_L3_SupportedMacros.html">Supported
+Macros</A>.)<!-- lm: 0x2 1 -->
+</UL><I> entry name</I><!-- lm: 0x2 21 -->
+<UL> Specifies
+the entry point of the IOProc DLL.<!-- lm: 0x2 1 -->
+</UL><I> flags</I><!-- lm: 0x2 21 -->
+<UL> Specifies
+any additional MMIO flags.  Set to 0L for this release.<!-- lm: 0x2 1 -->
+</UL><I> extend
+length</I><!-- lm: 0x2 21 -->
+<UL> Specifies the extended length of 16 for
+this release.<!-- lm: 0x2 1 -->
+</UL><I> media type</I><!-- lm: 0x2 21 -->
+<UL> Specifies
+the media type of this file.<!-- lm: 0x2 1 -->
+</UL><I> file format</I><!-- lm: 0x2 21 -->
+<UL> Specifies
+the type of IOProc, either a file format or storage system IOProc.<!-- lm: 0x2 1 -->
+</UL><I> default
+extension</I><!-- lm: 0x2 21 -->
+<UL> Specifies the default file extension.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+For example, to install the AVC audio I/O procedure, create an INI change
+control specifying the mmioInstall structure.
+<PRE>mmioInstall =   (
+   mmioFourCC        = "AVCA"
+   mmioDllName       = "$(DEST)AVCAPROC.DLL"
+   mmioDllEntryPoint = "AVCAIOProc"
+   mmioFlags         = 0L
+   mmioExtendLen     = 16L
+   mmioMediaType     = 2L
+   mmioIOProcType    = 2L
+   mmioDefExt        = ""
+   )
+</PRE>
+
+<P>
+Specify the name of your INI change control file using the SSINICH keyword
+in the master control file (CONTROL.SCR). See <A HREF="130_L3_CONTROLSCRSubsystemD.html">CONTROL.SCR
+Subsystem Definition</A> for an example of a CONTROL.SCR file and a description
+of the keywords.  For example:
+<PRE>SSINICH="BASE1.SCR"
+</PRE>
+
+<P>
+BASE1.SCR, located in the \MMOS2\INSTALL subdirectory, contains mmioInstall
+structure examples.  You can also install an IOProc in your system by identifying
+the IOProc in the initialization file (MMPMMMIO.INI) using the mmioIniFileHandler
+function.
+<P>
+The following shows an example of how an application uses the mmioIniFileHandler
+function to install the OS/2 1.3 PM bitmap image IOProc.
+<PRE>#define FOURCC_OS13   mmioFOURCC( 'O', 'S', '1', '3' )
+
+#pragma linkage( mmioIniFileHandler, system )
+
+void main ()
+{
+ ULONG   rc;
+ MMINIFILEINFO  mminifileinfo;
+ mminifileinfo.fccIOProc = FOURCC_OS13;
+ strcpy (mminifileinfo.szDLLName, "OS13PROC");
+ strcpy (mminifileinfo.szProcName, "OS13BITMAPIOPROC");
+ mminifileinfo.ulExtendLen = 16L;
+ mminifileinfo.ulFlags = 0L;
+ mminifileinfo.ulMediaType = MMIO_MEDIA_IMAGE;
+ mminifileinfo.ulIOProcType = MMIO_IOPROC_FILEFORMAT;
+ strcpy (mminifileinfo.szDefExt, "");
+
+ printf ("Installing OS/2 PM Bitmap (V1.3) IOProc\n");
+
+ rc = mmioIniFileHandler (&amp;mminifileinfo, MMIO_INSTALLPROC);
+ switch (rc)
+ {
+   case MMIO_SUCCESS:
+    printf ("Installing Complete\n");
+    break;
+   case MMIOERR_INVALID_PARAMETER:
+    printf ("Error in this install program\n");
+    break;
+   case MMIOERR_INTERNAL_SYSTEM:
+    printf ("OS/2 MPM System Error\n");
+    break;
+   case MMIOERR_NO_CORE:
+    printf ("Memory unavailable for this IOProc\n");
+    break;
+   case MMIOERR_INI_OPEN:
+    printf ("Unable to access the OS/2 MMPMMMIO.INI file\n");
+    break;
+   case MMIOERR_INVALID_FILENAME:
+    printf ("Cannot find the file : OS13PROC.DLL\n");
+    break;
+   default:
+    printf ("Unknown error attempting to install OS/2 Bitmap V(1.3)\n");
+    break;
+ }
+}
+</PRE>
+
+<P>
+The advantage of installing I/O procedures in the MMPMMMIO.INI file is to
+achieve application transparency; I/O procedures become built-in as soon
+as you restart your OS/2 multimedia application.  Note that the IOProc must
+reside in a DLL file, although more<!-- entering slot 187 --> than one IOProc
+can reside in the DLL if necessary.
+
+<P><HR>
+
+<A HREF="145_L3_InstallingStreamProt.html">[Back: Installing Stream Protocol]</A> <BR>
+<A HREF="147_L2_InsertingExternalSet.html">[Next: Inserting External Settings Pages]</A> 
+</BODY>
+</HTML>

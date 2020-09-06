@@ -1,0 +1,140 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Expand the function FILESPEC</TITLE>
+</HEAD>
+<BODY>
+<H1>Expand the function FILESPEC</H1><!-- entering slot 493 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* sample code to extend the FILESPEC function with code to extract   */
+/* the extension of a fileName                                        */
+
+  do until myInput = ""
+    say "New options for FILESPEC are:"                      /* v2.30 */
+    say "-----------------------------"                      /* v2.30 */
+    say "E - return the extension of the file"               /* v2.30 */
+    say "B - return the name without the extension of the file"  /* " */
+    say "H - return the drive &amp; path of the file"            /* v2.30 */
+    say "-----------------------------"                      /* v2.30 */
+    say "Enter the parameter for FILESPEC(option, fileName): "
+    myInput = strip( lineIn() )
+    if myInput &lt;&gt; "" then
+    do
+      parse var myInput myOption "," myfileName
+      say "The result of FILESPEC( " myOption "," myfileName ") is: "
+      say "&lt;" || fileSpec( myOption, myfileName ) || "&gt;"
+    end /* if myInput &lt;&gt; "" then */
+  end /* do until myInput = "" */
+
+exit 0
+
+/* ------------------------------------------------------------------ */
+/* function: Extended FILESPEC function                               */
+/*                                                                    */
+/* call:     FileSpec option,fileName                                 */
+/*                                                                    */
+/* where:    option                                                   */
+/*                                                                    */
+/*             - E{xtension}                                          */
+/*               return the extension of the file                     */
+/*                                                                    */
+/*             - B{asename}                                           */
+/*               returns the name of the file without extension       */
+/*                                                                    */
+/*             - H{ome]                                               */
+/*               returns the fully qualified path of the file         */
+/*               (including the drive specifier; without the trailing */
+/*               backslash)                                           */
+/*                                                                    */
+/*             All other values for "option" are processed by the     */
+/*             original FILESPEC function.                            */
+/*                                                                    */
+/*           fileName                                                 */
+/*             - name of the file                                     */
+/*                                                                    */
+/* returns:  if option = E{xtension}:                                 */
+/*             the extension of the fileName or "" if none            */
+/*           else                                                     */
+/*             if option = B{asename}:                                */
+/*               the name of the file without the path and extension  */
+/*             else                                                   */
+/*               the return code of the original FILESPEC function    */
+/*               or "SYNTAX ERROR" if called with invalid parameter   */
+/*                                                                    */
+/* note:     To call the original FILESPEC function directly, use     */
+/*             myResult = "FILESPEC"( option, fileName )              */
+/*                                                                    */
+/* history:                                                           */
+/*           RXT&amp;T v1.90 /bs                                          */
+/*            - added the option B{asename}                           */
+/*           RXT&amp;T v2.30 /bs                                          */
+/*            - added the option H{ome}                               */
+/*                                                                    */
+FileSpec: PROCEDURE
+  parse arg option, fileName
+
+                        /* init the return code                       */
+  rc = "SYNTAX ERROR"
+                        /* install a local error handler              */
+
+  SIGNAL ON SYNTAX NAME FileSpecError
+
+  fileName = strip( fileName )                               /* v2.30 */
+  option = translate( strip( option ) )
+
+                        /* check the option code                      */
+  select
+
+    when abbrev( "EXTENSION", option ) = 1 then
+    do
+                        /* process the new added option code          */
+      i = lastPos( ".", fileName )
+      if i &gt; lastPos( "\", fileName ) then
+        rc = substr( fileName, i+1 )
+      else
+        rc = ""
+    end /* when */
+
+    when abbrev( "BASENAME", option ) = 1 then               /* v1.90 */
+    do                                                       /* v1.90 */
+                        /* call the original FILESPEC function  v1.90 */
+                        /* to get the filename                  v1.90 */
+      rc = "FILESPEC"( "N", fileName )                       /* v1.90 */
+      i = lastpos( ".", rc )                                 /* v1.90 */
+      if i &lt;&gt; 0 then                                         /* v1.90 */
+        rc = substr( rc,1, i-1 )                             /* v1.90 */
+    end /* when */                                           /* v1.90 */
+
+    when abbrev( "HOME", option ) = 1 then                   /* v2.30 */
+    do                                                       /* v2.30 */
+      rc = "FILESPEC"( "D", fileName ) ||,                   /* v2.30 */
+           "FILESPEC"( "P", fileName )                       /* v2.30 */
+      if right( rc,1 ) = "\" then                            /* v2.30 */
+        rc = dbrright( rc,1 )                                /* v2.30 */
+    end /* when */                                           /* v2.30 */
+
+    otherwise
+    do
+                        /* call the original FILESPEC function        */
+      rc = "FILESPEC"( option, fileName )
+    end /* otherwise */
+
+  end /* select */
+
+FileSpecError:
+
+RETURN rc
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="474_L3_WriteastemusingCharO.html">[Back: Write a stem using CharOut()]</A> <BR>
+<A HREF="476_L3_MaintainMultiValueEA.html">[Next: Maintain Multi-Value EAs in REXX]</A> 
+</BODY>
+</HTML>

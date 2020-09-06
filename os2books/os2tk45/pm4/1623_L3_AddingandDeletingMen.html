@@ -1,0 +1,151 @@
+<HTML>
+<HEAD>
+<TITLE>Adding and Deleting Menu Items</TITLE>
+</HEAD>
+<BODY>
+<H1>Adding and Deleting Menu Items</H1><!-- entering slot 1658 -->
+<P>
+An application can add and delete items from its menus dynamically by sending
+MM_INSERTITEM and MM_DELETEITEM messages to the menu window.  Any item,
+including those in submenus, can be deleted by sending a message to the
+menu window.  Messages to insert items in submenus must be sent to the submenu's
+window (rather than to the window of the top-level menu).  You can retrieve
+the handle of a submenu of the menu bar by sending an MM_QUERYITEM message
+to the menu-bar and specifying the identifier of the submenu item for the
+submenu, as shown in the following code fragment:
+<PRE>    /* IDM_MYMENUID is the identifier of the submenu containing the item. */
+
+    MENUITEM mi;
+    HWND hwndMenu, hwndSubMenu, hwndPullDown,hwndFrame;
+
+    hwndMenu = WinWindowFromID(hwndFrame, FID_MENU);
+    WinSendMsg(hwndMenu,                           /* Handle of menu bar  */
+        MM_QUERYITEM,                              /* Message             */
+        MPFROM2SHORT(IDM_MYMENUID, TRUE),          /* Submenu identifier  */
+        (MPARAM) &amp;mi);                             /* Pointer to MENUITEM */
+
+    hwndPullDown = mi.hwndSubMenu;                 /* Handle to submenu   */
+
+</PRE>
+
+<P>
+Once the application has the handle of the submenu, it can insert an item
+by filling in a MENUITEM structure and sending an MM_INSERTITEM message
+to the submenu.  For text-menu items, the application must send a pointer
+to the text string as well as to the MENUITEM structure, as shown in the
+following figure.
+<PRE>
+    PSZ  pszNewItemString;
+
+    mi.iPosition = MIT_END;
+    mi.afStyle = MIS_TEXT;
+    mi.afAttribute = 0;
+    mi.id = IDM_MYMENU_FIRST;
+    mi.hwndSubMenu = NULL;
+    mi.hItem = 0;
+
+    WinSendMsg(hwndPullDown, MM_INSERTITEM, (MPARAM) &amp;mi,
+        (MPARAM) pszNewItemString);
+
+</PRE>
+
+<P>
+To delete an item, the application sends an MM_DELETEITEM message to the
+menu bar, specifying the identifier of the item to delete.  For example,
+to clear all the items following IDM_MYMENU_FIRST in a submenu in which
+the items are numbered sequentially, use the following code:
+<PRE>
+    USHORT usItemNum;
+
+    /* Clear all the items in MYMENU.                 */
+    hwndMenu = WinWindowFromID(hwndFrame, FID_MENU);
+    usItemNum = IDM_MYMENU_FIRST;
+    while (WinSendMsg(hwndMenu, MM_DELETEITEM,
+        MPFROM2SHORT(usItemNum++, TRUE), NULL) != 0);
+
+</PRE>
+
+<P>
+Adding a complete submenu to the menu bar is a more complicated procedure
+than that shown in the previous examples.  There are two strategies.  The
+recommended technique is to define all possible submenus in your resource-definition
+file; and then, as your application runs, selectively remove and insert
+the submenus as needed.
+<P>
+For example, assume that your application has a submenu that you want to
+be displayed only when a particular application tool is in use.  You must
+first define the submenu as part of the main menu resource in your resource-definition
+file, so that the system reads in the resource menu template and creates
+the submenu window along with the rest of the menu.  You then can remove
+the submenu from the menu bar, saving the title of the submenu and the MENUITEM
+structure that defines the submenu, as shown in the following figure:
+<PRE>
+    HWND hwndMenu, hwndClient;
+    MENUITEM mi;
+    CHAR szMenuTitle[MAX_STRINGSIZE];
+
+    /* Remove a submenu so that you can replace it later.           */
+
+    /* Obtain the handle of a menu.                                 */
+    hwndMenu = WinWindowFromID(WinQueryWindow(hwndClient, QW_PARENT),
+                               FID_MENU);
+
+    /* Obtain information on the item to remove.                    */
+    WinSendMsg(hwndMenu, MM_QUERYITEM,
+        MPFROM2SHORT(IDM_MENUID, TRUE),  /* TRUE to search submenus */
+        (MPARAM)&amp;mi);
+
+    /* Save the text for the submenu item.                          */
+    WinSendMsg(hwndMenu, MM_QUERYITEMTEXT,
+        MPFROM2SHORT(IDM_FONT, MAX_STRINGSIZE),
+        (MPARAM)szMenuTitle);
+
+    /* Remove the item, but retain mi and szMenuTitle.              */
+    WinSendMsg(hwndMenu, MM_REMOVEITEM,
+        MPFROM2SHORT(IDM_FONT, TRUE), NULL);
+
+</PRE>
+
+<P>
+It is important to use the MM_REMOVEITEM message, rather than MM_DELETEITEM,
+to remove the item; deleting the item destroys the submenu window-removing
+it does not.  The submenu should remain intact so that you can insert it
+later.
+<P>
+To reinsert the submenu, send an MM_INSERTITEM message to the menu bar,
+passing the MENUITEM structure and menu title that you saved when you removed
+the item.  The following code fragment shows how to insert a submenu that
+was removed by using the previous code example.
+<PRE>
+    /* Put the submenu back in and obtain the handle of the menu bar. */
+    hwndMenu = WinWindowFromID(
+                    WinQueryWindow(hwndClient, QW_PARENT), FID_MENU);
+
+    /* Use the information that you saved when you removed the menu.  */
+    WinSendMsg(hwndMenu, MM_INSERTITEM, (MPARAM)&amp;mi,
+               (MPARAM)szMenuTitle);
+
+</PRE>
+
+<P>
+The other technique that you can use to insert a submenu in the menu bar
+is to build up, in memory, a data structure as a menu template and use that
+template and WinCreateWindow to create a submenu.  The resultant submenu
+window handle then is<!-- entering slot 1659 --> placed in the<I> hwndSubMenu
+</I>field of a MENUITEM structure, and the menu item is sent to the menu
+bar with an MM_INSERTITEM message.
+<P>
+You also can create an empty submenu window by using WinCreateWindow.  Pass
+NULL for the<I> pCtlData</I> and<I> pPresParams</I> parameters, instead
+of building the menu template in memory.  Then insert a new menu item in
+the menu bar by using the MM_INSERTITEM message, setting the MIS_SUBMENU
+style, and putting the window handle of the created menu into the<I> hwndSubMenu
+</I>field.  Then use the MM_INSERTITEM message to insert the items in the
+new pull-down menu.
+
+<P><HR>
+
+<A HREF="1622_L3_SettingandQueryingMe.html">[Back: Setting and Querying Menu-Item Attributes]</A> <BR>
+<A HREF="1624_L3_CreatingaCustomMenuI.html">[Next: Creating a Custom Menu Item]</A> 
+</BODY>
+</HTML>

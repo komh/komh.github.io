@@ -1,0 +1,260 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Navigate another program</TITLE>
+</HEAD>
+<BODY>
+<H1>Navigate another program</H1><!-- entering slot 524 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* sample code to navigate a program by monitoring its output and     */
+/* sending the necessary keystrokes to it.                            */
+/*                                                                    */
+/* note:  The program to navigate must use STDIN for its input and    */
+/*        STDOUT and/or STDERR for its output.                        */
+/*                                                                    */
+/*        Some OS/2 commands write all or parts of their output to    */
+/*        STDERR if STDOUT is redirected to a file or into a pipe!    */
+/*        Some OS/2 commands do NOT write a CR/LF after a prompt for  */
+/*        an input. This is for example true for the FORMAT program.  */
+/*        To get around this, we always wait for the line preceding   */
+/*        the prompts from the FORMAT program (see below).            */
+/*                                                                    */
+/* (see also <A HREF="507_L3_Usingredirectionfora.html">REXX Wrapper for textmode programs</A>)                      */
+/*                                                                    */
+/* In this example we use "FORMAT A: /q"                              */
+/*                                                                    */
+/* Save this code in a file with the name "TEST.CMD" and call it with */
+/*  TEST &lt;RETURN&gt;                                                     */
+/*                                                                    */
+/* Tested with OS/2 WARP Version 3 (German) and OS/2 WARP BETA 2      */
+/* Version 2.99 (English)                                             */
+/*                                                                    */
+/*                                                                    */
+/* (c) 1996 <A HREF="002_L1_GeneralForeword.html">Bernd Schemmer</A>, Germany, EMail: Bernd.Schemmer@gmx.de     */
+/*                                                                    */
+
+                        /* get the name of this program               */
+  parse source . . prog.__Name
+
+                        /* output device for our messages (we cannot  */
+                        /* use STDOUT for the messages!!!             */
+  prog.__outputDevice = "STDERR:"
+
+                        /* get the parameter to check if this is the  */
+                        /* first, second or third call                */
+  parse arg prog.__Parameter .
+
+  select
+
+/*************************** third process ****************************/
+/* --- put the output of the format command into the queue (FIFO) --- */
+
+    when prog.__Parameter == "$$THIRD$$" then
+    do
+
+      thisLine = ""
+
+                        /* this process ends after writing the last   */
+                        /* output message of FORMAT into the queue    */
+
+    /* message 1273 = "Eine weitere Diskette formatieren (J/N)?" GER  */
+    /*                "Format another diskette (Y/N)?            USA  */
+      lastFormatMsg = SysGetMessage( 1273 )
+
+      do until pos( lastFormatMsg, thisLine ) &lt;&gt; 0
+        if lines() &lt;&gt; 0 then
+        do
+                        /* read the output of the FORMAT program ...  */
+          thisLine = lineIN()
+                        /* ... and write it into the REXX queue       */
+          queue thisLine
+        end /* if lines() &lt;&gt; 0 then */
+      end /* do until pos( lastFormatMsg, ... */
+
+                        /* put the end marker for process 2 into the  */
+                        /* queue                                      */
+      queue "***END***"
+
+    end /* when */
+
+/*************************** second process ***************************/
+/*  --- monitor the output of the FORMAT command and write the ---    */
+/*         necessary input for the FORMAT command to STDOUT           */
+
+    when prog.__Parameter == "$$SECOND$$" then
+    do
+                        /* init the variables with the messages       */
+                        /* indicating that FORMAT needs some input    */
+
+    /* message 1507 = "Dateisystemtyp f&uuml;r den Datentr&auml;ger ist: "  GER */
+    /*                "The type of file system for the disk is "  USA */
+      firstAskForInput = substr( SysGetMessage( 1507 ), 1, 25 )
+
+    /* message 1288 = "Namen f&uuml;r den Datentr&auml;ger (max. ... "      GER */
+    /*                "Enter up to 11 characters for the ..."     USA */
+      secondAskForInput = substr( SysGetMessage( 1288 ), 1, 45 )
+
+    /* message 1306 = "%1 verf&uuml;gbare Zuordnungseinheiten ... "    GER */
+    /*                "%1 available allocation units on disk."    USA */
+      thirdAskForInput = substr( SysGetMessage( 1306 ), 3, 20 )
+
+
+      outputOK = 0
+
+                    /* just for fun: Show an "in progress" message    */
+      call charOut prog.__OutputDevice , "Formatting "
+
+      do until OutputOK == 1
+
+        call charOut prog.__OutputDevice, "\" || "08"X || "/" || "08"x
+
+                        /* wait until output of the FORMAT command is */
+                        /* available                                  */
+        if queued() == 0 then
+          iterate
+
+                        /* monitor the output from the FORMAT command */
+        curFormatLine = strip( lineIn( "QUEUE:" ) )
+
+                        /* check if the FORMAT command ended          */
+        if curFormatLine = "***END***" then
+          <!-- entering slot 525 -->OutputOk = 1
+
+        select
+
+          when pos( FirstAskForInput, curFormatLine ) &lt;&gt; 0 then
+          do
+                        /* FORMAT needs some input to begin the       */
+                        /* format -- so give it a CR/LF               */
+            call lineOut , ""
+          end /* when */
+
+          when pos( SecondAskForInput, curFormatLine ) &lt;&gt; 0 then
+          do
+                        /* FORMAT needs some input for the volume     */
+                        /* label -- so give it the label              */
+            call lineOut , "Test"
+          end /* when */
+
+          when pos( thirdAskForInput, curFormatLine ) &lt;&gt; 0 then
+          do
+                        /* FORMAT needs to know if it should format   */
+                        /* another diskette -- tell it that we won't  */
+                        /* format another diskette                    */
+            call lineOut, "N"
+          end /* when */
+
+          otherwise
+          do
+                        /* do nothing                                 */
+          end /* otherwise */
+
+        end /* select */
+
+      end /* do until OutputOK == 1 */
+
+                        /* end the in progress message                */
+      call lineOut prog.__OutputDevice, "... done."
+
+    end /* when */
+
+/***************************** first call *****************************/
+/*                 --- execute the FORMAT command ---                 */
+    otherwise
+    do
+
+      "@cls"
+      call lineOut prog.__OutputDevice, ""
+
+      call lineOut prog.__OutputDevice,,
+                   "Example for navigating a program " || ,
+                   "by monitoring the output"
+      call lineOut prog.__outputDevice,,
+                   "Here we call FORMAT A: /Q to show how it works."
+      call lineOut prog.__OutputDevice, ""
+
+      if queued() &lt;&gt; 0 then
+      do
+                        /* flush the REXX queue                       */
+        do while queued() &lt;&gt; 0
+          tempLine = lineIn( "QUEUE:" )
+        end /* do while queued() &lt;&gt; 0 */
+      end /* if queued() &lt;&gt; 0 then */
+
+
+                        /* load the necessary functions from the DLL  */
+                        /* REXXUTIL                                   */
+      call LoadREXXUtil
+
+                        /* wait until theres a diskette in drive A:   */
+      call InsertDiskDialog
+
+                        /* execute the FORMAT command with the input  */
+                        /* coming from a second copy of this program  */
+                        /* and the output written to a REXX queue by  */
+                        /* a third copy of this program               */
+      "@cmd /c " prog.__Name "$$SECOND$$ | " || ,  /* second process  */
+               " format A: /q  | "           || ,  /* FORMAT command  */
+               prog.__Name "$$THIRD$$"             /* third process   */
+
+    end /* otherwise */
+
+  end /* select */
+
+EXIT 0
+
+
+/* ****************************************************************** */
+/*                            sub routines                            */
+
+/* ------------------------------------------------------------------ */
+/*         routine to wait until a diskette is in drive A:            */
+/* ------------------------------------------------------------------ */
+
+InsertDiskDialog: PROCEDURE
+
+InsertDiskDialogAgain:
+                        /* install a local error handler to check if  */
+                        /* the drive A: is ready                      */
+  SIGNAL ON NOTREADY Name InsertDiskDialogAgain
+
+  call lineOut , "Insert a disk to FORMAT into drive A: " || ,
+                 "and press enter"
+
+  tempLine = lineIn()
+
+  call stream "A:\*"
+RETURN
+
+/* ------------------------------------------------------------------ */
+/*       routine to load the necessary functions from REXXUTIL        */
+/* ------------------------------------------------------------------ */
+
+LoadREXXUtil: PROCEDURE
+  call rxFuncAdd "SysGetMessage", "REXXUTIL", "SysGetMessage"
+
+                        /* install a local error handler to check if  */
+                        /* the DLL was loaded                         */
+  SIGNAL ON SYNTAX NAME LoadRexxUtilError
+
+  t = SysGetMessage( 1 )
+RETURN
+
+LoadREXXUtilError:
+  call lineOut, "Error: Cannot load the DLL REXXUTIL!"
+EXIT 255
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="505_L4H_DummyprogramfortheRE.html">[Back: Dummy program for the REXX Wrapper]</A> <BR>
+<A HREF="507_L3_Usingredirectionfora.html">[Next: Using redirection for a simple process controller]</A> 
+</BODY>
+</HTML>

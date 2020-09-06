@@ -1,0 +1,60 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosFSCtl - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosFSCtl - Example Code</H1><!-- entering slot 615 -->
+<P>
+The following is NOT a complete C program.  It is intended to provide an
+idea of how to communicate with a file system driver (FSD).
+<P>
+This example assumes that FileHandle has been initialized with the handle
+to the file and that the file system driver (FSD) recognizes a function
+code of hex 81DE.  It further assumes that the input parameters and input
+data area are appropriate for the function.
+<PRE> #define INCL_DOSFILEMGR   /* File Manager values */
+ #define INCL_DOSERRORS    /* Error values */
+ #include &lt;os2.h&gt;
+ #include &lt;stdio.h&gt;
+ #include &lt;string.h&gt;
+
+ UCHAR   uchDataArea[200] = {0};          /* Input and output data area */
+ ULONG   ulDataLen        = 0;            /* Input and output data size */
+ UCHAR   uchParms[120]    = {0};          /* Input and output for function */
+ ULONG   ulParmLen        = 0;            /* Input and output parameter size */
+ ULONG   ulFunction       = 0x81DE;       /* Device-specific function */
+ HFILE   hfFile           = NULLHANDLE;   /* Handle for file */
+ APIRET  rc               = NO_ERROR;     /* Return code */
+
+  strcpy(uchDataArea,"34 22 37");   /* Data to pass to file system */
+  ulDataLen = strlen(uchDataArea);  /* Length of input data */
+
+  strcpy(uchParms,"PARM1: 98");     /* Input parameters */
+  ulParmLen = strlen(uchParms);     /* Length of input parameters */
+
+  rc = DosFSCtl(uchDataArea,         /* Input/output data area */
+                sizeof(uchDataArea), /* Maximum output data size */
+                &amp;ulDataLen,          /* Input:  size of input data area */
+                                     /* Output: size of data returned   */
+                uchParms,            /* Input/Output parameter list */
+                sizeof(uchParms),    /* Maximum output parameter size */
+                &amp;ulParmLen,          /* Input:  size of parameter list */
+                                     /* Output: size of parameters returned */
+                ulFunction,          /* Function being requested */
+                "MY_FSD",            /* File System Driver (FSD) name */
+                hfFile,              /* Handle for file */
+                FSCTL_FSDNAME);      /* Indicate FSD name is the route */
+
+  if (rc != NO_ERROR) {
+      printf("DosFSCtl error: return code = %u\n", rc);
+      return 1;
+  }
+</PRE>
+
+
+<P><HR>
+
+<A HREF="606_L2H_DosFSCtlRelatedFunct.html">[Back: DosFSCtl - Related Functions]</A> <BR>
+<A HREF="608_L2H_DosFSCtlTopics.html">[Next: DosFSCtl - Topics]</A> 
+</BODY>
+</HTML>

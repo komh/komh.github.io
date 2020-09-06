@@ -1,0 +1,168 @@
+<HTML>
+<HEAD>
+<TITLE>DBG_C_RegDebug</TITLE>
+</HEAD>
+<BODY>
+<H1>DBG_C_RegDebug</H1><!-- entering slot 9 -->
+<P>
+<B> Debug Command 35 JIT (Just-in-Time) Debugger Registration/De-Registration
+Command</B>
+<P>
+<B>Parameters</B><!-- lm: 0x2 1 -->
+<UL>
+<P>
+Pid<!-- lm: 0x2 8 -->
+<UL> Process of ID of debuggee<!-- lm: 0x2 1 -->
+</UL> Cmd
+<!-- lm: 0x2 8 -->
+<UL>DBG_C_RegDbg<!-- lm: 0x2 1 -->
+</UL> Buffer<!-- lm: 0x2 8 -->
+<UL> Pointer
+to JIT Debugger path name and arguments
+<P>
+Address of the buffer in which the fully-qualified path name of the JIT
+debugger is specified.  The path name can be followed by an optional arguments
+to the JIT debugger.  If %d is found in the arguments, the system will replace
+%d with the ID of the failing process.  If %d is not found in the arguments,
+the system will assume argument one is the process ID.
+<P>
+A coded example of this follows 
+<P>
+Assume the ID of the failing process is 99.
+<P>
+If Buffer contains "C \OS2\MYJITDBG.EXE /Tn /K /P%d",  the system will launch
+the JIT debugger as "C \OS2\MYJITDBG.EXE /Tn /K /P99"
+<P>
+If Buffer contains "C \OS2\MYJITDBG.EXE /Tn /K",  the system will launch
+the JIT debugger as "C \OS2\MYJITDBG.EXE 99 /Tn /K"<!-- lm: 0x2 1 -->
+</UL> Len
+<!-- lm: 0x2 8 -->
+<UL>0 or the size of Buffer in bytes
+<P>
+A Len of 0 is used to deregister the JIT debugger from the given process.
+Buffer is ignored in this case. If Len is 0 and no JIT debugger is registered
+the system will return error code ERROR_INSUFFICIENT_BUFFER.<!-- lm: 0x2 1 -->
+</UL> Addr
+<!-- lm: 0x2 8 -->
+<UL>Registration Flags<!-- lm: 0x2 8 -->
+<P>
+JIT_REG_INHERIT<!-- lm: 0x2 23 -->
+<UL> Enable children processes to inherit
+registered per-process JIT debugger from parent. (This is the default.)
+<!-- lm: 0x2 8 -->
+</UL>JIT_REG_NONINHERIT<!-- lm: 0x2 23 -->
+<UL> Do not
+allow inheritance of per-process JIT debugger to the children of that parent
+process.<!-- lm: 0x2 8 -->
+</UL> If Inheritance is being used with DosStartSession()
+on a PM application, the inheritance link is broken. This is due to the
+design of sessions management for DosStartSession() which causes all children
+processes to always inherit from the PM. The recommended way to start a
+child process is through DosExecPgm() under the same session type. The parent-child
+relationship will be set up correctly and the JIT will be inherited. Otherwise
+the parent application has to register the JIT on every DosStartSession()
+child process. The JIT could also be registered on the main PMSHELL.EXE
+process. This would cause all future DosStartSession() processes to inherit
+the JIT information from PM. This works around the DosStartSession() inheritance
+problem above.<!-- lm: 0x2 1 -->
+</UL> Value<!-- lm: 0x2 8 -->
+<UL> Return
+error code, if any<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Returns</B>
+<P>
+The only DosDebug notifications that are returned by this command are DBG_N_Success
+and DBG_N_Error.
+<P>
+Valid Field return error return code(s) <!-- lm: 0x2 1 -->
+<P>
+ERROR_FILE_NOT_FOUND<!-- lm: 0x2 11 -->
+<UL> File was not found in specified
+path<!-- lm: 0x2 1 -->
+</UL> ERROR_INSUFFICIENT BUFFER<!-- lm: 0x2 11 -->
+<UL> Returned
+if JIT Debugger not registered and a Len of 0 passed into register<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Restrictions</B>
+<P>
+This is one of the only DosDebug commands that can be called without having
+to issue a DBG_C_Connect or DBG_C_Attach first. This command is usually
+called after starting a process using DosExecPgm() or DosStartSession()
+in order to gather the PID to use with the registration command. Another
+way of gathering PID information is to use the DosQuerySysState(). This
+will return all of the current Process ID's running in the system. See DosQuerySysState()
+for more information. The registration of the debugger must use a fully-qualified
+path name and executable for per-process and global registration.  Registration
+will not occur if the debugger is not physically found on the disk upon
+registration.  If you make multiple calls to DosDebug with the DBG_C_RegDbg
+command, the previous debugger will be deleted and the newest one will be
+registered. If the DBG_C_RegDbg is called with the size field of 0 and a
+JIT debugger exists, the JIT debugger will be unregistered. This only applies
+for per-process JIT registration. Global registration cannot be unregistered.
+This is set for a systemwide level.
+<P>
+If a per-process JIT registration exists, it will be used over the global
+JIT registration specified in the CONFIG.SYS.
+<P>
+<B>Remarks</B>
+<P>
+The JIT debugger is<!-- entering slot 10 --> invoked when an application
+process encounters a trap or exception not serviced by that application's
+exception management.  Under normal operations, where a JIT debugger has
+not been registered with the OS, the application would be terminated by
+the user on a Hard Error Popup. This disallowed state information from being
+gathered.  By registering a JIT debugger with the OS, the OS will launch
+the JIT debugger in place of the Hard Error popup.
+<P>
+The JIT debugger should attach to the dying process allowing the user to
+debug the dying process using a conventional debug program or just gather
+state debugger (unattended).  A state debugger would gather required information
+to determine the state of the process dying; e.g., stack, registers, addresses,
+storage, etc.  Once the state is gathered, the state debugger could save
+it to a log and terminate the offending process and/or start a new process
+in place of the old. This is completely customizable in the JIT debugger.
+
+<P>
+There are two types of JIT registration supported in OS/2.  The first type
+is global registration.  This allows the user to register a global debugger
+for the entire OS in the CONFIG.SYS.  This debugger will be launched for
+any process in the OS that has an error.  The global debugger will not support
+launching a PM (Presentation Manager(R)) JIT debugger.  This has to be a
+VIO application (or one that produces no screen output) because of the organization
+of the boot cycle at which a JIT debugger can be invoked.  The global JIT
+registration is done before the loading of device drivers, IFS, CALLS, and
+RUNS.  This enables JIT support for all of these types of files.
+<P>
+The syntax for the CONFIG.SYS is as follows 
+<P>
+JITDBGREG=[JIT_PathName] [arguments]
+<P>
+Refer to Buffer under parameters section above to see how [JIT_PathName]
+and [arguments] are used.
+<P>
+Example 
+<P>
+JITDBGREG=c \os2\MYJITDBG.EXE /Tn /K /PID%d
+<P>
+The second type of JIT registration is the per-process registration. This
+type of registration allows the user to register any type of debugger including
+PM and VIO using the DBG_C_RegDbg command above.
+<P>
+<B>Attention</B>  The JIT debugger writer needs to be aware of the environment
+that the JIT is being used in because of PM and VIO considerations for starting
+the debugger in regards session management and screen groups.
+<P>
+<B>Note: </B> For kernel debugger users there is an option to turn off the
+JIT debugger support when trying to catch traps in the kernel debugger.
+See the .on, .of and .oq switches in the kernel debugger help.<!-- lm: 0x2 1 -->
+<P>
+
+
+<P><HR>
+
+<A HREF="007_L2_DBG_C_Detach.html">[Back: DBG_C_Detach]</A> <BR>
+<A HREF="009_L2_DBG_C_QueryDebug.html">[Next: DBG_C_QueryDebug]</A> 
+</BODY>
+</HTML>

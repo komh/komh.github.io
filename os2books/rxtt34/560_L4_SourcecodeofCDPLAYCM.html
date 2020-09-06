@@ -1,0 +1,1802 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Source code of CDPLAY.CMD - part 4</TITLE>
+</HEAD>
+<BODY>
+<H1>Source code of CDPLAY.CMD - part 4</H1><!-- entering slot 609 -->
+<PRE> 
+/***       Start of Part 4 of the source code of TEMPLATE.CMD       ***/
+                                                                   /*!*/
+
+/* ------------------------------------------------------------------ */
+/* function: main procedure of the program                            */
+/*                                                                    */
+/* call:     called by the runtime system with:                       */
+/*           =&gt; call main parameter_of_the_program                    */
+/*                                                                    */
+/* returns:  program return code                                      */
+/*           If no return code is returned, the value of the variable */
+/*           prog.__ExitCode is returned to the calling program.      */
+/*                                                                    */
+/* Note:     YOU MUST FILL THIS ROUTINE WITH CODE.                    */
+/*           If you want to add further global variables you SHOULD   */
+/*           add them to the expose list of the procedure MAIN!       */
+/*                                                                    */
+Main: PROCEDURE expose (exposeList)
+
+                    /* not used in this program                       */
+  parse arg template
+
+                    /* turn off the REXX error handling               */
+  signal off failure
+  signal off error
+  signal off notready
+
+                    /* used colors in this program                    */
+                    /* (the variable is used by the routine log)      */
+  prog.__LogExcludeWords = ,
+                           screen.__ErrorColor ,
+                           screen.__NormalColor ,
+                           screen.__DebugColor ,
+                           screen.__PromptColor ,
+                           screen.__SignOnColor ,
+                           screen.__fgYellow ,
+                           screen.__fgRed ,
+                           screen.__highlight ,
+                           screen.__AttrOff ,
+
+/* ------------------------------ */
+                    /* prefixes for the different message types       */
+  statusPrefix = '[---] '
+  resultPrefix = '      '
+  errorPrefix  = '[-!-] '
+  inputPrefix = ' ===&gt;  '
+
+  exposeList = exposeList 'statusPrefix resultPrefix ' ,
+                          'errorPrefix inputPrefix'
+
+                    /* the name of the cdrom device                   */
+  global.__cddevice = 'cdaudio01'
+
+                    /* MCI error code                                 */
+  global.__mmpmerror = 0
+
+  call DisplayStatusMessage 'Initialising ...'
+
+                    /* load the MMOS/2 REXX support                   */
+  call DisplayStatusMessage 'Loading the MMOS/2 DLL ...'
+  thisRC = LoadMCIRxInit()
+  call ShowMCIErrorDesc thisRC
+
+                    /* add the exit routine to the program exit       */
+                    /* code                                           */
+  prog.__exitRoutines = prog.__exitRoutines 'ExitMCI'
+
+                    /* open the cdrom device                          */
+  call DisplayStatusMessage 'Opening the cdrom device ...'
+  thisRC = OpenCDDevice()
+  call ShowMCIErrorDesc thisRC
+
+                    /* read the cdrom data                            */
+  call DisplayStatusMessage  'Reading the cdrom ... '
+  call ReReadCD
+
+                    /* main program loop                              */
+  do forever
+                    /* get the status of the device                   */
+    curResult = GetDeviceStatus()
+    if curResult = '' then
+      call ShowMCIErrorDesc global.__mmpmError
+    else
+      call DisplayStatusMessage 'The device is ' || ,
+                               AddColor1( , curResult )
+
+                    /* read the user input                            */
+    call log  screen.__PromptColor || ,
+          'Please enter a command (help to get help, quit to leave):' ,
+              screen.__NormalColor
+
+    call CharOut , InputPrefix
+    curCmd = cmdLine()
+
+                    /* write the userinput to the logfile             */
+    temp = prog.__QuietMode
+    prog.__QuietMode = 1
+    call log inputPrefix || curCmd
+    prog.__QuietMode = temp
+
+    parse upper var curCmd curCommand curParameter
+    parse var curCmd firstChar +1 extCommand
+
+    select
+
+      when curCommand = '' then
+      do
+        nop
+      end /* when */
+
+      when abbrev( 'QUIT', curCommand ) = 1 then
+      do
+                    /* exit the program                               */
+        leave
+      end /* when */
+
+      when abbrev( 'ERROR', curCommand ) = 1 then
+      do
+                    /* show the description for an MCI error code     */
+        call ShowMCIErrorDesc curParameter
+      end /* when */
+
+      when abbrev( 'VOLUME', curCommand ) = 1 then
+      do
+                    /* read or set the volume                         */
+        select
+
+          when curParameter = '' then
+          do
+                    /* read the current volume                        */
+            call DisplayStatusMessage 'Inquiring the volume ...'
+            curResult = GetVolume()
+            if curResult = '' then
+            do
+              call ShowMCIErrorDesc global.__mmpmError
+            end /* if */
+            else
+              call DisplayResultMessage 'The volume is ' || ,
+                                        AddColor1( , curResult )
+          end /* if */
+
+          when datatype( curParameter ) &lt;&gt; 'NUM' then
+          do
+            call DisplayErrorMsg 'Invalid parameter entered'
+          end /* if */
+
+          when  curParameter &gt; 100 | curParameter &lt; 0 then
+          do
+            call DisplayErrorMsg 'Parameter out of range'
+          end /* if */
+
+          otherwise
+          do
+            call DisplayStatusMessage 'Settting the volume to ' || ,
+                            curParameter || ':' || curParameter ||  ' ...'
+            call SetVolume curParameter
+            call ShowMCIErrorDesc global.__mmpmError
+
+          end /* otherwise */
+
+        end /* select */
+
+      end /* when */
+
+
+      when abbrev( 'TRY', curCommand ) = 1 then
+      do
+                    /* play the start of each track on the cd         */
+        if curParameter = '' | datatype( curParameter ) &lt;&gt; 'NUM' then
+          curParameter = 10
+
+        call TryCD curParameter
+      end /* when */
+
+      when abbrev( 'PLAY', curCommand ) = 1 then
+      do
+                    /* play one or more tracks from the cd            */
+        parse var curParameter startTrack endTrack
+
+        if starttrack = '' then
+        do
+                    /* def.: play all tracks                          */
+          startTrack = 1
+          endTrack = '+'
+        end /* if */
+
+        if endTrack = '+' then
+          endTrack = 100
+
+        call PlayTracks startTrack, endTrack
+      end /* when */
+
+      when abbrev( 'STOP', curCommand ) = 1 then
+      do
+                    /* stop the device                                */
+        call DisplayStatusMessage  'Stopping the device ...'
+        curResult = StopDevice()
+        call ShowMCIErrorDesc global.__mmpmError
+      end /* when */
+
+      when abbrev( 'SOUND', curCommand ) = 1 then
+      do
+                    /* turn the speaker on or off                     */
+        select
+
+          when curParameter = 'ON' | curParameter = '' then
+          do
+            call DisplayStatusMessage 'Turning the <!-- entering slot 610 -->sound on'
+            call SetSoundOn
+            call ShowMCIErrorDesc global.__mmpmError
+          end /* when */
+
+          when curParameter = 'OFF' then
+          do
+            call DisplayStatusMessage 'Turning the sound off'
+            call SetSoundOff
+            call ShowMCIErrorDesc global.__mmpmError
+          end /* when */
+
+          otherwise
+            call DisplayErrorMessage 'Invalid parameter (use ON or OFF)'
+
+        end /* select */
+
+      end /* when */
+
+      when abbrev( 'PAUSE', curCommand ) = 1 then
+      do
+                    /* pause the device                               */
+        call DisplayStatusMessage  'Pausing the device ...'
+        curResult = PauseDevice()
+        call ShowMCIErrorDesc global.__mmpmError
+      end /* when */
+
+      when abbrev( 'RESUME', curCommand ) = 1 then
+      do
+                    /* resume the device                              */
+        call DisplayStatusMessage  'Resuming the device ...'
+        curResult = ResumeDevice()
+        call ShowMCIErrorDesc global.__mmpmError
+      end /* when */
+
+      when abbrev( 'EJECT', curCommand ) = 1 then
+      do
+                    /* eject the CD                                   */
+        call DisplayStatusMessage  'Opening the cd drive ...'
+        curResult = OpenCDDrive()
+        call ShowMCIErrorDesc global.__mmpmError
+      end /* when */
+
+      when abbrev( 'LOAD', curCommand ) = 1 then
+      do
+                    /* close the cdrom                                */
+        call DisplayStatusMessage  'Closing the CD drive ...'
+        curResult = CloseCDDrive()
+        call ShowMCIErrorDesc global.__mmpmError
+      end /* when */
+
+      when abbrev( 'DIR', curCommand ) = 1 then
+      do
+                    /* show the contents of the cd                    */
+        call DirCD
+      end /* when */
+
+      when abbrev( 'REREAD', curCommand ) = 1 then
+      do
+                    /* "reread" the cd                                */
+        call DisplayStatusMessage  'Reading the cd ...'
+        call ReReadCD
+      end /* when */
+
+      when abbrev( 'DEBUG', curCommand ) = 1 then
+      do
+                    /* interactive enter MCI commands                 */
+        call TestMCI
+      end /* when */
+
+      when abbrev( 'CMD', curCommand ) = 1 then
+      do
+                    /* execute an OS command                          */
+        call ExecuteOSCommand curParameter
+      end /* when */
+
+      when firstChar = '!' then
+      do
+                    /* execute an OS command                          */
+        call ExecuteOSCommand extCommand
+      end /* when */
+
+      when firstChar = '#' then
+      do
+                    /* execute a REXX command                         */
+        call InterpretCommand extCommand
+      end /* when */
+
+      when abbrev( 'HELP', curCommand ) = 1 then
+      do
+                    /* show the online help                           */
+         call ShowOnlineHelp
+      end /* when */
+
+      when abbrev( 'SAMPLES', curCommand ) = 1 then
+      do
+                    /* show usage samples                             */
+         call ShowSamples
+      end /* when */
+
+      otherwise
+      do
+        call DisplayErrorMessage 'Unknown command "' || curCommand || '"'
+      end /* otherwise */
+
+    end /* select */
+
+  end /* do forever */
+
+                        /* close the cdrom device                     */
+  call DisplayStatusMessage  'Closing ...'
+  thisRC = CloseCDDevice()
+  call ShowMCIErrorDesc thisRC
+
+/* ------------------------------ */
+
+                        /* exit the program                           */
+                        /* Note: The program exit code is the return  */
+                        /*       code of the routine MAIN             */
+                        /*       If MAIN returns nothing, the program */
+                        /*       exit code is the current value of    */
+                        /*       the variable "prog.__ExitCode" after */
+                        /*       executing MAIN.                      */
+RETURN
+
+/* ------------------------------------------------------------------ */
+
+/*** INSERT FURTHER SUBROUTINES HERE ***/
+
+/*** Note: Do not forget the string 'EXPOSELIST' in the exposeList  ***/
+/***       of ALL procedures!                                       ***/
+
+/* ------------------------------------------------------------------ */
+/* function: Show the invocation syntax                               */
+/*                                                                    */
+/* call:     called by the runtime system with                        */
+/*           =&gt; call ShowUsage                                        */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  ''                                                       */
+/*                                                                    */
+/* Note:     YOU SHOULD FILL THIS ROUTINE WITH CODE.                  */
+/*           You may change the return code for your program in this  */
+/*           routine. The default for the return code is 253.         */
+/*           (The variable for the return code is prog.__ExitCode)    */
+/*                                                                    */
+/*                                                                    */
+ShowUsage: PROCEDURE expose (exposeList)
+  call ShowString I!.__GetMsg( 14 ) || ' ' ,,                /* v3.06 */
+                  prog.__name ,                              /* v3.06 */
+                  global.__userUsage prog.__DefParms         /* v3.06 */
+
+RETURN ' '                                                   /* v3.03 */
+
+/* ------------------------------------------------------------------ */
+/* Function: add quote chars and color codes to a string              */
+/*                                                                    */
+/* call:     AddColor1( quoteChar ,myString )                         */
+/*                                                                    */
+/* where:    quoteChar - leading and trailing character for the       */
+/*                       converted string (may be ommited)            */
+/*           myString - string to convert                             */
+/*                                                                    */
+/* returns:  converted string                                         */
+/*                                                                    */
+/* note:     Add the color codes used in this routine to the          */
+/*           variable 'prog.__LogExcludeWords' if you don't want      */
+/*           them in the logfile. Example:                            */
+/*                                                                    */
+/*               prog.__LogExcludeWords = screen.__fgYellow ,         */
+/*                                        screen.__highlight ,        */
+/*                                        screen.__AttrOff            */
+/*                                                                    */
+/*           This should be one of the first statements in the        */
+/*           routine main.                                            */
+/*                                                                    */
+AddColor1: PROCEDURE expose (exposeList)
+  parse arg quoteChar, myString
+
+return quoteChar || screen.__fgYellow || screen.__highlight || ,
+       myString || ,
+      screen.__AttrOff || quoteChar
+
+/* ------------------------------------------------------------------ */
+/* Function: add quote chars and color codes to a string              */
+/*                                                                    */
+/* call:     AddColor2( quoteChar ,myString )                         */
+/*                                                                    */
+/* where:    quoteChar - leading and trailing character for the       */
+/*                       converted string (may be ommited)            */
+/*           myString - string to convert                             */
+/*                                                                    */
+/* returns:  converted string                                         */
+/*                                                                    */
+/* note:     Add the color codes used in this routine to the          */
+/*           variable 'prog.__LogExcludeWords' if you don't want      */
+/*           them in the logfile. Example:                            */
+/*                                                                    */
+/*               prog.__LogExcludeWords = screen.__fgRed ,            */
+/*                                        screen.__highlight ,        */
+/*                                        screen.__AttrOff            */
+/*                                                                    */
+/*           This should be one of the first statements in the        */
+/*           routine main.                                            */
+/*                                                                    */
+AddColor2: PROCEDURE expose (exposeList)
+  parse arg quoteChar, myString
+
+return quoteChar || screen.__fgRed || screen.__highlight || ,
+       myString || ,
+      screen.__AttrOff || quoteChar
+
+/* ------------------------------------------------------------------ */
+/* NOTE: You must uncomment this routines before using them!!!        */
+
+/*** DEBUGGING SUBROUTINES ***/
+
+/**DEBUG** Delete this line before using the debugging routines!!!
+
+/* ------------------------------------------------------------------ */
+/* function: show all variables defined for the routine calling       */
+/*           this routine.                                            */
+/*                                                                    */
+/* call:     ShowDefinedVariables <!-- entering slot 611 -->{N} {,varMask} {,outpufFile}        */
+/*                                                                    */
+/* where:    N - no pause if the screen is full                       */
+/*           varMask - mask for the variables                         */
+/*           outputFile - write the variable list to this file        */
+/*                                                                    */
+/* returns:  nothing                                                  */
+/*                                                                    */
+/* note:     This routine needs the Dave Boll's DLL RXU.DLL!          */
+/*           Be aware that the special REXX variables SIGL, RC and    */
+/*           RESULT are changed if you call this routine!             */
+/*                                                                    */
+/*                                                                    */
+ShowDefinedVariables:
+  parse upper arg SDV.__pauseMode, SDV.__varMask, SDV.__outPut
+
+                                /* install a local error handler      */
+  signal on syntax name SDV.__RXUNotFound
+
+                                /* load the necessary DLL function    */
+  call rxFuncDrop 'RxVLIst'
+  call rxFuncAdd 'RxVlist', 'RXU', 'RxVList'
+
+  call rxFuncDrop 'RxPullQueue'
+  call rxFuncAdd 'RxPullQueue', 'RXU', 'RxPullQueue'
+
+                                /* create a queue for the variables   */
+  SDV.__newQueue = rxqueue( 'create' )
+
+                                /* the 'D' parameter of the RxVList   */
+                                /* functions won't pause if the       */
+                                /* screen is full                     */
+  SDV.__thisRC = RxVList( SDV.__varMask, 'V' , SDV.__newQueue )
+
+                                /* ignore local variables of this     */
+                                /* routine                            */
+  SDV.__thisRC = SDV.__thisRC
+
+  call LineOut SDV.__outPut , '  ' || copies( 'Ä',76 )
+
+  if SDV.__thisRC &lt;&gt; 0 then
+  do
+
+    call LineOut SDV.__outPut , '  Defined variable(s) and their values:'
+    SDV.__i = 0
+
+    do SDV.__n = 1 to SDV.__ThisRC
+      if SDV.__i &gt;= 23 &amp; ,
+         SDV.__pauseMode &lt;&gt; 'N' then
+      do
+        ADDRESS 'CMD' 'PAUSE'
+        SDV.__i = 0
+      end /* if */
+      SDV.__varName = RxPullQueue( SDV.__newQueue, 'Nowait', 'SDV.__dummy' )
+      SDV.__varValue = RxPullQueue( SDV.__newQueue, 'Nowait', 'SDV.__dummy' )
+
+                                /* ignore local variables of this     */
+                                /* routine                            */
+      if left( SDV.__varName, 6 ) &lt;&gt; 'SDV.__' then
+      do
+        call LineOut SDV.__outPut , '     ' || SDV.__varName || ' = "' || SDV.__varValue || '"'
+        SDV.__i = SDV.__i+1
+      end /* if right( ... */
+
+    end /* do */
+
+                        /* delete the queue for the variables         */
+    call rxqueue 'Delete', SDV.__newQueue
+  end
+  else
+    call LineOut SDV.__outPut , '  No variables defined.'
+
+  call LineOut SDV.__outPut , '  ' || copies( 'Ä',76 )
+
+                        /* close the file                             */
+  call LineOut SDV.__Output
+
+                        /* delete local variables                     */
+  drop SDV.
+RETURN ' '                                                   /* v3.03 */
+
+                        /* error exit for ShowDefinedVariables        */
+SDV.__RXUNotFound:
+  call LineOut SDV.__outPut , 'ShowDefinedVariables: RXU.DLL not found'
+RETURN 255
+
+NoValue:
+  say 'sigl = 'sigl
+  say 'condition(D) ' condition('D')
+  trace ?a; nop
+
+   Delete this line before using the debugging routines!!!    **DEBUG**/
+
+/***        End of Part 4 of the source code of TEMPLATE.CMD        ***/
+/**********************************************************************/
+
+/* ------------------------------------------------------------------ */
+/* function: (Re)Read the cdrom                                       */
+/*                                                                    */
+/* call:     ReReadCD                                                 */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  0 if successfull                                         */
+/*                                                                    */
+/* Note:     -                                                        */
+/*                                                                    */
+ReReadCD: PROCEDURE expose (exposeList)
+
+  thisRC = 0
+
+  if thisRC = 0 then
+  do
+    call DisplayStatusMessage ,
+           'Inquiring the product status of the cdrom drive ...'
+    cdromDesc = GetCDRomDescription()
+    if cdromDesc = '' then
+    do
+      call ShowMCIErrorDesc global.__mmpmError
+      thisRC = -1
+    end /* if */
+    else
+      call DisplayResultMessage ,
+               'The product information for the cdrom drive is ' || ,
+               AddColor1( , cdRomDesc )
+  end /* if */
+
+  if thisRC = 0 then
+  do
+    call DisplayStatusMessage 'Checking the status of the device ...'
+    curResult = GetDeviceStatus()
+    if curResult = '' then
+    do
+      call ShowMCIErrorDesc global.__mmpmError
+      thisRC = -1
+    end /* if */
+    else
+      call DisplayResultMessage 'The device is ' || ,
+                                AddColor1( , curResult )
+  end /* if */
+
+  if thisRC = 0 then
+  do
+    call DisplayStatusMessage 'Inquiring the volume ...'
+    curResult = GetVolume()
+    if curResult = '' then
+    do
+      call ShowMCIErrorDesc global.__mmpmError
+      thisRC = -1
+    end /* if */
+    else
+      call DisplayResultMessage 'The volume is ' || ,
+                                AddColor1( , curResult )
+  end /* if */
+
+  if thisRC = 0 then
+  do
+    curResult = GetCurrentPosition()
+    if curResult = '' then
+    do
+      call ShowMCIErrorDesc global.__mmpmError
+      thisRC = -1
+    end /* if */
+    else
+      call DisplayResultMessage 'The current position is ' || ,
+                                AddColor1( , curResult )
+  end /* if */
+
+  if thisRC = 0 then
+  do
+    curResult = GetNumberOfTracks()
+    if curResult = '' then
+    do
+      call ShowMCIErrorDesc global.__mmpmError
+      thisRC = -1
+    end /* if */
+    else
+      call DisplayResultMessage 'There are ' || ,
+                                AddColor1( , curResult ) || ,
+                                ' tracks on the CD'
+  end /* if */
+
+  if thisRC = 0 then
+  do
+    curResult = GetNumberOfTheCurrentTrack()
+    if curResult = '' then
+    do
+      call ShowMCIErrorDesc global.__mmpmError
+      thisRC = -1
+    end /* if */
+    else
+    do
+      curTrack = curResult
+      call DisplayResultMessage 'The current track is ' || ,
+                                AddColor1( , curResult )
+    end /* else */
+  end /* if */
+
+  if thisRC = 0 then
+  do
+    curResult = GetLengthOfTrack( curTrack )
+    if curResult = '' then
+    do
+      call ShowMCIErrorDesc global.__mmpmError
+      thisRC = -1
+    end /* if */
+    else
+    do
+      trackTime = MMTimeToSeconds( curResult )
+
+      call DisplayResultMessage 'The length of the current track is ' || ,
+                                AddColor1( , trackTime )
+    end /* else */
+  end /* if */
+
+  if thisRC = 0 then
+  do
+    curResult = GetPositionOfTrack( curTrack )
+    if curResult = '' then
+    do
+      call ShowMCIErrorDesc global.__mmpmError
+      thisRC = -1
+    end /* if */
+    else
+      call DisplayResultMessage 'The position of the current track is ' || ,
+                                AddColor1( , curResult )
+  end /* if */
+return
+
+/* ------------------------------------------------------------------ */
+/* function: Convert a MMTIME value into minutes:seconds              */
+/*                                                                    */
+/* call:     MMTimeToSeconds trackLength                              */
+/*                                                                    */
+/* where:    tracklength - track length in MMTME                      */
+/*                                                                    */
+/* returns:  mm:ss                                                    */
+/*                                                                    */
+/* Note:     -                                                        */
+/*                                                                    */
+MMTimeToSeconds: PROCEDURE expose (exposeList)
+  parse arg trackLength
+  thisRC = ''
+
+  parse value ( trackLength / 3000 ) with seconds '.'
+  minutes = seconds %  60
+  seconds = seconds // 60
+return minutes || ':' || right( seconds,2, '0' )
+
+/* ------------------------------------------------------------------ */
+/* function: Load the necessary DLL                                   */
+/*                                                                    */
+/* call:     LoadMCIRxInit                                            */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  0 if successfull                                         */
+/*                                                                    */
+/* Note:     -                                                        */
+/*                                                                    */
+LoadMCIRxInit: PROCEDURE expose (exposeList)
+  call rxFuncAdd 'mciRxInit', 'MCIAPI', 'mciRxInit'
+  thisRC = mciRxInit()
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: Terminate a REXX command file that contains <!-- entering slot 612 -->MCI string   */
+/*           commands                                                 */
+/*                                                                    */
+/* call:     ExitMCI                                                  */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  0 if successfull                                         */
+/*                                                                    */
+/* Note:     -                                                        */
+/*                                                                    */
+ExitMCI:  PROCEDURE expose (exposeList)
+  thisRC = CloseCDDevice()
+  thisRC = mciRxExit()
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: Open the cd device                                       */
+/*                                                                    */
+/* call:     OpenCDDevice                                             */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  0 if successfull                                         */
+/*                                                                    */
+/* Note:     global.__mmpmDeviceID contains the device ID             */
+/*                                                                    */
+OpenCDDevice: PROCEDURE expose (exposeList)
+  global.__mmpmerror = 0
+  mmpmCmd = 'open 'global.__cddevice 'shareable wait'
+  global.__mmpmDeviceID = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: Open the cd device                                       */
+/*                                                                    */
+/* call:     CloseCDDevice                                            */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/*                                                                    */
+/* returns:  0 if successfull                                         */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+CloseCDDevice: PROCEDURE expose (exposeList)
+  mmpmCmd = 'close 'global.__cddevice' wait'
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: get the number of tracks on the current cd               */
+/*                                                                    */
+/* call:     GetNumberOfTracks                                        */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  the number of tracks or '' in case of an error           */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+GetNumberOfTracks: PROCEDURE expose (exposeList)
+  mmpmCmd = 'status 'global.__cddevice' number of tracks wait'
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: get the number of the current track                      */
+/*                                                                    */
+/* call:     GetNumberOfTheCurrentTrack                               */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  the number of the current track or '' in case of an      */
+/*           error                                                    */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+GetNumberOfTheCurrentTrack: PROCEDURE expose (exposeList)
+  mmpmCmd = 'status 'global.__cddevice' current track wait'
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: get the position of the current track                    */
+/*                                                                    */
+/* call:     GetPositionInTheCurrentTrack                             */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  the position of the current track or '' in case of an    */
+/*           error                                                    */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+GetPositionInTheCurrentTrack: PROCEDURE expose (exposeList)
+  mmpmCmd = 'status 'global.__cddevice' position in track wait'
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: get the position of the track no. #                      */
+/*                                                                    */
+/* call:     GetPositionOfTrack trackNo                               */
+/*                                                                    */
+/* where:    trackNo - no of the track                                */
+/*                                                                    */
+/* returns:  the position of the track or '' in case of an            */
+/*           error                                                    */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+GetPositionOfTrack: PROCEDURE expose (exposeList)
+  parse arg trackNo
+
+  mmpmCmd = 'status 'global.__cddevice' position track 'trackNo' wait'
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: set the current volume in percentage                     */
+/*                                                                    */
+/* call:     SetVolume newValue                                       */
+/*                                                                    */
+/* where:    newValue - volume in percentage (0 .. 100)               */
+/*                                                                    */
+/* returns:  -                                                        */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+SetVolume: PROCEDURE expose (exposeList)
+  parse arg newValue
+
+  mmpmCmd = 'set 'global.__cddevice' audio volume' newValue
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: SetSoundOn                                               */
+/*                                                                    */
+/* call:     SetSoundOn                                               */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  -                                                        */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+SetSoundOn: PROCEDURE expose (exposeList)
+  mmpmCmd = 'set 'global.__cddevice' audio on'
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: SetSoundOff                                              */
+/*                                                                    */
+/* call:     SetSoundOff                                              */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  -                                                        */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+SetSoundOff: PROCEDURE expose (exposeList)
+  mmpmCmd = 'set 'global.__cddevice' audio off'
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: get the current volume in percentage                     */
+/*                                                                    */
+/* call:     GetVolume                                                */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  nn / mm - volume for right and left                      */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+GetVolume: PROCEDURE expose (exposeList)
+  mmpmCmd = 'status 'global.__cddevice' volume wait'
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: get the length the track no. #                           */
+/*                                                                    */
+/* call:     GetLengthOfTrack trackNo                                 */
+/*                                                                    */
+/* where:    trackNo - no of the track                                */
+/*                                                                    */
+/* returns:  the length of the track or '' in case of an              */
+/*           error                                                    */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+GetLengthOfTrack: PROCEDURE expose (exposeList)
+  parse arg trackNo
+
+  mmpmCmd = 'status 'global.__cddevice' length track 'trackNo' wait'
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: get the status of the cd device                          */
+/*                                                                    */
+/* call:     GetDeviceStatus                                          */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  the status code or '' in case of an                      */
+/*           error                                                    */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*           Possible status codes are:                               */
+/*           not ready / stopped / playing / seeking / recording /    */
+/*           paused / other                                           */
+/*                                                                    */
+GetDeviceStatus: PROCEDURE expose (exposeList)
+  mmpmCmd = 'status 'global.__cddevice' mode wait'
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: get the product information for the cdrom drive          */
+/*                                                                    */
+/* call:     GetCDRomDescription                                      */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  the product information associated with the cdrom drive  */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+GetCDRomDescription: PROCEDURE expose (exposeList)
+  mmpmCmd = 'info 'global.__cddevice' product'
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: check if the device is ready                             */
+/*                                                                    */
+/* call:     DeviceReady                                              */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  'TRUE' or '' in case of an                               */
+/*           error                                                    */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+DeviceReady: PROCEDURE expose (exposeList)
+  mmpmCmd = 'status 'global.__cddevice' ready wait'
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: get the current position on the device                   */
+/*                                                                    */
+/* call:     GetCurrentPosition                                       */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  the position or '' in case of an                         */
+/*           error                                                    */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+GetCurrentPosition: PROCEDURE expose (exposeList)
+  mmpmCmd = 'status 'global.__cddevice' position wait'
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: get the current volume                                   */
+/*                                                                    */
+/* call:     GetCurrentVolume                                         */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  the volume in the format n / m whre n is the percentage  */
+/*           for the left channel and m is the percentage for the     */
+/*           right channel ('' in case of an error)                   */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+GetVolume: PROCEDURE expose (exposeList)
+  mmpmCmd = 'status 'global.__cddevice' volume wait'
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: pause the device                                         */
+/*                                                                    */
+/* call:     PauseDevice                                              */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  nothing (check global.__mmpmerror for errors)            */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+PauseDevice: PROCEDURE expose (exposeList)
+  mmpmCmd = 'pause 'global.__cddevice''
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: resume the device                                        */
+/*                                                                    */
+/* call:     ResumeDevice                                             */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  nothing (check global.__mmpmerror for errors)            */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+ResumeDevice: PROCEDURE expose (exposeList)
+  mmpmCmd = 'resume 'global.__cddevice''
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: stop the cdrom                                           */
+/*                                                                    */
+/* call:     stopDevice                                               */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  nothing (check global.__mmpmerror for errors)            */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+StopDevice: PROCEDURE expose (exposeList)
+  mmpmCmd = 'stop 'global.__cddevice''
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: Seek to position n on the device                         */
+/*                                                                    */
+/* call:     SeekToPosition newPosition                               */
+/*                                                                    */
+/* where:    newPosition - new Position in mmtime (3000 per second)   */
+/*                                                                    */
+/* returns:  nothing (check global.__mmpmerror for errors)            */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+SeekToPosition: PROCEDURE expose (exposeList)
+  parse arg newPosition
+  mmpmCmd = 'seek 'global.__cddevice' to 'newPosition
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: Seek to start of the device                              */
+/*                                                                    */
+/* call:     SeekToStart                                              */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  nothing (check global.__mmpmerror for errors)            */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+SeekToStart: PROCEDURE expose (exposeList)
+  mmpmCmd = 'seek 'global.__cddevice' to start'
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: Seek to end of the device                                */
+/*                                                                    */
+/* call:     SeekToEnd                                                */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  nothing (check global.__mmpmerror for errors)            */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+SeekToEnd: PROCEDURE expose (exposeList)
+  mmpmCmd = 'seek 'global.__cddevice' to end'
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: Eject the cd                                             */
+/*                                                                    */
+/* call:     OpenCDDrive                                              */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  nothing (check global.__mmpmerror for errors)            */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+OpenCDDrive: PROCEDURE expose (exposeList)
+  mmpmCmd = 'set 'global.__cddevice' door open'
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: Close the cd drive                                       */
+/*                                                                    */
+/* call:     CloseCDDrive                                             */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  nothing (check global.__mmpmerror for errors)            */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+CloseCDDrive: PROCEDURE expose (exposeList)
+  mmpmCmd = 'set 'global.__cddevice' door closed'
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: Lock the cd drive                                        */
+/*                                                                    */
+/* call:     LockCDDrive                                              */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  nothing (check global.__mmpmerror for errors)            */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+LockCDDrive: PROCEDURE expose (exposeList)
+  mmpmCmd = 'set 'global.__cddevice' door locked'
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: Unlock the cd drive                                      */
+/*                                                                    */
+/* call:     UnlockCDDrive                                            */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  nothing (check global.__mmpmerror for errors)            */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+UnlockCDDrive: PROCEDURE expose (exposeList)
+  mmpmCmd = 'set 'global.__cddevice' door unlocked'
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: Set time format to MMTIME (3000 units per second)        */
+/*                                                                    */
+/* call:     SetMMTimeFormat                                          */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  nothing (check global.__mmpmerror for errors)            */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+SetMMTimeFormat: PROCEDURE expose (exposeList)
+  mmpmCmd = 'set 'global.__cddevice' time format MMTIME'
+  global.__mmpmerror = mciRxSendString( mmpmCmd, 'thisRC',0,0 )
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: Play from position n to position m                       */
+/*                                                                    */
+/* call:     PlayDevice begin [,end|length]                           */
+/*                                                                    */
+/* where:    begin - position to start playing                        */
+/*           end - position to end playing                            */
+/*           length - no. of MMTIME ticks to play (use a leading + to */
+/*                    distinguish between end and length)             */
+/*           wait - wait until the command has ended                  */
+/*                  (def.: do not wait)                               */
+/*                                                                    */
+/* returns:  nothing (check global.__mmpmerror for errors)            */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+PlayDevice: PROCEDURE expose (exposeList)
+  parse arg begin, end, wait
+
+  mmpmCmd = 'play 'global.__cddevice
+  if begin &lt;&gt; '' then
+    mmpmCmd = mmpmCmd ' from' begin
+
+  if end &lt;&gt; '' then
+  do
+    if left( end,1 ) = '+' then
+      end = begin + end
+    mmpmCmd = mmpmCmd ' to ' end
+  end /* if */
+
+  if wait &lt;&gt; '' then
+    mmpmCmd = mmpmCmd 'WAIT'
+  global.__mmpmerror = mciRxSendString( mmpmCmd, '',0,0 )
+
+  thisRC = global.__mmpmError
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: Play the first n seconds of every track on the cd        */
+/*                                                                    */
+/* call:     TryCD {seconds}                                          */
+/*                                                                    */
+/* where:    seconds - no. of seconds to play for each track          */
+/*                                                                    */
+/* returns:  -                                                        */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+TryCD: PROCEDURE expose (exposeList)
+  parse arg seconds
+
+  signal on halt name TryCDEnd
+
+  sampleDuration = seconds * 3000
+
+  thisRC = 0
+
+  call DisplayStatusMessage 'Playing the first ' || seconds || ,
+                           ' seconds of every track on the cd ...'
+
+                    /* get the number of tracks on the cd             */
+  if thisRC = 0 then
+  do
+                    /* get number of tracks on the cd                 */
+    call DisplayStatusMessage 'Inquiring the number of tracks on the cd ...'
+    noOfTracks = GetNumberOfTracks()
+    thisRC = global.__mmpmError
+  end /* if */
+
+  call DisplayResultMessage 'There are ' || AddColor1( , noOfTracks ),
+                            || ' tracks on the cd'
+
+  if thisRC = 0 then
+  do
+    do i = 1 to noOfTracks
+                    /* get the position of the start track            */
+      call DisplayStatusMessage 'Inquiring the position of the track ' || i  ||,
+                                ' ...'
+      mmpmCmd = 'status 'global.__cddevice' position track 'i' wait'
+      thisRC = mciRxSendString( mmpmCmd, 'startPosition',0,0 )
+      if thisRC = 0 then
+      do
+        call DisplayStatusMessage 'Playing the start of the track ' || i ||,
+                                  ' ...'
+        endPosition = startPosition + sampleDuration
+        thisRC = PlayDevice( startPosition, endPosition, 'wait' )
+      end /* if */
+    end /* do */
+  end /* if */
+
+  if thisRC &gt; 0 then
+  do
+                    /* error executing an MCI command                 */
+     call ShowMCIErrorDesc thisRC
+  end /* if */
+
+return thisRC
+
+TryCDEnd:
+  return 0
+
+/* ------------------------------------------------------------------ */
+/* function: PlayTracks                                               */
+/*                                                                    */
+/* call:     PlayTracks startTrack {, endTrack}                       */
+/*                                                                    */
+/* where:    startTrack - first track to play                         */
+/*           endTrack - last track to play (def.: startTrack)         */
+/*                                                                    */
+/* returns:  -                                                        */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+PlayTracks: PROCEDURE expose (exposeList)
+  parse arg startTrack, endTrack
+
+                    /* init the error indicator with 'no error'       */
+                    /* = 0 -&gt; no error                                */
+                    /* &lt; 0 -&gt; internal error                          */
+                    /* &gt; 0 -&gt; MCI error                               */
+  thisRC = 0
+
+                    /* default for endtrack is starttrack             */
+  if endTrack = '' then
+    endTrack = startTrack
+  noOfTracks = 0
+
+                    /* swap starttrack and endtrack if necessary      */
+  if endTrack &lt; startTrack then
+    parse value startTrack endTrack with endTrack StartTrack
+
+                    /* only numbers are valid parameters              */
+  if datatype( startTrack ) &lt;&gt; 'NUM' | datatype( endTrack ) &lt;&gt; 'NUM' then
+  do
+    call DisplayErrorMessage  '<!-- entering slot 613 -->Invalid track number(s) entered'
+    thisRC = -1
+  end /* if */
+
+  if thisRC = 0 then
+  do
+                    /* get number of tracks on the cd                 */
+    call DisplayStatusMessage  'Inquiring the number of tracks on the cd ...'
+    noOfTracks = GetNumberOfTracks()
+    thisRC = global.__mmpmError
+  end /* if */
+
+  if thisRC = 0 &amp; ( startTrack &gt; noOfTracks ) then
+  do
+                    /* invalid track number entered                   */
+    call DisplayErrorMessage  'Tracknumber is out of range (max is ' || noOfTracks || ')'
+    thisRC = -1
+  end /* if */
+
+  if endTrack &gt; noOfTracks then
+    endTrack = noOfTracks
+
+  if thisRC = 0 then
+  do
+                    /* get the position of the start track            */
+    call DisplayStatusMessage  'Inquiring the position of the start track ...'
+    mmpmCmd = 'status 'global.__cddevice' position track 'startTrack' wait'
+    thisRC = mciRxSendString( mmpmCmd, 'startPosition',0,0 )
+  end /* if */
+
+  if thisRC = 0 then
+  do
+                    /* get the position of the last track             */
+    if endTrack = startTrack then
+    do
+                    /* play only one track -&gt; start track = end track */
+      endTrackPosition = startPosition
+    end /* if */
+    else
+    do
+      call DisplayStatusMessage  'Inquiring the position of the last track ...'
+      mmpmCmd = 'status 'global.__cddevice' position track 'endTrack' wait'
+      thisRC = mciRxSendString( mmpmCmd, 'endTrackPosition',0,0 )
+    end /* else */
+  end /* if */
+
+  if thisRC = 0 then
+  do
+                    /* get the length of the last track               */
+    call DisplayStatusMessage  'Inquiring the length of the last track ...'
+    mmpmCmd = 'status 'global.__cddevice' length track 'endTrack' wait'
+    thisRC = mciRxSendString( mmpmCmd, 'lastTrackLength',0,0 )
+    if lastTrackLength &lt;&gt; "" then
+    do
+      endPosition = endTrackPosition + lastTrackLength
+    end /* if */
+  end /* if */
+
+  if thisRC = 0 then
+  do
+                    /* play the track(s)                              */
+    call DisplayStatusMessage  'Playing the track(s) ...'
+    thisRC = PlayDevice( startPosition, endPosition )
+  end /* if */
+
+  if thisRC &gt; 0 then
+  do
+                    /* error executing an MCI command                 */
+     call ShowMCIErrorDesc thisRC
+  end /* if */
+
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: Show the contents of a cd                                */
+/*                                                                    */
+/* call:     DirCD                                                    */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  -                                                        */
+/*                                                                    */
+/* Note:     global.__mmpmerror contains 0 or the error number        */
+/*                                                                    */
+DirCD: PROCEDURE expose (exposeList)
+
+  thisRC = 0
+
+                    /* get the number of tracks on the cd             */
+  if thisRC = 0 then
+  do
+                    /* get number of tracks on the cd                 */
+    call DisplayStatusMessage 'Inquiring the number of tracks on the cd ...'
+    noOfTracks = GetNumberOfTracks()
+    thisRC = global.__mmpmError
+    call ShowMCIErrorDesc thisRC
+  end /* if */
+
+  if thisRC = 0 then
+    call DisplayResultMessage 'There are ' || AddColor1( , noOfTracks ),
+                              || ' tracks on the cd'
+
+  cd. = ''
+  cd.0 = noOfTracks
+  totalTimeinMM = 0
+
+  if thisRC = 0 then
+  do
+    do i = 1 to noOfTracks
+                    /* get the position of the track                  */
+      call DisplayStatusMessage 'Inquiring the position of the track ' || i  ||,
+                                ' ...'
+      mmpmCmd = 'status 'global.__cddevice' position track 'i' wait'
+      thisRC = mciRxSendString( mmpmCmd, 'startPosition',0,0 )
+      call ShowMCIErrorDesc thisRC
+      if thisRC = 0 then
+      do
+        cd.i.position = startPosition
+      end /* if */
+
+                    /* get the length of the track       k            */
+      call DisplayStatusMessage 'Inquiring the length of the track ' || i  ||,
+                                ' ...'
+      mmpmCmd = 'status 'global.__cddevice' length track 'i' wait'
+      thisRC = mciRxSendString( mmpmCmd, 'tracklength',0,0 )
+      call ShowMCIErrorDesc thisRC
+      if thisRC = 0 then
+      do
+        cd.i.length = tracklength
+        totalTimeinMM = totalTimeinMM + tracklength
+        cd.i.length1 = MMTimeToSeconds( trackLength )
+      end /* if */
+    end /* do */
+
+    call log
+    call DisplayStatusMessage '"Directorylisting" of the CD'
+    call log
+    call log 'Track #       Start in MMTIME     Length in MMTIME      Length in mm:ss'
+    call log '-----------------------------------------------------------------------'
+
+    do i = 1 to cd.0
+
+      tLine = right( i, 4 ) || '         ' || ,
+              right( cd.i.position, 12 ) || '       ' || ,
+              right( cd.i.length, 12 ) || '      ' || ,
+              right( cd.i.length1, 12 ) || ' '
+      call log tline
+    end /* do */
+
+    call log
+    call log 'Total: ' || AddColor1( , cd.0 ) || ' tracks on the cd ' || ,
+             '(= ' || AddColor1( , MMTimeToSeconds( totalTimeInMM ) ) || ')'
+  end /* if */
+
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: Show Online help                                         */
+/*                                                                    */
+/* call:     ShowOnlineHelp                                           */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  -                                                        */
+/*                                                                    */
+/* Note:     -                                                        */
+/*                                                                    */
+ShowOnlineHelp: PROCEDURE expose (exposeList)
+  call log
+  call log 'Possible commands:'
+  call log 'SA[mples]          - show usage samples'
+  call log 'Q[iet]             - leave the program '
+  call log 'E[rror] #          - show the description for MMOS/2 error no #'
+  call log 'V[olume] {#}       - read or set the volume'
+  call log 'T[ry] {#}          - play every track for # seconds (def.: 10 sec.)'
+  call log 'P[lay] {# {#n|+} } - play track # to track #n (def.: play all tracks)'
+  call log 'S[top]             - stop playing'
+  call log 'PA[use]            - pause playing'
+  call log 'R[esume]           - resume playing'
+  call log 'SO[und] {on|off}   - turn sound on or off'
+  call log 'EJ[ect]            - eject the cd'
+  call log 'L[oad]             - load a cd'
+  call log 'D[dir]             - show cd contents'
+  call log 'RER[ead]           - reread the cd'
+  call log 'DE[bug]            - enter interactive test mode'
+  call log 'C[md] command      - execute an OS command'
+  call log '! command          - execute an OS command'
+  call log '# statement        - execute a REXX statement'
+return
+
+/* ------------------------------------------------------------------ */
+/* function: Show Usage samples                                       */
+/*                                                                    */
+/* call:     ShowSamples                                              */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  -                                                        */
+/*                                                                    */
+/* Note:     -                                                        */
+/*                                                                    */
+ShowSamples: PROCEDURE expose (exposeList)
+  call log
+  call log 'Usage samples'
+  call log
+  call log 'Command                     Description '
+  call log '-----------------------------------------------------------'
+  call log 'PLAY                        play the whole cd              '
+  call log 'P 4                         play the track 4               '
+  call log 'PLA 3 6                     play the tracks 3,4,5, and 6   '
+  call log 'P 2 +                       play track 2 and the rest      '
+  call log 'VOL                         get the current volume setting '
+  call log 'VOL 30                      set the volume to 30%          '
+  call log 'TRY 20                      play 20 sec. of every track    '
+  call log 'SOUND on                    turn the sound on              '
+  call log 'SO off                      turn the sound off             '
+  call log '!dir                        show the current directory     '
+  call log '!cmd                        open a cmd shell               '
+return
+
+/* ------------------------------------------------------------------ */
+
+/* ------------------------------------------------------------------ */
+/* function: convert a MCI error no into an error string              */
+/*                                                                    */
+/* call:     GetMCIErrorString errorNo                                */
+/*                                                                    */
+/* where:    errorNo - error number                                   */
+/*                                                                    */
+/* returns:  the error string                                         */
+/*                                                                    */
+/* Note:     -                                                        */
+/*                                                                    */
+GetMCIErrorString: PROCEDURE expose (exposeList)
+  parse arg errorNo
+
+  if datatype( errorNo ) = 'NUM'  then
+    call mciRxGetErrorString errorNo, 'thisRC'
+  else
+    thisRC = ''
+return thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: Show the description for an MCI error                    */
+/*                                                                    */
+/* call:     ShowMCIErrorDesc errorNo                                 */
+/*                                                                    */
+/* where:    errorNo - error number                                   */
+/*                                                                    */
+/* returns:  -                                                        */
+/*                                                                    */
+/* Note:     -                                                        */
+/*                                                                    */
+ShowMCIErrorDesc: PROCEDURE expose (exposeList)
+  parse arg errorNo
+
+  call DisplayResultMessage '<!-- entering slot 614 -->The result is "' || errorNo || '"'
+
+  if datatype( errorNo ) = 'NUM' &amp; errorNo &lt;&gt; 0  then
+  do
+    errorString = GetMCIErrorString( errorNo )
+    if errorString = '' then
+      call DisplayErrorMessage  'No description available'
+    else
+      call DisplayErrorMessage  errorString
+  end /* if errorNo &lt;&gt; 0 then */
+return
+
+/* ------------------------------------------------------------------ */
+/* function: Display error message                                    */
+/*                                                                    */
+/* call:     DisplayErorMessage msg                                   */
+/*                                                                    */
+/* where:    msg - error message                                      */
+/*                                                                    */
+/* returns:  -                                                        */
+/*                                                                    */
+/* Note:     -                                                        */
+/*                                                                    */
+DisplayErrorMessage: PROCEDURE expose (exposeList)
+  parse arg msg
+  call log screen.__ErrorColor || ErrorPrefix || msg screen.__NormalColor
+return
+
+/* ------------------------------------------------------------------ */
+/* function: Display status message                                   */
+/*                                                                    */
+/* call:     DisplayStatusmessage msg                                 */
+/*                                                                    */
+/* where:    msg - status message                                     */
+/*                                                                    */
+/* returns:  -                                                        */
+/*                                                                    */
+/* Note:     -                                                        */
+/*                                                                    */
+DisplayStatusMessage: PROCEDURE expose (exposeList)
+  parse arg msg
+  call log screen.__SignOnColor || StatusPrefix || msg screen.__NormalColor
+return
+
+/* ------------------------------------------------------------------ */
+/* function: Display result message                                   */
+/*                                                                    */
+/* call:     DisplayResultmessage msg                                 */
+/*                                                                    */
+/* where:    msg - result message                                     */
+/*                                                                    */
+/* returns:  -                                                        */
+/*                                                                    */
+/* Note:     -                                                        */
+/*                                                                    */
+DisplayResultMessage: PROCEDURE expose (exposeList)
+  parse arg msg
+  call log screen.__NormalColor || ResultPrefix || msg || ,
+           screen.__NormalColor
+return
+
+/* ------------------------------------------------------------------ */
+/* function: test MCI commands interactive                            */
+/*                                                                    */
+/* call:     TestMCI                                                  */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  -                                                        */
+/*                                                                    */
+/* Note:     -                                                        */
+/*                                                                    */
+TestMCI: PROCEDURE expose (exposeList)
+  trace off
+
+  do forever
+
+                    /* show some help messages                        */
+    call log ' ' || screen.__DebugColor || ,
+                    centre( ' Interactive test mode ' , 78, '*' ) || ,
+                    screen.__NormalColor
+
+    call log ' ' || screen.__DebugColor || ,
+                    centre( ' Caution: Every command to read the status needs the WAIT parameter!' , 78, ' ' ) || ,
+                    screen.__NormalColor
+
+    call log ' ' || screen.__DebugColor || ,
+                    centre( 'The name of the cdrom device is ' || global.__cddevice , 78, ' ' ) || ,
+                    screen.__NormalColor
+
+    call log ' ' || screen.__DebugColor || ,
+                    centre( 'Use a leading "!" for OS commands', 78, ' ' ) || ,
+                    screen.__NormalColor
+
+    call log ' ' || screen.__DebugColor || ,
+                    centre( 'Use a leading "#" for REXX commands', 78, ' ' ) || ,
+                    screen.__NormalColor
+
+    call log screen.__PromptColor || ,
+              'Enter mci command ("" to exit test mode):' || ,
+              screen.__NormalColor
+
+    call CharOut , InputPrefix
+    curCmd = cmdLine()
+
+    temp = prog.__QuietMode
+    prog.__QuietMode = 1
+    call log inputPrefix || curCmd
+    prog.__QuietMode = temp
+
+    parse var curCmd firstChar +1 extCommand
+
+    select
+
+      when curCmd = '' then
+      do
+        leave
+      end /* when */
+
+      when firstChar = '#' then
+      do
+                    /* execute a REXX command                         */
+        call InterpretCommand extCommand
+      end /* when */
+
+      when firstChar = '!' then
+      do
+                    /* execute an OS command                          */
+        call ExecuteOSCommand extCommand
+      end /* when */
+
+      otherwise
+      do
+                    /* execute a MCI command                          */
+        thisRC = mciRxSendString( curCmd, 'tresult',0,0 )
+        call log 'The returncode is ' || AddColor1( '"',thisRC ) || ,
+              ', the result is ' || AddColor1( '"', tresult ) || '.'
+        if thisRC &lt;&gt; 0 then
+        do
+          call mciRxGetErrorString thisRC, 'errstr'
+          call log screen.__ErrorColor || ,
+                   thisRC '-' errStr || ,
+                   screen.__NormalColor
+        end /* if */
+      end /* otherwise */
+    end /* select */
+  end /* do forever */
+return
+
+/* ------------------------------------------------------------------ */
+/* function: execute an OS command                                    */
+/*                                                                    */
+/* call:     ExecuteOSCommand cmd                                     */
+/*                                                                    */
+/* where:    cmd - command to execute                                 */
+/*                                                                    */
+/* returns:  0 - execution okay                                       */
+/*           else error executing the command                         */
+/*                                                                    */
+/*                                                                    */
+/* note:     do not use the keyword PROCEDURE!                        */
+/*                                                                    */
+ExecuteOSCommand:
+  parse arg IC.__CurLine
+
+                        /* init return code with failure code         */
+  IC.__ThisRC = 1
+
+                        /* install a local error handler              */
+  SIGNAL ON SYNTAX    NAME ExecuteOSCommand1
+  SIGNAL OFF NOVALUE
+  SIGNAL OFF FAILURE
+  SIGNAL OFF ERROR
+  SIGNAL OFF NOTREADY
+
+  'cmd /c ' IC.__CurLine
+  call DisplayStatusMessage 'The return code of the OS command is ' || rc
+
+ExecuteOSCommand1:
+  return
+
+/* ------------------------------------------------------------------ */
+/* function: interpret a command simulating "CALL ON SYNTAX"          */
+/*                                                                    */
+/* call:     interpretCommand cmd                                     */
+/*                                                                    */
+/* where:    cmd - command to interpret                               */
+/*                                                                    */
+/* returns:  0 - execution okay                                       */
+/*           else error executing the command                         */
+/*                                                                    */
+/*                                                                    */
+/* note:     do not use the keyword PROCEDURE!                        */
+/*                                                                    */
+InterpretCommand:
+  parse arg IC.__CurLine
+
+                        /* init return code with failure code         */
+  IC.__ThisRC = 1
+
+                        /* install a local error handler              */
+  SIGNAL ON SYNTAX    NAME InterpretCommand1
+  SIGNAL OFF NOVALUE
+  SIGNAL OFF FAILURE
+  SIGNAL OFF ERROR
+  SIGNAL OFF NOTREADY
+
+                        /* execute the line                           */
+  interpret IC.__CurLine
+
+                        /* set return code to OK                      */
+                        /* this statement is not executed if an error */
+                        /* occurs while executing the previous        */
+                        /* interpret command                          */
+  IC.__ThisRC = 0
+
+InterpretCommand1:
+  if IC.__ThisRC = 1 then
+  do
+    call DisplayErrorMessage 'Error executing the REXX statement'
+    IC.__ThisRC = rc
+  end /* if */
+                        /* drop unnecessary local variables         */
+  drop IC.__CurLine
+
+RETURN IC.__ThisRC
+
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="559_L4_SourcecodeofCDPLAYCM.html">[Back: Source code of CDPLAY.CMD - part 1]</A> <BR>
+<A HREF="561_L3_FurtherREXXprogramsb.html">[Next: Further REXX programs based on TEMPLATE.CMD]</A> 
+</BODY>
+</HTML>

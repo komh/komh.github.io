@@ -1,0 +1,207 @@
+<HTML>
+<HEAD>
+<TITLE>NetServerNameDel or Net32ServerNameDel</TITLE>
+</HEAD>
+<BODY>
+<H1>NetServerNameDel or Net32ServerNameDel</H1><!-- entering slot 124 -->
+<P>
+<B>Purpose</B>
+<P>
+NetServerNameDel removes a secondary server computername from a server and
+removes all shares and closes all sessions established to that name.
+<P>
+<B>Syntax</B>
+<PRE>#include  netcons.h&gt;
+#include  server.h&gt;
+</PRE>
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+NetServerNameDel<!-- lm: 0x2 11 -->
+<UL><B> (const UCHAR LSFAR* pszServerName,
+const UCHAR LSFAR*,  pszDelName)</B><!-- lm: 0x2 1 -->
+</UL> Net32ServerNameDel
+<!-- lm: 0x2 11 -->
+<UL><B>(const UCHAR LSFAR* pszServerName, const UCHAR
+LSFAR*,  pszDelName)</B><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Parameters</B><!-- lm: 0x2 1 -->
+<P>
+pszServerName(const UCHAR LSFAR*)  input<!-- lm: 0x11 11 -->
+<UL> Points
+to a NULL-terminated string containing the server name to be deleted.<!-- lm: 0x2 1 -->
+</UL> pszDelName(const
+UCHAR LSFAR*)  input<!-- lm: 0x11 11 -->
+<UL><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Returns</B><!-- lm: 0x2 1 -->
+<P>
+ulrc (APIRET)  returns FOR 32 bit<!-- lm: 0x11 11 -->
+<UL><!-- lm: 0x2 1 -->
+</UL> usrc
+(USHORT)  returns for 16 bit<!-- lm: 0x11 11 -->
+<UL> Return Code.
+<P>
+NetServerNameDel or Net32ServerNameDel returns one of the following values
+ <!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->NERR_Success<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->ERROR_ACCESS_DENIED<!-- lm: 0x2 11 -->
+<P>
+53<!-- lm: 0x2 26 -->
+<UL> ERROR_BAD_NETPATH<!-- lm: 0x2 11 -->
+</UL> 54
+<!-- lm: 0x2 26 -->
+<UL>ERROR_NETWORK_BUSY<!-- lm: 0x2 11 -->
+</UL> 56<!-- lm: 0x2 26 -->
+<UL> ERROR_TOO_MANY_CMDS
+<!-- lm: 0x2 11 -->
+</UL>59<!-- lm: 0x2 26 -->
+<UL> ERROR_UNEXP_NET_ERR
+<!-- lm: 0x2 11 -->
+</UL>71<!-- lm: 0x2 26 -->
+<UL> ERROR_REQ_NOT_ACCEP
+<!-- lm: 0x2 11 -->
+</UL>87<!-- lm: 0x2 26 -->
+<UL> ERROR_INVALID_PARAMETER
+<!-- lm: 0x2 11 -->
+</UL>2102<!-- lm: 0x2 26 -->
+<UL> NERR_NetNotStarted
+<!-- lm: 0x2 11 -->
+</UL>2114<!-- lm: 0x2 26 -->
+<UL> NERR_ServerNotStarted
+<!-- lm: 0x2 11 -->
+</UL>2140<!-- lm: 0x2 26 -->
+<UL> NERR_InternalError
+<!-- lm: 0x2 11 -->
+</UL>2141<!-- lm: 0x2 26 -->
+<UL> NERR_BadTransactConfig
+<!-- lm: 0x2 11 -->
+</UL>2142<!-- lm: 0x2 26 -->
+<UL> NERR_InvalidAPI<!-- lm: 0x2 11 -->
+</UL> 2460
+<!-- lm: 0x2 26 -->
+<UL>NERR_NoSuchServer<!-- lm: 0x2 11 -->
+</UL> 2469
+<!-- lm: 0x2 26 -->
+<UL>NERR_DelPrimaryName<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Remarks</B>
+<P>
+Only secondary server names can be deleted by the API. An attempt to delete
+the primary server name will result in NERR_DelPrimaryName being returned.
+
+<P>
+If a name successfully deleted had sessions to it, then the name may still
+show in NetServerNameEnum and may not be re-added until the server has completed
+closing all sessions established to that name.
+<P>
+Any shares that were added to the deleted name will also be removed.
+<P>
+This API can be called from OS/2 workstations. Administrative or server
+operator authority is required to call this API.
+<P>
+<B>Related Functions</B><!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->NetServerNameAdd<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->NetServerNameEnum<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Example Code</B>
+<P>
+This example adds a servername called  Server18 , then enumerates the server
+names in use and finally removes the  Server18  servername.
+<PRE>#define PURE_32#define INCL_DOS
+#define INCL_DOSERRORS
+#include  os2.h&gt;
+#include  stdio.h&gt;
+#include  stdlib.h&gt;
+#include  string.h&gt;
+#include  netcons.h&gt;
+#include  server.h&gt;
+int main(VOID)
+{
+
+   struct server_info_0 LSFAR * pBuffer; /* pointer to enum return info */
+   ULONG  ulBufLen=4096;                 /* length in bytes of enum buffer */
+   ULONG  ulLevel=0;                     /* enum return info level */
+   ULONG  ulEntriesRead=0;               /* total entries read from enum */
+   ULONG  ulEntriesAvail=0;              /* total entries available from enum */
+   CHAR   achServer[CNLEN+1];            /* remote server name or '\0' */
+   CHAR   achName[CNLEN+1];              /* server name to add and delete */
+   ULONG  ulReturnCode=0;                /* return code */
+
+   strcpy(achName,"Server18");         /* initialize servername to use */
+   achServer[0] = '\0';                  /* initialize for local API call */
+
+   ulReturnCode = Net32ServerNameAdd(achServer,achName);
+
+   if (ulReturnCode == NO_ERROR)
+   {
+      if ((pBuffer = malloc(ulBufLen)) != NULL)
+      {
+         ulReturnCode = Net32ServerNameEnum(achServer,
+                                            ulLevel,
+                                            (unsigned char *)pBuffer,
+                                            ulBufLen,
+                                             ulEntriesRead,
+                                             ulEntriesAvail);
+
+
+         if (ulReturnCode == NO_ERROR || ulReturnCode == ERROR_MORE_DATA)
+         {
+            printf("Total entries read == %u\n",ulEntriesRead);
+            printf("Total entries available == %u\n",ulEntriesAvail);
+            printf("Server names <!-- entering slot 125 -->are \n");
+
+            while (ulEntriesRead) {
+               printf("\t%s\n",pBuffer-&gt;sv0_name);  /* print out name */
+               pBuffer++;                           /* advance to next entry */
+               ulEntriesRead--;                     /* dec entries displayed */
+            } /* endwhile */
+         }
+         else
+         {
+            printf("Net32ServerNameEnum() error  return code = %u.\n",
+                   ulReturnCode);
+            Net32ServerNameDel(achServer,achName);
+            return 1;
+         }
+      } else {
+         printf("malloc() failed!\n");
+         return 1;
+      }
+
+      ulReturnCode = Net32ServerNameDel(achServer,achName);
+
+      if (ulReturnCode != NO_ERROR)
+      {
+         printf("Net32ServerNameDel() error  return code = %u.\n",
+                ulReturnCode);
+         return 1;
+      }
+   }
+   else
+   {
+       printf("Net32ServerNameAdd() error  return code = %u.\n",
+              ulReturnCode);
+       return 1;
+   }
+
+   return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="079_L2_NetServerNameAddorNe.html">[Back: NetServerNameAdd or Net32ServerNameAdd]</A> <BR>
+<A HREF="081_L2_NetServerNameEnumorN.html">[Next: NetServerNameEnum or Net32ServerNameEnum]</A> 
+</BODY>
+</HTML>

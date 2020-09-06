@@ -1,0 +1,77 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosProtectQueryFileInfo - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosProtectQueryFileInfo - Example Code</H1><!-- entering slot 966 -->
+<P>
+This example creates a read-only file named "DOSFDEL.DAT", then changes
+the file attributes to normal, and uses DosForceDelete to delete the file
+so that it can not be restored using UNDELETE.
+<PRE> #define INCL_DOSFILEMGR   /* File Manager values */
+ #define INCL_DOSERRORS    /* DOS error values    */
+ #include &lt;os2.h&gt;
+ #include &lt;stdio.h&gt;
+
+ int main(VOID) {
+
+ UCHAR       uchFileName[]   = "DOSFDEL.DAT";   /* File we want to delete    */
+ HFILE       fhDelFile       = 0;               /* File handle from DosOpen  */
+ FILESTATUS3 fsts3FileInfo   = {{0}};  /* Information associated with file   */
+ ULONG       ulBufferSize    = sizeof(FILESTATUS3); /* File info buffer size */
+ ULONG       ulOpenAction    = 0;                 /* Action taken by DosOpen */
+ APIRET      rc              = NO_ERROR;          /* Return code             */
+ FHLOCK      FHLock          = 0;                 /* File handle lock        */
+
+                 /* Create a read-only file */
+
+  rc = DosProtectOpen(uchFileName, &amp;fhDelFile,
+               &amp;ulOpenAction, 10L, FILE_READONLY,
+               OPEN_ACTION_CREATE_IF_NEW | OPEN_ACTION_OPEN_IF_EXISTS,
+               OPEN_ACCESS_READWRITE | OPEN_SHARE_DENYNONE, 0L, &amp;FHLock);
+  if (rc != NO_ERROR) {
+     printf("DosProtectOpen error: return code = %u\n", rc);
+     return 1;
+  }
+
+  rc = DosProtectQueryFileInfo(fhDelFile, FIL_STANDARD,
+               &amp;fsts3FileInfo, ulBufferSize, FHLock);   /* Get standard info */
+  if (rc != NO_ERROR) {
+      printf("DosProtectQueryFileInfo error: return code = %u\n", rc);
+      return 1;
+  } else { printf("File %s created read-only.\n",uchFileName); }
+
+    /*   Change the file attributes to be "normal"  */
+
+    fsts3FileInfo.attrFile  = FILE_NORMAL;
+    rc = DosProtectSetFileInfo(fhDelFile, FIL_STANDARD,
+                        &amp;fsts3FileInfo, ulBufferSize, FHLock);
+    if (rc != NO_ERROR) {
+        printf("DosProtectSetFileInfo error: return code = %u\n", rc);
+        return 1;
+    }
+
+    rc = DosProtectClose(fhDelFile, FHLock);
+    /* Should verify that (rc != NO_ERROR) here... */
+
+           /* Delete the file */
+
+    rc = DosForceDelete(uchFileName);
+    if (rc != NO_ERROR) {
+        printf("DosForceDelete error: return code = %u\n", rc);
+        return 1;
+    } else {
+        printf("File %s has been deleted.\n",uchFileName);
+    }  /* endif */
+
+   return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="949_L2H_DosProtectQueryFileI.html">[Back: DosProtectQueryFileInfo - Related Functions]</A> <BR>
+<A HREF="951_L2H_DosProtectQueryFileI.html">[Next: DosProtectQueryFileInfo - Topics]</A> 
+</BODY>
+</HTML>

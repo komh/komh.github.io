@@ -1,0 +1,93 @@
+<HTML>
+<HEAD>
+<TITLE>WinGetMsg Logic</TITLE>
+</HEAD>
+<BODY>
+<H1>WinGetMsg Logic</H1><!-- entering slot 279 -->
+<P>
+<B>WinGetMsg</B> operates essentially as a loop that waits for message activity
+and returns messages to the user. Conceptually the application's code acts
+as an inverted subroutine of<B> WinGetMsg</B>. This was illustrated in <A HREF="184_L4_ThePMMessagingEnviro.html">The
+PM Messaging Environment.</A> 
+<P>
+These are the essential steps in<B> WinGetMsg</B> processing:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->When<B> WinGetMsg</B> wakes, it first unlocks the
+System Queue if owned or if it is the<I> active thread</I>.
+<P>
+The<B> MQ</B> of the current system queue owner is pointed to by<B> pmqsyslock</B>.
+This is set to zero if this points to the<B> MQ</B> of the current thread.
+
+<P>
+The<B> active thread</B> is the thread that has the right to unlock to system
+queue if locked by another thread. Normally this is the thread that manages
+the<B> MQ</B> of the window in focus. Normally the thread that has locked
+the system queue is the<B> active thread</B>. <!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The received list is checked.
+<P>
+If<B> SMSs</B> are queued then each is removed successively and the corresponding
+window procedure is called.
+<P>
+Received messages, that is messages sent via<B> WinSendMsg</B> to this thread,
+are not returned by<B> WinGetMsg</B>. The window procedure is called directly.
+ <!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The application's queue is checked for posted messages.
+
+<P>
+If one is found it is dequeued and returned to the application. <!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If no posted message is found then<B> WinGetMsg</B> tries
+to process the system queue. <!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->We attempt to lock the system queue if free.
+<P>
+if<B> pmqsyslock</B> is zero it is set to the current thread's<B> MQ</B> address.
+ <!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If the lock was successful then we peek the next system
+queue message.
+<P>
+If the lock was unsuccessful we return to the beginning of the loop and
+wait on the message queue semaphore. <!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If the next system message is for this thread then
+it is dequeued and returned to the application<B> with the system queue
+lock still held</B>.
+<P>
+The possibility of holding the system queue lock while running in user code
+is vital to note. While this happens only<B> active thread</B> can dequeue
+a system queue message. The reason for holding the system queue lock is
+for performance. It is likely that one system message will be followed by
+a sequence for the same thread. If the lock was released, unnecessary processing
+on other message queue threads would take place. More recently queued messages
+could not be processed out of turn anyway, since the interpretation of a
+system message depends upon the outcome of the preceding system message.
+ <!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If the next system message is for another application
+then the system queue is unlocked. <!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The other application is made the current input receiver.
+
+<P>
+PM distinguishes between current mouse, keyboard and event receiver.<B> WinGetMsg
+</B>makes the other application the current mouse, keyboard or event receiver
+depending upon the message category. <!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Finally the other application's message queue semaphore
+is posted.<B> WinGetMsg</B> returns to the beginning of its message loop
+by waiting on its own message semaphore for more message activity.<!-- lm: 0x2 1 -->
+</UL> 
+<P>
+This processing is illustrated in the following diagram:<!-- Unable to decode bitmap format --><IMG SRC="188_L5_WinGetMsgLogic_20.gif" WIDTH=717 HEIGHT=1011>
+
+
+<P><HR>
+
+<A HREF="187_L4_PMMessageProcessingL.html">[Back: PM Message Processing Logic]</A> <BR>
+<A HREF="189_L5_WinSendMsgLogic.html">[Next: WinSendMsg Logic]</A> 
+</BODY>
+</HTML>

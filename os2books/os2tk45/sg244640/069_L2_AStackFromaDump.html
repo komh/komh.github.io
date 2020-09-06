@@ -1,0 +1,91 @@
+<HTML>
+<HEAD>
+<TITLE>A Stack From a Dump</TITLE>
+</HEAD>
+<BODY>
+<H1>A Stack From a Dump</H1><!-- entering slot 81 -->
+<PRE>DW SS:BP L10
+001f:000014e6  1550 00f1 000f 02e8 18ae 0000 0000 0000
+001f:000014f6  0000 0000 0000 0000 0000 0000 0000 0000
+
+The first word, which is addressed by the current value in the
+BP register, is the near address of the next stack frame, 1550.
+
+The next two words are a far return address, with the offset to
+the left of the selector.  The return is to address F:F1.
+
+The words following the return address are the parameters, if any
+were passed.  There is no direct way to tell from the stack how
+many parameters were passed, or expected.  To see the next frame,
+
+DW 1550 L 10
+001f:00001550  0000 0300 000f 0001 1560 001f 156e 001f
+001f:00001560  1568 001f 0000 0000 4544 4f4d 0000 15c6
+
+In this stack frame, the BP chain pointer is zero.  This usually
+means that you have found all of the frames on this stack.
+
+The return address for this frame is F:300. The parameters
+seem to be an integer, 1, and three far addresses, 1F:1560,
+1F:156e, and 1F:1568. A little further inspection shows that
+the third address 1F:1568 is pointed to by the first, which is
+highly unusual.  Actually, this is the stack frame received by 'main'.
+Main's parameters are as follows:
+<!-- lm: 0x2 2 -->
+<UL>
+  1 .<!-- lm: 0x2 6 -->
+<UL> an   integer ,   which   tells   it   how   many   strings   were   found   on   the   command   line
+<!-- lm: 0x2 2 -->
+</UL>  2 .<!-- lm: 0x2 6 -->
+<UL> the   far   address   of   a   list   of   addresses ,   each   of   which   points   to   one   of
+the   strings
+<!-- lm: 0x2 2 -->
+</UL>  3 .<!-- lm: 0x2 6 -->
+<UL> the   far   address   of   a   second   list   of   addresses ,   each   of   which   points   to
+an   environment   variable .   This   list   is   terminated   with   a   NULL   POINTER ,   a   far
+address   in   which   both   the   selector   and   offset   are   zero .
+<!-- lm: 0x2 1 -->
+</UL></PRE>
+
+<PRE>
+Let ' s   look   at   them . 1F : 1560   has   the   address   1f : 1568 .   Near   addresses   default   to   the
+last   selector   used ,   so   we   are   not   required   to   supply   it   every   time .
+
+DA   1568
+# 001f : 00001568   DEMO
+
+Right ,   the   name   of   the   program   was   the   first   string   on   the   command   line .
+The   first   parameter   indicates   that   there   is   only   one   string .
+
+
+Let ' s   look   at   a   few   of   the   environment   variables .
+
+DW   156E   L8
+001f : 0000156e    15c6   001f   15da   001f   1608   001f   161f   001f
+
+This   gets   us   four   far   addresses .   To   see   them   all   with   only   one
+input   line ,   use   the   semicolon   as   a   command   delimiter   and   type   away .
+
+DA   15C6 ; DA   15DA ; DA1608 ; DA   161F
+001f : 000015c6   WP _ OBJHANDLE = 132739
+001f : 000015da   AUTOSTART = PROGRAMS , TASKLIST , FOLDERS , LAUNCHPAD
+001f : 00001608   BOOKSHELF = C : \ OS2 \ BOOK ;
+001f : 0000161f   COMSPEC = C : \ OS2 \ CMD . EXE
+
+Notice   that   the   tools   are   not   very   particular   about   spaces   in   the   commands .
+
+Lastly ,   to   see   the   local   data   for   the   failing   routine ,
+DW   SS : SP   BP - 2
+001f : 000014be    02e8   18ae   00e3   2910   0017   0060   0017   0000
+001f : 000014ce    0004   0017   c8cf   0000   0030   c949   c85a   c8cf
+001f : 000014de    0002   0000   00e6   1488
+and   now   you   have   it ,   displayed  <!-- entering slot 82 --> above .
+</PRE>
+
+
+<P><HR>
+
+<A HREF="068_L2_MultipleStackFrames.html">[Back: Multiple Stack Frames]</A> <BR>
+<A HREF="070_L1_ApplicationDocumenta.html">[Next: Application Documentation]</A> 
+</BODY>
+</HTML>

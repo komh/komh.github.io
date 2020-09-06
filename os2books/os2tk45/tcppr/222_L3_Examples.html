@@ -1,0 +1,136 @@
+<HTML>
+<HEAD>
+<TITLE>Examples</TITLE>
+</HEAD>
+<BODY>
+<H1>Examples</H1><!-- entering slot 256 -->
+<P>
+The following examples illustrate the sysctl() call.
+<P>
+This example uses the sysctl() call to get the protocol driver version.
+
+<PRE>#include &lt;stdio.h&gt;
+#include &lt;types.h&gt;
+#include &lt;netinet\in.h&gt;
+#include &lt;sys\socket.h&gt;
+#include &lt;netinet\ip_var.h&gt;
+#include &lt;sys\sysctl.h&gt;
+
+int main(void)
+{
+        int mib[4],i;
+        unsigned int  oldenp=0, newlen=0;
+        struct inetvers_ctl  uap_old, *uap_new;
+
+        mib[0]= CTL_KERN;        /* cmd             */
+        mib[1]= KERN_HOSTID;     /* Protocol Family.*/
+        mib[2]= IPPROTO_IP;      /* Protocol        */
+        mib[3]= KERNCTL_INETVER; /* Control command for sysctl */
+
+
+        uap_new = NULL;
+        oldenp  = sizeof(struct inetvers_ctl);
+
+        if (sysctl(mib,4,(void *)&amp;uap_old,&amp;oldenp,(void *)uap_new,newlen) &gt; 0)
+           printf ("   SOCKETS.SYS: %s\n",uap_old.versionstr);
+
+} </PRE>
+
+<P>
+The next example shows an inetcfg sysctl() call that uses a fifth mib argument
+to specify the actual inet config command. This example sets then gets the
+value.
+<PRE>#include &lt;stdio.h&gt;
+#include &lt;types.h&gt;
+#include &lt;sys/socket.h&gt;
+#include &lt;netinet/in.h&gt;
+#include &lt;netinet/tcp_var.h&gt;
+#include &lt;sys/sysctl.h&gt;
+void  main(void)
+{
+        int mib[5];
+        unsigned int  oldenp=0, newlen;
+        struct inetcfg_ctl uap_old, uap_new;
+
+        mib[0]= CTL_NET;         /* Top level idetifier */
+        mib[1]= PF_INET;         /* Protocol Family */
+        mib[2]= IPPROTO_TCP;     /* Protocol */
+        mib[3]= TCPCTL_INETCFG;  /* Control command for tcp_sysctl */
+        mib[4]= TCPCTL_KEEPCNT;  /* Particular Inetcfg cmd for sysctl_inetcfg */
+
+        /* Set the Value in stack */
+        uap_new.var_cur_val = 4;  /* Send 4 Keepalive probes, rather than 8 */
+        newlen  = sizeof(struct inetcfg_ctl);
+        if (sysctl(mib,5,(void *)NULL, &amp;oldenp, (void *)&amp;uap_new, newlen) &lt; 0)
+            printf("sysctl failed for requested parameter\n");
+
+        /* Get the Value from stack */
+        oldenp  = sizeof(struct inetcfg_ctl);
+        if (sysctl(mib,5,(void *)&amp;uap_old, &amp;oldenp, (void *)NULL, 0) &lt; 0)
+            printf("sysctl failed for requested parameter\n");
+        else
+            printf("Current stack parameter value is %d\n",uap_old.var_cur_val);
+} </PRE>
+
+<P>
+This example illustrates a sysctl() call that uses the route mib.
+<P>
+
+<PRE>#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+#include &lt;types.h&gt;
+#include &lt;netinet\in.h&gt;
+#include &lt;sys\socket.h&gt;
+#include &lt;netinet\ip_var.h&gt;
+#include &lt;sys\sysctl.h&gt;
+#include &lt;net\route.h&gt;
+#include &lt;net\if.h&gt;
+
+void main(void)
+{
+        size_t   needed;
+        int      mib[6];
+        char     *buf, *next, *lim;
+        struct   rt_msghdr *rtm;
+
+        mib[0] = CTL_NET;
+        mib[1] = PF_ROUTE;
+        mib[2] = 0;            /* Wildcard Protocol */
+        mib[3] = 0;            /* Wildcard Address Family */
+        mib[4] = NET_RT_IFLIST;
+        mib[5] = 0;            /* All interfaces */
+
+        if (sysctl(mib, 6, NULL, &amp;needed, NULL, 0) &lt; 0)
+                 psock_errno("route-sysctl-estimate");
+
+        if (needed == 0) {
+            printf("no routes defined\n");
+            return 0;
+        }
+
+        buf = malloc(needed);
+        if (sysctl(mib, 6, buf, &amp;needed, NULL, 0) &lt; 0)
+                psock_errno("sysctl if table");
+        lim  = buf + needed;
+        for (next = buf; next &lt; lim; next += rtm-&gt;rtm_msglen) {
+           rtm = (struct rt_msghdr *)next;
+           switch(rtm-&gt;rtm_type){
+              case RTM_IFINFO:
+                { struct if_msghdr *ifm = (struct if_msghdr *) rtm;
+                  printf("if#  %d ,flags 0x%x\n",ifm-&gt;ifm_index,ifm-&gt;ifm_flags);
+                }
+                  break;
+              case RTM_NEWADDR:
+                  /* Add code for this and for RTM_DELADDR etc.....*/
+                  break;
+           } /* switch */
+        } /* for */
+} </PRE>
+
+
+<P><HR>
+
+<A HREF="221_L3_mibsforROUTEwithFlag.html">[Back: mibs for ROUTE with Flags]</A> <BR>
+<A HREF="223_L2_writev.html">[Next: writev()]</A> 
+</BODY>
+</HTML>

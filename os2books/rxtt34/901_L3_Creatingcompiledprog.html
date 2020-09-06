@@ -1,0 +1,72 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Creating "compiled" programs for Classic REXX and Object REXX</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating "compiled" programs for Classic REXX and Object REXX</H1><!-- entering slot 949 -->
+<P>
+To use a "compiled" program in Classic REXX and in Object REXX you must
+create a "compiled" version for Classic REXX (created for example with <A HREF="647_L3_REXXCCaREXXcompiler.html">REXXCC</A>)
+and a "compiled" version for Object REXX (created with REXXC.EXE from Object
+REXX).
+<BR>
+Then, to call your "compiled" REXX program you should use a "wrapper" program
+written in REXX (Do<B> not</B> "compile" the wrapper program!).
+<P>
+The wrapper program might look as follows:
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* sample wrapper to call a "compiled" REXX program depending on the  */
+/* version of the current REXX interpreter (Classic REXX or           */
+/* Object REXX)                                                       */
+/*                                                                    */
+/* Note:                                                              */
+/*                                                                    */
+/* This program assumes                                               */
+/*                                                                    */
+/* - the REXX program "compiled" for Classic REXX is called           */
+/*   &lt;name_of_this_prog&gt;C.CMD                                         */
+/*                                                                    */
+/* - the REXX program "compiled" for Object REXX is called            */
+/*   &lt;name_of_this_prog&gt;O.CMD                                         */
+/*                                                                    */
+/* - both programs are in the same directory as this program          */
+/*                                                                    */
+
+                    /* init the return code                           */
+  rc = 255
+
+                    /* get the parameter                              */
+  parse arg thisParameters
+
+                    /* get the name of this program                   */
+  parse source . . thisFile
+
+  progBaseName = substr( thisFile,1 lastPos( ".", thisFile )-1 )
+
+                    /* check the version of the current REXX          */
+                    /* interpreter                                    */
+  parse upper version thisVersion thisVersionNo
+  if thisVersion = "OBJREXX" | thisVersionNo &gt; 4.00 then
+  do
+                    /* current REXX interpreter is Object REXX        */
+    "@cmd /c " progBaseName || "O.CMD" thisParameters
+  end /* if thisVersion = "OBJREXX" | thisVersionNo &gt; 4.00 then */
+  else
+  do
+                    /* current REXX interpreter is Classic REXX       */
+    "@cmd /c " progBaseName || "C.CMD" thisParameters
+  end /* else */
+
+return rc
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="900_L2_CompilingREXXprogram.html">[Back: "Compiling" REXX programs]</A> <BR>
+<A HREF="902_L2_PreventREXXfromcreat.html">[Next: Prevent REXX from creating a token image]</A> 
+</BODY>
+</HTML>

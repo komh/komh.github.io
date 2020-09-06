@@ -1,0 +1,187 @@
+<HTML>
+<HEAD>
+<TITLE>Virtual Memory Management Lock Trace</TITLE>
+</HEAD>
+<BODY>
+<H1>Virtual Memory Management Lock Trace</H1><!-- entering slot 347 -->
+<P>
+Virtual Memory Management implements a logging function that records successful
+attempts to lock and unlock memory pages.
+<P>
+Memory locking and unlocking is implemented by the Memory Management routines:
+<B>VMLockMem</B> and<B> VMUnlock</B>. This routine is available directly
+to all kernel components and indirectly to device drivers through:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+<B>DevHlp_Lock</B><!-- lm: 0x2 6 -->
+<P>
+<B>DevHlp_Unlock</B><!-- lm: 0x2 6 -->
+<P>
+<B>DevHlp_VMLock</B><!-- lm: 0x2 6 -->
+<P>
+<B>DevHlp_VMUnlock</B><!-- lm: 0x2 1 -->
+</UL>
+<P>
+and to file system drivers through:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+<B>MFSH_Lock</B><!-- lm: 0x2 6 -->
+<P>
+<B>MFSH_Unlock</B><!-- lm: 0x2 1 -->
+</UL>
+<P>
+The VM lock trace is activated by setting bit 0 of the VM log flag double-word
+to 1. The flag double word is located at symbol:<B> _VMLogFlags</B>. Since
+no function is currently assigned to the other bit positions so the lock
+log may be effectively turned on by setting the byte a<B> _VMLogFlags</B> to
+<B>0xff</B> as in the following example: 
+<PRE>e _vmlogflags
+%fff0127c  00.
+ff
+##g
+L base fff32  size 2 flags 1  hob 16 hptda 3b9 ret fff3e551
+L base 15e0  size 1 flags 4  hob 4a4 hptda 91 ret fff5a93c
+L base 3f  size 1 flags 4  hob 188 hptda 91 ret fff5a93c
+U base 15e0  size 1 flags 4  hob 4a4 hptda 91 ret fff5a983
+U base 3f  size 1 flags 4  hob 188 hptda 91 ret fff5a983
+L base 15e0  size 1 flags 4  hob 4a4 hptda 91 ret fff5a93c
+L base 3f  size 1 flags 4  hob 188 hptda 91 ret fff5a93c
+U base 15e0  size 1 flags 4  hob 4a4 hptda 91 ret fff5a983
+U base 3f  size 1 flags 4  hob 188 hptda 91 ret fff5a983
+L base fff35  size 3 flags 1  hob 16 hptda 4a4 ret fff3e551
+L base fe79c  size 4 flags 0  hob 3 hptda 380 ret fff49ec6
+U base fe79c  size 4 flags 0  hob 3 hptda 380 ret fff3d173
+
+
+</PRE>
+ 
+<P>
+The fields displayed in each lock trace entry are formatted from the constituent
+parts of the corresponding lock handle. They are defined as follows:<!-- lm: 0x2 1 -->
+<P>
+<B>L</B><!-- lm: 0x11 11 -->
+<UL> Indicates a lock request.<!-- lm: 0x2 1 -->
+</UL><B> U
+</B><!-- lm: 0x11 11 -->
+<UL>Indicates an unlock request.<!-- lm: 0x2 1 -->
+</UL><B> base
+</B><!-- lm: 0x11 11 -->
+<UL>The virtual page number (that is the high order
+5 digits of the address) of the page(s) to be locked or unlocked.<!-- lm: 0x2 1 -->
+</UL><B> size
+</B><!-- lm: 0x11 11 -->
+<UL>The number of pages being locked or unlocked
+<!-- lm: 0x2 1 -->
+</UL><B>flags</B><!-- lm: 0x11 11 -->
+<UL> The following
+bit settings are defined:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³<I>Bit value</I> ³<I>Description</I>                             ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³0x01      ³Lock is a long-term                     ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³0x02      ³Verify lock call                        ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³0x04      ³Lock originated from a DevHlp           ³
+ÀÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL><B>hob</B><!-- lm: 0x11 11 -->
+<UL> The <A HREF="3350_L0_.html">hob
+</A>of the memory object whose pages are being locked or unlocked.<!-- lm: 0x2 1 -->
+</UL><B> hptda
+</B><!-- lm: 0x11 11 -->
+<UL>The <A HREF="3352_L0_.html">hptda</A> of the
+process that requested the memory lock or unlock.<!-- lm: 0x2 1 -->
+</UL><B> ret
+</B><!-- lm: 0x11 11 -->
+<UL>The return address from<B> VMLockMem</B>, that
+is, the address of the caller.
+<P>
+<B>Note: </B>
+<P>
+The return address is unfortunately of limited use since most calls to<B> VMLockMem
+</B>are made via a limited number of interface routines. In particular,
+<B>DevHlp</B> lock requests are made via<B> dhw_VMLock</B> and<B> SegLockDM</B>.
+Unless one can trace in addition the<B> SS:ESP</B> on entry to<B> VMLock</B>,
+the lock trace alone will be insufficient to solve memory locking problem.
+One possible way of providing more information is to supplement the lock
+trace with following breakpoint commands:
+<PRE>##bp _vmunlock+1,"k ss:sp;g"
+##bp _vmlockmem+1,"k ss:sp;g"
+##g
+0170:fff3e551 fff32d68 00001281 10000000 ffe0068f CodeLockProc + 7c
+L base fff32  size 2 flags 1  hob 16 hptda 3b9 ret fff3e551
+0170:fff5a93c 015f0000 0000000e 40000000 fe7958c6 _dhw_VMLock + dc
+0170:fff3db40 40000000 015f0000 0000000e fe7958c6
+0170:00000155 <!-- entering slot 348 -->01550000 62d61a84 00000003 5ab40000
+L base 15f0  size 1 flags 4  hob 5de hptda 91 ret fff5a93c
+0170:fff5a93c 0003f198 0000000b 40000000 fe795be0 _dhw_VMLock + dc
+0170:fff3db40 40000000 0003f198 0000000b fe795be0
+0170:00000055 00550000 62d61a84 00000003 5ab40000
+L base 3f  size 1 flags 4  hob 196 hptda 91 ret fff5a93c
+0170:fff5a983 fe7958c6 00002796 083082fc fe7958c6 _dhw_VMUnlock + 3a
+0170:fff3db4c fe7958c6 00001af0 00001100 00000056
+0170:00000003 5b030000 08300000 f2a40000 08489254
+U base 15f0  size 1 flags 4  hob 5de hptda 91 ret fff5a983
+0170:fff5a983 fe795be0 000008c6 0830823f fe795be0 _dhw_VMUnlock + 3a
+0170:fff3db4c fe795be0 00001af0 00001100 0000ff56
+0170:00000003 5b030000 08300000 f2a40000 08489254
+U base 3f  size 1 flags 4  hob 196 hptda 91 ret fff5a983
+0170:fff5a93c 015f0000 00000dd6 40000000 fe7958c6 _dhw_VMLock + dc
+0170:fff3db40 40000000 015f0000 00000dd6 fe7958c6
+0170:00000155 01550000 62d61a84 00000003 5ab40000
+L base 15f0  size 1 flags 4  hob 5de hptda 91 ret fff5a93c
+0170:fff5a93c 0003f198 0000000b 40000000 fe795be0 _dhw_VMLock + dc
+0170:fff3db40 40000000 0003f198 0000000b fe795be0
+0170:00000055 00550000 62d61a84 00000003 5ab40000
+L base 3f  size 1 flags 4  hob 196 hptda 91 ret fff5a93c
+0170:fff5a983 fe7958c6 00002796 083082fc fe7958c6 _dhw_VMUnlock + 3a
+0170:fff3db4c fe7958c6 00001af0 00001100 0000ff56
+0170:00000003 5b030000 08300000 f2a40000 08489254
+U base 15f0  size 1 flags 4  hob 5de hptda 91 ret fff5a983
+0170:fff5a983 fe795be0 000008c6 0830823f fe795be0 _dhw_VMUnlock + 3a
+0170:fff3db4c fe795be0 00001af0 00001100 0000ff56
+0170:00000003 5b030000 08300000 f2a40000 08489254
+U base 3f  size 1 flags 4  hob 196 hptda 91 ret fff5a983
+0170:fff3e551 fff351dc 000022f5 10000000 ffe0053f CodeLockProc + 7c
+L base fff35  size 3 flags 1  hob 16 hptda 3b9 ret fff3e551
+0170:fff4a218 ffe0053f ffe0052b 00082006 00000000 _CodeLockHook + 2c
+0170:fff42df7 ffffffff ffffffff 7b71ff40 7b71ff40 KMDispatchHook + a3
+U base fff35  size 3 flags 1  hob 16 hptda 3b9 ret fff4a218
+0170:fff4a218 ffe0068f ffe0067b 00082006 00000006 _CodeLockHook + 2c
+0170:fff42df7 ffffffff ffffffff 7b71ff40 7b71ff40 KMDispatchHook + a3
+U base fff32  size 2 flags 1  hob 16 hptda 3b9 ret fff4a218
+</PRE>
+
+<P>
+Given that the<B> K</B> command rapidly looses synchronisation with the
+correct stack frame pointer one may have to resort to using: 
+<PRE>
+##bp _vmunlock+1,"dw ss:sp l80;g"
+##bp _vmlockmem+1,"dw ss:sp l80;g"
+
+</PRE>
+
+<P>
+Refer to the Kernel Debugger <A HREF="303_L3_KDisplayStackTracefr.html">K
+command</A> and <A HREF="280_L3_BPSetorAlteraBreakpo.html">BP command</A> for
+further information.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+Related information on memory locking may be found under the description
+of the Kernel Debugger <A HREF="361_L3_MOFormatMemoryObject.html">.MO command</A>.
+
+<P>
+The latest versions of OS/2 2.11 and OS/2 3.0 have implmented a new Kernel
+Debugger command that facilitates an alternative method for analysing memory
+locking problems. See the Kernel Debugger <A HREF="355_L3_MKDisplayMemoryLockI.html">.MK
+command</A> command for details.
+
+<P><HR>
+
+<A HREF="232_L3_ForcingaSystemDumpfr.html">[Back: Forcing a System Dump from the Kernel Debugger]</A> <BR>
+<A HREF="234_L3_VirtualMemoryManagem.html">[Next: Virtual Memory Management System Heap Validation]</A> 
+</BODY>
+</HTML>

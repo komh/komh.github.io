@@ -1,0 +1,812 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Source code of TEMPLATE.CMD - part 3</TITLE>
+</HEAD>
+<BODY>
+<H1>Source code of TEMPLATE.CMD - part 3</H1><!-- entering slot 582 -->
+<PRE> 
+
+/***       Start of Part 3 of the source code of TEMPLATE.CMD       ***/
+
+/* ------------------------------------------------------------------ */
+/* function:  load a dll                                              */
+/*                                                                    */
+/* call:                                                              */
+/*   thisRC = LoadDll( registerFunction, dllName, entryPoint,         */
+/*                     ,{deRegisterFunction},{checkFunction}          */
+/*                     ,{IgnoreRxFuncAddRC},{RegisterErrorRC}         */
+/*                     ,{errorAction}                                 */
+/*                                                                    */
+/* where:                                                             */
+/*         registerFunc = name of the dll init function               */
+/*                        (e.g. "SysLoadFuncs")                       */
+/*              dllName = name of the dll                             */
+/*                        (e.g. "REXXUTIL")                           */
+/*           entryPoint = entryPoint for the dll init function        */
+/*                        (e.g. "SysLoadFuncs")                       */
+/*       deRegisterFunc = name of the dll exit function               */
+/*                        (e.g. "SysDropFuncs")                       */
+/*                        If this parameter is entered, the           */
+/*                        deRegisterFunction is automaticly called    */
+/*                        at program end if the loading of the dll    */
+/*                        was successfull.                            */
+/*            checkFunc = function which must be loaded if the dll is */
+/*                        loaded (def.: none -&gt; always load the dll)  */
+/*                        Note:                                       */
+/*                        Do not use the registerFunction for this    */
+/*                        parameter! A good candidate for this        */
+/*                        parameter is the deRegisterFunction.        */
+/*    IgnoreRxFuncAddRC = 1: ignore the rc from rxFuncAdd             */
+/*                        0: do not ignore the rc from rxFuncAdd      */
+/*                        (def.: 0)                                   */
+/*                        Note: Always set this parameter to 1 if     */
+/*                              using the program under WARP.         */
+/*       RegisterErroRC = returncode of the dll init function         */
+/*                        indicating a load error                     */
+/*                        (def. none, -&gt; ignore the returncode of the */
+/*                         dll init function)                         */
+/*           actionCode = 1: abort program if loading failed          */
+/*                        0: do not abort program if loading failed   */
+/*                        (def.: 1)                                   */
+/*                                                                    */
+/* returns:                                                           */
+/*   0 - loading failed                                               */
+/*   1 - dll loaded                                                   */
+/*   2 - dll already loaded                                           */
+/*                                                                    */
+/* Note:                                                              */
+/*   See the routine MAIN for some examples for using LoadDLL.        */
+/*   LoadDLL can only handle dlls with an init function to register   */
+/*   the further routines in the dll (like the function SysLoadFuncs  */
+/*   in the dll REXXUTIL).                                            */
+/*                                                                    */
+LoadDll:  PROCEDURE expose (exposeList)
+  parse arg regFunc , ,
+            dllName , ,
+            entryPoint , ,
+            deregFunc , ,
+            checkFunc , ,
+            ignoreRXFuncAddRC, ,
+            registerErrorRC, ,
+            errorAction
+
+                        /* check the necessary parameters             */
+  if '' == entryPoint | '' == dllName | '' == regFunc then
+    call ShowError global.__ErrorExitCode, I!.__GetMsg( 6 )
+
+  if '' == ignoreRXFuncAddRC then
+    ignoreRXFuncAddRc = 0
+
+  if '' == errorAction then
+    errorAction = 1
+
+  I!.__LoadDLLRc = 0
+                        /* if the 'checkFunc' is missing, we          */
+                        /* assume that the dll is not loaded          */
+  dllNotLoaded = 1
+  if ( checkFunc &lt;&gt; '' ) then
+    dllNotLoaded = rxFuncQuery( checkFunc )
+
+  if dllNotLoaded then
+  do
+                        /* first deRegister the function        v3.01 */
+    call rxFuncDrop regFunc                                  /* v3.01 */
+
+                        /* load the dll and register the init         */
+                        /* function of the dll                        */
+    rxFuncAddRC = rxFuncAdd( regFunc, dllName, entryPoint )
+
+    if \ rxFuncAddRC | ignoreRxFuncAddRC then
+    do
+
+      I!.__DllInitRC = 0
+      if I!.__CallUserProc( 0, regFunc ) == 0 then
+        I!.__DllInitRC = 'ERROR'
+
+      if ( registerErrorRC &lt;&gt; '' &amp; I!.__DLLInitRC == registerErrorRC ) | ,
+         ( I!.__DllInitRC == 'ERROR' ) then
+        nop
+      else
+      do
+                        /* add the dll deregister function to the     */
+                        /* program exit routine list                  */
+        if DeregFunc &lt;&gt; '' then
+          if \ rxFuncQuery( DeregFunc ) then
+            prog.__ExitRoutines = prog.__ExitRoutines || ' ' || ,
+                                  DeregFunc
+
+        I!.__LoadDLLRc = 1
+      end /* else */
+    end /* if \ rxFuncAddRC | ignoreRxFuncAddRC then */
+  end /* if dllNotLoaded then */
+  else
+    I!.__LoadDLLRc = 2  /* dll is already loaded                      */
+
+  if 1 == errorAction &amp; 0 == I!.__LoadDLLRC then
+    call ShowError global.__ErrorExitCode,,
+                   I!.__GetMsg( 5, dllName )
+
+RETURN I!.__LoadDLLRc
+
+/* ------------------------------------------------------------------ */
+/* function: show a string with word wrapping                         */
+/*                                                                    */
+/* call:     showString Prefix, thisString                            */
+/*                                                                    */
+/* where:                                                             */
+/*           Prefix = prefix for the first line (e.g. "*-*" or "#" to */
+/*                    use # leading blanks, # = 1 ... n )             */
+/*           thisString - string to print                             */
+/*                                                                    */
+/* returns:  ''                                                       */
+/*                                                                    */
+ShowString: PROCEDURE EXPOSE (exposeList)
+  parse arg Prefix, thisStr
+
+  maxLineL = prog.__ScreenCols-4
+
+  if datatype( prefix, 'W' ) == 1 then
+    prefix = copies( ' ' , prefix )
+
+  maxWordL = maxLineL - length( prefix )
+
+  thisRC = 0
+  curStr = ''
+
+  do i = 1 to words( thisStr)
+    pStr = 0
+
+    curStr = curStr || word( thisStr, i ) || ' '
+
+    if length( curStr || prefix ||  word( thisStr, i+1 ) ) &gt; maxLineL then
+      pStr = 1
+
+    if 1 == pStr | i == words( thisStr ) then
+    do
+      if length( prefix || curStr ) &gt; prog.__ScreenCols then
+      do until curStr = ''
+        parse var curStr curStr1 =(maxWordL) ,
+                                  curStr
+        call log left( prefix || curStr1, prog.__ScreenCols )
+        prefix = copies( ' ', length( prefix ) )
+      end /* if length( ... then do until */
+      else
+        call Log left( prefix || curStr, prog.__ScreenCols )
+
+      curStr = ''
+      prefix = copies( ' ', length( prefix ) )
+    end /* if 1 == pStr | ... */
+
+  end /* do i = 1 to words( thisStr */
+
+RETURN ' '                                                   /* v3.03 */
+
+/* ------------------------------------------------------------------ */
+/* function: show a warning message                                   */
+/*                                                                    */
+/* call:     showWarning message                                      */
+/*                                                                    */
+/* where:    warningMessage - warning Message                         */
+/*                                                                    */
+/* returns:  ''                                                       */
+/*                                                                    */
+ShowWarning: PROCEDURE expose (exposeList)
+  parse arg wMsg
+
+  screen.__CurColor = screen.__ErrorColor
+
+  call I!.__LogStart
+
+  call ShowString I!.__GetMsg( 7 ) || ' ', wMsg || '!'
+  call I!.__LogSeparator
+
+  screen.__CurColor = screen.__NormalColor
+  call Log
+
+RETURN ' '                                                   /* v3.03 */
+
+/* ------------------------------------------------------------------ */
+/* function: show an error message and end the program                */
+/*                                                                    */
+/* call:     ShowError exitCode, errorMessage                         */
+/*                                                                    */
+/* where:    ExitCode - no of the error (= program exit code)         */
+/*           errorMessage - error Message                             */
+/*                                                                    */
+/* returns:  nothing                                                  */
+/*                                                                    */
+/* Note:     THIS ROUTINE WILL <!-- entering slot 583 -->NOT COME BACK!!!                       */
+/*                                                                    */
+ShowError: PROCEDURE expose (exposeList)
+  parse arg prog.__ExitCode, I!.__errMsg
+
+  I!.__QM = prog.__QuietMode
+                        /* turn quiet mode off                        */
+  prog.__QuietMode = ''
+
+  screen.__CurColor = screen.__ErrorColor
+
+  call I!.__LogStart
+
+  call Log left( I!.__GetMsg( 8, prog.__Name , prog.__ExitCode ) ,,
+                 prog.__ScreenCols )
+  call ShowString 1, I!.__errMsg || '!'
+
+  call I!.__LogSeparator
+  call Log
+                        /* restore quiet mode status                  */
+  prog.__QuietMode = I!.__QM
+
+  if prog.__NoSound &lt;&gt; 1 then
+  do
+    call beep 537,300
+    call beep 237,300
+    call beep 537,300
+  end /* if prog.__NoSound &lt;&gt; 1 then */
+
+  screen.__CurColor = screen.__NormalColor                   /* v3.08 */
+
+SIGNAL I!.__ProgramEnd
+
+RETURN
+
+/* ------------------------------------------------------------------ */
+/* function: log a debug message and clear the rest of the line       */
+/*                                                                    */
+/* call:     logDebugMsg message                                      */
+/*                                                                    */
+/* where:    message - message to show                                */
+/*                                                                    */
+/* returns:  ''                                                       */
+/*                                                                    */
+/* Note:     You do not need the 'call' keyword to use this routine.  */
+/*                                                                    */
+LogDebugMsg: PROCEDURE expose (exposeList)
+  if global.__verbose &lt;&gt; '' then
+  do
+    parse arg dMsg
+    screen.__CurColor = screen.__DebugColor
+    call Log '+++' dMsg
+    screen.__CurColor = screen.__NormalColor
+  end /* if global.__verbose &lt;&gt; '' then */
+RETURN ' '                                                   /* v3.03 */
+
+/* ------------------------------------------------------------------ */
+/* function: write a CR/LF and a separator line to the screen and to  */
+/*           the logfile                                              */
+/*                                                                    */
+/* call:     I!.__LogStart                                            */
+/*                                                                    */
+/* returns:  nothing                                                  */
+/*                                                                    */
+
+/* ------------------------------------------------------------------ */
+/* function: write a separator line to the screen and to the logfile  */
+/*                                                                    */
+/* call:     I!.__LogSeparator                                        */
+/*                                                                    */
+/* returns:  nothing                                                  */
+/*                                                                    */
+I!.__LogStart:
+  call log
+I!.__LogSeparator:
+  call Log ' ' || left('-', prog.__ScreenCols-2, '-' ) || ' '
+RETURN
+
+/* ------------------------------------------------------------------ */
+/* function: log a message and clear the rest of the line             */
+/*                                                                    */
+/* call:     log message                                              */
+/*                                                                    */
+/* where:    message - message to show                                */
+/*                                                                    */
+/* returns:  ''                                                       */
+/*                                                                    */
+/* Note:     You do not need the 'call' keyword to use this routine.  */
+/*                                                                    */
+Log: PROCEDURE expose (exposeList)
+  parse arg msg
+
+  logmsg = msg
+  do i = 1 to words( prog.__LogExcludeWords )
+    curWord = word( prog.__LogExcludeWords, i )
+
+    do until j = 0
+      j = Pos( curWord, logmsg )
+      if j &lt;&gt; 0 then
+        logmsg = delstr( logmsg, j, length( curWord ) )
+    end /* do until j = 0 */
+  end /* do i = 1 to words( prog.__LogExcludeWords ) */
+
+  if prog.__QuietMode &lt;&gt; 1 then
+  do
+
+    if length( logmsg ) == prog.__ScreenCols  then
+      call charout prog.__STDOUT, screen.__CurColor || ,
+                                  msg || screen.__AttrOff
+    else
+      call lineOut prog.__STDOUT, screen.__CurColor || ,
+                                  msg || screen.__AttrOff ||,
+                                  screen.__DelEOL
+
+  end /* if prog.__Quietmode &lt;&gt; 1 then */
+
+  if symbol( 'prog.__LogFile' ) == 'VAR' then
+    if prog.__LogFile &lt;&gt; '' then
+    do
+      call lineout prog.__LogFile, logmsg
+
+                                /* close the logfile                  */
+      call stream prog.__LogFile, 'c', 'CLOSE'
+    end /* if prog.__LogFile &lt;&gt; '' then */
+
+RETURN ' '                                                   /* v3.03 */
+
+/* ------------------------------------------------------------------ */
+/* function: check if there is a patched version of this program      */
+/*                                                                    */
+/* call:     I!.__CheckPatch                                          */
+/*                                                                    */
+/* returns:  nothing                                                  */
+/*                                                                    */
+/* Note:     I!.__RealParam must contain the parameters for           */
+/*           this program.                                            */
+/*           The variables prog.__Path and prog.__Name must be set!   */
+/*           This procedure ends the program with an EXIT command!    */
+/*                                                                    */
+I!.__CheckPatch: PROCEDURE expose (exposeList)
+
+                        /* get the drive with patch cmd files         */
+                        /*                                      v3.04 */
+  parse upper value value( 'PATCHDRIVE',, prog.__env ) with pLW
+
+  if global.__NeedPatchCheck &lt;&gt; 0 &amp; ( pLW &lt;&gt; '' &amp; pLW &lt;&gt; prog.__Drive ) then
+  do
+
+    pVer = pLW || prog.__Path || prog.__Name
+
+                        /* check if a patched program version exists  */
+    if stream( pVer, 'c', 'QUERY EXIST' ) &lt;&gt; '' then
+    do
+      pCmd = pVer || ' ' || I!.__RealParam
+
+      screen.__CurColor = screen.__PatchColor
+      call Log left( I!.__GetMsg( 9, pver ), prog.__ScreenCols )
+      screen.__CurColor = screen.__AttrOff
+      call I!.__LogSeparator
+
+      '@cmd /c ' pCmd
+
+      screen.__CurColor = screen.__AttrOff
+      call I!.__LogSeparator
+      screen.__CurColor = screen.__PatchColor
+      call Log left( I!.__GetMsg( 10, rc ), prog.__ScreenCols )
+
+      exit rc
+    end /* if stream( ... */
+  end /* if pLW &lt;&gt; '' */
+RETURN
+
+/* ------------------------------------------------------------------ */
+/* function: error handler for unexpected errors                      */
+/*                                                                    */
+/* call:     DO NOT CALL THIS ROUTINE BY HAND!!!                      */
+/*                                                                    */
+/* returns:  nothing                                                  */
+/*                                                                    */
+/* input:    I!.__IncActive:                                          */
+/*             if 1 the error occured while executing an include file */
+/*             statement. In this case the following variables are    */
+/*             also used (Note that this variables are automaticly    */
+/*             set by the routine INCLUDE()):                         */
+/*               I!.__IncLineNo                                       */
+/*                 Line no. of the include file                       */
+/*               I!.__IncFileName:                                    */
+/*                 Name of the include file                           */
+/*               I!.__IncCurLinePos:                                  */
+/*                 Fileposition of the first char of the line causing */
+/*                 the error                                          */
+/*                                                                    */
+/* Note:     THIS FUNCTION ABORTS THE PROGRAM WITH A JUMP TO THE      */
+/*           LABEL I!.__PROGRAMEND!!!                                 */
+/*                                                                    */
+I!.__ErrorAbort:
+
+                            /* turn ANSI word wrap on                 */
+  if screen.__CurColor &lt;&gt; '' then
+    call CharOut prog.__STDOUT, '1B'x || '<!-- entering slot 584 -->[7h'
+
+                        /* check if the error occured in the error    */
+                        /* handler                                    */
+  if I!.__errorLineNo == sigl then
+  do
+    call charout 'STDERR:',,
+                                                            '0D0A'x  ,
+       'Fatal Error: Error in the error handler detected!'  '0D0A'x  ,
+                                                            '0D0A'x  ,
+       'Linenumber:       ' || sigl                         '0D0A'x  ,
+       'Errorname:        ' || condition('C')               '0D0A'x  ,
+       'Errordescription: ' || condition('D')               '0D0A'x  ,
+                                                            '0D0A'x  ,
+       'The program exit routines were not called!'         '0D0A'x  ,
+       'Check if "(EXPOSELIST)" is included in the ' || ,
+       'expose lists of all procedures!'                    '0D0A'x
+
+    call beep 637,300 ; call beep 437,300 ; call beep 637,300
+    exit 255
+
+  end /* if I!.__errorLineNo == sigl then */
+
+                        /* get the number of the line causing the     */
+                        /* error                                      */
+  I!.__errorLineNo = sigl
+
+                        /* get the name of this error                 */
+  I!.__ErrorName = condition('C')
+
+                        /* get further information for this error     */
+                        /* if available                               */
+  I!.__ErrorCondition = condition('D')
+  if I!.__ErrorCondition &lt;&gt; '' then
+    I!.__ErrorCondition = ' (Desc.: "' || I!.__ErrorCondition || '")'
+
+  if datatype( prog.__ScreenCols, 'W' ) &lt;&gt; 1 then
+    prog.__ScreenCols = 80
+
+  if SYMBOL( 'prog.__Name' ) &lt;&gt; 'VAR' | value( 'prog.__Name' ) == '' then
+    if I!.__errorLineNO &lt; I!.__FirstUserCodeLine then
+      I!.__pName = '**Runtime**'
+    else
+      I!.__pName = '***???***'
+  else
+    i!.__pName = prog.__Name
+
+                        /* reInstall the error handler                */
+  INTERPRET  'SIGNAL ON ' value(condition('C')) ' NAME I!.__ErrorAbort'
+
+                        /* check, if we should ignore the error       */
+  if value( 'sigl' ) == value( 'I!.__ICmdLine' ) then
+  do
+    I!.__errorLineNo = 0
+    SIGNAL I!.__CallUserProc2
+  end /* if value( ... */
+
+  screen.__CurColor = screen.__ErrorColor
+
+  I!.__QM = prog.__QuietMode
+                        /* turn quiet mode off                        */
+  prog.__QuietMode = ''
+
+                        /* init variables for printing the line       */
+                        /* causing the error to the screen            */
+  I!.__ThisSRCLine = ''
+  I!.__ThisPrefix = ' *-* '
+
+  call I!.__LogStart
+
+  call ShowString ' ' || I!.__pName || ' - ', I!.__ErrorName || ,
+                  I!.__ErrorCondition || ' error detected!'
+
+                        /* check, if the RC is meaningfull for this   */
+                        /* error                                      */
+  if pos( I!.__ErrorName, 'ERROR FAILURE SYNTAX' ) &lt;&gt; 0 then
+  do
+    if datatype(rc, 'W' ) == 1 then
+      if 'SYNTAX' == I!.__ErrorName then
+         if rc &gt; 0 &amp; rc &lt; 100 then
+            call Log left( ' The error code is ' || rc || ,
+                           ', the REXX error message is: ' || ,
+                           errorText( rc ), ,
+                           prog.__ScreenCols )
+         else
+           call log left( ' The error code is ' || rc || ,
+                          ', this error code is unknown.',,
+                          prog.__ScreenCols )
+      else
+        call Log left( ' The RC is ' || rc || '.', prog.__ScreenCols )
+  end /* if pos( ... */
+
+  if value( 'I!.__IncActive' ) == 1 then
+  do
+                /* error occured while interpreting an include file   */
+    call ShowString 1, 'The error occured while executing the line ' || ,
+                       I!.__IncLineNo || ' of the include file "' || ,
+                       I!.__IncFileName || '".'
+
+                        /* reset the file pointer of the include file */
+                        /* to the start of the line causing the error */
+    call stream I!.__IncFileName, 'c', 'SEEK =' || ,
+                                                   I!.__IncCurLinePos
+
+    I!.__SrcAvailable = stream( I!.__IncFileName, ,
+                                   'c', 'QUERY EXIST' ) &lt;&gt; ''
+  end
+  else
+  do
+    call ShowString 1, 'The error occured in line ' ||,
+                       I!.__errorLineNo || '.'
+
+    I!.__thisLineNo = I!.__errorLineNo
+
+                /* error occured in this file                         */
+                /* check if the sourcecode is available               */
+    SIGNAL ON SYNTAX   NAME I!.__NoSourceCode
+    I!.__inMacroSpace = 1
+    I!.__SrcAvailable = 0
+    if sourceLine( I!.__errorLineNo ) &lt;&gt; '' then
+      I!.__SrcAvailable = 1
+
+    SIGNAL ON SYNTAX NAME I!.__ErrorAbort
+    I!.__inMacroSpace = 0
+
+  end /* else */
+
+                        /* print the statement causing the error to   */
+                        /* the screen                                 */
+  if 1 == I!.__SrcAvailable then
+  do
+    call Log left( ' The line reads: ', prog.__ScreenCols )
+    I!.__InterpretVar = 0
+
+                /* read the line causing the error                    */
+    call I!.__GetSourceLine
+
+    I!.__FirstToken = strip(word( I!.__ThisSRCLine,1))
+    if translate( I!.__FirstToken ) == 'INTERPRET' then
+    do
+      parse var I!.__ThisSRCLine (I!.__FirstToken) ,
+                I!.__interpretValue
+      I!.__InterpretVar = 1
+    end /* if I!.__thisLineNo = I!.__errorLineNo */
+
+                        /* handle multi line statements               */
+    do forever
+      call ShowString I!.__ThisPrefix, I!.__ThisSRCLine
+
+      if right( strip( I!.__ThisSRCLine),1 ) &lt;&gt; ',' then
+        leave
+
+      I!.__ThisPrefix = 5
+
+      call I!.__GetSourceLine
+    end /* do forever */
+
+    if 1 == I!.__InterpretVar then
+    do
+      I!.__interpretValue = strip( word(I!.__interpretValue,1) )
+
+      if symbol( I!.__interpretValue ) == 'VAR' then
+      do
+        call Log left( '', prog.__ScreenCols )
+        call Log left( ' The value of "' || I!.__interpretValue || ,
+                       '" is:', prog.__ScreenCols )
+        call ShowString ' &gt;V&gt; ', value( I!.__interpretValue )
+      end /* if symbol( I!.__interpretValue ) = 'VAR' then */
+
+    end /* if 1 == I!.__InterpretVar */
+
+  end /* if 1 == I!.__SrcAvailable  then do */
+  else
+    call Log left( ' The sourcecode for this line is not available',,
+                   prog.__ScreenCols )
+
+I!.__NoSourceCode:
+  SIGNAL ON SYNTAX NAME I!.__ErrorAbort
+
+  if 1 == I!.__inMacroSpace then
+  do
+    parse source . . I!.__thisProgName
+
+    if fileSpec( 'D', I!.__thisProgName ) == '' then
+      call ShowString 1, ' The sourcecode for this line is not' || ,
+                         ' available because the program is in' || ,
+                         ' the macro space.'
+    else
+      call ShowString 1, ' The sourcecode for this line is not' || ,
+                         ' available because the program is unreadable.'
+  end /* if 1 == I!.__inMacroSpace then */
+
+  call I!.__LogSeparator
+  call Log
+
+  prog.__ExitCode = global.__ErrorExitCode
+
+  if prog.__NoSound &lt;&gt; 1 then
+  do
+    call beep 137,300;  call beep 337,300;  call beep 137,300
+  end /* if prog.__NoSound &lt;&gt; 1 then */
+
+  if 'DEBUG' == global.__verbose | prog.__Trace = 1 then
+  do
+                        /* enter interactive debug mode               */
+    trace ?a
+    nop
+  end /* if 'DEBUG' == global.__verbose | ... */
+
+                        /* restore quiet mode status                  */
+  prog.__QuietMode = I!.__QM
+                        /* restore current color                      */
+  screen.__CurColor = screen.__NormalColor                   /* v3.08 */
+
+SIGNAL I!.__programEnd
+
+/* ------------------------------------------------------------------ */
+/* function: get the sourceline causing an error (subroutine of       */
+/*           I!.__ErrorAbort)                                         */
+/*                                                                    */
+/* call:     DO NOT CALL THIS IN YOUR CODE!!!                         */
+/*                                                                    */
+/* returns:  nothing                                                  */
+/*                                                                    */
+/* Note:     -                                                        */
+/*                                                                    */
+I!.__GetSourceLine:
+  if 1 == I!.__IncActive then
+    I!.__ThisSRCLine = lineIn( I!.__IncFileName )
+  else
+  do
+    I!.__ThisSRCLine = sourceLine( I!.__ThisLineNo )
+    I!.__ThisLineNo = I!.__ThisLineNo <!-- entering slot 585 -->+ 1
+  end /* else */
+RETURN
+
+/* ------------------------------------------------------------------ */
+/* function: error handler for user breaks                            */
+/*                                                                    */
+/* call:     DO NOT CALL THIS ROUTINE BY HAND!!!                      */
+/*                                                                    */
+/* returns:  nothing                                                  */
+/*                                                                    */
+/* Note:     THIS FUNCTION ABORTS THE PROGRAM WITH A JUMP TO THE      */
+/*           LABEL I!.__PROGRAMEND IF prog.__UserAbort IS NOT 0!!!    */
+/*                                                                    */
+/*           In exit routines you may test if the variable            */
+/*           prog.__ExitCode is 254 to check if the program           */
+/*           was aborted by the user.                                 */
+/*                                                                    */
+I!.__UserAbort:
+  I!.__sSigl = sigl
+
+                        /* reinstall the error handler                */
+  CALL ON HALT NAME I!.__UserAbort
+
+                        /* check if user aborts are allowed           */
+  if 0 == prog.__UserAbort then
+    RETURN              /* CTRL-BREAK not allowed                     */
+
+  I!.__QM = prog.__QuietMode
+
+                        /* turn quiet mode off                        */
+  prog.__QuietMode = ''
+
+  call Log
+
+  screen.__CurColor = screen.__ErrorColor
+  call I!.__LogSeparator
+  call Log left( I!.__GetMsg( 11, I!.__sSigl ), prog.__ScreenCols )
+  call I!.__LogSeparator
+  screen.__CurColor = screen.__NormalColor
+
+  prog.__ExitCode = 254
+
+                        /* restore quiet mode status                  */
+  prog.__QuietMode = I!.__QM
+
+SIGNAL I!.__ProgramEnd
+
+/* ------------------------------------------------------------------ */
+/* function: get a message                                            */
+/*                                                                    */
+/* call:     I!.__GetMsg msgNo {,msgP1} {...,msgP9}                   */
+/*                                                                    */
+/* returns:  the message or an empty string                           */
+/*                                                                    */
+/* note:     This routines calls the external routine which name is   */
+/*           saved in the variable 'global.__GetMsg' if this variable */
+/*           is not equal ''.                                         */
+/*                                                                    */
+/*           I!.__GetMsg adds global.__BaseMsgNo to the msgNo.        */
+/*                                                                    */
+I!.__GetMsg: PROCEDURE expose (exposeList)
+  parse arg msgNo, mP1 , mP2 , mP3, mP4, mP5, mP6, mP7, mP8, mP9
+
+  f = 0
+  t = ''
+
+  if symbol( 'global.__GetMsg' ) = 'VAR' then
+    if global.__GetMsg &lt;&gt; '' then
+    do
+            /* first check if there's a user defined GetMsg routine   */
+
+                        /* install a local error handler              */
+      SIGNAL ON SYNTAX Name I!.__GetMsg1
+
+                    /* try to call the user defined GetMsg routine    */
+      interpret 'call ' global.__GetMsg ' msgNo+global.__BaseMsgNo,,' ,
+                ' mP1, mP2, mP3, mP4, mP5, mP6, mP7, mP8, mP9 '
+      f = 1
+    end /* if global.__GetMsg &lt;&gt; '' then */
+
+I!.__GetMsg1:
+
+  if f = 1 then
+  do
+                        /* user defined GetMsg routine found -- use   */
+                        /* the result                                 */
+    if symbol( 'RESULT' ) == 'VAR' then
+      t = result
+  end /* if result = 0 then */
+  else
+  do
+                        /* user defined GetMsg routine not found --   */
+                        /* use the hardcoded message strings          */
+      msgString =  ,
+/* 1001 */      'Routine_"@1"_not_found',
+/* 1002 */      'Can_not_write_to_the_logfile_"@1",_the_status_of_the_logfile_is_"@2"._Now_using_the_NUL_device_for_logging',
+/* 1003 */      'Include_file_"@1"_not_found' ,
+/* 1004 */      'Unexpected_EOF_detected_while_reading_the_include_file_"@1"' ,
+/* 1005 */      'Error_loading_the_DLL_"@1"' ,
+/* 1006 */      'Invalid_call_to_LOADDLL' ,
+/* 1007 */      '_Warning:' ,
+/* 1008 */      '_@1_-_Error_@2_detected!_The_error_message_is_',
+/* 1009 */      '_Calling_the_patched_version_@1_...' ,
+/* 1010 */      '_..._the_patched_version_endet_with_RC_=_@1' ,
+/* 1011 */      '_Program_aborted_by_the_user_(sigl=@1)' ,
+/* 1012 */      '@1_@2_started_on_@3_at_@4_...' ,
+/* 1013 */      '@1_@2_ended_on_@3_at_@4_with_RC_=_@5_(=''@6''x)' ,
+/* 1014 */      '_Usage:'
+
+                    /* get the message and translate all underscores  */
+                    /* to blanks                                      */
+    t = translate( word( msgString, msgNo ), ' ', '_'  )
+
+                    /* replace place holder                           */
+    i = 1
+    do <!-- entering slot 586 -->until i &gt; 9
+     j = pos( '@' || i, t )
+     if j &lt;&gt; 0 then
+       t = insert( arg( i+1 ), delStr(t, j, 2) , j-1 )
+     else
+       i = i +1
+    end /* do until i &gt; 9 */
+  end /* else */
+return t
+
+/* ------------------------------------------------------------------ */
+/* function: get the line no of the call statement of this routine    */
+/*                                                                    */
+/* call:     GetLineNo                                                */
+/*                                                                    */
+/* returns:  the line number                                          */
+/*                                                                    */
+/*                                                                    */
+GetLineNo:
+  RETURN sigl
+
+/* ------------------------------------------------------------------ */
+/* function: get the no. of the first line with the user code         */
+/*                                                                    */
+/* call:     DO NOT CALL THIS ROUTINE BY HAND!!!                      */
+/*                                                                    */
+/* returns:  nothing                                                  */
+/*                                                                    */
+/*                                                                    */
+I!.__GetUserCode:
+  I!.__FirstUserCodeLine = GetLineNo()+2
+RETURN
+
+/********************** End of Runtime Routines ***********************/
+/**********************************************************************/
+
+/***        End of Part 3 of the source code of TEMPLATE.CMD        ***/
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="545_L3_SourcecodeofTEMPLATE.html">[Back: Source code of TEMPLATE.CMD - part 2]</A> <BR>
+<A HREF="547_L3_SourcecodeofTEMPLATE.html">[Next: Source code of TEMPLATE.CMD - part 4]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,175 @@
+<HTML>
+<HEAD>
+<TITLE>Multicasting and the setsockopt() Call</TITLE>
+</HEAD>
+<BODY>
+<H1>Multicasting and the setsockopt() Call</H1><!-- entering slot 93 -->
+<P>
+When a datagram socket is defined, the setsockopt() call can be used to
+modify it. In order to join or leave a multicast group, use the setsockopt()
+call with the IP_ADD_MEMBERSHIP or IP_DROP_MEMBERSHIP flags. The interface
+that is used and the group used are specified in an ip_mreq structure that
+contains the following fields:
+<PRE>struct ip_mreq{
+   struct in_addr imr_multiaddr;
+   struct in_addr imr_interface;
+}
+</PRE>
+
+<P>
+The in_addr structure is defined as:
+<PRE>struct in_addr{
+   ulong s_addr;
+}
+</PRE>
+
+<P>
+
+<P>
+A<I> host group</I> consists of zero or more IP hosts.  An IP datagram designated
+to a host group address will be delivered to all the current members of
+that group.  A host group does not have a fixed membership.  Any IP multicast-capable
+hosts can join or leave a host group dynamically.
+<P>
+To join or leave a host group, an application needs to specify a host group
+address, ranging from 224.0.0.2 to 239.255.255.255, and a network interface
+address.  (Note that 224.0.0.0 is reserved and 224.0.0.1 is permanently
+assigned to the<I> all hosts group,</I> which includes all hosts and routers
+participating in IP multicast.) It is possible to join the same host group
+on more than one network interface.  It is also possible for more than one
+application to join the same host group.  A host's IP module discards an
+incoming multicast datagram designated for a host group not joined on that
+incoming network interface, even though the same host group is joined on
+another network interface.
+<P>
+In order to send to a multicasting group it is not necessary to join the
+groups. For receiving transmissions sent to a multicasting group membership
+is required. For multicast sending use an IP_MULTICAST_IF flag with the
+setsockopt() call. This specifies the interface to be used.
+<P>
+An application can specify the time-to-live value of outgoing multicast
+datagrams.  The default value is one for all IP multicast datagrams.  An
+application can also specify whether a copy of the multicast datagram is
+looped back in the case where the host itself is a member of the destination
+host group.  By default, a copy of the multicast datagram is looped back.
+
+<P>
+It may be necessary to call the setsockopt() call with the IP_MULTICAST_LOOP
+flag in order to control the loopback of multicast packets. By default,
+packets are delivered to all members of the multicast group including the
+sender, if it is a member. However, this can be disabled with the setsockopt()
+call using the IP_MULTICAST_LOOP flag.
+<P>
+For hosts that attach to more than one network, an application can choose
+which interface is used for the initial transmission. Only one interface
+can be used for the initial transmission.  Further transmission to other
+networks is the responsibility of<I> multicast routers.</I>  Do not be confused
+by the interface where a host group joins the outgoing interface for multicast
+transmission.  The interface specified when joining or leaving a host group
+is mainly for receiving incoming multicast datagrams. An application can
+join one host group on one network interface but transmit data to the same
+host group by way of another interface.
+<P>
+Currently multicast is supported only on UDP, so datagram sockets should
+be used to do multicast operations. One thing to consider is that using
+aliasing and multicasting together (with multiple processes) may give unexpected
+results, and the following limitations apply.<!-- lm: 0x2 2 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 5 -->More than one socket can bind on Class D IP address
+(or mcast address) and a common port; for example, two clients that want
+to receive the same mcast packet.<!-- lm: 0x2 2 -->
+<P>
+<LI><!-- lm: 0x2 5 -->These sockets must also set a socket option, SO_REUSEADDR.
+<!-- lm: 0x2 0 -->
+</UL>
+<P>
+The setsockopt() call flags that are required for multicast communication
+and used with the IPPROTO_IP protocol level follow:<!-- lm: 0x2 0 -->
+<P>
+IP_ADD_MEMBERSHIP<!-- lm: 0x11 2 -->
+<UL> Joins a multicast group as specified
+in the<I> optval</I> parameter of type struct ip_mreq. A maximum of 20 groups
+may be joined per socket.<!-- lm: 0x2 0 -->
+</UL> IP_DROP_MEMBERSHIP<!-- lm: 0x11 2 -->
+<UL> Leaves
+a multicast group as specified in the<I> optval</I> parameter of type struct
+ip_mreq. Only allowable for processes with UID=0.<!-- lm: 0x2 0 -->
+</UL> IP_MULTICAST_IF
+<!-- lm: 0x11 2 -->
+<UL>Permits sending of multicast messages on an interface
+as specified in the<I> optval</I> parameter of type struct in_addr. An address
+of<!-- entering slot 94 --> INADDR_ANY (0x000000000) removes the previous
+selection of an interface in the multicast options. If no interface is specified
+then the interface leading to the default route is used.<!-- lm: 0x2 0 -->
+</UL> IP_MULTICAST_LOOP
+<!-- lm: 0x11 2 -->
+<UL>Sets multicast loopback, determining whether or
+not transmitted messages are delivered to the sending host. An<I> optval
+</I>parameter of type uchar is used to control loopback being on or off.
+<!-- lm: 0x2 0 -->
+</UL>IP_MULTICAST_TTL<!-- lm: 0x11 2 -->
+<UL> Sets the
+time-to-live for multicast packets. An<I> optval</I> parameter of type uchar
+is used to set this value between 0 and 255.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+The getsockopt() function can also be used with the multicast flags to obtain
+information about a particular socket:<!-- lm: 0x2 0 -->
+<P>
+IP_MULTICAST_IF<!-- lm: 0x11 2 -->
+<UL> Retrieves the interface's IP address.
+<!-- lm: 0x2 0 -->
+</UL>IP_MULTICAST_LOOP<!-- lm: 0x11 2 -->
+<UL> Retrieves
+the specified looping mode from the multicast options.<!-- lm: 0x2 0 -->
+</UL> IP_MULTICAST_TTL
+<!-- lm: 0x11 2 -->
+<UL>Retrieves the time-to-live in the multicast options.
+<!-- lm: 0x2 0 -->
+</UL>
+<P>
+The following examples demonstrate the use of the setsockopt() call with
+the protocol level set to the Internet Protocol (IPPROTO_IP).
+<P>
+To mark a socket for sending to a multicast group on a particular interface:
+
+<PRE>struct ip_mreq imr;setsockopt(s, IPPROTO_IP, IP_MULTICAST_IF, &amp;imr.imr_interface,
+sizeof(struct
+in_addr));
+</PRE>
+
+<P>
+To disable the loopback on a socket:
+<PRE>char loop = 0;
+setsockopt(s, IPPROTO_IP, IP_MULTICAST_LOOP, &amp;loop, sizeof(uchar));
+</PRE>
+
+<P>
+To allow address reuse for binding multiple multicast applications to the
+same IP group address:
+<PRE>int on = 1;
+setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &amp;on, sizeof(int));
+</PRE>
+
+<P>
+To join a multicast group for receiving:
+<PRE>struct ip_mreq imr;
+setsockopt(s, IPPROTO_IP, IP_ADD_MEMBERSHIP, &amp;imr, sizeof(struct
+ip_mreq));
+</PRE>
+
+<P>
+To leave a multicast group:
+<PRE>struct ip_mreq imr;
+setsockopt(s, IPPROTO_IP, IP_DROP_MEMBERSHIP, &amp;imr, sizeof(struct
+ip_mreq));
+</PRE>
+
+
+<P><HR>
+
+<A HREF="086_L2_IPMulticasting.html">[Back: IP Multicasting]</A> <BR>
+<A HREF="088_L3_ASocketProgramExampl.html">[Next: A Socket Program Example]</A> 
+</BODY>
+</HTML>

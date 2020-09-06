@@ -1,0 +1,86 @@
+<HTML>
+<HEAD>
+<TITLE>Using Save/Restore Methods</TITLE>
+</HEAD>
+<BODY>
+<H1>Using Save/Restore Methods</H1><!-- entering slot 204 -->
+<P>
+The following sample codes (IDL and C files) serves as an example of how
+to use the Save/Restore methods. In this example, class X, a subclass of
+WPDataFile, introduces two pieces of persistent instance data.
+<PRE>include wpdataf.idl
+
+interface X : WPDataFile
+{
+  .
+  .
+  .
+
+  implementation
+  {
+
+    ULONG ulA;     //# Persistent instance data introduced by class X
+    PSZ   pszB;
+
+    wpSaveState: override;    //# To save your data
+    wpRestoreState: override; //# To restore your data
+    wpInitData: override;     //# To supply default values for your data
+  };
+};
+
+</PRE>
+
+<P>
+The following sample code shows the source code for X:
+<PRE>BOOL SOMLINK x_wpSaveState(X * somSelf)
+{
+  _wpSaveLong(somSelf, "X", 1, _ulA);
+  _wpSaveString(somSelf, "X", 2, _pszB);   // Key is X and 1 for _ulA
+  return parent_wpSaveState(somSelf);      // Key is X and 2 for _pszB
+}
+  .
+  .
+  .
+
+BOOL SOMLINK x_wpRestoreState(X * somSelf, ULONG ulReserved)
+{
+  ULONG ulSize;
+
+  // Key is X and 1 for _ulA
+  _wpRestoreLong(somSelf, "X", 1, &amp;_ulA);
+
+  // Key is X and 2 for _pszB
+  _wpRestoreString(somSelf, "X", 2, &amp;_pszB, &amp;ulSize);
+  return parent_wpRestoreState(somSelf, ulReserved);
+}
+  .
+  .
+  .
+
+BOOL SOMLINK x_wpInitData(X * somSelf)
+{
+  BOOL rc;
+  rc    = parent_wpInitData(somSelf);
+  _ulA  = 1001;
+  _pszB = "hello";
+  return rc;
+}
+
+</PRE>
+
+<P>
+
+<P>
+<B>Note: </B> Some of the save and restore methods are used in a complete
+program that is illustrated in <A HREF="160_L2_SampleCodeforSetupCl.html">Sample
+Code for Setup/Cleanup Methods</A>.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+
+<P><HR>
+
+<A HREF="188_L2_AboutSaveRestoreMeth.html">[Back: About Save/Restore Methods]</A> <BR>
+<A HREF="190_L1_ObjectPropertiesNote.html">[Next: Object Properties: Notebook Methods]</A> 
+</BODY>
+</HTML>

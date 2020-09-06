@@ -1,0 +1,336 @@
+<HTML>
+<HEAD>
+<TITLE>Source Code MEMLAB3.C</TITLE>
+</HEAD>
+<BODY>
+<H1>Source Code MEMLAB3.C</H1><!-- entering slot 273 -->
+<PRE>/**********************************************************/
+/**********************************************************/
+/***                                                    ***/
+/***  Program name: MEMLAB3.EXE                         ***/
+/***                                                    ***/
+/***  Created     : 7 May, 1990                         ***/
+/***                                                    ***/
+/***  Author      : Bo Falkenberg                       ***/
+/***                                                    ***/
+/***  Revised     : February, 1992 by Darryl Frost      ***/
+/***                                                    ***/
+/***  Purpose     : To demonstrate multiple sessions    ***/
+/***                started from a OS/2 program, and    ***/
+/***                to show how the size of the swap    ***/
+/***                file varies as the sessions are     ***/
+/***                started and what happens to the swap***/
+/***                file after the sessions are stopped.***/
+/***                                                    ***/
+/***  Compile     : icc /O+ /W2 memlab3.c               ***/
+/***                                                    ***/
+/***  Execute     : memlab3 n x                         ***/
+/***                where n = the number of sessions    ***/
+/***                to be started. If nothing is        ***/
+/***                entered 4 sessions will be started. ***/
+/***                x is the type of sessions to start. ***/
+/***                By default x is equal to 4, which   ***/
+/***                means full screen DOS sessions will ***/
+/***                be started. x can be any of the     ***/
+/***                SessionType values recognized by    ***/
+/***                DosStartSession.                    ***/
+/***                                                    ***/
+/***  File input  : Reads file MEMLAB3.PRO which must be***/
+/***                setup using an editor such as the   ***/
+/***                OS/2 System Editor. The file        ***/
+/***                contains three lines. The first     ***/
+/***                line contains the name of the swap  ***/
+/***                file including its full path. The   ***/
+/***                next line contains the name of the  ***/
+/***                program which is to be executed in  ***/
+/***                the sessions. The path used to      ***/
+/***                find the program must be included.  ***/
+/***                The last line  contains the         ***/
+/***                parameter string which is to be     ***/
+/***                passed to the program at start-up.  ***/
+/***                                                    ***/
+/**********************************************************/
+/**********************************************************/
+
+/**********************************************************/
+/***  DEFINES                                           ***/
+/**********************************************************/
+ #define INCL_DOS
+ #define LENGTH       sizeof(buffer)
+                           /* DosFindFirst returned buffer
+                              size */
+ #define TIMEINTERVAL 10   /* Seconds to wait when checking
+                              swap file size */
+ #define MAXLOOP      10   /* No of intervals with same
+                              swap file size after which
+                              program in terminated */
+ #define NOSESS       4    /* No of Sessions to start */
+ #define DOS_FULL_SCREEN 4 /* Default Session Type    */
+
+/**********************************************************/
+/***  INCLUDE                                           ***/
+/**********************************************************/
+ #include        &lt;os2.h&gt;
+ #include        &lt;stdio.h&gt;
+ #include        &lt;string.h&gt;
+ #include        &lt;stdlib.h&gt;
+
+/**********************************************************/
+/***  GLOBAL VARIABLES                                  ***/
+/**********************************************************/
+ ULONG            SessID;      /* Session ID (returned)   */
+ PID              DOSpid;      /* Process ID (returned)   */
+ USHORT           rc = 0;      /* return code             */
+ USHORT           frc = 0;     /* file return code        */
+ struct _STARTDATA StartData;  /* start program structure */
+ struct _FILEFINDBUF buffer;   /* file information struct */
+ char szFname[64];
+ char szProgname[64];
+ char szProginp[64];
+ FILE *fptr;
+ PULONG pStartedSessID;
+ ULONG *p;
+
+/**********************************************************/
+/***  FUNCTION PROTOTYPES                               ***/
+/**********************************************************/
+
+void main(int argc, char *argv[], char *envp[]);
+void printtrouble(void);
+ULONG GetSwapperSize();
+
+/**********************************************************/
+/***  MAIN PROGRAM                                      ***/
+/**********************************************************/
+
+void main(int argc, char *argv[], char *envp[])
+{
+   int radix = 10;
+   int loop;
+   int no_of_SESS;
+   int sesstype;
+   char Related;
+   unsigned char *Title1;
+   unsigned char *Title2;
+   char chloop1[30];
+   char chloop2[30];
+   char *dummy1;
+   char *dummy2;
+   char *pchrc;
+   ULONG sLen;
+   ULONG fsize;
+   ULONG ulrc;
+   ULONG ulTargetOption;
+   ULONG ulSessid;
+   ULONG ulTimeInterval = TIMEINTERVAL * 1000;
+   ULONG elapsed;
+   ULONG loopflag;
+   ULONG timecount;
+   ULONG samecount;
+   ULONG savesize;
+
+/* Default no of sessions to start                        */
+   no_of_SESS = NOSESS;
+   sesstype = DOS_FULL_SCREEN;
+
+/* Get arguments from the command line, if <!-- entering slot 274 -->present        */
+   if (argc &gt;= 2)
+   {
+/* Number of sessions to start                            */
+      no_of_SESS = atoi (argv[1]);
+   }
+
+   if (argc &gt;= 3)
+   {
+/* Session type                                           */
+      sesstype = atoi (argv[2]);
+   }
+
+/* Read parameters from MEMLAB3.PRO file                  */
+   fptr = fopen("memlab3.pro", "r");
+   if (fptr == (FILE *)NULL)
+   {
+      printf("\nFile MEMLAB3.PRO cannot be found\n");
+      return;
+   }
+/* line 1 : swapper file path and filename                */
+   pchrc = fgets(szFname, sizeof(szFname)-1, fptr);
+   if (pchrc == (char *)NULL)
+   {
+      printtrouble();
+      return;
+   }
+   szFname[strlen(szFname)-1] = '\0';
+/* line 2 : name of program to start in the sessions  */
+   pchrc = fgets(szProgname, sizeof(szProgname)-1, fptr);
+   if (pchrc == (char *)NULL)
+   {
+      printtrouble();
+      return;
+   }
+   szProgname[strlen(szProgname)-1] = '\0';
+/* line 3 : parameters to be passed to the program        */
+   pchrc = fgets(szProginp, sizeof(szProginp)-1, fptr);
+   if (pchrc == (char *)NULL)
+   {
+      printtrouble();
+      return;
+   }
+   sLen = strlen(szProginp);
+   szProginp[sLen-1] = '\0';
+
+/* Set up parameter block for DosStartSession             */
+   StartData.PgmName = szProgname;
+   StartData.PgmInputs = szProginp;
+   StartData.Length = 32;
+   StartData.FgBg = 1;
+
+   StartData.Related = 1; /* related to parent */
+
+   StartData.TermQ = NULL;
+   StartData.InheritOpt = 0;
+   StartData.Environment = 0;
+   StartData.PgmControl = SSF_CONTROL_MINIMIZE; /* Start Minimized */
+   loop = 0;
+   rc = 0;
+
+/* Allocate memory to save IDs of started sessions        */
+   sLen = no_of_SESS * sizeof(ULONG);
+   frc = DosAllocMem ((PPVOID)&amp;pStartedSessID, sLen,
+                      PAG_WRITE | PAG_READ | PAG_COMMIT );
+   if (frc != 0)
+   {
+      printf("Memory Allocation Failure, return code %u\n",frc);
+      exit (1);
+   }
+   p = pStartedSessID;
+
+   /* Keep starting sessions, until an error occurs       */
+   /* or the requested number of sessions is reached.     */
+   /* Save the IDs of the started sessions.               */
+   /* Display the size of the swap file before starting   */
+   /* any sessions and after each session is started.     */
+
+   printf("Program MEMLAB3 is executing\n");
+   printf("%u sessions will be started\n", no_of_SESS);
+   fsize = GetSwapperSize();
+   printf("Size of SWAPPER.DAT is now %u KB\n", fsize);
+   while (!rc &amp;&amp; loop &lt; no_of_SESS)
+   {
+      loop++;
+      StartData.SessionType = sesstype; /* session type       */
+                                 /* make the program title    */
+      Title1 = ". SESS\n\0";      /* with a session number */
+      dummy1 = _itoa(loop,  chloop1, radix);
+      strcat (dummy1, Title1);
+      StartData.PgmTitle = dummy1;
+
+      rc = DosStartSession(&amp;StartData, &amp;SessID, &amp;DOSpid);
+      if (rc == 0)
+      {
+         printf("Session no %u is started; Session ID: %u\n",
+                loop, SessID);
+         fsize = GetSwapperSize();
+         printf("Size of SWAPPER.DAT is now %u KB\n", fsize);
+         *p++ = SessID;
+       } else
+       {
+         printf("An error occurred starting Session no %u\n", loop);
+         printf("Return code from DosStartSession = %u\n", rc);
+         loop = no_of_SESS;
+       } /* endif */
+   } /* endwhile */
+
+/* Wait for a key on the keyboard to be depressed, then   */
+/* terminate the sessions. Display the swap file size */
+/* after each session is terminated.                      */
+   printf("Press &lt;Enter&gt; to terminate the Sessions...");
+   fflush(stdout);
+   loop = getchar();  /*wait for input */
+   p = pStartedSessID;
+   for (loop = 1; loop &lt;= no_of_SESS; loop++)
+   {
+      ulSessid = *p++;
+      ulTargetOption = 0;
+      ulrc = DosStopSession (ulTargetOption, ulSessid);
+      if (ulrc == 0)
+      {
+         printf("Session with ID %u has been stopped\n", ulSessid);
+
+         fsize = GetSwapperSize();
+         printf("Size of SWAPPER.DAT is now %u KB\n", fsize);
+      }
+   }
+
+/* Monitor the swap file size and display it at intervals */
+/* of TIMEINTERVAL seconds. When the size has remained    */
+/* constant for TIMEINTERVAL * MAXLOOP seconds, terminate */
+/* the program.                                           */
+   loopflag = TRUE;
+   savesize = fsize;
+   timecount = 1;
+   while (loopflag)
+   {
+      ulrc = DosSleep(ulTimeInterval);
+      elapsed = timecount * TIMEINTERVAL;
+      printf("Elapsed time since closing DOS sessions is %u seconds\n",
+             elapsed);
+      fsize = GetSwapperSize();
+      printf("Size of SWAPPER.DAT is now %u KB\n", fsize);
+      timecount++;
+      samecount++;
+      if ( fsize != savesize)
+      {
+         savesize = fsize;
+         samecount = 0;
+      }
+      if (samecount == MAXLOOP - 1)
+      {
+         elapsed = MAXLOOP * TIMEINTERVAL;
+         printf("No change in SWAPPER.DAT size for %u seconds\n"
+                "Program in terminating\n",elapsed);
+         loopflag = FALSE;
+      }
+
+   }
+   exit(0);
+}
+
+/* Function to <!-- entering slot 275 -->report errors with MEMLAB3.PRO             */
+void printtrouble(void)
+{
+   printf("\nSorry, trouble reading MEMLAB3.PRO\n");
+   fclose(fptr);
+   return;
+}
+
+/* Function which returns swap file size in KB            */
+ULONG GetSwapperSize ()
+{
+   HDIR fhandle;
+   unsigned LONG count;
+   int fsize;
+
+   count = 1;
+   fhandle = 0xFFFF;
+   frc = DosFindFirst (szFname, &amp;fhandle, 0, &amp;buffer, LENGTH,
+                       &amp;count, 1L);
+   if (frc != 0)
+   {
+      fflush(stdout);
+      printf("File error :%u\n", frc);
+      exit(0);
+   } /* endif */
+   fsize = buffer.cbFileAlloc / 1024;  /* in KBytes */
+   DosFindClose (fhandle);
+   return(fsize);
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="246_L2_ExpectedResultsfromE.html">[Back: Expected Results from Exercise 3]</A> <BR>
+<A HREF="248_L3_SampleInputFileforME.html">[Next: Sample Input File for MEMLAB3.EXE]</A> 
+</BODY>
+</HTML>

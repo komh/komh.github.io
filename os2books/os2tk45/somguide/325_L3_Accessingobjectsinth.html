@@ -1,0 +1,157 @@
+<HTML>
+<HEAD>
+<TITLE>Accessing objects in the Interface Repository</TITLE>
+</HEAD>
+<BODY>
+<H1>Accessing objects in the Interface Repository</H1><!-- entering slot 372 -->
+<P>
+As mentioned above, one instance of the<B> Repository</B>  class exists
+for the entire SOM Interface Repository. This object does not, itself, reside
+in the Interface Repository (hence it does not exhibit any of the behavior
+defined by the<B> Contained</B> class). It is, however, a<B> Container</B>,
+and it holds all<B> ConstantDef</B>s,<B> TypeDef</B>s,<B> ExceptionDef</B>s,
+<B>InterfaceDef</B>s, and<B> ModuleDef</B>s that are global in scope (that
+is, not contained inside of any other<B> Container</B>s).
+<P>
+When any method provided by the<B> Repository</B> class is used to locate
+other objects in the Interface Repository, those objects are automatically
+instantiated and activated. Consequently, when the program is finished using
+an object from the Interface Repository, the client code should release
+the object using the<B> somFree</B> method.
+<P>
+All objects contained in the Interface Repository have both a "name" and
+a "Repository ID" associated with them. The name is not guaranteed to be
+unique, but it does uniquely identify an object within the context of the
+object that contains it. The Repository ID of each object is guaranteed
+to uniquely identify that object, regardless of its context.
+<P>
+For example, two<B> TypeDef</B> objects may have the same name, provided
+they occur in separate name scopes (<B>ModuleDef</B>s or<B> InterfaceDef</B>s).
+In this case, asking the Interface Repository to locate the<B> TypeDef</B> object
+based on its name would result in both<B> TypeDef</B> objects being returned.
+On the other hand, if the name is looked up from a particular<B>  ModuleDef
+</B>or<B> InterfaceDef</B> object, only the<B> TypeDef</B> object within
+the scope of that<B> ModuleDef</B> or<B> InterfaceDef</B> would be returned.
+By contrast, once the Repository ID of an object is known, that object can
+always be directly obtained from the<B> Repository</B> object via its Repository
+ID.
+<P>
+C or C++ programmers can obtain an instance of the<B> Repository</B> class
+using the<B> RepositoryNew</B> macro. Programmers using other languages
+(and C/C++ programmers without static linkage to the<B> Repository</B> class)
+should invoke the method<B> somGetInterfaceRepository</B> on the<B> SOMClassMgrObject
+</B>. For example,
+<P>
+For C or C++ (static linkage):
+<PRE>#include &lt;repostry.h&gt;
+Repository repo;
+
+repo = RepositoryNew();
+</PRE>
+
+<P>
+From other languages (and for dynamic linkage in C/C++):<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Use the<B> somEnvironmentNew</B> function to
+obtain a pointer to the<B> SOMClassMgrObject</B>, as described in Chapter
+3, "Using SOM Classes."<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Use the<B> somResolve</B> or<B> somResolveByName
+</B>function to obtain a pointer to the<B> somGetInterfaceRepository</B> method
+procedure.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Invoke the method procedure on the<B> SOMClassMgrObject</B>,
+with no additional arguments, to obtain a pointer to the<B> Repository</B> object.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+After obtaining a pointer to the<B> Repository</B> object, use the methods
+it inherits from<B> Container</B> or its own<B> lookup_id</B> method to
+instantiate objects in the Interface Repository. As an example, the<B> contents
+</B>method shown in the C fragment below activates every object with global
+scope in the Interface Repository and returns a sequence containing a pointer
+to every global object:
+<PRE>#include &lt;containd.h&gt;      /* Behavior common to allIR objects */
+Environment *ev;
+int i;
+sequence(Contained) everyGlobalObject;
+
+ev = SOM_CreateLocalEnvironment(); /* Get an environment to use */
+printf ("Every global object in the Interface Repository:\n");
+
+everyGlobalObject = Container_contents (repo, ev, "all", TRUE);
+
+for (i=0; i &lt; everyGlobalObject._length; i++) {
+    Contained aContained;
+
+    aContained = (Contained) everyGlobalObject._buffer[i];
+    printf ("Name: %s, Id: %s\n",
+        Contained__get_name (aContained, ev),
+        Contained__get_id (aContained, ev));
+    SOMObject_somFree (aContained);
+}
+</PRE>
+
+<P>
+Taking this example one step further, here is a complete program that accesses
+every object in the entire Interface Repository. It, too, uses the<B> contents
+</B>method, but this time recursively<!-- entering slot 373 --> calls the
+<B>contents</B> method until every object in every container has been found:
+
+<PRE>#include &lt;stdio.h&gt;
+#include &lt;containd.h&gt;
+#include &lt;repostry.h&gt;
+
+void showContainer (Container c, int *next);
+
+main ()
+{
+    int count = 0;
+    Repository repo;
+
+    repo = RepositoryNew ();
+    printf ("Every object in the Interface Repository:\n\n");
+    showContainer ((Container) repo, &amp;count);
+    SOMObject_somFree (repo);
+    printf ("%d objects found\n", count);
+    exit (0);
+}
+
+void showContainer (Container c, int *next)
+{
+    Environment *ev;
+    int i;
+    sequence(Contained) everyObject;
+
+    ev = SOM_CreateLocalEnvironment (); /* Get an environment */
+    everyObject = Container_contents (c, ev, "all", TRUE);
+
+    for (i=0; i&lt;everyObject._length; i++) {
+        Contained aContained;
+
+        (*next)++;
+        aContained = (Contained) everyObject._buffer[i];
+        printf ("%6d. Type: %-12s id: %s\n", *next,
+            SOMObject_somGetClassName (aContained),
+            Contained__get_id (aContained, ev));
+        if (SOMObject_somIsA (aContained, _Container))
+            showContainer ((Container) aContained, next);
+        SOMObject_somFree (aContained);
+    }
+}
+</PRE>
+
+<P>
+Once an object has been retrieved, the methods and attributes appropriate
+for that particular object can then be used to access the information contained
+in the object. The methods supported by each class of object in the Interface
+Repository, as well as the classes themselves, are documented in the<I> SOMobjects
+Developer Toolkit: Programmers Reference Manual.</I>
+
+<P><HR>
+
+<A HREF="324_L3_MethodsintroducedbyI.html">[Back: Methods introduced by Interface Repository classes]</A> <BR>
+<A HREF="326_L3_Awordaboutmemorymana.html">[Next: A word about memory management]</A> 
+</BODY>
+</HTML>

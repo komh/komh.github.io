@@ -1,0 +1,213 @@
+<HTML>
+<HEAD>
+<TITLE>32-Bit Semaphore Structures (SEM32, OPENQ and MUXQ)</TITLE>
+</HEAD>
+<BODY>
+<H1>32-Bit Semaphore Structures (SEM32, OPENQ and MUXQ)</H1><!-- entering slot 482 -->
+<PRE>##.pb 25
+ Slot  Sta BlockID  Name     Type        Addr    Symbol
+ 0025  blk fe81d2d0 pmshell  Sem32     8001 004b hevLazyWrite
+
+##.d sem32 %fe81d2d0
+        Type: Shared Event
+       Flags: Reset
+       pMuxQ: 00000000
+  Post Count: 0000
+      pOpenQ: fe56eb10
+       pName: fd074e98
+ Create Addr: 13f60088
+
+##.pb 2f
+ Slot  Sta BlockID  Name     Type        Addr    Symbol
+ 002f  blk fe86ffdc pmshell
+
+##.d sem32 %fe86ffdc
+        Type: Shared Event
+       Flags: Reset
+       pMuxQ: 00000000
+  Post Count: 0000
+      pOpenQ: fe56eb02
+       pName: NULL (anonymous)
+ Create Addr: 12d16b48
+
+##.pb 30
+ Slot  Sta BlockID  Name     Type        Addr    Symbol
+ 0030  blk fe86fe58 pmshell  Sem32     0001 00ce hevSleeper
+
+##.d sem32 %fe86fe58
+        Type: Private Event
+       Flags: Reset
+       pMuxQ: 00000000
+  Post Count: 0000
+  Open Count: 0001
+ Create Addr: 13f62f28
+
+</PRE>
+
+<BR>
+Three types of Event Semaphore
+<P>
+<B>Notes: </B><!-- lm: 0x2 6 -->
+<UL>
+<P>
+32-bit semaphores may be Event or Mutex in type, private or shared in scope
+and if shared, named or anonymous.<!-- lm: 0x2 6 -->
+<P>
+The BlockId of a thread waiting on a 32-bit semaphore is the address of
+the semaphore structure. The<B> Type</B> field in the <A HREF="380_L3_PBDisplayBlockedThre.html">.PB
+command</A> usually indicates a 32-bit semaphore when in use, however this
+is not always the case. The next example shows how to determine precisely
+whether the blockid points to a 32-bit semaphore.<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+ 
+<PRE>##.pb 33 Slot  Sta BlockID  Name     Type        Addr    Symbol
+ 0033  blk fe86fa1c pmshell
+##.m %0fe86fa1c
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0003 %feaef04c 00000400 %fe6ef000 001 0002 0023 0000 0000 0003 0000      =0000
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 0003  0003 fec5  0000 ffec 0000  0000 00  01 00 00 vmkrhrw
+   pvmli    cs    eip     phlock   cpg      va    flg  hptda hob sig  csig
+ %fe82e380 002d 0a6800a5 %ac22403c 0001 %fe83c000 0005 024b 0003 ea9f ea9f
+##dd %0fe86fa1c-10 l8
+%fe86fa0c  12d15b4c 54564553 ab97d220 ffc20018
+%fe86fa1c  00000010 00000000 c4280001 455000a7
+##.mo ffc2
+ffc2 semstruc
+##.d sem32 %0fe86fa1c
+        Type: Private Event
+       Flags: Reset
+       pMuxQ: 00000000
+  Post Count: 0000
+  Open Count: 0001
+ Create Addr: 00a7c428
+
+##
+</PRE>
+
+<BR>
+How to determine whether a BlockId points to a 32-bit semaphore.
+<P>
+<B>Notes: </B><!-- lm: 0x2 6 -->
+<UL>
+<P>
+Except for RAMSEM, MUXWAIT, ChildWait and private conventions the BlockID
+is an address of a structure or routine that relates to the resource or
+event being waited for.<!-- lm: 0x2 6 -->
+<P>
+The <A HREF="339_L3_MFormatMemoryStructu.html">.M command</A> is used to
+identifty the owner of the BlockId. In this case it is the kernel resident
+heap.<!-- lm: 0x2 6 -->
+<P>
+Each resident heap block is prefixed with a 4 byte header. If the low order
+bit is 0 then the high word of the header contains the owner of the heap
+block.<!-- lm: 0x2 6 -->
+<P>
+32-bit Semaphore structures are allocated from regular resident heap blocks.
+Thus the owner id may be seen by displaying storage before the BlockId address.
+<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+ 
+<PRE>##.pb 56 0056  blk fe88ad8c mutxwait Sem32     8001 0090 _<!-- entering slot 483 -->WINOS2_Settings + 77
+
+##.d sem32 %fe88ad8c
+        Type: Shared Mutex
+       Flags:
+       pMuxQ: fe88ab94
+  Request Ct: 0001
+       Owner: 0055
+Requester Ct: 0001
+      pOpenQ: fe5724c2
+       pName: fd084368
+ Create Addr: 00022e98
+
+##.d openq %fe5724c2
+
+  PID   Open Count
+  ----------------
+  00d8     0001
+  00d7     0001
+  00d6     0001
+
+##da %fd084368
+%fd084368 RJM\MUTEX0
+
+##.d muxq %fe88ab94
+
+  pMux
+  --------
+  fe88aba4
+
+##.d sem32 %fe88aba4
+        Type: Shared MuxWait
+       Flags: Mutex_Mux
+    SR Count: 0003
+  SR Pointer: fe88a8f4
+  Wait Count: 0001
+      pOpenQ: fe571e94
+       pName: fd0843c8
+ Create Addr: 00022ec4
+
+##da %fd0843c8
+%fd0843c8 RJM\MUXWAIT
+##.d openq %fe571e94
+
+  PID   Open Count
+  ----------------
+  00d7     0001
+  00d6     0001
+
+##dd %fe88a8f4
+%fe88a8f4  00000003 00000004 80000090 00000000
+%fe88a904  80000091 00000001 80000094 00000001
+%fe88a914  ffbe0014 fe88aba4 00000000 5158554d
+%fe88a924  fe88a916 ffc70010 fe88a958 dd2f4580
+%fe88a934  000001a2 ffc70010 fe88aa88 dd2f464d
+%fe88a944  00000010 ffa4000c fe88a968 000102d5
+%fe88a954  ffc70010 fe88a9d8 1bd49ce0 000101a5
+%fe88a964  ffa4000c fe88aa7c 0001038d ffc70010
+
+##</PRE>
+ 
+<BR>
+Mux Wait Semaphores
+<P>
+<B>Notes: </B><!-- lm: 0x2 6 -->
+<UL>
+<P>
+<B>pOpenQ</B> points to an Open Queue Structure, that list all processes
+that have access to the 32-bit semaphore. This is formatted using<B> .D
+OPENQ</B>.<!-- lm: 0x2 6 -->
+<P>
+<B>pName</B> points to the semaphore name, when not anonymous.<!-- lm: 0x2 6 -->
+<P>
+<B>pMuxQ</B> points to a MUXQ structure, that lists any 32-bit MUX wait
+semaphore address lists that have included this semaphore. In this example
+we see one MUX list.<!-- lm: 0x2 6 -->
+<P>
+The MUX list may be formatted using<B> .D SEM32</B>.<!-- lm: 0x2 6 -->
+<P>
+Instead of a<B> pMuxQ</B>, the MUX semaphore contains a pointer to the semaphore
+record (<B>SR Pointer</B>) and a count of the number of semaphores in the
+list (<B>SR Count</B>).<!-- lm: 0x2 6 -->
+<P>
+There is no special formatting command for the<B> SR Structure</B> - it
+has to be view by displaying storage directly. In this case we see then
+length, flags and three semaphore handles each followed by the user correlator.
+<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+ 
+<P>
+For a description of the 32-bit Semaphore Structures, see the <A HREF="3130_L3_32bitSemaphoreStruct.html">32-bit
+Semaphore Structures</A> in the<B> System Reference</B>.
+
+<P><HR>
+
+<A HREF="332_L4_BIOSParameterBlockBP.html">[Back: BIOS Parameter Block (BPB)]</A> <BR>
+<A HREF="334_L3_ISwapinStorage.html">[Next: .I - Swap in Storage]</A> 
+</BODY>
+</HTML>

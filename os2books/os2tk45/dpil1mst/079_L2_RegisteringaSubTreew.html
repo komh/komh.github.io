@@ -1,0 +1,101 @@
+<HTML>
+<HEAD>
+<TITLE>Registering a Sub-Tree with the Agent</TITLE>
+</HEAD>
+<BODY>
+<H1>Registering a Sub-Tree with the Agent</H1><!-- entering slot 83 -->
+<P>
+After we have set up a connection to the agent and after we have identified
+ourselves, we must register one or more MIB sub-trees for which we want
+to be responsible to handle all SNMP requests.
+<P>
+To do so, the subagent must create a DPI-REGISTER packet and send it to
+the agent.  The agent will then send a response to indicate success or failure
+of the register request.
+<P>
+To create a DPI-REGISTER packet, the subagent uses a call to the mkDPIregister()
+function, which expects these parameters:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->A timeout value in seconds for this sub-tree.  If
+you specify zero, your overall timeout value that was specified in DPI-OPEN
+is used.  You can specify a different value if you expect longer processing
+time for a specific sub-tree.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A requested priority.  Multiple subagents may register
+the same sub-tree at different priorities.  For example, 0 is better than
+1 and so on.  The agent considers the subagent with the best priority to
+be the active subagent for the sub-tree.  If you specify -1, you are asking
+for the best priority available.  If you specify 0, you are asking for a
+better priority than any existing subagent may already have.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The MIB sub-tree which you want to control.  You must
+specify this parameter with a trailing dot.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Your choice of GETBULK processing.  You can ask the
+agent to map a GETBULK into multiple GETNEXT packets or to pass the GETBULK
+to you.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The function returns a pointer to a static buffer holding the DPI packet
+if successful.  If it fails, it returns a NULL pointer.
+<P>
+Now we must send this DPI-REGISTER packet to the agent with the DPIsend_packet_to_agent()
+function.  This is similar to sending the DPI_OPEN packet.  We then wait
+for a response from the agent.  Again, we use the DPIawait_packet_from_agent()
+function in the same way as we awaited a response on the DPI-OPEN request.
+ Once we have received the response, we must check the return code to ensure
+that registration was successful.
+<P>
+The following code example demonstrates how to register one MIB sub-tree
+with the agent.
+<PRE>#include &lt;snmp_dpi.h&gt;             /* DPI 2.0 API definitions */static int handle;                /* handle has global scope */
+
+static void do_register(void)
+{
+   unsigned char *packet_p;
+   int            rc;
+   unsigned long  length;
+   snmp_dpi_hdr  *hdr_p;
+
+   packet_p = mkDPIregister(          /* Make DPI register    */
+                3,                    /* timeout in seconds   */
+                0,                    /* requested priority   */
+                DPI_SIMPLE_MIB,       /* ptr to the sub-tree  */
+                DPI_BULK_NO);         /* GetBulk into GetNext */
+
+   if (!packet_p) exit(1);            /* If it failed, exit   */
+
+   rc  = DPIsend_packet_to_agent(     /* send REGISTER packet */
+            handle,                   /* on this connection   */
+            packet_p,                 /* this is the packet   */
+            DPI_PACKET_LEN(packet_p));/* this is its length   */
+
+   if (rc != DPI_RC_OK) exit(1);      /* If it failed, exit   */
+
+   rc  = DPIawait_packet_from_agent(  /* wait for response    */
+            handle,                   /* on this connection   */
+            3,                        /* timeout in seconds   */
+            &amp;packet_p,                /* gets ptr to packet   */
+            &amp;length);                 /* gets packet length   */
+
+   if (rc != DPI_RC_OK) exit(1);      /* If it failed, exit   */
+
+   hdr_p = pDPIpacket(packet_p);      /* parse DPI packet     */
+   if (hdr_p == snmp_dpi_hdr_NULL_p)  /* Failed to parse it   */
+      exit(1);                        /* so exit              */
+
+   if (hdr_p-&gt;packet_type != SNMP_DPI_RESPONSE) exit(1);
+
+   rc = hdr_p-&gt;data_u.resp_p-&gt;error_code;
+   if (rc != SNMP_ERROR_DPI_noError) exit(1);
+} /* end of do_register() */
+</PRE>
+
+
+<P><HR>
+
+<A HREF="078_L2_ConnectingtotheAgent.html">[Back: Connecting to the Agent]</A> <BR>
+<A HREF="080_L2_ProcessingRequestsfr.html">[Next: Processing Requests from the Agent]</A> 
+</BODY>
+</HTML>

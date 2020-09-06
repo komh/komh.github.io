@@ -1,0 +1,130 @@
+<HTML>
+<HEAD>
+<TITLE>_uclose - Close Heap from Use</TITLE>
+</HEAD>
+<BODY>
+<H1>_uclose - Close Heap from Use</H1><!-- entering slot 328 -->_uclose - Close Heap from Use<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>#include &lt;umalloc.h&gt;
+int _uclose(Heap_t <I>heap</I>);
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Description
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+<LI>uclose closes a<I> heap</I> when a process will not use it again.  After
+you close a heap, any attempt in the current process to allocate or return
+memory to it will have undefined results. _uclose affects only the current
+process; if the heap is shared, other processes may still be able to access
+it.
+<P>
+Once you have closed the heap, use _udestroy to destroy it and return all
+its memory to the operating system.
+<P>
+<B>Note: </B> If the heap is shared, you must close it in all processes
+that share it before you destroy it, or undefined results will occur.<!-- lm: 0x2 10 -->
+<P>
+
+<P>
+You cannot close<I> The Developer's Toolkit</I> run-time heap (_RUNTIME_HEAP).
+
+<P>
+For more information about creating and using heaps, see "Managing Memory"
+in the<I> VisualAge C++ Programming Guide</I>.<!-- lm: 0x2 1 -->
+</UL> Returns
+
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+If successful, _uclose returns 0. A nonzero return value indicates failure.
+Passing _uclose a heap that is not valid results in undefined behavior.
+<!-- lm: 0x2 1 -->
+</UL>Example Code
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+The following example creates and opens a heap, and then performs operations
+on it.  It then calls _uclose to close the heap before destroying it.
+<PRE>#define  INCL_DOSMEMMGR             /* Memory Manager values */
+#include &lt;os2.h&gt;
+#include &lt;bsememf.h&gt;                /* Get flags for memory management  */
+#include &lt;stdlib.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;umalloc.h&gt;
+
+int main(void)
+{
+   void    *initial_block;
+   APIRET  rc;
+   Heap_t  myheap;
+   char    *p;
+
+   /* Call DosAllocMem to get the initial block of memory */
+   if (0 != (rc = DosAllocMem(&amp;initial_block, 65536,
+                              PAG_WRITE | PAG_READ | PAG_COMMIT))) {
+      printf("DosAllocMem error: return code = %ld\n", rc);
+      exit(EXIT_FAILURE);
+   }
+   /* Create a fixed size heap starting with the block declared earlier */
+   if (NULL == (myheap = _ucreate(initial_block, 65536, _BLOCK_CLEAN,
+                                  _HEAP_REGULAR, NULL, NULL))) {
+      puts("_ucreate failed.");
+      exit(EXIT_FAILURE);
+   }
+   if (0 != _uopen(myheap)) {
+      puts("_uopen failed.");
+      exit(EXIT_FAILURE);
+   }
+   p = _umalloc(myheap, 100);
+   memset(p, 'x', 10);
+   free(p);
+
+   if (0 != _uclose(myheap)) {
+      puts("_uclose failed");
+      exit(EXIT_FAILURE);
+   }
+   if (0 != (rc = DosFreeMem(initial_block))) {
+      printf("DosFreeMem error: return code = %ld\n", rc);
+      exit(EXIT_FAILURE);
+   }
+   return 0;
+}
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Related Information
+<P>
+<!-- lm: 0x2 10 -->
+<UL><!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 --><A HREF="317_L2__uopenOpenHeapforUse.html"><LI>uopen
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="305_L2__udestroyDestroyaHea.html"><LI>udestroy
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="303_L2__ucreateCreateaMemor.html"><LI>ucreate
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="046_L2_Differentiatingbetwe.html">Differentiating
+between Memory Management Functions</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><LI>Managing Memory" in the<I> VisualAge C++ Programming
+Guide</I><!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="301_L2__ucallocReserveandIn.html">[Back: _ucalloc - Reserve and Initialize Memory from User Heap]</A> <BR>
+<A HREF="303_L2__ucreateCreateaMemor.html">[Next: _ucreate - Create a Memory Heap]</A> 
+</BODY>
+</HTML>

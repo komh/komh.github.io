@@ -1,0 +1,132 @@
+<HTML>
+<HEAD>
+<TITLE>How do I remove a separator from a menu?</TITLE>
+</HEAD>
+<BODY>
+<H1>How do I remove a separator from a menu?</H1><!-- entering slot 62 -->
+<P>
+Here are two methods of doing that.  The first is from the PMHINTS file,
+and the second is from Gpf.  PMHINTS takes the approach of removing SC_CLOSE
+and the nearby separator.  The Gpf solution takes the approach of deleting
+everything that it doesn't explicitly want.  I've extended it to, among
+other things, conditionally delete the "Window List" menu item as well.
+
+<P>
+The deletion problems get messier in application menus when there are multiple
+separaters in different pull-downs.  That is when assigning the separators
+an id really pays off.
+<P>
+Both examples are 16-bit OS/2 1.x code.
+<P>
+PMHINTS:
+<PRE> VOID  DelClose(HWND hwnd)
+ {
+   HWND        hSysMenu,
+               hSysSubMenu;
+   MENUITEM    SysMenu;
+   SHORT       idItem,
+               idSep,
+               idSysMenu;
+
+   hSysMenu = WinWindowFromID(WinQueryWindow(hwnd, QW_PARENT, FALSE),
+                              FID_SYSMENU);
+
+   idSysMenu = SHORT1FROMMR(WinSendMsg(hSysMenu, MM_ITEMIDFROMPOSITION,
+                            NULL, NULL));
+
+   WinSendMsg(hSysMenu, MM_QUERYITEM, MPFROM2SHORT(idSysMenu, FALSE),
+              MPFROMP(&amp;SysMenu));
+
+   hSysSubMenu = SysMenu.hwndSubMenu;
+
+   idItem = SHORT1FROMMR(WinSendMsg(hSysSubMenu, MM_ITEMPOSITIONFROMID,
+                         MPFROM2SHORT(SC_CLOSE, FALSE), NULL));
+   if (idItem != MIT_ERROR)
+   {
+     idSep = idItem + 1;  // Get separator ID
+
+     idSep  = SHORT1FROMMR(WinSendMsg(hSysSubMenu, MM_ITEMIDFROMPOSITION,
+                           MPFROMSHORT(idSep), NULL));
+
+     WinSendMsg(hSysMenu, MM_DELETEITEM, MPFROM2SHORT(SC_CLOSE, TRUE),
+                MPFROMSHORT(NULL));
+
+     WinSendMsg(hSysSubMenu, MM_DELETEITEM, MPFROM2SHORT(idSep, FALSE), NULL);
+   }
+ }
+</PRE>
+
+<P>
+Derived from Gpf, adapted for a client, with some of my changes expurgated
+(so it won't compile as is):
+<PRE> /*****
+  *
+  *  UtilDlgSysMenu
+  *
+  *      Remove unavailable items from system menu of dialog box.
+  *
+  *  History:
+  *      8/31/92  gts  Adapted from Gpf's GpfSetDialogBoxSysMenu
+  *               with slight modifications.
+  *
+  *****/
+
+ void _export UtilDlgSysMenu (	      /* Remove unwanted system menu items */
+ HWND hwndFrame)                      /* I - Handle to dialog window */
+ {
+    HWND     hwndSubMenu;             /* sys menu pull-down handle  */
+    MENUITEM miTemp;                  /* menu item template         */
+    SHORT    sItemId;                 /* system menu item ID        */
+    SHORT    sItemIndex;              /* system menu item index     */
+    MRESULT  mresult;
+
+    /********************************************************************/
+    /* Get the handle of the system menu pull-down.			*/
+    /********************************************************************/
+    hwndSubMenu = WinWindowFromID( hwndFrame, FID_SYSMENU );
+    WinSendMsg( hwndSubMenu,
+                MM_QUERYITEM,
+                MPFROM2SHORT( SC_SYSMENU, FALSE ),
+                MPFROMP( (PSZ)&amp;miTemp ) );
+    hwndSubMenu = miTemp.hwndSubMenu;
+
+    /********************************************************************/
+    /* Remove all items from the system menu pull-down that are no	*/
+    /* longer wanted.							*/
+    /********************************************************************/
+    mresult = WinSendMsg( hwndSubMenu,
+                         MM_QUERYITEMCOUNT,
+                         MPFROMSHORT(0),
+                         MPFROMSHORT(0) );
+    sItemIndex = SHORT1FROMMR(mresult);
+    for (sItemId = 0; sItemIndex != -1; sItemIndex--)
+    {
+       mresult = WinSendMsg( hwndSubMenu,
+                             MM_ITEMIDFROMPOSITION,
+                             MPFROMSHORT(sItemIndex),
+                             MPFROMSHORT(0) );
+       sItemId = SHORT1FROMMR(mresult);
+       if ( sItemId != MIT_ERROR
+             &amp;&amp;sItemId != SC_MOVE
+             &amp;&amp;sItemId != SC_CLOSE
+             &amp;&amp;(sItemId != SC_TASKMANAGER
+             || (flFlags &amp; MAXONLY)) )   // &lt;- application controls
+       {
+          WinSendMsg( hwndSubMenu,
+                      MM_DELETEITEM,
+                      MPFROM2SHORT(sItemId,FALSE),
+                      MPFROMSHORT(0) );
+       }
+    }
+ }
+</PRE>
+
+<P>
+Credit:  Guy Scharf 
+
+<P><HR>
+
+<A HREF="050_L3_HowdoIcreateaconditi.html">[Back: How do I create a conditional cascade menu?]</A> <BR>
+<A HREF="052_L2_ContainerControls.html">[Next: Container Controls]</A> 
+</BODY>
+</HTML>

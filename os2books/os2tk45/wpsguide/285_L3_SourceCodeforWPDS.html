@@ -1,0 +1,343 @@
+<HTML>
+<HEAD>
+<TITLE>Source Code for WPDS</TITLE>
+</HEAD>
+<BODY>
+<H1>Source Code for WPDS</H1><!-- entering slot 306 -->
+<P>
+The following example shows the source modules for the sample Workplace
+Shell DSOM program:
+<PRE>/*
+ * Purpose..: To demonstrate how to call Workplace Shell
+ * methods using DSOM.
+ *
+ * Workplace Shell methods called:
+ *        _wpclsQueryFolder()
+ *        _wpclsNew()
+ *        _wpSetup()
+ *        _wpOpen()
+ *        _wpDelete()
+ */
+
+#pragma info(nogen)
+
+#include &lt;stdarg.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;stdio.h&gt;
+#define  INCL_DOS
+#define  INCL_WINWORKPLACE
+#define  INCL_PM
+#include &lt;os2.h&gt;
+#include &lt;somd.h&gt;
+#include &lt;somtcnst.h&gt;
+#include &lt;wpobject.h&gt;
+#include &lt;wpdesk.h&gt;
+#include &lt;wpabs.h&gt;
+#include &lt;wpfolder.h&gt;
+#include &lt;wptrans.h&gt;
+#include &lt;wpmet.h&gt;
+#include &lt;wpclrpal.h&gt;
+#include &lt;wpdataf.h&gt;
+#include &lt;wpclsmgr.h&gt;
+
+enum {STOP, START};
+
+WPClassManager *vWPClassManagerObject;
+
+BOOL       checkForError(Environment *, char *, ...);
+SOMClass * getClassObject(SOMClass *, Environment *, string);
+
+int main(int argc, char *argv[])
+{
+  Environment *ev;
+  SOMClass   *Server;
+  SOMObject  *objDesktop;
+  SOMObject  *objWPAbs;
+  SOMObject  *objWPFolder;
+  SOMObject  *object;
+  M_WPFolder *classFolder;
+  APIRET     apiRtnCd;
+  BOOL       fDaemonUp;
+  BOOL       fServerUp;
+
+  /*
+   * Check if the DSOM daemon is active.
+   * If not, it needs to be started before continuing.
+   */
+  fDaemonUp = WinIsSOMDDReady();
+  if (!fDaemonUp)
+  {
+    apiRtnCd = WinRestartSOMDD(START);
+    if (apiRtnCd)
+    {
+      somPrintf("Unable to start the DSOM dameon, rc=%ld\n", apiRtnCd);
+      exit(apiRtnCd);
+    }
+  }
+
+  /*
+   * Check if the Workplace Shell DSOM server is up and running.
+   * If not, it needs to be started before continuing.
+   */
+  fServerUp = WinIsWPDServerReady();
+  if (!fServerUp)
+  {
+    apiRtnCd = WinRestartWPDServer(START);
+    if (apiRtnCd)
+    {
+      somPrintf("Unable to start the DSOM server, rc=%ld\n", apiRtnCd ;
+      exit(apiRtnCd);
+    }
+  }
+
+  /*
+   * Create the local DSOM environment
+   */
+  ev = SOM_CreateLocalEnvironment();
+  SOMD_Init(ev);
+
+  /*
+   * Merge the Workplace Shell class manager with the
+   * SOM class manager
+   */
+  vWPClassManagerObject = WPClassManagerNew();
+  _somMergeInto(SOMClassMgrObject, vWPClassManagerObject);
+
+  /*
+   * Initialize all the Workplace Shell classes used by the program
+   */
+  WPObjectNewClass( 1, 1 );
+  WPTransientNewClass( 1, 1 );
+  WPAbstractNewClass( 1, 1 );
+  WPFileSystemNewClass( 1, 1 );
+  WPDataFileNewClass( 1, 1 );
+  WPFolderNewClass( 1, 1 );
+  WPMetNewClass( 1, 1 );
+  WPDesktopNewClass( 1, 1 );
+
+  /*
+   * Find the Workplace Shell DSOM server by its name
+   */
+  Server = _somdFindServerByName(SOMD_ObjectMgr, ev, "wpdServer");
+  checkForError(ev, "Could not find server 'wpdServer'\n");
+
+  /*
+   * Get a pointer to the WPFolder's class object
+   */
+  classFolder = getClassObject(Server, ev, "WPFolder");
+
+  /*
+   * Get the object pointer of the Desktop folder
+   */
+  objDesktop = _wpclsQueryFolder(classFolder, "&lt;WP_DESKTOP&gt;", TRUE);
+  if (objDesktop)
+  {
+    /* Create an abstract object on the Desktop */
+    somPrintf("Creating a WPAbstract object on Desktop: ");
+    objWPAbs = _wpclsNew(getClassObject(Server, ev, "WPAbstract"),
+                         "WPAbstract Object",   /* Title of the object */
+                         "",                    /* Setup string        */
+                         objDesktop,            /* Target folder       */
+                         TRUE);                 /* Never dormant       */
+    somPrintf("%s\n", objWPAbs ? "Succeeded" : "\aFailed");
+
+    /*
+     * Create a WPFolder object on the Desktop
+     */
+    somPrintf("Creating a opened WPFolder object on Desktop: ");
+    objWPFolder = _wpclsNew(classFolder,                 /* Object's class name  */
+                            "WPFolder Object",           /* Title of the object  */
+                            "OPEN=ICON;ALWAYSSORT=YES",  /* Setup string         */
+                            objDesktop,                  /* Target folder        */
+                            TRUE );                      /* Never dormant        */
+    somPrintf("%s\n", objWPFolder ? "Succeeded" : "\aFailed");
+
+    /*
+     * Create a WPDataFile object in the new folder on the Desktop
+     */
+    somPrintf("Creating a WPDataFile object in folder: ");
+    object = _wpclsNew(getClassObject(Server, ev, "WPDataFile"),
+                       "WPDataFile Object",   /* Title of the object */
+                       "",                    /* Setup string        */
+                       objWPFolder,           /* Target folder       */
+                       TRUE);                 /* Never dormant       */
+    somPrintf("%s\n", object ? "Succeeded" : "\aFailed");
+
+    /*
+     * Create a WPTransient object in the folder
+     */
+    somPrintf("Creating a WPTransient object in folder: ");
+    object = _wpclsNew(getClassObject(Server, ev, "WPTransient"),
+                       "WPTransient Object",   /* Title of the object */
+                       "",                     /* setup string        */
+                       objWPFolder,            /* Target folder       */
+                       TRUE);                  /* Never dormant       */
+    somPrintf( "%s\n", object ? "Succeeded" : "\aFailed" );
+
+    /*
+     * Create a metafile object in the folder
+     */
+    somPrintf("Creating a WPMet object in folder: ");
+    object = _wpclsNew(getClassObject(Server, ev, "WPMet"),
+                       "WPMet Object",   /* Title of the object */
+                       "",               /* setup string        */
+                       objWPFolder,      /* Target folder       */
+                       TRUE);            /* Never dormant       */
+    somPrintf("%s\n", object ? "Succeeded" : "\aFailed");
+
+    /*
+     * Open a Detail view of the folder
+     */
+    _wpSetup(objWPFolder, "OPEN=DETAILS");
+
+    /*
+     * Create a color palette in the folder and open palette
+     */
+    somPrintf("Creating a WPColorPalette object in folder: ");
+    object = _wpclsNew(getClassObject(Server, ev, "WPColorPalette") ,
+                       "WPColorPalette Object",   /* Title of the object */
+                       "",                        /* Setup string        */
+                       objWPFolder,               /* Target folder       */
+                       TRUE);                     /* Never dormant       */
+
+    somPrintf("%s\n", object ? "Succeeded" : "\aFailed");
+    _wpOpen(object, NULLHANDLE, OPEN_DEFAULT, 0L);
+    somPrintf("Deleting the WPAbstract object on the Desktop.\n");
+    _wpDelete(objWPAbs, 0);
+  }
+  else
+  {
+    somPrintf("\aUnable to acquire the Desktop object pointer\n");
+  }
+
+  /*
+   * Clean up the DSOM environment
+   */
+  _somdReleaseObject(SOMD_ObjectMgr, ev, Server);
+  checkForError(ev, "_somdReleaseObject failed\n");
+  SOMD_Uninit(ev);
+  SOM_DestroyLocalEnvironment(ev);
+
+  /*
+   * If the Workplace Shell DSOM server was started
+   * then, lets stop it before terminating
+   */
+  if (!fServerUp)
+  {
+    apiRtnCd = WinRestartWPDServer(STOP);
+    if (apiRtnCd)
+      somPrintf("Stopping the DSOM server was unsucessful, rc=%ld\n", apiRtnCd);
+  }
+
+  if (!fDaemonUp)
+  {
+    ULONG count = 0;
+
+    /*
+     * <!-- entering slot 307 -->Loop until the server thread ends or the program times out
+     */
+    while(WinIsWPDServerReady())
+    {
+      HEV hev;
+
+      /*
+       * First create a private, reset, event semaphore.
+       * Wait for 1 second, then try again for a maximum
+       * of 30 seconds
+       */
+      DosCreateEventSem((PSZ) NULL, &amp;hev, 0, FALSE);
+      DosWaitEventSem(hev, 1000);
+      if (count++ &gt; 30)
+        break;
+    }
+    apiRtnCd = WinRestartSOMDD(STOP);
+    if (apiRtnCd)
+      somPrintf("Stopping the DSOM daemon was unsucessful, rc=%ld\n", apiRtnCd);
+  }
+  return 0;
+} /* End of main() */
+
+/* getClassObject */
+SOMClass *getClassObject(SOMClass *Server, Environment *ev, string sClassName)
+{
+  SOMClass *ClassObj = NULL;
+  ClassObj = _somdGetClassObj(Server, ev, sClassName);
+  if (checkForError(ev, NULL) || ClassObj == NULL)
+  {
+    somPrintf("\aCould not find class '%s'\n", sClassName);
+    ClassObj = NULL;
+  }
+  return ClassObj;
+}
+
+/* Check for errors */
+BOOL checkForError(Environment *ev, char *pchFmt, ...)
+{
+  va_list  vargs;
+  char *exId;
+  APIRET apiRtnCd = FALSE;
+
+  switch(ev-&gt;_major)
+  {
+    case SYSTEM_EXCEPTION:
+    {
+      StExcep *params;
+      exId   = somExceptionId(ev);
+      params = somExceptionValue(ev);
+      somPrintf("\a** Error Occurred **\n");
+      somPrintf("** exception string: %s\n", exId);
+      somPrintf("** minor error code: %u\n", params-&gt;minor);
+      somPrintf("** completion code: %s\n",
+                (params-&gt;completed == YES ? "YES" :
+                 params-&gt;completed == NO ? "NO": "MAYBE" ));
+      somExceptionFree(ev);
+
+      if (pchFmt)
+      {
+        char achBuf[1024];
+        va_start(vargs, pchFmt);
+        vsprintf(achBuf, pchFmt, vargs);
+        somPrintf(achBuf);
+        va_end(vargs);
+        SOMD_Uninit(ev);
+        SOM_DestroyLocalEnvironment(ev);
+        exit(1);
+      }
+      apiRtnCd = TRUE;
+      break;
+    }
+
+    case USER_EXCEPTION:
+    {
+      if (pchFmt)
+      {
+        char achBuf[1024];
+        va_start(vargs, pchFmt);
+        vsprintf(achBuf, pchFmt, vargs);
+        somPrintf(achBuf);
+        va_end(vargs);
+      }
+      apiRtnCd = TRUE;
+      break;
+    }
+
+    default:
+    case NO_EXCEPTION:
+    {
+      apiRtnCd = FALSE;
+      break;
+    }
+  }
+  return(apiRtnCd);
+}
+#pragma info(nouse)
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="284_L2_UsingWorkplaceShellD.html">[Back: Using Workplace Shell Distributed SOM]</A> <BR>
+<A HREF="286_L3_ResourceDefinitionFi.html">[Next: Resource Definition File for WPDS]</A> 
+</BODY>
+</HTML>

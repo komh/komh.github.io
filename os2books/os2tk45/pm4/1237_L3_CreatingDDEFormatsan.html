@@ -1,0 +1,81 @@
+<HTML>
+<HEAD>
+<TITLE>Creating DDE Formats and a Unique Clipboard Format</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating DDE Formats and a Unique Clipboard Format</H1><!-- entering slot 1257 -->
+<P>
+Applications that define their own clipboard or DDE formats must register
+those formats in the system atom table to avoid conflicting with the predefined
+formats and any formats used by other applications. The following sample
+code fragment shows how to register a custom format:
+<PRE>#define MAX_BUF_SIZE 128
+
+HAB hab;                               /* Anchor block handle         */
+HATOMTBL hatomtblSystem;               /* System atom table handle    */
+ATOM atomFormatID;                     /* Atom message                */
+PSZ  pszSrc, pszDest;                  /* String pointers             */
+BOOL fSuccess;
+CHAR szClipString[MAX_BUF_SIZE];
+APIRET rc;
+
+/**********************************************************************/
+/* Get the handle of the system atom table,                           */
+/* then add the format name to the table.                             */
+/**********************************************************************/
+
+/* System atom table handle  */
+hatomtblSystem = WinQuerySystemAtomTable();
+/* Register format string    */
+atomFormatID = WinAddAtom(hatomtblSystem,"SuperCAD_FORMAT")
+
+/**********************************************************************/
+/* Obtain data and write data to buffer (szClipString).               */
+/**********************************************************************/
+
+/* Open the clipboard */
+if (WinOpenClipbrd(hab))
+{
+
+/* Allocate a shared memory object for the text data                  */
+if (!(rc = DosAllocSharedMem(
+     (PVOID)&amp;pszDest,                  /* Pointer to shared memory    */
+                                       /* object                      */
+      (PSZ) NULL,                      /* Use unnamed shared memory   */
+      (ULONG)strlen(
+          szClipString) + 1,           /* Amount of memory            */
+         PAG_WRITE  |                  /* Allow write access          */
+         PAG_COMMIT |                  /* Commit the shared memory    */
+         OBJ_GIVEABLE)))               /* Make pointer giveable       */
+{
+
+   /* Setup the source pointer to point to text */
+   pszSrc = szClipString;
+
+   /* Copy the string to the allocated memory   */
+   while (*pszDest++ = *pszSrc++);
+
+   /* Clear old data from the clipboard         */
+   WinEmptyClipbrd(hab);
+
+   /* Pass the pointer to the clipboard in custom format.             */
+   /* Notice that the pointer must be a ULONG value.                  */
+   fSuccess = WinSetClipbrdData(hab,   /* Anchor block handle         */
+      (ULONG) pszDest,                 /* Pointer to text data        */
+      atomFormatID,                    /* Custom format ID (atom)     */
+      CFI_POINTER);                    /* Passing a pointer           */
+
+   /* Close the clipboard */
+   WinCloseClipbrd(hab);
+}
+}
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1236_L3_CreatingUniqueWindow.html">[Back: Creating Unique Window-Message Atoms]</A> <BR>
+<A HREF="1238_L1_ButtonControls.html">[Next: Button Controls]</A> 
+</BODY>
+</HTML>

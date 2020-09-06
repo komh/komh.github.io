@@ -1,0 +1,129 @@
+<HTML>
+<HEAD>
+<TITLE>Server-Client Communications Using Named Pipes</TITLE>
+</HEAD>
+<BODY>
+<H1>Server-Client Communications Using Named Pipes</H1><!-- entering slot 58 -->
+<P>
+A server process initiates a connection to a client process by using<A><!-- external link: 1D 6B C3 FC --> DosConnectNPipe</A>.
+Once the pipe has been connected by the server process, the client process
+must open the pipe by using<A><!-- external link: 1D 9F C3 52 --> DosOpen
+</A>to complete the connection. If no client process has opened the pipe
+when the server process calls<A><!-- external link: 1D 6B C3 FC --> DosConnectNPipe</A>,
+the function either waits until a client opens the pipe or returns ERROR_PIPE_NOT_CONNECTED,
+depending on whether the server process created the pipe to wait for data.
+
+<P>
+Each client process requires a separate instance of a pipe. For example,
+if a server process creates a named pipe and specifies that four instances
+of the pipe can be created, the process can then create three more instances
+of the named pipe (for a total of four pipes, including the original). Each
+instance has the same name, but each has a unique pipe handle. The process
+can then connect each pipe to the server. (Each instance must be connected
+by an explicit use of<A><!-- external link: 1D 6B C3 FC --> DosConnectNPipe</A>.)
+In this example, the server must use each function four times to create
+and connect four separate instances of the named pipe. Each pipe is then
+available to a separate client process.
+<P>
+If a client process receives the ERROR_PIPE_BUSY return value from<A><!-- external link: 1D 9F C3 FC --> DosOpen</A>,
+no instances of the given pipe are available. The process can use<A><!-- external link: 1D 0D C4 58 --> DosWaitNPipe
+</A>to wait for an instance to become available. The function waits until
+an instance is free or until the specified time interval elapses. When an
+instance becomes free, the process can open the pipe. If several processes
+are waiting for an instance to become available, the system gives the named
+pipe to the process that has been waiting the longest.
+<P>
+The server process can disconnect a client process from a pipe by using
+<A><!-- external link: 1D 7B C3 FC -->DosDisConnectNPipe</A>. Ideally, the
+client process closes the pipe by using<A><!-- external link: 1D 65 C3 4F --> DosClose
+</A>before the server process disconnects the pipe. If the client process
+has not closed the pipe when the server process disconnects it, the server
+process forces the pipe closed and the client process subsequently receives
+errors if it attempts to access the pipe. Note that forcing the closure
+of the pipe might discard data in the pipe before the client process has
+had an opportunity to read it.
+<P>
+A process can read and write bytes to a named pipe by using<A><!-- external link: 1D D7 C3 55 --> DosRead
+</A>and<A><!-- external link: 1D 0F C4 FC --> DosWrite</A>. A process can
+read or write messages by using<A><!-- external link: 1D 07 C4 FC --> DosTransactNPipe</A>.
+Depending on the access mode,<A><!-- external link: 1D 07 C4 57 --> DosTransactNPipe
+</A>writes a message to the pipe, reads a message from the pipe, or both.
+If a named pipe contains unread data or is not a message pipe,<A><!-- external link: 1D 07 C4 57 --> DosTransactNPipe
+</A>fails.
+<P>
+Named pipes created with the NP_ACCESS_INBOUND or NP_ACCESS_OUTBOUND access
+mode cannot use the<A><!-- external link: 1D 07 C4 57 --> DosTransactNPipe
+</A>function. If the named pipe's client uses the<A><!-- external link: 1D 07 C4 57 --> DosTransactNPipe
+</A>function, the function returns error code 5 (ERROR_ACCESS_DENIED).
+<P>
+If it is reading from the pipe,<A><!-- external link: 1D 07 C4 57 --> DosTransactNPipe
+</A>does not return until a complete message is read, even if the server
+process specified no-wait mode when the pipe was created.
+<P>
+A process can also read data from a named pipe without removing the data
+from the pipe by using<A><!-- external link: 1D A5 C3 FC --> DosPeekNPipe</A>.
+This function copies the specified number of bytes from the pipe and returns
+the number of bytes of data left in the pipe and the number of bytes left
+in the current message, if any.
+<P>
+<A><!-- external link: 1D A5 C3 53 -->DosPeekNPipe</A> also returns the
+state of the pipe. A named pipe can be in one of the following states:
+<P>
+<B>Named Pipe States</B>
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³State          ³Description                                  ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Connected      ³The pipe has been created and connected by   ³
+³               ³the server process and has been opened by a  ³
+³               ³client process.  Only connected pipes can be ³
+³               ³written to or read from.                     ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Closing        ³The pipe has been closed by the client       ³
+³               ³process but has not yet been disconnected by ³
+³               ³the server process.                          ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Disconnected   ³The pipe has been created by the server      ³
+³               ³process but not connected, or has been       ³
+³               ³explicitly disconnected and not yet          ³
+³               ³reconnected. A disconnected pipe cannot      ³
+³               ³accept a <A><!-- external link: 1D 9F C3 52 -->DosOpen</A> request.                    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Listening      ³The pipe has been created and connected by   ³
+³               ³the server process but has not yet been      ³
+³               ³opened by a client process. A listening pipe ³
+³               ³is ready to accept a request to open. If the ³
+³               ³pipe is not in a listening state, <A><!-- external link: 1D 9F C3 52 -->DosOpen</A>    ³
+³               ³returns ERROR_PIPE_BUSY.                     ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+<A><!-- external link: 1D 63 C3 4E -->DosCallNPipe</A> is used to open,
+write to, read from, and close a named message-format pipe.
+<P>
+Named pipes created with the NP_ACCESS_INBOUND or NP_ACCESS_OUTBOUND access
+mode cannot use the<A><!-- external link: 1D 63 C3 4E --> DosCallNPipe</A> function.
+If the named pipe's client uses the<A><!-- external link: 1D 63 C3 4E --> DosCallNPipe
+</A>function, the function returns error code 5 (ERROR_ACCESS_DENIED). This
+function is equivalent to calling<A><!-- external link: 1D 9F C3 FC --> DosOpen</A>,
+<A><!-- external link: 1D 07 C4 FC -->DosTransactNPipe</A>, and<A><!-- external link: 1D 65 C3 4F --> DosClose
+</A>If no instances of the pipe are available,<A><!-- external link: 1D 63 C3 4E --> DosCallNPipe
+</A>waits for an instance or returns without opening the pipe if the specified
+interval of time elapses.
+<P>
+A process can retrieve information about the handle state of a named pipe
+by using<A><!-- external link: 1D CC C3 FC --> DosQueryNPHState</A>. The
+handle state is a combination of the instance count, the access mode, and
+the pipe type (byte or message).<A><!-- external link: 1D CC C3 54 --> DosQueryNPHState
+</A>also specifies whether the process owning the handle is a server or
+client and whether the pipe waits if reading and writing cannot proceed.
+
+<P>
+A process can modify the handle state of a named pipe by using<A><!-- external link: 1D F0 C3 FC --> DosSetNPHState</A>.
+For example, the process can change the reading mode for the pipe,<!-- entering slot 59 --> enabling
+a process to read bytes from the pipe instead of messages.
+
+<P><HR>
+
+<A HREF="057_L3_NamedPipes.html">[Back: Named Pipes]</A> <BR>
+<A HREF="059_L4_StepsinManagingServe.html">[Next: Steps in Managing Server-Client Transactions]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,94 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>SplEnumDevice - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>SplEnumDevice - Example Code</H1><!-- entering slot 1226 -->
+<P>
+This sample code enumerates all the devices on the local workstation. It
+then prints out the information.
+<PRE>#define INCL_BASE
+#define INCL_DOSMEMMGR
+#define INCL_SPL
+#define INCL_SPLDOSPRINT
+#define INCL_SPLERRORS
+
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+
+INT main ()
+{
+   ULONG  cbBuf ;
+   ULONG  cTotal;
+   ULONG  cReturned ;
+   ULONG  cbNeeded ;
+   ULONG  ulLevel = 3L;
+   ULONG  i ;
+   SPLERR splerr ;
+   PSZ    pszComputerName ;
+   PBYTE  pBuf ;
+   PPRDINFO3 pprd3 ;
+
+   pszComputerName = (PSZ)NULL ;
+
+   /* Make the call with cBuf = 0 so that you will get the size of the */
+   /* buffer  needed returned in cbNeeded.                             */
+   splerr = SplEnumDevice(pszComputerName, ulLevel, pBuf, 0L, /* cbBuf */
+                            &amp;cReturned, &amp;cTotal, &amp;cbNeeded,
+                            NULL) ;
+
+   /* Only continue if the error codes ERROR_MORE_DATA or       */
+   /* NERR_BufTooSmall are returned.                               */
+   if (splerr == ERROR_MORE_DATA || splerr == NERR_BufTooSmall)
+   {
+      /* Allocate memory for the buffer that will hold the returning info. */
+      if (!DosAllocMem( &amp;pBuf, cbNeeded,
+                        PAG_READ|PAG_WRITE|PAG_COMMIT) )
+      {
+         cbBuf = cbNeeded ;
+
+         /* Make call again with the proper buffer size.                   */
+         splerr = SplEnumDevice(pszComputerName, ulLevel, pBuf, cbBuf,
+                                &amp;cReturned, &amp;cTotal,
+                                &amp;cbNeeded, NULL) ;
+
+         /* If no errors, print out the buffer information.                */
+         if (splerr == NO_ERROR)
+         {
+            for (i=0;i &lt; cReturned ; i++)
+            {
+               /* Each time through the loop increase the pointer.         */
+               pprd3 = (PPRDINFO3)pBuf+i ;
+               printf("Device info:pszPrinterName   - %s\n",
+                            pprd3-&gt;pszPrinterName) ;
+               printf("  pszUserName - %s\n", pprd3-&gt;pszUserName);
+               printf("  pszLogAddr  - %s\n", pprd3-&gt;pszLogAddr);
+               printf("  uJobId      - %d  fsStatus - %X\n",
+                            pprd3-&gt;uJobId ,  pprd3-&gt;fsStatus);
+               printf("  pszStatus   - %s\n", pprd3-&gt;pszStatus);
+               printf("  pszComment  - %s\n", pprd3-&gt;pszComment);
+               printf("  pszDrivers  - %s\n", pprd3-&gt;pszDrivers);
+               printf("  time        - %d usTimeOut - %X\n",
+                            pprd3-&gt;time ,  pprd3-&gt;usTimeOut);
+             }
+         }
+         DosFreeMem(pBuf) ;
+      }
+   } /* end if  */
+   else
+   {
+       printf("SplEnumDevice splerr=%ld, cTotal=%ld, cReturned=%ld, cbNeeded=%ld\n",
+              splerr, cTotal, cReturned, cbNeeded) ;
+   }
+   DosExit( EXIT_PROCESS , 0 ) ;
+   return(splerr);
+}   /* end main */
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1214_L2H_SplEnumDeviceRelated.html">[Back: SplEnumDevice - Related Functions]</A> <BR>
+<A HREF="1216_L2H_SplEnumDeviceTopics.html">[Next: SplEnumDevice - Topics]</A> 
+</BODY>
+</HTML>

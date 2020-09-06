@@ -1,0 +1,265 @@
+<HTML>
+<HEAD>
+<TITLE>FMT Keyword</TITLE>
+</HEAD>
+<BODY>
+<H1>FMT Keyword</H1><!-- entering slot 599 -->The optional FMT parameter is used to produce
+the formatting string for the trace data. The developer should use these
+to control formatting the output produced by the Trace Formatter.  Each
+<B>FMT</B> keyword causes CR/LF to be appended to the format string. The
+formatting string is similar to a C library printf string specification.
+It consists of ASCII characters and formatting controls enclosed in double
+quotes as for a C language string. Each formatting primitive describes the
+format of the data in the trace buffer at the formatting position and must
+match the data stored in the trace buffer by the data statements described
+later. See <A HREF="431_L2_FormattingTraceData.html">Formatting Trace Data
+</A>for a description of how the data is stored in the trace buffer and
+subsequently formatted.
+<P>
+The formatting controls are as follows:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<LI>Innn<!-- lm: 0x2 5 -->
+<UL> Ignore nnn number of bytes in the trace
+buffer.
+<P>
+This tells the Trace Formatter to skip over the next nnn bytes in the current
+trace record. This could be used, for example, to skip over unimportant
+data, traced as a block, and only output the data of interest.
+<P>
+When using this control, nnn represents an ASCII decimal number and must
+be followed by a space.
+<PRE>
+        statement: FMT = "ignore ten bytes %I10 here",
+                   FMT = "       and two more %I2 here",
+
+        generates: ignore ten bytes here
+                          and two more here
+
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>%P<!-- lm: 0x2 5 -->
+<UL> Process the data prefix
+bytes associated with the trace data.
+<P>
+This tells the Trace Formatter that the next bytes in the trace record are
+the prefix or header bytes for data logged by the dynamic tracing mechanism.
+This is required to precede any format control describing data logged from
+memory.  Do not use this before data that was logged from a register and
+never use with static tracepoints.
+<P>
+%P may be used in combination with any of the following formatting controls:
+%A, %B, %C, %D, %F, %Q, %S, %U, %W.
+<P>
+%P%x may be specified as %Px.
+<P>
+See <A HREF="431_L2_FormattingTraceData.html"> Formatting Trace Data</A> for
+a description of how the data is stored in the trace buffer and the use
+of this control.
+<PRE>
+        statements: FMT="memory byte = %P%B",
+
+        generates:  memory byte = C2
+
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>%B<!-- lm: 0x2 5 -->
+<UL> Output a byte of data
+in hexadecimal.
+<PRE>
+        statement: FMT = "memory byte = %P%B"
+
+        generates: memory byte = 01
+
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>%C<!-- lm: 0x2 5 -->
+<UL> Output an ASCII character
+
+<PRE>
+        statement: FMT = "memory bytes = %C%C%C"
+
+        generates: memory byte = ABC
+
+</PRE>
+
+<P>
+<B>%C</B> formats a byte of data as a single ASCII character, with no separating
+spaces. Bytes outside the range 0x20 - 0x7f are formatted as periods.
+<P>
+<B>Note: </B>
+<P>
+The<B> %C</B> formatting control is only available with TRCUST 2.26 or later
+and  TRACEFMT version 2.2 or later.<!-- lm: 0x2 5 --><!-- lm: 0x2 1 -->
+</UL> %W
+<!-- lm: 0x2 5 -->
+<UL>Output a word of data.
+<PRE>
+        statement: FMT = "register word = %W"
+
+        generates: register word = 0001
+
+
+        statement: FMT = "memory word = %P%W"
+
+        generates: memory word = 0001
+
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>%D<!-- lm: 0x2 5 -->
+<UL> Output a double word of
+data.
+<PRE>
+        statement: FMT = "double word EAX = %D"
+
+        generates: double word EAX = 0000 4B2C
+
+
+        statement: FMT = "double memory word = %P%D"
+
+        generates: double memory word = 0000 4B2C
+
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>%F<!-- lm: 0x2 5 -->
+<UL> Output a Flat (0:32 bit)
+address.
+<PRE>
+        statement: FMT = "flat address EAX = %F"
+
+        generates: flat address EAX = 00004B2C
+
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>%Q<!-- lm: 0x2 5 -->
+<UL> Output a quad word of
+data.
+<PRE>
+        statement: FMT = "quad word from regs EAX and EBX = %Q"
+
+        generates: quad word from regs EAX and EBX = 00004B2C 00000001
+
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>%A<!-- lm: 0x2 5 -->
+<UL> Output a segmented (16:16
+bit) address.
+<PRE>
+        statement: FMT = "segmented address in SS:SP = %A"
+
+        generates: segmented address in SS:SP = 00B7:0001
+
+
+        statement: FMT = "segmented address in memory = %P%A"
+
+        generates: segmented address in memory = 00B7:0001
+
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>%R<!-- lm: 0x2 5 -->
+<UL> Repeat the following format
+control for the rest of the memory that was logged.
+<P>
+The action of %R differs between dynamic and static trace:<!-- lm: 0x2 10 -->
+<UL>
+<P>
+For dynamic trace records, %R will process the 3-byte memory prefix to determine
+the length of data to which repeat formatting applies.  %R is used in place
+of the %P control.<!-- lm: 0x2 10 -->
+<P>
+For static trace records, %R applies itself to all the remaining data in
+the trace buffer. No 3-byte memory prefix is examined or processed.<!-- lm: 0x2 5 -->
+</UL> %R
+may be used only with the following formatting controls: %A, %B, %C, %D,
+%F, %Q, %W, in particular it has no meaning with %S and %U.
+<PRE>
+   statement: FMT = "log a variable number of words from memory = %R%W"
+
+   generates: log a variable number of words from memory = 0001 0004
+
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>%S<!-- lm: 0x2 5 -->
+<UL> Output an ASCIIZ string.
+
+<P>
+The prefix formatting control should always precede this for dynamic tracepoints
+because the data was logged from memory.
+<P>
+<B>Note: </B><!-- entering slot 600 --> If the tracepoint is static, then
+<B>%P</B> should not be used because the string is terminated with a null
+byte.
+<PRE>
+        statement: FMT = "string = %P%S"
+
+        generates: string = c:\os2\os2.ini
+
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>%U<!-- lm: 0x2 5 -->
+<UL> Format the remainder of
+the trace record as a sequence of bytes in hexadecimal or dump format depending
+upon the View pull-down selection from TRACEFMT.
+<P>
+This will output the remaining of the traced data, including any prefix
+bytes.
+<PRE>
+        statement: FMT = "garbage = %U"
+
+        generates: garbage = [00 00 00 03 c2 c1 c4 ff 04 00 09 c0 18]
+
+</PRE>
+
+<P>
+With fix pack 35 for OS/2 Warp V3.0, fix pack 10 of OS/2 Warp V4.0 and OS/2
+Warp E-Server the TRACEFMT utility permits unformatted data to be displayed
+in dump format, where both the hexadecimal and ASCII representations of
+the data are displayed together with offsets. ASCII characters outside the
+range 0x20-0x7f are displayed as '.' for example:
+<PRE>
+       Data [+0000  04 00 5A 00 00 0C 00 2B-DF F6 FF FF FF 00 00 01  ..Z....+........ ]
+       Data [+0010  00 01 C0                                         ... ]
+
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>%X<!-- lm: 0x2 5 -->
+<UL> Output the major event
+code.
+<PRE>
+        statement: FMT = "major code = %X"
+
+        generates: major code = 00C2
+
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>%Y<!-- lm: 0x2 5 -->
+<UL> Output the minor event
+code.
+<PRE>
+        statement: FMT = "minor code = %Y"
+
+        generates: minor code = 0081
+
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Note to CMVC Users: </B> To avoid conflicts with source file control
+information, all formatting specifications can be in upper or lower case.
+Also, prefix format specifications may be combined with data format specifications.
+For example, the following create the same format controls in the TFF:<!-- lm: 0x2 1 -->
+<P>
+
+<PRE>        FMT = "%P%W here"
+        FMT = "%p%w here"
+        FMT = " %P %W here"
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="418_L4_DESCKeyword.html">[Back: DESC Keyword]</A> <BR>
+<A HREF="420_L4_LENKeyword.html">[Next: LEN Keyword]</A> 
+</BODY>
+</HTML>

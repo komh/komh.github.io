@@ -1,0 +1,90 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosWaitNPipe - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosWaitNPipe - Example Code</H1><!-- entering slot 2002 -->
+<P>
+This example handles the client side of a pipe. It attempts to open an existing
+named pipe, if the pipe is not available, it uses this API to wait until
+it becames avalilable and opens it. It then sets the pipe handle state,
+sends a message to the host, reads the host reply, and finally closes the
+pipe.
+<P>
+Before running this example, compile and run the example code shown in the
+DosConnectNPipe, DosCreateNPipe, DosDisConnectNPipe, or DosSetNPipeSem functions,
+which handles the host side of the pipe.
+<PRE>#define INCL_DOSFILEMGR       /* DOS File Manager values */
+#define INCL_DOSNMPIPES       /* DOS Named Pipes values */
+#define INCL_DOSSEMAPHORES    /* DOS Semaphore values */
+#define INCL_DOSERRORS        /* DOS Error values */
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+
+int main(VOID) {
+   APIRET   rc                     = NO_ERROR;   /* Return code */
+   CHAR     message[256]           = "";         /* Message buffer */
+   HFILE    PipeHandle             = NULLHANDLE; /* Pipe handle */
+   struct   _AVAILDATA  BytesAvail = {0};
+   UCHAR    Buffer[200]            = {0};
+   ULONG    bytes                  = 0;
+   ULONG    Action                 = 0;
+   ULONG    PipeState              = 0;
+   ULONG    HandType               = 0;
+   ULONG    FlagWord               = 0;
+   ULONG    BytesRead              = 0;
+
+   rc = DosOpen("\\PIPE\\EXAMPLE", &amp;PipeHandle, &amp;Action, 0, 0, FILE_OPEN,
+                OPEN_ACCESS_READWRITE | OPEN_SHARE_DENYREADWRITE |
+                OPEN_FLAGS_FAIL_ON_ERROR, NULL);
+   if (rc == ERROR_PIPE_BUSY)
+      if (DosWaitNPipe("\\PIPE\\EXAMPLE", 30000)) {
+         rc = DosOpen("\\PIPE\\EXAMPLE", &amp;PipeHandle, &amp;Action, 0, 0, FILE_OPEN,
+                      OPEN_ACCESS_READWRITE | OPEN_SHARE_DENYREADWRITE |
+                      OPEN_FLAGS_FAIL_ON_ERROR, NULL);
+      }
+
+   if (rc != NO_ERROR) {
+      printf("DosOpen error: error code = %u\n", rc);
+      return 1;
+   }  else printf("Connected to HOST\n");
+
+   rc = DosSetNPHState(PipeHandle, NP_WAIT);
+   if (rc != NO_ERROR) {
+      printf("DosSetNPHState error: error code = %u\n", rc);
+      return 1;
+   }
+
+   printf("Enter message to send to PIPEHOST: ");
+
+   fflush(NULL);  /* Cause above printf to show on display */
+   gets(message);
+
+   rc = DosWrite(PipeHandle, message, strlen(message), &amp;bytes);
+   if (rc != NO_ERROR) {
+      printf("DosWrite error: error code = %u\n", rc);
+      return 1;
+   }
+   rc = DosRead(PipeHandle, message, sizeof(message), &amp;bytes);
+   if (rc != NO_ERROR) {
+      printf("DosRead error: error code = %u\n", rc);
+      return 1;
+   }
+
+   printf("\nMessage received from PIPEHOST was: %s\n\n", message);
+
+   rc = DosClose(PipeHandle);
+   printf("...Disconnected\n");
+   return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1981_L2H_DosWaitNPipeRelatedF.html">[Back: DosWaitNPipe - Related Functions]</A> <BR>
+<A HREF="1983_L2H_DosWaitNPipeTopics.html">[Next: DosWaitNPipe - Topics]</A> 
+</BODY>
+</HTML>

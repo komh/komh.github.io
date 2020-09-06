@@ -1,0 +1,160 @@
+<HTML>
+<HEAD>
+<TITLE>.S - Set or Display Default Thread Slot</TITLE>
+</HEAD>
+<BODY>
+<H1>.S - Set or Display Default Thread Slot</H1><!-- entering slot 560 --><!-- Unable to decode bitmap format --><IMG SRC="386_L3_SSetorDisplayDefault_157.gif" WIDTH=32 HEIGHT=32><!-- Unable to decode bitmap format --><IMG SRC="386_L3_SSetorDisplayDefault_158.gif" WIDTH=32 HEIGHT=32>
+<P>
+Set or display the Kernel Debugger's and Dump Formatter's default <A HREF="3320_L0_.html">thread
+slot</A>.
+<P>
+This command affects the default operation of the following:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+<A HREF="285_L3_DDisplayMemory.html">D command</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="297_L3_EEnterDataIntoMemory.html">E command</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="312_L3_UUnassemble.html">U command.</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="334_L3_ISwapinStorage.html"><LI>I command</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="337_L3_KDisplayUserStackTra.html"><LI>K command</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="378_L3_PDisplayProcessStatu.html"><LI>P command</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="380_L3_PBDisplayBlockedThre.html"><LI>PB command</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="381_L3_PQDisplaySchedulerQu.html"><LI>PQ command</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="383_L3_PUDisplayThreadUserS.html"><LI>PU command</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="384_L3_RDisplayUsersRegiste.html"><LI>R command</A><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<U><I>Syntax:</I></U>
+<PRE>
+ÄÄÄÄ.S ÄÄÄÄÄÂÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+              ÀÄÄ S ÄÄÙ         ÃÄÄ *    ÄÄ´
+                                ÀÄÄ slot ÄÄÙ
+
+
+</PRE>
+
+<P>
+<U><I>Parameters:</I></U><!-- lm: 0x2 1 -->
+<P>
+<B><I>slot</B></I><!-- lm: 0x11 11 -->
+<UL> Set the default <A HREF="3320_L0_.html">thread
+slot</A> to<B><I> slot</B></I>.
+<P>
+The following short-hand may be used for the slot number:<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->The current (last) thread the dispatcher gave control
+to. This value is taken from the word a global label:
+<PRE>     <B>_TaskNumber</B>
+</PRE>
+<!-- lm: 0x2 11 -->
+<P>
+If no slot number is given<B> .S</B> displays the current thread slot number
+in message:
+<PRE>Current task number: <B><I>nnnn</B></I>
+</PRE>
+
+<P>
+where<B><I> nnnn</B></I> is the thread slot number.<!-- lm: 0x2 1 -->
+</UL><B> S
+</B><!-- lm: 0x11 11 -->
+<UL>Set current ESP, EBP, SS, CS and EIP registers
+to those of the Dispatcher.
+<P>
+This option sets these registers as if the thread context had just been
+switched by the OS/2 Dispatcher. The <A HREF="309_L3_RSetorDisplayCurrent.html">R
+command</A> will show the thread in kernel mode, about to be run.
+<P>
+No actual updating of register values takes place. Only default values are
+effected.
+<P>
+The new defaults are derived as follows:<!-- lm: 0x2 11 -->
+<P>
+<B>ESP</B><!-- lm: 0x2 20 -->
+<UL> taken from<B> TSDKernelESP</B> (TSD +
+<B>Disp</B> value of <A HREF="378_L3_PDisplayProcessStatu.html">.P command
+</A>output.)<!-- lm: 0x2 11 -->
+</UL><B> EBP</B><!-- lm: 0x2 20 -->
+<UL> taken
+from<B> TSDUserSSPad</B> (TSDKernelESP - 2)<!-- lm: 0x2 11 -->
+</UL><B> SS
+</B><!-- lm: 0x2 20 -->
+<UL>selector 30 (<B>TASKAREA</B> segment).<!-- lm: 0x2 11 -->
+</UL><B> CS
+</B><!-- lm: 0x2 20 -->
+<UL>Selector 170 (<B>DOSHIGH32CODE</B> segment).
+<!-- lm: 0x2 11 -->
+</UL><B>EIP</B><!-- lm: 0x2 20 -->
+<UL> label<B> pgSwitchRet</B>.
+<!-- lm: 0x2 11 -->
+</UL>This option is not available to the Dump Formatter.
+
+<P>
+<B>Note: </B>
+<P>
+The intent of this option is to simulate the correct value of the ring 0
+stack selector for the default thread. This is only safe to use in commands
+that make explicit reference to the stack selector, for example:
+<PRE>    .SS 21
+    R
+    DD SS:ESP
+</PRE>
+
+<P>
+If an indirect reference is made to selector 30, for example by referring
+to a symbol from the<B> TASKAREA</B> segment then the adjustment to the
+default slot is not made. For example:
+<PRE>    DW JFN_Tabel l14
+</PRE>
+will only display the <A HREF="3298_L0_.html">JFT</A> for the current thread
+slot. To display the<B> JFT</B> for another slot requires the following
+technique:
+<PRE>    DW %ptda_address+JFN_Table-ptda_start l14
+</PRE>
+ <!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<U><I>Results &amp; Notes:</I></U>
+<P>
+The<B> .S</B> command sets certain default values such that the view of
+the user's space in the new default slot is as if the the thread <A HREF="3284_L0_.html">context
+</A>had switched. Linear and <A HREF="3332_L0_.html">LDT</A> selector based
+addresses will be accesses correctly by the Dump Formatter and Kernel Debugger.
+However, certain system data that are updated by a context switch are not
+changed and continue to display in the system's current thread context.
+These items include:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+Task Register (TR)<!-- lm: 0x2 6 -->
+<P>
+GDT descriptor table entries for selectors 28, 30, 38 and 150b<!-- lm: 0x2 6 -->
+<P>
+Current <A HREF="3275_L0_.html">TSS</A> ring 0, and ring 2 stack selectors
+and pointers.<!-- lm: 0x2 6 -->
+<P>
+Global and System copy of the Current Local Information Segments.<!-- lm: 0x2 6 -->
+<P>
+The Thread Local Memory Area and Local Information Segment mapped by LDT
+descriptor<B> dfff</B>.
+<P>
+<B>Note: </B>
+<P>
+Descriptor<B> dfff</B> maps a global shared<!-- entering slot 561 --> memory
+object, but it's data is copied from the incoming<B> PTDA</B> and<B> TCB
+</B>when a context switch occurs. This achieves the effect of thread local
+memory.<!-- lm: 0x2 6 --><!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="385_L3_REBOOTRestarttheSyst.html">[Back: .REBOOT - Restart the System]</A> <BR>
+<A HREF="387_L3_SYSDUMPForceaSystemD.html">[Next: .SYSDUMP - Force a System Dump and Restart the System]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,262 @@
+<HTML>
+<HEAD>
+<TITLE>System Exceptions</TITLE>
+</HEAD>
+<BODY>
+<H1>System Exceptions</H1><!-- entering slot 829 -->
+<P>
+OS/2 defines a class of error conditions called<I> system exceptions</I>,
+and specifies the default actions that are taken when these system exceptions
+occur. The default action taken by OS/2 in most cases is to terminate the
+thread that caused the system exception.
+<P>
+System exceptions include both synchronous and asynchronous exceptions.
+<I>Synchronous exceptions</I> are caused by events that are internal to
+the execution of a thread. For example, synchronous exceptions could be
+caused by invalid parameters, or by the request of a thread to end its own
+execution.
+<P>
+<I>Asynchronous exceptions</I> are caused by events that are external to
+the execution of a thread. For example, an asynchronous exception can be
+caused by a user entering a Ctrl+C or Ctrl+Break key sequence, or by a process
+calling<A><!-- external link: 1D 9A C3 4F --> DosKillProcess</A> to end
+the execution of another process.
+<P>
+The Ctrl+Break, Ctrl+C, and<A><!-- external link: 1D 9A C3 FC --> DosKillProcess</A>-generated
+exceptions are also known as<I> signals</I>, or as<I> signal exceptions</I>.
+
+<P>
+OS/2 delivers exceptions that occur in 16-bit as well as 32-bit code. The
+sequence or hierarchy for delivering exceptions is as follows:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->When an exception occurs in 32-bit code, the system
+gives control only to the 32-bit exception handlers registered for the current
+thread. If the thread has not registered any 32-bit handlers, the system
+default action occurs.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->When an exception occurs in 16-bit code, the system
+first gives control to the 32-bit exception handlers registered for the
+current thread. If the exception is not handled by one of these handlers,
+control is passed to the 16-bit handler, if one exists for the given exception.
+If there is no 16-bit handler for the exception, the system default action
+occurs.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Notification of an exception is usually sent only to the thread that caused
+the exception. However, if a thread uses<A><!-- external link: 1D 84 C3 4E --> DosExit
+</A>to terminate all the threads in the process, notification of the process-termination
+exception is sent to every thread in the process. The thread that used<A><!-- external link: 1D 84 C3 4E --> DosExit
+</A>gets a XCPT_PROCESS_TERMINATE exception, all the other threads in the
+process get a XCPT_ASYNC_PROCESS_TERMINATE exception.
+<P>
+Exit-list processing occurs on a per-process basis after a process-termination
+exception has been delivered to each thread in the process and each thread
+has finally ended except Thread 1 (the main thread). Therefore, any thread
+that handles a process-termination exception must eventually end its own
+execution voluntarily. Otherwise, the process-termination sequence will
+not conclude properly.
+<P>
+The following tables briefly list the possible exceptions. For more detailed
+information about the system exceptions, including default system action,
+parameters, and related trap numbers, see the<I> Control Program Programming
+Reference</I>.
+<P>
+<B>Non-Fatal, Software-Generated Exceptions</B>
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³Exception Symbolic Constant           ³Description           ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_GUARD_PAGE_VIOLATION             ³A guard page has been ³
+³                                      ³accessed.             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_UNABLE_TO_GROW_STACK             ³The system is unable  ³
+³                                      ³to allocate the memory³
+³                                      ³page directly below   ³
+³                                      ³the guard page just   ³
+³                                      ³accessed.             ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+<B>Fatal, Software-Generated Exceptions</B>
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Exception Symbolic Constant           ³Description           ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_IN_PAGE_ERROR                    ³An I/O error occurred ³
+³                                      ³while reading a memory³
+³                                      ³page into memory.     ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_PROCESS_TERMINATE                ³The thread has        ³
+³                                      ³terminated itself with³
+³                                      ³<A><!-- external link: 1D 84 C3 4E -->DosExit</A>.              ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_ASYNC_PROCESS_TERMINATE          ³Another thread in the ³
+³                                      ³process has caused the³
+³                                      ³thread to terminate.  ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_NONCONTINUABLE_EXCEPTION         ³An exception handler  ³
+³                                      ³has attempted to      ³
+³                                      ³continue execution in ³
+³                                      ³response to a         ³
+³                                      ³non-<!-- entering slot 830 -->continuable       ³
+³                                      ³exception.            ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_INVALID_DISPOSITION              ³An exception handler  ³
+³                                      ³has returned an       ³
+³                                      ³invalid value.        ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+<B>Fatal, Hardware-Generated Exceptions</B>
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Exception Symbolic Constant           ³Description           ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_ACCESS_VIOLATION                 ³An access violation or³
+³                                      ³page fault has        ³
+³                                      ³occurred.             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_INTEGER_DIVIDE_BY_ZERO           ³An attempt to divide  ³
+³                                      ³by 0 has occurred in  ³
+³                                      ³an integer operation. ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_FLOAT_DIVIDE_BY_ZERO             ³An attempt to divide  ³
+³                                      ³by 0 has occurred in a³
+³                                      ³floating point        ³
+³                                      ³operation.            ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_FLOAT_INVALID_OPERATION          ³An invalid floating   ³
+³                                      ³point operation was   ³
+³                                      ³attempted.            ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_ILLEGAL_INSTRUCTION              ³An attempt was made to³
+³                                      ³execute an instruction³
+³                                      ³that is not defined on³
+³                                      ³the host machine's    ³
+³                                      ³architecture.         ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_PRIVILEGED_INSTRUCTION           ³An attempt was made to³
+³                                      ³execute an instruction³
+³                                      ³that is not permitted ³
+³                                      ³in the current machine³
+³                                      ³mode or that the      ³
+³                                      ³application does not  ³
+³                                      ³have permission to    ³
+³                                      ³execute.              ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_INTEGER_OVERFLOW                 ³An integer operation  ³
+³                                      ³generated a carry-out ³
+³                                      ³of the most           ³
+³                                      ³significant bit.      ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_FLOAT_OVERFLOW                   ³A floating point      ³
+³                                      ³operation generated a ³
+³                                      ³resulting exponent    ³
+³                                      ³that is greater than  ³
+³                                      ³the magnitude         ³
+³                                      ³permitted for the     ³
+³                                      ³operands.             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_FLOAT_UNDERFLOW                  ³A floating point      ³
+³                                      ³operation generated a ³
+³                                      ³resulting exponent    ³
+³                                      ³that is less than the ³
+³                                      ³magnitude provided for³
+³                                      ³the operands.         ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_FLOAT_DENORMAL_OPERAND           ³An attempt was made to³
+³                                      ³perform an arithmetic ³
+³                                      ³operation on a        ³
+³                                      ³denormal operand.     ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_FLOAT_INEXACT_RESULT             ³The result of an      ³
+³                                      ³operation is not      ³
+³                                      ³exactly representable ³
+³                                      ³in the target format. ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_FLOAT_STACK_CHECK                ³An illegal stack      ³
+³                                      ³operation was         ³
+³                                      ³attempted by the      ³
+³                                      ³floating point        ³
+³                                      ³coprocessor.          ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_DATATYPE_MISALIGNMENT            ³An attempt was made to³
+³                                      ³store a data in an    ³
+³                                      ³address that is not   ³
+³                                      ³naturally aligned on a³
+³                                      ³hardware architecture ³
+³                                      ³that does not provide ³
+³                                      ³alignment hardware.   ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_BREAKPOINT                       ³A breakpoint          ³
+³                                      ³instruction was       ³
+³                                      ³executed.             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_SINGLE_STEP                      ³One instruction has   ³
+³                                      ³been executed in      ³
+³                                      ³single-step mode.     ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+<B>Fatal Exceptions</B>
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Exception Symbolic Constant           ³Description           ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_INVALID_LOCK_SEQUENCE            ³An invalid operation  ³
+³                                      ³was attempted within  ³
+³                                      ³an interlocked section³
+³                                      ³of code.              ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_ARRAY_BOUNDS_EXCEEDED            ³An array index outside³
+³                                      ³its upper and lower   ³
+³                                      ³boundary was detected.³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+<B>Unwind Operation Exceptions</B>
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Exception Symbolic Constant           ³Description                 ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_UNWIND                           ³An unwind operation is in   ³
+³                                      ³process.                    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_BAD_STACK                        ³An                          ³
+³                                      ³<A HREF="181_L2_EXCEPTIONREGISTRATIO.html">EXCEPTIONREGISTRATIONRECORD</A> ³
+³                                      ³data structure was reached  ³
+³                                      ³that is not properly aligned³
+³                                      ³or that is not within the   ³
+³                                      ³current stack boundaries.   ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_INVALID_UNWIND_TARGET            ³The address of the target   ³
+³                                      ³<A HREF="181_L2_EXCEPTIONREGISTRATIO.html">EXCEPTIONREGISTRATIONRECORD</A> ³
+³                                      ³is below the current stack  ³
+³                                      ³pointer or not in the       ³
+³                                      ³exception handler chain.    ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+<B>Fatal Signal Exceptions</B>
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Exception Symbolic Constant           ³Description           ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_SIGNAL                           ³A signal was made to  ³
+³                                      ³your process (usually ³
+³                                      ³to stop). All the     ³
+³                                      ³signal exceptions     ³
+³                                      ³(Ctrl+Break, Ctrl+C,  ³
+³                                      ³and                   ³
+³                                      ³XCPT_SIGNAL_KILLPROC) ³
+³                                      ³come under this       ³
+³                                      ³exception.            ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+
+<P><HR>
+
+<A HREF="811_L2_AboutExceptionManage.html">[Back: About Exception Management]</A> <BR>
+<A HREF="813_L3_SignalExceptions.html">[Next: Signal Exceptions]</A> 
+</BODY>
+</HTML>

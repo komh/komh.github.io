@@ -1,0 +1,166 @@
+<HTML>
+<HEAD>
+<TITLE>Virtual COM Device Driver</TITLE>
+</HEAD>
+<BODY>
+<H1>Virtual COM Device Driver</H1><!-- entering slot 175 -->
+<P>
+The virtual COM device driver VCOM.SYS provides virtual support for the
+serial communication I/O ports and for the serial channel-related CBIOS
+entry points.  It provides support in each VDM for up to two communication
+channels on the IBM PC AT and compatible systems, and up to four on the
+IBM PS/2 Model 80 and compatible PS/2 systems.
+<P>
+VCOM only supports access to communication channels which are physically
+present on a given system.  It does not include support for accessing communication
+devices which may be redirected by network software.  For each supported
+port, VCOM searches for the port's base address in the CBIOS data area.
+ If the address is zero, indicating that the device is not present or is
+owned by a physical device driver other than the COM.SYS device driver,
+VCOM does not attempt to support that serial device.
+<P>
+If the port's base address is found, VCOM verifies that the physical device
+driver has installed itself for that serial device.  If the physical device
+driver indicates it is not installed for that port, VCOM does not attempt
+to support that serial device.
+<P>
+Many DOS applications that support asynchronous communications include hardware
+interrupt handler routines.  These routines typically perform I/O directly
+to the COM port hardware. To support these DOS applications and to allow
+them to run in both background and foreground, VCOM simulates hardware interrupts
+in the task-time context of the V86 mode process. VDMs are scheduled and
+dispatched using the same preemptive task dispatching method that drives
+OS/2 processes.  Hardware interrupts on the other hand, occur asynchronously
+to this scheduling process.  By simulating hardware interrupts and presenting
+a virtual hardware state, the interrupt handling logic of the DOS application
+does not execute on the physical interrupt thread.  This means that switching
+to V86 mode is not done at interrupt time, but is deferred until the scheduler
+dispatches the VDM task.
+<P>
+The advantage of simulated interrupts is that mode switching and hardware
+virtualization need not be done at interrupt time.  In addition, the DOS
+application does not gain control at interrupt time, which helps to maintain
+system integrity.  A potential disadvantage of this approach is that DOS
+applications with time-critical routines may not operate correctly under
+some system load configurations.
+<P>
+<B>Port/Channel Contention</B>
+<P>
+After VDM creation, the CBIOS data area provides a logical link between
+the virtual communication channels in the VDM and the physical serial channel
+hardware.  Since VCOM does not support a COM port if its address is not
+in the CBIOS area, it can handle its own errors and/or terminate in its
+usual fashion if the DOS application does not find the device address.
+<P>
+If the CBIOS area indicates that the device is present, however, VCOM determines
+if the device is already in use in another VDM when the DOS application
+makes its first access to that device.  If so, VCOM does not attempt to
+send the OPEN command to the physical device driver.  Instead, VCOM will
+issue a pop-up message that informs the user of the resource contention
+and allows for a user-selected action.  As a result of the user action,
+the conflict is resolved or the VDM may be terminated.
+<P>
+If the port is not already in use, VCOM calls the physical device driver
+with the OPEN command.  This command will succeed provided the port is not
+currently in use by a protected mode process.
+<P>
+Once the device is opened, VCOM communicates directly with the physical
+device driver to perform all virtual hardware operations.  These include
+sending and receiving data, detection and simulation of hardware interrupts,
+and<!-- entering slot 176 --> setting or querying the status and control
+registers.
+<P>
+<B>CBIOS Access</B>
+<P>
+VCOM also supports access to CBIOS COM port services through software interrupt
+14h.  Rather than allowing the CBIOS to perform the functions by accessing
+the virtual I/O ports directly, VCOM emulates CBIOS functions. The CBIOS
+access emulation supports six functions:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B>Initialize</B>
+<P>
+The initialize function establishes the communication speed and framing
+options for the channel, and returns the modem and line status.  To specify
+bit rates of greater than 9600 bits per second, the<I> extended initialize
+</I>function must be used.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B>Extended Initialize</B>
+<P>
+The extended initialize function, like the initialize function, establishes
+the communication speed and framing options for the channel and returns
+the modem and line status.  This function is used if a bit rate of 19,200
+bits per second (or greater) is desired,  or if<I> space</I> or<I> mark
+</I>parity selection is desired.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B>Send Character</B>
+<P>
+The send character function sends a character to the communication channel.
+<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B>Receive Character</B>
+<P>
+The receive character function waits for a character from the communication
+channel and returns the character.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B>Read Status</B>
+<P>
+The read status function returns the modem and line status.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B>Extended Port Control</B>
+<P>
+The extended port control function sets or reads the modem control register.
+<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+DOS applications running in VDMs may access these functions using the standard
+INT 14h service, in a manner identical to that used in a native DOS environment.
+
+<P>
+<B>Virtual Interrupt Indication</B>
+<P>
+The DOS application must properly enable interrupts and the specific interrupt
+type before the interrupt will be simulated to the VDM.  The following INS8250
+interrupt types are virtualized by VCOM:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Line Status Interrupt<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Receive Data Available Interrupt<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Transmitter Holding Register Empty Interrupt<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Modem Status Interrupt.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+When the physical device driver notifies VCOM of an interrupt, VCOM passes
+a virtual interrupt to the Virtual Programmable Interrupt Controller, which
+in turn simulates the interrupt to the VDM.
+<P>
+To maintain high performance on the physical serial channel, the COM physical
+device driver typically does not notify the VCOM on every interrupt.  Rather,
+VCOM receives notification of certain events, and determines whether to
+begin or continue simulating interrupts to the VDM.
+<P>
+<B>Coexistence with Other Serial Device Drivers</B>
+<P>
+Since there is always the potential for other device drivers to own a serial
+port, VCOM does not assume ownership of any devices for which the physical
+COM device driver has not been installed.  For example, a serial mouse device
+driver may be installed and may own the COM1 serial port.  The COM physical
+device driver will not install for this port, and VCOM will therefore support
+only the higher numbered serial ports (if installed).
+<P>
+If a physical device driver installs itself and zeros the COM port base
+addresses in the CBIOS data area, VCOM does not attempt to initialize for
+that COM port and will not assume any responsibility to virtualize the serial
+device hardware for that port.  This may result in problems for certain
+DOS applications which rely on the CBIOS data area in order to access multiple
+serial ports.
+
+<P><HR>
+
+<A HREF="162_L3_VirtualTimerDeviceDr.html">[Back: Virtual Timer Device Driver]</A> <BR>
+<A HREF="164_L3_VDPMIDeviceDriver.html">[Next: VDPMI Device Driver]</A> 
+</BODY>
+</HTML>

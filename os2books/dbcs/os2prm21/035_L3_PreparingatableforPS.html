@@ -1,0 +1,335 @@
+<HTML>
+<HEAD>
+<TITLE>Preparing a table for PS/55 DBCS printers</TITLE>
+</HEAD>
+<BODY>
+<H1>Preparing a table for PS/55 DBCS printers</H1><!-- entering slot 40 -->
+<P>
+If you associate a printer device context with a presentation space, there
+is no difference between SBCS OS/2 and DBCS OS/2. However, if you create
+a data stream for printers by yourself, you need to handle differences among
+printer devices.
+<PRE>旼컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴커
+쿟able-driven approach is needed to absorb differences of printer      �
+쿬ontrol codes between the IBM Proprinter and the IBM PS/55 printer.   �
+읕컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴켸
+</PRE>
+
+<P>
+The PS/55 printer connected to PS/55 is a DBCS-capable printer. Control
+codes for the PS/55 printer are different from those for the Proprinter.
+To support both printers, an application program should take table-driven
+approach to generate a printer data stream. This approach allows an application
+program to create a printout using full capability of a DBCS printer. e.g.
+changing a font style and a size of a print header, and printing grid lines.
+
+<P>
+Our sample program shown in Table-driven print (source: PRTDLG.H) has two
+tables; one for the Proprinter, and the other for the PS/55 5575 printer.
+If the current code page is of DBCS countries, the program refers to a table
+for the 5575 printer.  If not, it refers to a table for the Proprinter.
+
+<BR>
+Table-driven print (source: PRTDLG.H)
+<BR>
+
+<PRE>...
+/* Printer type definitions */
+#define PROPRINTER 0
+#define IBM5575    1
+
+/* Structure for control codes and escape sequences */
+typedef struct _SEQ {
+   SHORT len;
+   CHAR *str;
+} SEQ;
+
+/* Structure for control code sets for supported printers */
+typedef struct _CCODE {
+   USHORT ptype;
+   SEQ init;
+   SEQ bs;
+   SEQ lf;
+   SEQ cr;
+   SEQ ulon;
+   SEQ uloff;
+   SEQ dwon;
+   SEQ dwoff;
+   SEQ emon;
+   SEQ emoff;
+   SEQ boxl;
+   SEQ boxm;
+   SEQ boxr;
+} CCODE;
+
+/* Number of printers currently supported */
+#define MAX_SUPPORTED_PRINTERS 2
+
+/* Specification of control codes for supported printers */
+CCODE ccode[MAX_SUPPORTED_PRINTERS] =
+{{
+      PROPRINTER,          // Control codes for Proprinter
+      { 4,  "\x12\x1b\x41\x0c"},           // Initialization
+      { 1,  "\x08"},                       // Back Space
+      { 1,  "\x0a"},                       // Line Feed
+      { 1,  "\x0d"},                       // Carriage Return
+      { 3,  "\x1b\x2d\x01"},               // Underlining On
+      { 3,  "\x1b\x2d\x02"},               // Underlining Off
+      { 1,  "\x0e"},                       // Double Width On
+      { 1,  "\x14"},                       // Double Width Off
+      { 2,  "\x1b\x45"},                   // Emphasize On
+      { 2,  "\x1b\x46"},                   // Emphasize Off
+      { 60, "\x1b\x5b\x67\x37\x00\x0b"
+            "\xFF\xFF\xFF\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"}, // Box Left
+      { 60, "\x1b\x5b\x67\x37\x00\x0b"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"}, // Box Middle
+      { 60, "\x1b\x5b\x67\x37\x00\x0b"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\xff\xff\xff"}  // Box Right
+ },
+ {
+      IBM5575,             // Control Codes for 5575
+      { 12, "\x1b\x7e\x02\x00\x01\x32"
+            "\x1b\x7e\x03\x00\x01\x3c"},             // Initialization
+      { 1,  "\x08"},                                 // Back Space
+      { 1,  "\x0a"},                                 // Line Feed
+      { 1,  "\x0d"},                                 // Carriage Return
+      { 6,  "\x1b\x7e\x11\x00\x01\x01"},             // Underlining On
+      { 6,  "\x1b\x7e\x11\x00\x01\x00"},             // Underlining Off
+      { 8,  "\x1b\x7e\x20\x00\x03\x20\x10\x02"},     // Double Width On
+      { 8,  "\x1b\x7e\x20\x00\x03\x10\x10\x02"},     // Double Width Off
+      { 6,  "\x1b\x7e\x0e\x00\x01\x17"},             // Emphasize On
+      { 6,  "\x1b\x7e\x0e\x00\x01\x18"},             // Emphasize Off
+      { 59, "\x1b\x25\x31\x00\x12"
+            "\xFF\xFF\xFF\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"}, // Box Left
+      { 59, "\x1b\x25\x31\x00\x12"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"}, // Box Middle
+      { 59, "\x1b\x25\x31\x00\x12"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\x80\x00\x01"
+            "\x80\x00\x01\x80\x00\x01\xff\xff\xff"}  // Box Right
+}};
+
+/* Constant definitions for drawtext() */
+#define RIGHT  0x0001
+#define CENTER 0x0002
+#define LEFT   0x0004
+#define BOX    <!-- entering slot 41 -->0x0010
+#define DOUBLE 0x0020
+#define EMPH   0x0040
+#define UNDER  0x0080
+#define CR     0x0100
+#define CRLF   0x0200
+
+/* Prototype declaration for high level functions */
+BOOL   check_date(CHAR *, CHAR *, CHAR *);
+VOID   print_report(VOID);
+VOID   draw_text(UCHAR *, USHORT, USHORT);
+
+/* Prototype declaration for low level printing functions */
+USHORT init_prn(VOID);   // Initialize printer
+VOID   end_prn(VOID);    // Close printer
+VOID   bs(VOID);         // Send "bs" cotrol code sequence to printer
+VOID   lf(VOID);         // Send "lf" cotrol code sequence to printer
+VOID   cr(VOID);         // Send "cr" cotrol code sequence to printer
+VOID   ulon(VOID);       // Send "ulon" cotrol code sequence to printer
+VOID   uloff(VOID);      // Send "uloff" cotrol code sequence to printer
+VOID   dwon(VOID);       // Send "dwon" cotrol code sequence to printer
+VOID   dwoff(VOID);      // Send "dwoff" cotrol code sequence to printer
+VOID   emon(VOID);       // Send "emon" cotrol code sequence to printer
+VOID   emoff(VOID);      // Send "emoff" cotrol code sequence to printer
+VOID   boxl(VOID);       // Send "boxl" cotrol code sequence to printer
+VOID   boxm(VOID);       // Send "boxm" cotrol code sequence to printer
+VOID   boxr(VOID);       // Send "boxr" cotrol code sequence to printer
+</PRE>
+
+<BR>
+Table-driven print (source: PRTDLG.C)
+<BR>
+
+<PRE>...
+/**********************************************************************/
+/*   Initialize a printer and load the control code set of the        */
+/*   specified printer                                                */
+/**********************************************************************/
+USHORT init_prn()
+{
+   SHORT   i;
+   USHORT  prn_selected;
+
+   /*--- Check if the current code page is a combined one ----*/
+   if (flDbcsCp == DBCS_CP) {
+      prn_selected = IBM5575;
+   } else {
+      prn_selected = PROPRINTER;
+   }
+
+   /*--- Load the control set --------------------------------*/
+   while (TRUE) {
+      if (prn_selected == ccode[cPrn].ptype) {
+         break;
+      }
+      if (++cPrn == MAX_SUPPORTED_PRINTERS) {
+         return PRINTER_NOT_SUPPORTED;
+      }
+   }
+
+   /*--- Open the printer device file ------------------------*/
+   printer = fopen("PRN", "wb");
+
+   /*- Send a control code for initialization to the printer -*/
+   for (i = 0; i &lt; ccode[cPrn].init.len; ++i) {
+      fputc(ccode[cPrn].init.str[i], printer);
+   }
+   return 0;
+}
+
+/*--- Close the printer device file ----------------------------------*/
+VOID end_prn()
+{
+   fclose(printer);
+}
+
+/*--- Send a control code for back space to the printer --------------*/
+VOID bs()
+{
+   SHORT i;
+
+   for (i = 0; i &lt; ccode[cPrn].bs.len; ++i)
+      fputc(ccode[cPrn].bs.str[i], printer);
+}
+
+/*--- Send a control code for line feed to the printer ---------------*/
+VOID lf()
+{
+   SHORT i;
+
+   for (i = 0; i &lt; ccode[cPrn].lf.len; ++i)
+      fputc(ccode[cPrn].lf.str[i], printer);
+}
+
+/*--- Send a control code for carriage return to the printer ---------*/
+VOID cr()
+{
+   SHORT i;
+
+   for (i = 0; i &lt; ccode[cPrn].cr.len; ++i)
+      fputc(ccode[cPrn].cr.str[i], printer);
+}
+
+/*--- Send a control code for underlining-on to the printer ----------*/
+VOID ulon()
+{
+   SHORT i;
+
+   for (i = 0; i &lt; ccode[cPrn].ulon.len; ++i)
+      fputc(ccode[cPrn].ulon.str[i], printer);
+}
+
+/*--- Send a control code for underlining-off to the printer ---------*/
+VOID uloff()
+{
+   SHORT i;
+
+   for (i = 0; i &lt; ccode[cPrn].uloff.len; ++i)
+      fputc(ccode[cPrn].uloff.str[i], printer);
+}
+
+/*--- Send a control code for double-width-on to the printer ---------*/
+VOID dwon()
+{
+   SHORT i;
+
+   for (i = 0; i &lt; ccode[cPrn].dwon.len; ++i)
+      fputc(ccode[cPrn].dwon.str[i], printer);
+}
+
+/*--- Send a control code for double-width-off to the printer --------*/
+VOID dwoff()
+{
+   SHORT i;
+
+   for (i = 0; i &lt; ccode[cPrn].dwoff.len; ++i)
+      fputc(ccode[cPrn].dwoff.str[i], printer);
+}
+
+/*--- Send a control code for emphasize-on to the printer ------------*/
+VOID emon()
+{
+   SHORT i;
+
+   for (i = 0; i &lt; ccode[cPrn].emon.len; ++i)
+      fputc(ccode[cPrn].emon.str[i], printer);
+}
+
+/*--- Send a control code for emphasize-off to the printer -----------*/
+VOID emoff()
+{
+   SHORT i;
+
+   for (i = 0; i &lt; ccode[cPrn].emoff.len; ++i)
+      fputc(ccode[cPrn].emoff.str[i], printer);
+}
+
+/*--- Send a control code for box-left to the printer ----------------*/
+VOID boxl()
+{
+   SHORT i;
+
+   for (i = 0; i &lt; ccode[cPrn].boxl.len; ++i)
+      fputc(ccode[cPrn].boxl.str[i], printer);
+}
+
+/*--- Send a control code for box-middle to the printer --------------*/
+VOID boxm()
+{
+   SHORT i;
+
+   for (i = 0; i &lt; ccode[cPrn].boxm.len; ++i)
+      fputc(ccode[cPrn].boxm.str[i], printer);
+}
+/*--- Send a control code for box-right to the printer ---------------*/
+VOID boxr()
+{
+   SHORT i;
+
+   for (i = 0; i &lt; ccode[cPrn].boxr.len; ++i)
+      fputc(ccode[cPrn].boxr.str[i], printer);
+}
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="034_L3_UsingFontDialogcontr.html">[Back: Using Font Dialog control]</A> <BR>
+<A HREF="036_L2_PreparingMRIMachineR.html">[Next: Preparing MRI (Machine Readable Information)]</A> 
+</BODY>
+</HTML>

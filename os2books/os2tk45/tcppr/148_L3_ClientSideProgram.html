@@ -1,0 +1,163 @@
+<HTML>
+<HEAD>
+<TITLE>Client Side Program</TITLE>
+</HEAD>
+<BODY>
+<H1>Client Side Program</H1><!-- entering slot 156 -->
+<P>
+The following is an example of the lowest layer of RPC on the client side
+program:
+<PRE>#define RMTPROGNUM  (u_long)0x3fffffffL
+#define RMTPROGVER  (u_long)0x1L
+#define STRINGPROC  (u_long)2
+
+#include &lt;stdio.h&gt;
+#include &lt;rpc\rpc.h&gt;
+#include &lt;sys\socket.h&gt;
+#include &lt;netdb.h&gt;
+
+main(argc, argv)
+int argc;
+char *argv[ ];
+{
+   struct hostent *hp;
+   struct timeval pertry_timeout, total_timeout;
+   struct sockaddr_in server_addr;
+   int sock = RPC_ANYSOCK;
+   static char buf[100], *strc_in= "Hello", *strc_out=buf;
+   char *parrc_in, *parrc_out;
+   register CLIENT *clnt;
+   enum clnt_stat cs;
+...
+   /* get the Internet address of RPC server host */
+   if ((hp = gethostbyname("RPCSERVER_HOST")) == NULL)
+    {
+     fprintf(stderr,"Can't get address for %s\n","RPCSERVER_HOST");
+     exit (-1);
+    }
+
+   pertry_timeout.tv_sec = 3;
+   pertry_timeout.tv_usec = 0;
+
+   /* set sockaddr_in structure */
+   bcopy(hp-&gt;h_addr, (caddr_t)&amp;server_addr.sin_addr.s_addr,
+                              hp-&gt;h_length);
+   server_addr.sin_family = AF_INET;
+   server_addr.sin_port = 0;
+
+   /* create clnt TCP handle */
+   if ((clnt = clnttcp_create(&amp;server_addr, RMTPROGNUM, RMTPROGVER,
+                             &amp;sock, 1024*10, 1024*10)) == NULL)
+    {
+     clnt_pcreateerror("clnttcp_create fail"); /* Why failed ? */
+     exit(-1);
+    }
+
+/*
+ *  create clnt UDP handle
+ *  if ((clnt = clntudp_create(&amp;server_addr, RMTPROGNUM, RMTPROGVER,
+ *                             pertry_timeout, &amp;sock)) == NULL)
+ *   {
+ *     clnt_pcreateerror("clntudp_create fail");
+ *     exit(-1);
+ *   }
+ */
+   total_timeout.tv_sec = 10;
+   total_timeout.tv_usec = 0;
+...
+
+   /*call the remote procedure STRINGPROC associated with */
+   /*client handle (clnt) */
+   cs=clnt_call(clnt, STRINGPROC,xdr_wrapstring,
+   (char *)&amp;strc_in[j],
+                    xdr_wrapstring, (char *)&amp;strc_out,total_timeout);
+         if (cs != RPC_SUCCESS)
+               printf("*Error* clnt_call fail :\n");
+
+   clnt_destroy(clnt);  /* deallocate any memory associated  */
+                        /* with clnt handle                  */
+...
+}
+</PRE>
+
+<P>
+The following steps describe the lowest layer of RPC on the client side
+program:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 5 -->Determine the internet address of the RPC server
+host.
+<P>
+Use the gethostbyname() call to determine the internet address of the host,
+which is running the RPC server. Initialize the socaddr_in structure, found
+in the &lt;NETINET\IN.H&gt; header file.
+<P>
+If you are not familiar with socket calls, see <A HREF="011_L1_SocketsGeneralProgra.html">Sockets
+General Programming Information</A>.<!-- lm: 0x2 1 -->
+<P>
+ <LI><LI><!-- lm: 0x2 5 -->Use the client RPC handle.
+<P>
+The clnttcp_create() and clntudp_create() calls create TCP and UDP client
+RPC handles (CLIENT), respectively. The CLIENT structure is defined in the
+&lt;RPC\CLNT.H&gt; header file.
+<P>
+There are six parameters for the clnttcp_create() call:<!-- lm: 0x2 7 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 10 -->Server address<!-- lm: 0x2 7 -->
+<BR>
+<LI><!-- lm: 0x2 10 -->Program number<!-- lm: 0x2 7 -->
+<BR>
+<LI><!-- lm: 0x2 10 -->Version number<!-- lm: 0x2 7 -->
+<BR>
+<LI><!-- lm: 0x2 10 -->Pointer to a valid socket descriptor<!-- lm: 0x2 7 -->
+<BR>
+<LI><!-- lm: 0x2 10 -->Send buffer size<!-- lm: 0x2 7 -->
+<BR>
+<LI><!-- lm: 0x2 10 -->Receive buffer size<!-- lm: 0x2 5 --> 
+</UL> Use
+the same parameters for the clntudp_create() call, except for the send and
+receive buffer size. Instead, specify a timeout value (between tries).<!-- lm: 0x2 1 -->
+</UL>
+3.<!-- lm: 0x2 5 -->
+<UL>Call the remote procedure.
+<P>
+The low-level version of the callrpc() call is the clnt_call(), which has
+seven parameters:<!-- lm: 0x2 7 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 10 -->CLIENT pointer<!-- lm: 0x2 7 -->
+<BR>
+<LI><!-- lm: 0x2 10 -->Remote procedure number (STRINGPROC)<!-- lm: 0x2 7 -->
+<BR>
+<LI><!-- lm: 0x2 10 -->XDR call for serializing the argument<!-- lm: 0x2 7 -->
+<BR>
+<LI><!-- lm: 0x2 10 -->Pointer to the argument<!-- lm: 0x2 7 -->
+<BR>
+<LI><!-- lm: 0x2 10 -->XDR call for deserializing the return value from
+the RPC server<!-- lm: 0x2 7 -->
+<BR>
+<LI><!-- lm: 0x2 10 -->Pointer to where the return value is to be placed
+<!-- lm: 0x2 7 -->
+<BR>
+<LI><!-- lm: 0x2 10 -->Total time in seconds to wait for a reply<!-- lm: 0x2 5 -->
+
+</UL>For UDP transport, the number of tries is the clnt_call() timeout
+divided by the clntudp_create() timeout.
+<P>
+The return code RPC_SUCCESS indicates a successful call; otherwise, an error
+has occurred.<!-- entering slot 157 --> You find the RPC error code in the
+&lt;RPC\CLNT.H&gt; header file.
+<P>
+The clnt_destroy() call always deallocates the space associated with the
+client handle. If the RPC library opened the socket associated with the
+client handle, the clnt_destroy() call closes it. If you open the socket,
+it stays open.<!-- lm: 0x2 0 -->
+</UL>
+
+<P><HR>
+
+<A HREF="147_L3_ServerSideProgram.html">[Back: Server Side Program]</A> <BR>
+<A HREF="149_L2_rpcgenCommand.html">[Next: rpcgen Command]</A> 
+</BODY>
+</HTML>

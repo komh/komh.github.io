@@ -1,0 +1,76 @@
+<HTML>
+<HEAD>
+<TITLE>MDI (Multiple-Document Interface)</TITLE>
+</HEAD>
+<BODY>
+<H1>MDI (Multiple-Document Interface)</H1><!-- entering slot 73 -->
+<P>
+In a multiple-document interface application (that accepts DBCS text input),
+the DBCS keyboard shift status area should be included only in the primary
+window.  To make child windows without the DBCS keyboard shift status area
+and share it with the parent window, the following are required:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Create the parent window with<B> FCF_DBE_APPSTAT</B> frame
+control flag.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Create the child windows without<B> FCF_DBE_APPSTAT
+</B>frame control flag.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Issue<B> WinDBCSIMEControl</B> call with<B> DBE_IMCTL_INHERIT_PFRAME
+</B>flag for each child window (that accepts DBCS text input) to have the
+system maintain the DBCS input method status (enable, disable, enter or
+exit) of the child together with its parent.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Issue<B> WinDBCSModeControl</B> call with<B> DBE_MCTL_INHERIT_PFRAME
+</B>flag for each child window (that accepts DBCS text input) to have the
+system maintain the the NLS shift status (country specific keyboard shift
+status) of the child together with its parent.<!-- lm: 0x2 1 -->
+</UL>The next code fragment is a sample.
+<PRE> IMEMODE IMEMode; ULONG usMode;
+ ...
+ /* create the parent window with FCF_DBE_APPSTAT flag */
+ hwndFrame = WinCreateStdWindow(
+     HWND_DESKTOP,
+     ... ,
+     FCF_DBE_APPSTAT | ... , /* with DBCS keyboard shift status area */
+     ...
+     hwndTop,
+ );
+ ...
+ /* create the child windows without FCF_DBE_APPSTAT flag */
+ hwndChildFrame = WinCreateStdWindow(
+     hwndTop,
+     ... ,
+     ... , /* without DBCS keyboard shift status area */
+     ...
+     ...
+ );
+ ...
+ /* issue WinDBCSIMEControl call with DBE_IMCTL_INHERIT_PFRAME flag */
+ IMEMode.lenIMEMODE = sizeof(IMEMode);
+ IMEMode.fIMEMode = DBE_IMCTL_INHERIT_PFRAME;
+ WinDBCSIMEControl(hAB, hwndChildFrame, DBE_IMCTL_SET, &amp;IMEMode);
+ ...
+ /* issue WinDBCSModeControl call with DBE_MCTL_INHERIT_PFRAME flag */
+ usMode = DBE_MCTL_INHERIT_PFRAME;
+ WinDBCSModeControl(hAB, hwndChildFrame, DBE_MCTL_SET,
+                    DBE_MCTL_INPUTMODEREQUEST, &amp;usMode);
+ ...
+</PRE>
+
+<P>
+The other capability of<B> WinDBCSIMEControl</B> call are to set or query
+the status (enabled, disabled, on or off) of the DBCS input method. The
+other capability of<B> WinDBCSModeControl</B> call is to set or query the
+NLS shift status.  These usages are not explained in this book since usually
+these controls are done by keyboard operation rather than your program.
+ The two calls are DBCS OS/2 unique calls and require special considerations
+to use; see <A HREF="208_L2_SingleModule.html">Single Module</A>.
+
+<P><HR>
+
+<A HREF="067_L5_WC_DBE_APPSTAT.html">[Back: WC_DBE_APPSTAT]</A> <BR>
+<A HREF="069_L4_OnTheSpotConversioni.html">[Next: On-The-Spot Conversion in DBCS PM]</A> 
+</BODY>
+</HTML>

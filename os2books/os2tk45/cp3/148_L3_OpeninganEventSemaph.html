@@ -1,0 +1,70 @@
+<HTML>
+<HEAD>
+<TITLE>Opening an Event Semaphore</TITLE>
+</HEAD>
+<BODY>
+<H1>Opening an Event Semaphore</H1><!-- entering slot 156 -->
+<P>
+When a process creates an event semaphore, all of the threads that belong
+to the process have immediate access to the semaphore.
+<P>
+Threads in other processes must open the semaphore by calling<A><!-- external link: 1D A0 C3 40 --> DosOpenEventSem
+</A>before they can use the semaphore in any other event semaphore function.
+
+<P>
+The following code fragment shows how processes can open an event semaphore
+that was created in a different process and then wait for the event to be
+posted:
+<PRE>    #define INCL_DOSSEMAPHORES   /* Semaphore values */
+    #include &lt;os2.h&gt;
+
+    HEV hevEventHandle = 0;                 /* Must be 0 because we are opening */
+                                            /* the semaphore by name            */
+
+    DosOpenEventSem("\\sem32\\wrtevent", &amp;hevEventHandle);
+
+    DosWaitEventSem(hevEventHandle,
+                    SEM_INDEFINITE_WAIT);   /* Waits until event is posted      */
+        .
+        .    /* Read from file when event is posted. */
+        .
+</PRE>
+
+<P>
+Applications can open an event semaphore by name or by handle. If the name
+is used to open the semaphore, as in the code fragment above, the handle
+parameter must be 0. If the handle is used to open the semaphore, the name
+parameter must be NULL.
+<P>
+Access to semaphores is on a per-process basis. Therefore, a semaphore that
+has been opened by one thread in a process is open to all other threads
+in that process as well.
+<P>
+<A><!-- external link: 1D A0 C3 40 -->DosOpenEventSem</A> merely provides
+access to an event semaphore. In order to wait for an event semaphore to
+be posted, a thread must call<A><!-- external link: 1D 0B C4 FC --> DosWaitEventSem</A>.
+In order to post or reset an open event semaphore, a thread uses<A><!-- external link: 1D A9 C3 41 --> DosPostEventSem
+</A>or<A><!-- external link: 1D DD C3 42 --> DosResetEventSem</A> respectively.
+
+<P>
+When a process no longer requires access to an event semaphore, it closes
+the semaphore by calling<A><!-- external link: 1D 66 C3 FC --> DosCloseEventSem</A>.
+If a process ends without closing an open semaphore, the semaphore is closed
+by OS/2.
+<P>
+Each call to<A><!-- external link: 1D A0 C3 40 --> DosOpenEventSem</A> increments
+the usage count of the semaphore. This count is initialized to 1 when the
+semaphore is created and is decremented by each call to<A><!-- external link: 1D 66 C3 FC --> DosCloseEventSem</A>.
+When the usage count reaches 0, the semaphore is deleted by OS/2.
+<P>
+Calls to<A><!-- external link: 1D A0 C3 40 --> DosOpenEventSem</A> and<A><!-- external link: 1D 66 C3 3F --> DosCloseEventSem
+</A>can be nested, but the usage count for a semaphore cannot exceed 65535.
+If an attempt is made to exceed this number, ERROR_TOO_MANY_OPENS is returned.
+
+
+<P><HR>
+
+<A HREF="147_L3_CreatinganEventSemap.html">[Back: Creating an Event Semaphore]</A> <BR>
+<A HREF="149_L3_ClosinganEventSemaph.html">[Next: Closing an Event Semaphore]</A> 
+</BODY>
+</HTML>

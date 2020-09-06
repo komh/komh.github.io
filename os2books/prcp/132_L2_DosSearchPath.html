@@ -1,0 +1,164 @@
+<HTML>
+<HEAD>
+<TITLE>DosSearchPath</TITLE>
+</HEAD>
+<BODY>
+<H1>DosSearchPath</H1><!-- entering slot 162 -->Bindings:  <A HREF="307_L2H_DosSearchPath.html">C</A>,
+<A HREF="482_L2H_DosSearchPath.html">MASM</A>
+<BR>
+
+<P>
+This call provides a general path search mechanism that allows applications
+to find files residing along paths.  The path string may come from the process
+environment, or be supplied directly by the caller.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+DosSearchPath<!-- lm: 0x2 19 -->
+<UL> (Control, PathRef, FileName, ResultBuffer,
+ResultBufferLen)<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+<B>Control</B> (USHORT) - input<!-- lm: 0x11 4 -->
+<UL> A word bit vector
+that controls the behavior of DosSearchPath.<!-- lm: 0x2 4 -->
+<P>
+Bit<!-- lm: 0x2 14 -->
+<UL> Description<!-- lm: 0x2 4 -->
+</UL> 15-3<!-- lm: 0x2 14 -->
+<UL> Reserved
+bits, must be zero.<!-- lm: 0x2 4 -->
+</UL> 2<!-- lm: 0x2 14 -->
+<UL> Ignore
+network errors bit. The Ignore Network Errors Bit controls whether the search
+will abort if it encounters a network error or will continue the search
+with the next element.  This allows one to place network paths in the PATH
+variable and be able to find executables in components of the PATH variable
+even if the network returns an error, for example, if a server is down.
+ If the Ignore Network Errors Bit = 0, DosSearchPath will abort the search
+if it encounters an error from the network.  If the Ignore Network Errors
+Bit = 1, DosSearchPath will continue on the search if it encounters network
+errors.<!-- lm: 0x2 4 -->
+</UL> 1<!-- lm: 0x2 14 -->
+<UL> Path source bit.
+ The path source bit determines how DosSearchPath interprets the PathRef
+argument.
+<P>
+0 = The PathRef points to the actual search path. The search path string
+may be anywhere in the calling process's address space.  Therefore, it may
+be in the environment, but is not required.
+<P>
+1 = The PathRef points to the name of an environment variable in the process
+environment, and that environment variable contains the search path.<!-- lm: 0x2 4 -->
+</UL> 0
+<!-- lm: 0x2 14 -->
+<UL>Implied current bit. The implied current bit controls
+whether the current directory is implicitly on the front of the search path.
+
+<P>
+0 = DosSearchPath only searches the current directory if it appears in the
+search path.
+<P>
+1 = DosSearchPath searches the current working directory before it searches
+the directories in the search path.
+<P>
+For example, implied current bit = 0 and path = ".\;a;b" is equivalent to
+implied current bit = 1 and path = "a;b".<!-- lm: 0x2 1 -->
+</UL><B> PathRef
+</B>(PSZ) - input<!-- lm: 0x11 4 -->
+<UL> Address of the path. If the path
+source bit of control = 0, PathRef is the search path that may be anywhere
+in the caller's address space.
+<P>
+A search path consists of a sequence of paths separated by a semicolon (;).
+ It is a single ASCIIZ string.  The directories are searched in the order
+they appear in the path.
+<P>
+If the path source bit of control = 1, PathRef is the name of an environment
+variable, that contains the search path.
+<P>
+A search path consists of a sequence of paths separated by ";". It is a
+single ASCIIZ string.  The directories are searched in the order they appear
+in the path.  Paths that contain ";"s should be quoted.  For example:
+<PRE>"c:&amp;this  is  ;  one directory path";thisisanother</PRE>
+
+<P>
+Environment variable names are simply strings that match name strings in
+the environment.  The equal (=) sign is not part of the name.<!-- lm: 0x2 1 -->
+</UL><B> FileName
+</B>(PSZ) - input<!-- lm: 0x11 4 -->
+<UL> Address of the ASCIIZ file name.
+It may contain global file name characters.  If FileName does contain global
+file name characters, they remain in the result path returned in ResultBuffer.
+ This allows applications like CMD.EXE to feed the output directly to <A HREF="040_L2_DosFindFirst.html">DosFindFirst</A>.
+ If there are no global file name characters in FileName, the resulting
+path returned in ResultBuffer is a full qualified name, and may be passed
+directly to <A HREF="091_L2_DosOpen.html">DosOpen</A>, or any other system
+call.<!-- lm: 0x2 1 -->
+</UL><B> ResultBuffer</B> (PBYTE) - output<!-- lm: 0x11 4 -->
+<UL> Address
+of the pathname of the file, if found. If FileName is found in one of the
+directories along the path, its full pathname is returned in ResultBuffer
+(with global file name characters from FileName left in place.) Do not depend
+on the contents of ResultBuffer being meaningful if DosSearchPath returns
+a non-zero return code.<!-- lm: 0x2 1 -->
+</UL><B> ResultBufferLen</B> (USHORT)
+- input<!-- lm: 0x11 4 -->
+<UL> Length, in bytes, of the ResultBuffer.<!-- lm: 0x2 1 -->
+</UL><B> rc
+</B>(USHORT) - return<!-- lm: 0x11 4 -->
+<UL> Return code descriptions are:
+<!-- lm: 0x2 4 -->
+<P>
+<LI><!-- lm: 0x2 14 -->NO_ERROR<!-- lm: 0x2 4 -->
+<BR>
+<LI><!-- lm: 0x2 14 -->ERROR_INVALID_FUNCTION<!-- lm: 0x2 4 -->
+<BR>
+<LI><!-- lm: 0x2 14 -->ERROR_FILE_NOT_FOUND<!-- lm: 0x2 4 -->
+<BR>
+87<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_PARAMETER<!-- lm: 0x2 4 -->
+</UL>111<!-- lm: 0x2 14 -->
+<UL> ERROR_BUFFER_OVERFLOW<!-- lm: 0x2 4 -->
+</UL>203<!-- lm: 0x2 14 -->
+<UL> ERROR_ENVVAR_NOT_FOUND<!-- lm: 0x2 1 -->
+</UL><B>Remarks</B>
+<P>
+PathRef always points to an ASCIIZ string. Let DPATH be an environment variable
+in the environment segment of the process.
+<PRE>"DPATH=c:\sysdir;c:\init"  /* in the environment */
+</PRE>
+
+<P>
+The following two code fragments are equivalent:
+<PRE>DosScanEnv("DPATH", &amp;PathRef);
+DosSearchPath(0, /* Path Source Bit = 0 */
+    PathRef, "myprog<!-- entering slot 163 -->.ini", &amp;ResultBuffer, ResultBufLen);
+
+DosSearchPath(2, /* Path Source Bit = 1 */
+    "DPATH", "myprog.ini", &amp;ResultBuffer, ResultBufLen);
+</PRE>
+
+<P>
+They both use the search path stored as DPATH in the environment segment.
+ In the first case, the application uses <A HREF="131_L2_DosScanEnv.html">DosScanEnv
+</A>to find the variable: in the second case DosSearchPath calls <A HREF="131_L2_DosScanEnv.html">DosScanEnv
+</A>for the application.
+<P>
+DosSearchPath does not check for consistency or formatting on the names.
+ It does a <A HREF="040_L2_DosFindFirst.html">DosFindFirst</A> on a series
+of names it constructs from PathRef and FileName.
+<P>
+To determine the size of the returned path name, the ResultBuffer must be
+scanned for the ASCIIZ terminator.
+<P>
+<A HREF="120_L2_DosQSysInfo.html">DosQSysInfo</A> must be used by an application
+to determine the maximum path length supported by OS/2.  The returned value
+should be used to dynamically allocate buffers that are to be used to store
+paths.
+
+<P><HR>
+
+<A HREF="131_L2_DosScanEnv.html">[Back: DosScanEnv]</A> <BR>
+<A HREF="133_L2_DosSelectDisk.html">[Next: DosSelectDisk]</A> 
+</BODY>
+</HTML>

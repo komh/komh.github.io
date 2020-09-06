@@ -1,0 +1,202 @@
+<HTML>
+<HEAD>
+<TITLE>Example 3-Overriding an Inherited Method</TITLE>
+</HEAD>
+<BODY>
+<H1>Example 3-Overriding an Inherited Method</H1><!-- entering slot 29 -->
+<P>
+An important aspect of OOP programming is the ability of a subclass to replace
+an inherited method implementation with a new implementation especially
+appropriate to its instances.  This is called<I> overriding llo"q.</I>  a
+method.  Sometimes, a class may introduce methods that every descendant
+class is expected to override.  For example,<B> SOMobject  ves</B>  introduces
+the<B> somPrintSelf</B> method, and a good SOM programmer will generally
+override this method when implementing a new class.
+<P>
+The purpose of<B> somPrintSelf</B> is to print a brief description of an
+object.  The method can be useful when debugging an application that deals
+with a number of objects of the same class -assuming the class designer
+has overridden<B> somPrintSelf</B> with a message that is useful in distinguishing
+different objects of the class.  For example, the implementation of<B> somPrintSelf
+</B>provided by<B> SOMobjects</B> simply prints the class of the object
+and its address in memory. <B> SOMclass</B> overrides this method so that,
+when<B> somPrintSelf</B> is invoked on a class object, the name of the class
+will print.
+<P>
+This example illustrates how<B> somPrintSelf</B> might be overridden for
+the "Hello" class.  An important identifying characteristic of "Hello" objects
+is the message they hold; thus, the following steps illustrate how<B> somPrintSelf
+</B>could be overridden in "Hello" to provide this information.<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Modify the interface declaration in "hello.idl."
+
+<P>
+To override the<B> somPrintSelf</B> method in "Hello", additionalinformation
+must be provided in "hello.idl" in the form of an<B> implementation</B> statement,
+which gives extra information about the class, its methods and attributes,
+and any instance variables.  (The previous examples omitted the optional
+"implementation" statement, because it was not needed.)
+<P>
+In the current example, the "implementation" statement introduces the<I> modifiers
+</I> for the "Hello" class, as follows.
+<PRE>   #include &lt;somobj.idl&gt;
+
+   interface Hello : SOMObject
+   {
+     void sayHello();
+
+     attribute string msg;
+
+     #ifdef __SOMIDL__
+     <B>implementation</B>
+     {
+             //# Method Modifiers:
+             <B>somPrintSelf: override;</B>
+             // Override the inherited implementation of somPrintSelf.
+     };
+     #endif
+
+     };
+</PRE>
+
+<P>
+Here, "somPrintSelf:" introduces a list of<I> modifiers</I>  for the (inherited)
+<B>somPrintSelf</B> method in the class "Hello".  Modifiers are like C/C
+++ #pragma commands and give specific implementation details to the compiler.
+This example uses only one modifier, "override." Because of the "override"
+modifier, when<B> somPrintSelf</B> is invoked on an instance of class "Hello",
+Hello's implementation of<B> somPrintSelf</B> (in the implementation file)
+will be called, instead of the implementation inherited from the parent
+class,<B> SOMObject</B>.
+<P>
+The "#ifdef__SOMIDL__" and "#endif" are standard C and C++ preprocessor
+commands that cause the "implementation" statement to be read only when
+using the SOM IDL compiler (and not some other IDL compiler).<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Re-run the SOM Compiler on the updated .idl file,
+as before.  The SOM Compiler extends the existing implementation file from
+Example 2 to include new stub procedures as needed (in this case, for<B> somPrintSelf</B>).
+Below is a shortened version of the C language implementation file as updated
+by the SOM Compiler; C++ implementation files are similarly revised.  Notice
+that the code previously added to the "sayHello" method is not disturbed
+when the SOM Compiler updates the implementation file.
+<PRE>   #include &lt;hello.ih&gt;
+
+   SOM_Scope void   SOMLINK sayHello(Hello somSelf, Environment  *ev)
+   {
+       /* HelloData *somThis = HelloGetData(somSelf); */
+       HelloMethodDebug("Hello","sayHello");
+
+       printf("%s\n", __<!-- entering slot 30 -->get_msg(somSelf, ev));
+   }
+
+   SOM_Scope void   SOMLINK  <B>somPrintSelf(Hello somSelf)</B>
+   {
+       HelloData *somThis = HelloGetData(somSelf);
+       HelloMethodDebug("hello","somPrintSelf");
+
+         Hello_parent_SOMObject_somPrintSelf(somSelf);
+   }
+</PRE>
+
+<P>
+Note that the SOM Compiler added code allowing the "Hello" class to redefine
+<B>somPrintSelf</B>.  The SOM Compiler provides a default implementation
+for overriding the<B> somPrintSelf</B> method.  This default implementation
+simply calls the "parent method" [the procedure that the parent class of
+"Hello" (<B>SOMObject</B>) uses to implement the<B> somPrintSelf</B> method].
+This parent method call is accomplished by the macro<B> Hello_parent_SOMObject_somPrintSelf
+</B>defined in "hello.ih."
+<P>
+Notice that the stub procedure for overriding the<B> somPrintSelf</B> method
+does not include an Environment parameter. This is because<B> somPrintSelf
+</B>is introduced by<B> SOMObject</B>, which does not include the Environment
+parameter in any of its methods (to ensure backward compatibility). The
+signature for a method cannot change after it has been introduced.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Customize the implementation.
+<P>
+Within the new<B> somPrintSelf</B> method procedure, display a brief description
+of the object, appropriate to "Hello" objects.  Note that the parent method
+call is not needed, so it has been deleted.  Also, direct access to instance
+data introduced by the "Hello" class is not required, so the assignment
+to "somThis" has been commented out (see the first line of the procedure).
+
+<PRE>   SOM_Scope void   SOMLINK somPrintSelf(Hello somSelf)
+   {
+       HelloData *somThis = HelloGetData(somSelf);
+       HelloMethodDebug("Hello","somPrintSelf");
+
+<B>     somPrintf("--a %s object at location %x with msg:s\n",
+                   _somGetClassName(somSelf),
+                   somSelf,
+                   __get_msg(somSelf,0));
+</B>   }
+</PRE>
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Update the client program to illustrate the change
+(also notice the new message text):
+<P>
+For C programmers:
+<PRE>   #include &lt;hello.h&gt;
+
+   int main(int argc, char *argv[])
+   {
+       Hello obj;
+       Environment *ev = somGetGlobalEnvironment();
+
+       obj = HelloNew();
+
+       /* Set the msg text */
+       __set_msg(obj, ev, <B>"Hi There");</B>
+
+       /* Execute the "somPrintSelf" method */
+  <B>     _somPrintSelf(obj);</B>
+
+            _somFree(obj);
+            return (0);
+   }
+</PRE>
+
+<P>
+For C++ programmers:
+<PRE>   #include &lt;hello.xh&gt;
+
+   int main(int argc, char *argv[])
+   {
+       Hello *obj;
+       Environment *ev = somGetGlobalEnvironment();
+
+       obj = new Hello;
+
+       /* Set the msg text */
+       __setmsg(obj, ev, <B>"Hi There");</B>
+
+      /* Execute the "somPrintSelf" method */<B>
+         obj-&gt;somPrintSelf();</B>
+
+       obj-&gt;somFree();
+       return (0);
+   }
+</PRE>
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Compile and link the client program, as before.
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Execute the client program, which now outputs
+the message:
+<PRE>   &gt; hello
+    -- a Hello object at location 20062838 with msg: Hi There
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="021_L3_Attributesvsinstance.html">[Back: Attributes vs instance variables]</A> <BR>
+<A HREF="023_L3_Example4Initializing.html">[Next: Example 4 - Initializing a SOM Object]</A> 
+</BODY>
+</HTML>

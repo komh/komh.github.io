@@ -1,0 +1,98 @@
+<HTML>
+<HEAD>
+<TITLE>Adding and Removing Class Items to a Pop-Up Menu</TITLE>
+</HEAD>
+<BODY>
+<H1>Adding and Removing Class Items to a Pop-Up Menu</H1><!-- entering slot 224 -->
+<P>
+New items are added to the pop-up menu inherited from an object's ancestors
+by overriding the object's wpModifyPopupMenu and calling wpInsertPopupMenuItems.
+For example, to add<B> New item</B> to MyObject's pop-up menu, the new menu
+item is defined in a resource file in the same manner as menus are defined
+in PM programs. An ID is assigned to the new menu and to the menu item,
+as shown in the following sample code:
+<PRE>#define ID_MOREITEMS  WPMENUID_USER+1
+#define ID_NEWITEMS   WPMENUID_USER+2
+
+MENU ID_MOREITEMS LOADONCALL MOVEABLE DISCARDABLE
+  BEGIN
+    MENUITEM "New Item", ID_NEWITEMS
+  END
+
+</PRE>
+
+<P>
+Menu items can also be deleted by overriding wpModifyPopupMenu and by sending
+the MM_DELETEITEM message to the menu.
+<P>
+User defined menu items must be greater than 0x6500. IDs for class-specific
+menus and menu items have a value greater than WPMENUID_USER, so they do
+not conflict with IDs for menus and menu items defined by the Workplace
+Shell classes, as shown in the following sample code:
+<PRE>/* Add a new item to MyObject's pop-up menu */
+SOM_Scope BOOL32 SOMLINK MyObject_wpModifyPopupMenu
+  (MyObject *somSelf,HWND hwndMenu, HWND hwndCnr, ULONG ulPosition)
+
+/* Remove an item from MyObject's pop-up menu */
+WinSendMsg(hwndMenu,
+           MM_DELETEITEM,
+           MPFROM2SHORT(MY_ITEMID,FALSE),
+           NULL);
+
+{
+  /* Insert new items in MyObject's primary menu */
+  _wpInsertPopupMenuItemsA(somSelf,
+                           hwndMenu,
+                           ulPosition,
+                           hmod,
+                           ID_MOREITEMS,
+                           WPMENUID_PRIMARY);
+
+  /* Add the items inherited from MyObject's parent */
+  return (parent_wpModifyPopupMenu(somSelf,
+                                   hwndMenu,
+                                   hwndCnr,
+                                   ulPosition));
+}
+
+</PRE>
+
+<P>
+The wpInsertPopupMenuItems method requires:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->A handle to the module where the menu resource is
+defined<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The ID for the menu resource<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The ID for the menu where the item is being inserted.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+In the above sample code, ID_MOREITEMS is the ID for the menu resource that
+defines the new menu item being added to the object's primary pop-up menu.
+WPMENUID_PRIMARY is the ID for the object's primary pop-up menu, where<B> New
+item</B> is being inserted.
+<P>
+An item can be added to a pop-up submenu or conditional cascaded menu by
+specifying the ID for the conditional cascaded menu on the call to wpInsertPopupMenuItems.
+For example, to add<B> New item</B> to the<B> Open</B> conditional cascaded
+menu, the call to wpInsertPopupMenuItems is modified as shown in the following
+sample code:
+<PRE>/* Insert new items in MyObject's Open submenu */_wpInsertPopupMenuItemsA(somSelf,
+                         hwndMenu,
+                         ulPosition,
+                         hmod,
+                         ID_MOREITEMS,
+                         WPMENUID_OPEN);
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="207_L3_AddingandRemovingSta.html">[Back: Adding and Removing Standard Pop-Up Menu Items]</A> <BR>
+<A HREF="209_L3_AddingConditionalCas.html">[Next: Adding Conditional Cascaded Menus to a Pop-Up Menu]</A> 
+</BODY>
+</HTML>

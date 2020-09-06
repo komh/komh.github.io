@@ -1,0 +1,159 @@
+<HTML>
+<HEAD>
+<TITLE>TSF Using 32-bit Addressing</TITLE>
+</HEAD>
+<BODY>
+<H1>TSF Using 32-bit Addressing</H1><!-- entering slot 616 -->
+<PRE>
+;  Trace source file for the NEW dynalink.  Compiled with 32-bit offsets.
+
+     MODNAME=NEWCALLS.DLL
+     MAJOR=241
+     MAXDATALEN=200
+;  We will want to trace up to 200 bytes in any one trace call.
+
+     TYPELIST NAME=API,ID=08,
+              NAME=SYS,ID=04,
+              NAME=PRE,ID=02,
+              NAME=POST,ID=64
+
+     GROUPLIST NAME=MEM,ID=1,
+               NAME=FS,ID=3
+
+              /* The following tracepoint does not need debug info,
+                 only a MAP file is necessary with label NewAllocSeg
+                 public in it.  The program must be compiled in 32-bit
+                 mode because flat addressing is used (ASCIIZ32 instead
+                 of ASCIIZ).
+                 This logs lower word of EAX, the double word of EBX
+                 and the string at the address specified by ESP with
+                 offset ESI. */
+
+     TRACE    MINOR=45, TP=.NewAllocSeg,
+              TYPE=(API,PRE),
+              GROUP=MEM,
+              DESC="(NEW) NewAllocSeg Pre-Invocation",
+              FMT ="                             AX = %W ",
+              FMT ="                             EBX = %F",
+              FMT ="                             param = %P%S",
+              REGS=(AX,EBX),
+              ASCIIZ32=(FESP+ESI,DIRECT,20)
+
+              /* This defines a tracepoint at Foo label.  The ten words
+                 to log are found indirectly by using EBP with offset
+                 EDI. Note that each value logged needs a format control. */
+
+      TRACE   MINOR=0xD0, TP=.Foo,
+              TYPE=(SYS),
+              GROUP=FS,
+              DESC="(NEW) Foo Pre-Invocation",
+              FMT="                     First Five words = %P%W%W%W%W%W",
+              FMT="                     Three words ignored %I6",
+              FMT="                     Last Two Words = %W%W",
+              MEM32=(FEBP+EDI,INDIRECT,20)
+
+
+              /* This defines a tracepoint at Goo label. EAX + EDI points
+                 to a structure whose second field is a pointer to an
+                 ASCIIZ string.  The offset from the first field in the
+                 structure is 4 bytes. Max string size to log is 40 bytes.*/
+
+      TRACE   MINOR=0xD1, TP=.Goo,
+              TYPE=(SYS),
+              GROUP=FS,
+              DESC="(NEW) Goo Pre-Invocation",
+              FMT="           Second field in struct points to %P%S",
+              ASCIIZ32=(FEAX+EDI+4,INDIRECT,40)
+
+
+              /* This defines a tracepoint at Hoo label.  EBP + EDI points
+                 to memory that contains a pointer to a structure. We want
+                 to log the third field in the structure (offset 6 from
+                 begin of structure). */
+
+      TRACE   MINOR=0xD2, TP=.Hoo,
+              TYPE=(SYS),
+              GROUP=FS,
+              DESC="(NEW) Hoo Pre-Invocation",
+              FMT="           Third field in struct is doubleword = %P%D",
+              MEM32=(FEBP+EDI,INDIRECT*+6,4)
+
+
+              /* This defines a tracepoint at Zoo label.  EAX + EDI points
+                 to memory that contains a pointer to end of a structure. We
+                 want to log the last field in the structure (offset -2 from
+                 end of structure). */
+
+      TRACE   MINOR=0xD3, TP=.Zoo,
+              TYPE=(SYS),
+              GROUP=FS,
+              DESC="(OS) Zoo Pre-Invocation",
+              FMT="          Last field in struct is word = %P%W",
+              MEM=(FEAX+EDI,INDIRECT*-2,2)
+
+
+              /* This defines a tracepoint at procedure CheckIT.  This is
+                 a C routine compiled with debug information.  The
+                 data to log is an ASCIIZ string called NameIt. */
+
+      TRACE   MINOR=0xD3, TP=.CheckIt,
+              TYPE=(PRE),
+              GROUP=FS,
+              DESC="(NEW) CheckIt Pre-Invocation",
+              FMT="              NameIt = %P%S",
+              ASCIIZ32=(.NameIt,DIRECT,64)
+
+
+              /* This defines a tracepoint at the return point of the
+                 procedure CheckIt, a C routine compiled with debug.
+                 Status_Rec is a record variable. We want to log the
+                 age field (four bytes from the begin of Status_Rec)
+                 the name (six bytes from Status_Rec that points to
+                 an ASCIIZ string) and the age of the next Status_Rec
+                 (a pointer to the next Status_Rec is ten bytes from
+                 the begin of Status_Rec, the age is four bytes from
+                 the begin of the next Status_Rec). */
+
+      TRACE   MINOR=0x80D3, TP=.CheckIt,RETEP,
+              TYPE=(POST),
+              GROUP=FS,
+              DESC="(NEW) CheckIt Post-Invocation",
+              FMT="              Status_Rec.age = %P%W",
+              FMT="              Status_Rec.name = %P%S",
+              FMT="              Status_Rec.next-&gt;age = %P%W",
+              MEM32=(.Status_Rec+4,DIRECT,2),
+              ASCIIZ32=(.Status_Rec+6,INDIRECT,64),
+              MEM32=(.Status_Rec+10,INDIRECT*+4,2)
+
+
+              /* This does not define a tracepoint, it only defines a
+                 trace formatting string for minor code 223 (DF hex). */
+
+      TRACE   MINOR=0xDF, TP=@STATIC,
+              DESC="(NEW) StaticProcedure Pre-Invocation",
+              FMT="                 DI = %W FLAGS = %W"
+
+
+              /* This defines a tracepoint at routine LookUp, but no
+                 data is to be logged, only the DESC will show up
+                 in the Trace log when the tracepoint is formatted.
+                 LookUp is a C language routine not compiled with
+                 debug and not declared with <!-- entering slot 617 -->Pascal
+                 calling conventions; the underscore is needed for
+                 this label. */
+
+      TRACE   MINOR=0xE0, TP=._LookUp,
+              TYPE=(SYS),
+              GROUP=FS,
+              DESC="(NEW) LookUp  Pre-Invocation"
+
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="433_L3_TSFUsing16bitSegment.html">[Back: TSF Using 16-bit Segmented Addressing]</A> <BR>
+<A HREF="435_L3_TSFUsingMixof16bitan.html">[Next: TSF Using Mix of 16-bit and 32-bit Addressing]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,81 @@
+<HTML>
+<HEAD>
+<TITLE>Key Design Points</TITLE>
+</HEAD>
+<BODY>
+<H1>Key Design Points</H1><!-- entering slot 9 -->
+<P>
+Key Design Points
+<BR>
+
+<BR>
+<I>Input Method Manager API functions</I>
+<P>
+OS/2 Input Method (IM) interface, called IMI, provides the same level of
+functionality as that of Windows95.  In this sense, the role of Open32 NLS
+Extension is to translate Windows95's IMM API calls to OS/2's IMI API calls.
+ However, there's several platform specific differences.  In particular,
+the difference of timing of IM related messages and kinds of those messages
+leads Open32 NLS Extension to become such a state machine that keeps track
+of Windows95's Input Method behavior.
+<BR>
+<I>Restrictions Using 16Bit IME</I>
+<P>
+OS/2 supports two kinds of IME (Input Method Editor); the traditional 16bit
+IME and the new 32bit IME.  The latter, 32bit IME provides the same or more
+functionality compared with Windows95.  However, the 16bit IME does not.
+
+<P>
+There would be several restrictions when the 16bit IME is chosen by the
+user or by an application program.  As of this writing, the Input Method
+for INTEL, Programming Functional Specifications does not clearly state
+such restrictions.  So, we cannot describe restrictions for Open32 application
+programs when 16bit IME is used.
+<BR>
+<I>IMM Context Mapping</I>
+<P>
+WIN32 IMM Context (IMC) is mapped to OS/2 IM Instance (IMI).  On WIN32 platform,
+each thread is associated with an IMC.  On the other hand, on OS/2, IMI
+can be associated with either a frame or a queue in a thread.  Therefore,
+at thread creation time, Open32 NLS Extension calls the<I> ImSetMsgQueueProperty
+</I>to switch the mode from frame-basis to thread-basis in order to emulate
+the WIN32 behavior.  (Open32 creates a message queue for each Open32 application
+thread.)
+<BR>
+<I>Keyboard Layout related API functions</I>
+<P>
+Most of all Keyboard Layout related API functions are supported by Open32
+NLS Extension. Open32 NLS Extension internally maps HKL (Keyboard Layout
+Handle) value to an associated OS/2 IME.  The messages WM_INPUTLANGCHANGEREQUEST
+and WM_IMPUTLANGCHANGE are supported. A HKL on Open32 NLS environment depends
+on code page because IM32 API depends on PM queue code page which can be
+changed by WinSetCp PM function, so the base language which is obtained
+from default codepage is only supported.
+<BR>
+<I>HKL</I>
+<P>
+The HKL of Win95 is translated to OS/2 IME IME ID  using Open32 NLS Extension
+internal table which is created from the result of ImQueryIMEList of OS/2.
+The LangID part in HKL is created from a code pgae, and the KeyboardID part
+in HKL is created sequentialy. If a IM32-IME does not exist in OS/2 environmet,
+the KeyboardID is set to zero.
+<P>
+A Open32 application can not assume the value of HKL. If the application
+will use the HKL, the value of the HKL will have to be gotten by using GetKeyboardLayout/GetKeyboardLayoutList.
+
+<P>
+Due to the current OS/2 restriction, available languages in HKL returned
+from GetKeyboardLayoutList API is limited only to one language, which is
+specified in the keyboard 'DEVINFO=' statement in the CONFIG.SYS file.
+<P>
+
+<P>
+The HKL-IME ID table must be updated in all functions which use HKL of WIn95,
+because an OS/2 IME may be installed without re-booting.
+
+<P><HR>
+
+<A HREF="007_L2_Overview.html">[Back: Overview]</A> <BR>
+<A HREF="009_L2_FunctionalDescriptio.html">[Next: Functional Description by API or Message]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,74 @@
+<HTML>
+<HEAD>
+<TITLE>Dragging Over a Window</TITLE>
+</HEAD>
+<BODY>
+<H1>Dragging Over a Window</H1><!-- entering slot 331 -->
+<P>
+While the dragitem is being dragged, Presentation Manager sends a succession
+of DM_DRAGOVER messages to the Presentation Manager window under the mouse
+pointer; one message is sent for every mouse movement. The DM_DRAGOVER message
+informs the target window that it is being dragged over, and allows it to
+access sufficient information to allow the window to decide whether it is
+able to accept a drop operation.  The window procedure indicates this to
+Presentation Manager by the value that it returns in response to the DM_DRAGOVER
+message.
+<P>
+The information required by the window is contained in two data structures;
+the DRAGINFO structure, which is referenced by one of the parameters in
+the DM_DRAGOVER message, and the DRAGITEM structure, which can be accessed
+from the DRAGINFO structure.  Since multiple items may be dragged at the
+same time, the DRAGINFO structure contains an array of pointers to DRAGITEM
+structures, one for each dragitem.  The DRAGINFO structure maintains a count
+of the number of dragitems.
+<P>
+When a potential target is a Workplace Shell object, the Workplace Shell
+notifies the object that a dragitem is being dragged over it, by invoking
+the object's<I> _wpDragOver</I> method. The DRAGINFO structure is passed
+to the object as a parameter to this method.  Processing of the<I> _wpDragOver
+</I>method is very similar to that described below for Presentation Manager
+window procedures.  In normal circumstances, however, the<I> _wpDragOver
+</I>method is not overridden by an object class; the default processing
+supplied by the parent class is allowed to occur unless the object class
+supports private rendering mechanisms that must be explicitly checked against
+those supported by the dragitem.
+<P>
+An example of the way in which a window procedure may process the DM_DRAGOVER
+message is shown in <A HREF="071_L2_HandlingtheDM_DRAGOV.html">Figure "Handling
+the DM_DRAGOVER Message"</A>.
+<P>
+The code shown in <A HREF="071_L2_HandlingtheDM_DRAGOV.html">Figure "Handling
+the DM_DRAGOVER Message"</A> is quite simple; the processing of the DM_DRAGOVER
+message is intended only to determine whether a drop operation is valid
+for the specified dragitem and the target window.  First, access is gained
+to the DRAGINFO structure, which is referenced by the first parameter to
+the DM_DRGOVER message.  The DRAGINFO structure is then used to access the
+DRAGITEM structure, by means of the<B> DrgQueryDragitemPtr()</B> function.
+The window procedure then has access to all the information needed to determine
+the validity of a drop operation.
+<P>
+In this particular case, the only type of dragitem that is acceptable to
+the target window is one that represents a customer object, using the specially
+defined DRM_SHAREMEM rendering mechanism.  The window procedure therefore
+uses the<B> DrgVerifyRMF()</B> function to check whether the dragitem supports
+this rendering mechanism and the data type required by it.
+<P>
+According to the result returned by the<B> DrgVerifyRMF()</B> function,
+the window procedure returns either DOR_DROP, indicating that a drop is
+acceptable, or DOR_NEVERDROP, indicating that a drop is not acceptable and
+that there is no point in sending any more DM_DRAGOVER messages to this
+window.  A number of other valid returns are possible for the DM_DRAGOVER
+message; these are documented in the<I> IBM OS/2 Version 2.0 Presentation
+Manager Reference</I>.  Irrespective of the return code, the DRAGINFO structure
+is released.
+<P>
+If a window returns any return code other than DOR_DROP to this message,
+the icon seen by the user is automatically modified to show that a drop
+is not allowed, thereby providing instant visual feedback.
+
+<P><HR>
+
+<A HREF="299_L3_InitiatingaDragOpera.html">[Back: Initiating a Drag Operation]</A> <BR>
+<A HREF="301_L3_DroppinganObject.html">[Next: Dropping an Object]</A> 
+</BODY>
+</HTML>

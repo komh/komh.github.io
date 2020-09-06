@@ -1,0 +1,74 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosSetPathInfo - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosSetPathInfo - Example Code</H1><!-- entering slot 1729 -->
+<P>
+This example creates a directory named "HIDEME", makes it hidden, and finally
+deletes it.
+<PRE>#define INCL_DOSFILEMGR   /* File Manager values */
+#define INCL_DOSERRORS    /* DOS Error values    */
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+int main(VOID) {
+   UCHAR       achNewDir[256]  = "\\HIDEME";           /* Directory name    */
+   FILESTATUS3 fsts3PathInfo   = {{0}};                /* Directory info    */
+   ULONG       ulBufferSize    = sizeof(FILESTATUS3);  /* Buffer size       */
+   APIRET      rc              = NO_ERROR;             /* Return code       */
+
+   rc = DosCreateDir(achNewDir, (PEAOP2) NULL);        /* Create directory
+                                                          with no EAs       */
+   if (rc != NO_ERROR) {
+      printf("DosCreateDir error: return code = %u\n", rc);
+      return 1;
+   } else {
+      printf("Directory %s created.\n",achNewDir);
+   }
+
+   rc = DosQueryPathInfo(achNewDir, FIL_STANDARD,
+                        &amp;fsts3PathInfo, ulBufferSize); /* Get standard info */
+   if (rc != NO_ERROR) {
+      printf("DosQueryPathInfo error: return code = %u\n", rc);
+      return 1;
+   }
+
+   fsts3PathInfo.attrFile  = FILE_HIDDEN;   /* Add HIDDEN attribute to path */
+
+   rc = DosSetPathInfo(achNewDir,           /* Change directory info on     */
+                       FIL_STANDARD,        /* the disk using the buffer    */
+                       &amp;fsts3PathInfo,      /* we just updated.             */
+                       ulBufferSize,
+                       DSPI_WRTTHRU );      /* Write data before returning  */
+   if (rc != NO_ERROR) {
+       printf("DosSetPathInfo error: return code = %u\n", rc);
+       return 1;
+   } else {
+       printf("Directory %s hidden.\n",achNewDir);
+   }
+       /* Delete the hidden directory.  If this step is omitted, the directory
+          can still be manipulated by standard OS/2 commands like CHDIR and
+          RMDIR, it will just not be displayed in a DIR command without the
+          /AH display option specified.                                     */
+
+   rc = DosDeleteDir (achNewDir);
+   if (rc != NO_ERROR) {
+       printf ("DosDeleteDir error : return code = %u\n", rc);
+       return 1;
+   } else {
+       printf("Directory %s deleted.\n",achNewDir);
+   }
+
+   return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1710_L2H_DosSetPathInfoRelate.html">[Back: DosSetPathInfo - Related Functions]</A> <BR>
+<A HREF="1712_L2H_DosSetPathInfoTopics.html">[Next: DosSetPathInfo - Topics]</A> 
+</BODY>
+</HTML>

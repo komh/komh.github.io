@@ -1,0 +1,111 @@
+<HTML>
+<HEAD>
+<TITLE>DmiListGroupPragmaReq</TITLE>
+</HEAD>
+<BODY>
+<H1>DmiListGroupPragmaReq</H1><!-- entering slot 108 -->
+<P>
+This command is used to request the contents of the pragma statement in
+the requested group's definition, if one exists. On return from this call,
+the confirm buffer contains the text from the pragma statement associated
+with the group requested. iCnfCount in the command block is always set to
+1.
+<P>
+The format for the command block is: ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+<BR>
+³ Table 29. DmiListGroupPragmaReq Command Block                 ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ OFFSET     ³ SIZE      ³ TYPE      ³ VARIABLE NAME         ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 0       ³ 64       ³ STRUCT     ³ DmiMgmtCommand        ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 64       ³ 4       ³ INT      ³ iComponentId         ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 68       ³ 4       ³ INT      ³ iGroupId           ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 72       ³ 4       ³ INT      ³ iOffset            ³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+<B><!-- lm: 0x2 1 -->
+<UL>
+<P>
+Variable Name<!-- lm: 0x2 21 -->
+<UL> Variable Description</B><!-- lm: 0x2 1 -->
+</UL> DmiMgmtCommand
+<!-- lm: 0x12 21 -->
+<UL>The command block.  The value of iCommand is 0x20C.
+<!-- lm: 0x2 1 -->
+</UL>iComponentId<!-- lm: 0x12 21 -->
+<UL> The ID of
+the desired component.<!-- lm: 0x2 1 -->
+</UL> iGroupId<!-- lm: 0x12 21 -->
+<UL> The
+ID of the desired group within the component identified by iComponentId.
+<!-- lm: 0x2 1 -->
+</UL>iOffset<!-- lm: 0x12 21 -->
+<UL> The number of characters
+into the pragma where the service layer should start fetching the pragma
+string. Specify zero to start at the beginning of the pragma. On return
+from the command, the service layer updates this field with the index of
+the last character put into the confirm buffer and sets iStatus accordingly.
+If iStatus indicates that there are more characters in the string, the management
+application can re-issue the call to get more of the pragma text.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Issuing DmiListGroupPragmaReq displays an example of how to issue the DmiListGroupPragmaReq
+command to the MI. IssuingDmiListGroupPragmaReq
+<BR>
+
+<PRE>ULONG IssueLoadPragma(ULONG Comp,ULONG Group)
+{
+DMI_ListGroupPragmaReq_t      *ListPragma;
+ULONG RC;
+
+    ListPragma =
+        (DMI_ListGroupPragmaReq_t *)
+malloc(sizeof(DMI_ListGroupPragmaReq_t));
+    memset((void *)ListPragma,0,sizeof(DMI_ListGroupPragmaReq_t));
+    ListDesc-&gt;iGroupId = Group;
+    ListDesc-&gt;iComponentId = Comp;
+    ListDesc-&gt;iOffset = 0;      // start at the beginning of the
+Pragma
+    ListDesc-&gt;DmiMgmtCommand.iLevelCheck = DMI_LEVEL_CHECK;
+    ListDesc-&gt;DmiMgmtCommand.iMgmtHandle = YOUR_MGMT_HANDLE;
+    ListDesc-&gt;DmiMgmtCommand.iCmdHandle = YOUR_COMMAND_HANDLE;
+    ListDesc-&gt;DmiMgmtCommand.iCnfBufLen = 4000UL;// set size of the
+response
+    ListDesc-&gt;DmiMgmtCommand.pCnfBuf = (void *)malloc(4000UL);  //
+set rsp ptr
+    ListDesc-&gt;DmiMgmtCommand.iRequestCount = 1;
+    ListDesc-&gt;DmiMgmtCommand.iCmdLen =
+sizeof(DMI_ListGroupPragmaReq_t);
+    // set the command
+    ListDesc-&gt;DmiMgmtCommand.iCommand = DmiListGroupPragmaCmd;
+    // now we can call the service layer
+    if((RC = DmiInvoke((DMI_MgmtCommand_t *)ListPragma)) !=
+SLERR_NO_ERROR) {
+        free(ListPragma-&gt;DmiMgmtCommand.pCnfBuf);
+        free(ListPragma);
+    }
+    return RC;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="104_L3_DmiListGroupCnf.html">[Back: DmiListGroupCnf]</A> <BR>
+<A HREF="106_L3_DmiListAttributeReq.html">[Next: DmiListAttributeReq]</A> 
+</BODY>
+</HTML>

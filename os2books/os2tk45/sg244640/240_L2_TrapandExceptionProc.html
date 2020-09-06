@@ -1,0 +1,294 @@
+<HTML>
+<HEAD>
+<TITLE>Trap and Exception Processing</TITLE>
+</HEAD>
+<BODY>
+<H1>Trap and Exception Processing</H1><!-- entering slot 362 -->
+<P>
+The fine detail of exception management by OS/2 is complex. However the
+principles are easy to grasp. This section gives an overview of OS/2 Exception
+Management sufficient to provide the reader with a technique for intercepting
+exceptions in user code under the Kernel Debugger. 
+<P>
+<U><I>Exception Definition</I></U>
+<P>
+Exceptions may be summarised as follows:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Exceptions refer either to:<!-- lm: 0x2 11 -->
+<UL>
+<P>
+Hardware Traps and Faults - INTEL defined.<!-- lm: 0x2 11 -->
+<P>
+Software generated exceptions - OS/2 and User defined.<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>Each
+Hardware Exception has an associated vector, which the processor uses to
+index the <A HREF="3278_L0_.html">IDT</A> to give control to the appropriate
+system exception handler.<!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>OS/2
+Converts Traps and Faults to software exceptions.  For example, traps 0xd
+and 0xe are converted to exception 0xc0000005.<!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>Software
+exceptions are generated from three sources:<!-- lm: 0x2 7 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 11 -->Converted Hardware Traps and Faults.<!-- lm: 0x2 7 -->
+<P>
+ <LI><LI><!-- lm: 0x2 11 -->Software Signals.<!-- lm: 0x2 7 -->
+<P>
+ <LI><LI><!-- lm: 0x2 11 -->Software Exceptions from DosRaiseException.
+<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL>Exceptions
+occur for both normal and abnormal reasons. In the normal case additional
+processing is required to be executed in a manner transparent to the main
+line code. Examples of this are:<!-- lm: 0x2 11 -->
+<UL>
+<P>
+Page fault exceptions.<!-- lm: 0x2 11 -->
+<P>
+Trap 1 and 3 for system trace<!-- lm: 0x2 11 -->
+<P>
+387 Co-processor emulation<!-- lm: 0x2 11 -->
+<P>
+VDM privileged instruction emulation<!-- lm: 0x2 6 -->
+</UL> In the abnormal
+case, an error condition has been detected. If the error cannot be corrected
+then either a process or the system dies depending on whether the error
+can be isolated to a particular process.  Usually traps and faults in ring
+0 code result in system termination.  Bad parameters passed in system APIs
+may cause the kernel to trap. The system recovers by directing an exception
+0xc0000005 to a process. Unless the process can handle this exception, it
+dies.<!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>Full details of OS/2
+defined exceptions are given in <A HREF="3234_L2_OS2SystemExceptionCo.html">OS/2
+System Exception Codes.</A><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<U><I>Exception Logic</I></U>
+<P>
+The essential logic for exception handling is as follows:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->If the processor generates a hardware exception then
+control is given to the first level exception handler pointed to by the
+<A HREF="3278_L0_.html">IDT</A> descriptor that corresponds to the hardware
+exception vector.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If the <A HREF="313_L3_VExceptionTrapFaultV.html">Kernel
+Debugger Vector Commands</A> have been specified without the fatal flag
+then first level exception handlers have been replaced by the Kernel Debugger
+routines. These may give control to the debugging console or enter the normal
+system handlers if interception criteria are not satisfied.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The non-debugger first level routines perform any
+specific processing for the current exception, for example processing single
+step and breakpoint traps.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If full recovery is possible then the first level
+routines exit with an IRET instruction.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->In most cases control passes from the first level
+trap handlers to<B> TrapCommonFaultEntry</B>. This performs common processing
+for all hardware exceptions. If recovery is possible, for example by satisfying
+a page fault or making a segment present, then this is done and control
+returned to the interrupted code.
+<P>
+If recovery is not directly possible or further special processing is required
+then control passes to one of the following second level exception handlers:
+<!-- lm: 0x2 11 -->
+<UL>
+<P>
+V8086 Emulation for instruction emulation.<!-- lm: 0x2 11 -->
+<P>
+VDM Exception Handler to reflect non-fatal exceptions back to the VDM using
+its IDT.<!-- lm: 0x2 11 -->
+<P>
+Process Fatal Fault Handler (<B>_TRAPProcessFatalFault</B>) for non-kernel
+mode code (<B>InDos</B>=0).<!-- lm: 0x2 11 -->
+<P>
+Kernel Fault Handler for kernel code (<B>InDos=1)</B><!-- lm: 0x2 11 -->
+<P>
+<!-- entering slot 363 -->Special handlers for Co-processor handling, NMIs
+etc..<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>The
+Kernel Fault Handler checks for the presence of a local fault handler by
+inspecting<B> TSDpfnFault</B>. If this is non-zero then passes control to
+the local fault handler, otherwise it passes to the System Fatal Fault handler
+(<B>SystemFatalFault</B>).<!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>Ths
+System Fatal Fault handler will enter the Kernel Debugger (if in a non-RETAIL
+kernel), otherwise it will call and Device Drivers that have registered
+for notification of fatal system faults, then exit to the panic routine
+with a formatted message - usually the IPE trap screen. Once in panic the
+system will not dispatch any more threads. If TRAPDUMP or REIPL are specified
+then these are acted on otherwise the system waits to be re-booted.<!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>The
+Process Fatal Fault handler will check for fatal fault interception by the
+Kernel Debugger (<A HREF="313_L3_VExceptionTrapFaultV.html">VSF command</A>)
+and enter the kernel debugger if interception criteria are satisfied.  Otherwise
+user exception processing begins, if it is not possible to dispatch user
+exception handlers then<B> DelayHardErr</B> is called immediately to build
+the trap screen and wake the Hard Error process. Normally control passes
+to the<B> _XCPTBuildR3DispatcherStack</B>.<!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL><B>_XCPTBuildR3DispatcherStack
+</B>is entry-point for all kernel initiated exceptions to be sent to user.
+It is responsible for massaging the users stack so that when the kernel
+exits, control returns to the Exception Dispatcher (<B>Dos32R3ExceptionDispatcher
+</B>in DOSCALL1.DLL).
+<P>
+The parameters to<B> XCPTBuildR3DispatcherStack</B> are:<!-- lm: 0x2 11 -->
+<UL>
+<P>
+Trap number or 0x0000ffff for S/W generated exceptions<!-- lm: 0x2 11 --> Exception
+number<!-- lm: 0x2 11 -->
+<BR>
+Count of exception info parameters<!-- lm: 0x2 11 -->
+<BR>
+Pointer to the array of exception info parameters<!-- lm: 0x2 11 -->
+<BR>
+Boolean, if true then exception is non-contnueable.<!-- lm: 0x2 11 -->
+<BR>
+Pointer to any additional nested report record<!-- lm: 0x2 6 -->
+</UL> The
+parameters to<B> Dos32R3ExceptionDispatcher</B> are:<!-- lm: 0x2 11 -->
+<UL>
+<P>
+Trap number<!-- lm: 0x2 11 -->
+<BR>
+Pointer to the <A HREF="3195_L3_ExceptionHandlerStru.html">exception report
+record</A><!-- lm: 0x2 11 -->
+<BR>
+Pointer to the <A HREF="3195_L3_ExceptionHandlerStru.html">exception context
+record</A><!-- lm: 0x2 6 -->
+</UL> If no exception registration records
+exist for the current thread then the thread enters termination and the
+Exception Dispatcher is not called.<!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>The
+Exception Dispatcher runs the chain of exception registration records, anchored
+from the<B> TIB</B>  of the current thread.  Each registered user exception
+handler is called in turn (via an intermediate routine,<B> _xcptExecuteUserExceptionHandler</B>).
+The return code (excetion disposition) passed back by the exception handler
+is examined. If it specifies<B> XCPT_CONTINUE_EXECUTION</B> then control
+returns to the kernel via<B> Dos32ExceptionCallBack</B>, whereupon the thread's
+stack is prepared for returning to the interrupted program. If<B> XCPT_CONTINUE_SEARCH
+</B>is specified then the next exception handler in the chain is dispatched.
+When the last exception handler has been dispatched (and all have returned
+<B>XCPT_CONTINUE_SEARCH</B>) then control passes to the kernel via<B> Dos32ExceptionCallBack
+</B>and the thread is terminated.<B> XCPT_CONTINUE_STOP</B>) may be returned
+by a debugger via<B> DosDebug</B> to indicate that debugger handler the
+exception and that exception handler scheduling should be halted immediately.
+
+<P>
+The values for the various return codes are as follows:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Name                   ³Bit Mask  ³Description          ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_CONTINUE_SEARCH   ³0x00000000³Exception not handled³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_CONTINUE_EXECUTION³0xFFFFFFFF³Exception handled    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³XCPT_CONTINUE_STOP     ³0x00716668³Exception handled by ³
+³                       ³          ³debugger (via        ³
+³                       ³          ³DosDebug)            ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+The following additional return codes are<!-- entering slot 364 --> used
+by internal excfeption handlers to manage nested exceptions.
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Name           ³Bit Mask  ³Description                             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³NESTED         ³0xf0f0f0f0³An exception occurred while an exception³
+³               ³          ³was active                              ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³COLLIDED_UNWIND³0x0f0f0f0f³Indicates collided unwinds              ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³EXIT_UNWIND    ³0x65796C4B³Indicates the end of an exit unwind     ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+<!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL><B>Dos32ExeptionCallBack
+</B>is the kernel entry-point that is called after all user exception handlers
+have been called. It is passed the following parameters:<!-- lm: 0x2 11 -->
+<UL>
+<P>
+Trap number<!-- lm: 0x2 11 -->
+<BR>
+Pointer to the <A HREF="3195_L3_ExceptionHandlerStru.html">exception report
+record</A><!-- lm: 0x2 11 -->
+<BR>
+Pointer to the <A HREF="3195_L3_ExceptionHandlerStru.html">exception context
+record</A><!-- lm: 0x2 11 -->
+<BR>
+Exception disposition<!-- lm: 0x2 6 -->
+</UL> This entry-point calls<B> _xcptExceptionCallBack
+</B>which either takes the default action according to the exception disposition
+and the exception type (fatal or non-fatal). The either user's context is
+retored from the exception context record or control passes to<B> _xctDefaultAction</B>.
+The latter action usually implies proces termination but also may result
+in a process or system dump being initiated.
+<P>
+For fatal exceptions<B> _xctDefaultAction</B>. calls<B> DelayHardError</B> to
+format the trap screen information from the context record and wake the
+Hard Error process. It also writes the POPUPLOG.OS2 entry and calls the
+Kernel Debugger if the <A HREF="313_L3_VExceptionTrapFaultV.html">VSU command
+</A>has been specified.<!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>Local
+Fault Handlers are exception handlers registered by kernel routines. Typically
+one is registered on entry to the kernel by an API call, and de-registered
+on exit. If a Local Fault Handler cannot resolve the fault then it will
+call panic if a serious system fault has occurred, or<B> _XCPTBuildR3DispatcherStack
+</B>if user code is at fault, for example when a bad parameter supplied
+to an API by an application program causes the kernel to trap.<!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>Multiple
+nested Local Exception Handlers may be registered. When the system calls
+a Local Exception Handler, the current handler deregisters itself and reinstates
+the previous nested handler. This is done by restoring the previous handler
+address from the top-most <A HREF="3182_L3_LocalExceptionHandle.html">long-jump
+buffer</A> saved in<B> TSDpljmp</B> and updating<B> TSDpfnFault</B>. The
+register values saved in the long-jump buffer are restore then then fault
+handler returns to the main-line code that registered.<B> EAX</B> is set
+by the fault handler to indicate that an error occurred. When no more local
+exception handlers are registed then<B> TSDpfnFault</B>. is zeroed, thereby
+de-registering all local exception handlers. Local Exception Handlers are
+always deregistered on exiting the kernel.<!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>The
+<B>DosRaiseException</B> API is called to create a user exception. This
+passes control to<B> _xcptExceptionCallBack</B> and normal user exception
+processing follows.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+These details are summarised in the following diagrams:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+<A HREF="241_L3_ExceptionRegistratio.html">Exception Registration Records
+</A><!-- lm: 0x2 6 -->
+<P>
+<A HREF="242_L3_OS2ExceptionExceptio.html">OS/2 Exception Exception Management
+- Overview</A><!-- lm: 0x2 6 -->
+<P>
+<A HREF="243_L3_ExceptionHandlerStac.html">Exception Handler Stack Frames
+</A><!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="239_L2_KernelDebuggerBreakp.html">[Back: Kernel Debugger Breakpoints]</A> <BR>
+<A HREF="241_L3_ExceptionRegistratio.html">[Next: Exception Registration Records]</A> 
+</BODY>
+</HTML>

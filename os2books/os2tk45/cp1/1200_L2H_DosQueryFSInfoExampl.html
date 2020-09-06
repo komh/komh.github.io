@@ -1,0 +1,75 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosQueryFSInfo - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosQueryFSInfo - Example Code</H1><!-- entering slot 1216 -->
+<P>
+The first example displays the volume label associated with a particular
+drive. The second example provides allocation information for a drive from
+the file system.
+<PRE> #define INCL_DOSFILEMGR   /* File manager values  */
+ #define INCL_DOSERRORS    /* DOS error values     */
+ #include &lt;os2.h&gt;
+ #include &lt;stdio.h&gt;
+
+ int main(VOID) {
+
+ ULONG       ulDriveNumber = 0;          /* Drive number */
+ FSINFO      fsBuffer      = {0};        /* File system info buffer */
+ APIRET      rc            = NO_ERROR;   /* Return code */
+
+    ulDriveNumber = 3;          /* Specify drive C (A=1, B=2, C=3, ...) */
+
+    rc = DosQueryFSInfo(ulDriveNumber,
+                        FSIL_VOLSER,      /* Request volume information */
+                        &amp;fsBuffer,        /* Buffer for information     */
+                        sizeof(FSINFO));     /* Size of buffer          */
+
+    if (rc != NO_ERROR) {
+        printf("DosQueryFSInfo error: return code = %u\n", rc);
+        return 1;
+    } else {
+        printf("Volume label: '%s'\n", fsBuffer.vol.szVolLabel);
+    }
+    return NO_ERROR;
+  }
+</PRE>
+
+<PRE>#define INCL_DOSFILEMGR   /* File Manager values */
+#define INCL_DOSERRORS    /* DOS Error values    */
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+
+int main (VOID) {
+   FSALLOCATE fsaBuffer     = {0};         /* File system info buffer     */
+   APIRET  rc               = NO_ERROR;    /* Return code                 */
+
+   rc = DosQueryFSInfo(3L,                     /* Drive number 3 (C:)     */
+                       FSIL_ALLOC,             /* Level 1 allocation info */
+                       (PVOID)&amp;fsaBuffer,      /* Buffer                  */
+                       sizeof(FSALLOCATE));    /* Size of buffer          */
+
+   if (rc != NO_ERROR) {
+      printf("DosQueryFSInfo error: return code = %u\n", rc);
+      return 1;
+   } else {
+      printf ("%12ld bytes in each allocation unit.\n",
+               fsaBuffer.cSectorUnit * fsaBuffer.cbSector);
+             /* (Sectors per allocation unit) * (Bytes per sector) */
+      printf ("%12ld total allocation units.\n", fsaBuffer.cUnit);
+      printf ("%12ld available allocation units on disk.\n", fsaBuffer.cUnitAvail);
+   }
+   DosExit(EXIT_THREAD,fsaBuffer.cUnitAvail);  /* Return available allocation units
+                                             to the initiating process      */
+   return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1199_L2H_DosQueryFSInfoRelate.html">[Back: DosQueryFSInfo - Related Functions]</A> <BR>
+<A HREF="1201_L2H_DosQueryFSInfoTopics.html">[Next: DosQueryFSInfo - Topics]</A> 
+</BODY>
+</HTML>

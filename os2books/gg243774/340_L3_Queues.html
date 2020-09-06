@@ -1,0 +1,96 @@
+<HTML>
+<HEAD>
+<TITLE>Queues</TITLE>
+</HEAD>
+<BODY>
+<H1>Queues</H1><!-- entering slot 374 -->
+<P>
+A queue can be used to pass information between the process that created
+it and other processes in the system.  The process that creates the queue
+is known as the owner of the queue, and is the only process that can read
+ and remove elements from the queue.  Other processes may only add  elements
+to the queue.
+<P>
+In a client-server environment, a queue is typically created by the  server
+process.  If a requester wishes to receive returned data from  the server
+process, it must therefore create its own queue.  <A HREF="094_L2_InterprocessCommunic.html">Figure
+"Interprocess Communication Using Queues (Part 1)"</A> shows a requester
+process using the <B> DosCreateQueue()</B> function to create its own queue,
+as well as using a queue owned by a server process.
+<P>
+Queues may be created with a number of different ordering mechanisms.  The
+order of elements in a queue is determined when the queue is  created, and
+may be specified as FIFO, LIFO, or priority-based.  When  adding an element
+to a priority-based queue, a process must specify a  priority (from 0 to
+15 with 0 being lowest and 15 being highest) for  the element.
+<P>
+Processes other than a queue's owner may gain write access to the  queue
+using the<B> DosOpenQueue()</B> function to obtain a queue handle.  Once
+this handle is obtained, the process  may use the<B> DosWriteQueue()</B> function
+to add elements to the queue.  The example in <A HREF="094_L2_InterprocessCommunic.html">Figure
+"Interprocess Communication Using Queues (Part 1)"</A> shows  a requester
+process that passes a request to a server process using a  queue created
+by that server process.
+<P>
+The requester process first creates its own queue for returned data,  using
+the<B> DosCreateQueue()</B> function.  This queue will be  accessed by the
+server to write the returned data from the completed  request, which can
+then be read by the requester.  The example shown in <A HREF="095_L2_InterprocessCommunic.html">Figure
+"Interprocess Communication Using Queues (Part 2)"</A> creates a FIFO queue
+with the name specified in the  string constant REQQUENAME, and specifies
+that the addresses of any  elements placed in the queue by 16-bit processes
+are to be  automatically converted to 32-bit addresses by the operating
+system.  This conversion, specified using the QUE_CONVERT_ADDRESS flag,
+is used by 32-bit queue owners to avoid the need for the queue owner to
+explicitly convert addresses.
+<P>
+The requester obtains access to the server's queue using the<B> DosOpenQueue()
+</B>function, passing the queue name as a parameter.  This function returns
+both a queue handle and the process identifier of the server process that
+owns the queue.
+<P>
+The requester must allocate a shared memory object to contain the  request;
+the actual queue element contains only a pointer to that  memory object.
+The requester then invokes the <B> DosGiveSharedMem()</B> function to provide
+read-only access (by  specifying only the PAG_READ flag) to that object
+for the server  process, using the process identifier returned by the<B> DosOpenQueue()
+</B>function.
+<P>
+The requester adds its request as a element in the queue, using the<B> DosWriteQueue()
+</B>function.  Note that the second parameter to  the function is an unsigned
+long integer, which may be used to pass application-specific information.
+ The value specified in this  parameter is passed to the queue owner as
+the<I> ulData</I> field  of a REQUESTDATA structure, which is returned by
+the <B> DosReadQueue()</B> function.  In this example, the parameter is
+ used to pass the window handle of the requester's object window to the
+ server process, so that a notification message can be passed to the  requester
+when the request has been completed.
+<P>
+Once the element has been written to the queue, the requester  immediately
+relinquishes access to the server's queue by issuing a <B> DosCloseQueue()
+</B>function call.  The shared memory object allocated for the request buffer
+is  then released by the requester using the<B> DosFreeMem()</B>  function.
+
+<P>
+The server process is very similar in structure to the requester, in that
+it creates its own queue, then awaits and services requests.  The server
+process is illustrated in <A HREF="095_L2_InterprocessCommunic.html">Figure
+"Interprocess Communication Using Queues (Part 2)"</A>.
+<P>
+Note that the server process<I> does not</I> use an object window.  It simply
+accepts requests from its own queue, using the DCWW_WAIT flag  to suspend
+itself in the<B> DosReadQueue()</B> call until an  element becomes available
+in the queue.  Once a request is complete, the server places the returned
+data on the requester's queue, extracts the window handle of the requester
+from the REQUESTDATA structure  provided by the<B> DosReadQueue()</B> call,
+and posts a message to the requester indicating that the request is complete.
+This message is processed by the requester to retrieve the returned data
+from the queue. <A HREF="341_L3_Queuescontinued.html">Continue</A> on the
+next page of this chapter.
+
+<P><HR>
+
+<A HREF="339_L3_Atoms.html">[Back: Atoms]</A> <BR>
+<A HREF="341_L3_Queuescontinued.html">[Next: Queues (continued)]</A> 
+</BODY>
+</HTML>

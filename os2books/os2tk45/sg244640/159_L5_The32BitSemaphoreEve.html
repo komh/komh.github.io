@@ -1,0 +1,149 @@
+<HTML>
+<HEAD>
+<TITLE>The 32-Bit Semaphore Event and Mutex Semaphores</TITLE>
+</HEAD>
+<BODY>
+<H1>The 32-Bit Semaphore Event and Mutex Semaphores</H1><!-- entering slot 205 -->
+<P>
+Block ids for 32-bit sems point to kernel heap allocated structure with
+object mnemonic<B> semstruc</B>.
+<P>
+<B>.PB</B> under the KDB usually identifies these as<B> SEM32</B>, but DF
+doesn't.
+<P>
+<A HREF="333_L4_32BitSemaphoreStruct.html"><B>.D SEM32</B></A> will format
+a 32-bit semaphore structure.
+<P>
+There are several structures that relate to 32-bit semaphores. Each of these
+is allocated from the kernel heaps and is assigned the following meaningful
+owner id mnemonics:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+semmuxq (0xffbe)<!-- lm: 0x2 21 -->
+<UL> Semaphore Mux Queue. This records
+instances of single event or mutex semaphores being also waited on in a
+mux wait.<!-- lm: 0x2 1 -->
+</UL> semopenq (0xffbf)<!-- lm: 0x2 21 -->
+<UL> Semaphore
+Open Queue. This tracks all processes that have opened a 32-bit semaphore.
+<!-- lm: 0x2 1 -->
+</UL>semrec (0xffc0)<!-- lm: 0x2 21 -->
+<UL> SemRecord.
+This is a system copy of the user's SemRecord structure, which was created
+when a Mux wait was declared. It correlates user semaphore Ids with semaphore
+handles.<!-- lm: 0x2 1 -->
+</UL> semstr (0xffc1)<!-- lm: 0x2 21 -->
+<UL> The
+semaphore name string.<!-- lm: 0x2 1 -->
+</UL> semstruc (0xffc2)<!-- lm: 0x2 21 -->
+<UL> The
+main 32-bit structure. The address of this forms the BlockId when a thread
+waits on a 32-bit semaphore.<!-- lm: 0x2 1 -->
+</UL>Of the associated structures listed above the Open Queue and Mux Queue
+may be formatted using:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+<A HREF="333_L4_32BitSemaphoreStruct.html"><B><LI>D OPENQ</B></A><!-- lm: 0x2 6 -->
+<P>
+<A HREF="333_L4_32BitSemaphoreStruct.html"><B><LI>D MUXQ</B></A><!-- lm: 0x2 1 -->
+</UL> 
+<P>
+In this example we look at the BlockId slot 42 is waiting on.
+<PRE># .p 42 Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name 0042  000d 000a 000d 0002 blk 0200 7bd1a000 7bdfa188 7bddfe20 0ed4 11 PMSHL32
+
+# .pb42
+ Slot  Sta BlockID  Name     Type        Addr        Symbol
+ 0042  blk fe0bf91c PMSHL32
+
+&gt;&gt; check owner of blockid
+# .m %fe0bf91c
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0003 %fef1f04c 00001000 %fdf1f000 001 0002 0020 0000 0000 0003 0000      =0000
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 0003  0003 ff08  0000 ffec 0000  0000 00  06 00 00 vmkrhrw
+
+&gt;&gt; kernel swappable heap. Check current user of heap block.
+
+# dd  %fe0bf91c-10
+%fe0bf90c  ffbf000c 00010008 fe0bff20 ffc20014
+%fe0bf91c  00000011 00000000 fef1ef94 fcae5a28
+%fe0bf92c  ffbf0010 00010006 fe08f24c fe0bf92e
+%fe0bf93c  ffbf000c 00010006 fe08f7c0 ffa4000c
+%fe0bf94c  fe0567d0 00010494 ffbf000c 0001000a
+%fe0bf95c  00000000 ffa4000c fe0bf970 000104ec
+%fe0bf96c  ffa4000c fef1ef4c <!-- entering slot 206 -->000200ba ffbf000c
+%fe0bf97c  00010005 fe0bf758 ffbf000c 00010005
+
+# .mo ffc2
+ffc2 semstruc
+
+&gt;&gt; This is a 32-bit Semaphore
+
+# .d sem32 %fe0bf91c
+        Type: Shared Event
+       Flags: Reset
+       pMuxQ: 00000000
+  Post Count: 0000
+      pOpenQ: fef1ef94
+       pName: fcae5a28
+ Create Addr: ffbf0010
+
+# .d openq %fef1ef94
+
+  PID   Open Count
+  ----------------
+  000d     0001
+  000a     0001
+
+# da %fcae5a28
+%fcae5a28 WORKPLAC\LAZYWRIT.SEM
+
+&gt;&gt; For interest look for the owner of the OPENQ:
+
+# .m %fef1ef94
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0003 %fef1f04c 00001000 %fdf1f000 001 0002 0020 0000 0000 0003 0000      =0000
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 0003  0003 ff08  0000 ffec 0000  0000 00  06 00 00 vmkrhrw
+
+# dd %fef1ef94 -10
+%fef1ef84  00000000 00000000 fef10001 ffbf000c
+%fef1ef94  0001000d fe0bf958 ffc20018 00000009
+%fef1efa4  00000000 00000000 fef1ef58 fcb18478
+%fef1efb4  ffbf000c 0001000d 00000000 ffc20018
+%fef1efc4  00000009 00000000 00000000 fef1efb8
+%fef1efd4  fcb18458 ff910024 00000007 00000000
+%fef1efe4  00000000 00000000 00000000 00000000
+%fef1eff4  00000000 00000000 ffea0004 fef2a128
+# .mo ffbfffbf semopenq
+
+&gt;&gt; For interest look for the owner of the pName:
+
+# .m  %fcae5a28
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0021 %fef1f2e0 00001400 %fca5f000 121 0020 0022 0000 0020 0022 0000      =0000
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 0022  0021 0000  0225 ffef 0000  0000 00  04 00 00 vmkshrw
+# dd  %fcae5a28-10
+%fcae5a18  003f1d1a 0007004a 52000020 0000ffc1
+%fcae5a28  4b524f57 43414c50 5a414c5c 49525759
+%fcae5a38  45532e54 5412004d 520000c8 0000ff60
+%fcae5a48  005d004a 1b131b12 1b151b14 1b171b16
+%fcae5a58  1b191b18 1b1b1b1a 1b1d1b1c 1b1f1b1e
+%fcae5a68  1b211b20 1b231b22 1b251b24 1b271b26
+%fcae5a78  1b291b28 1b2b1b2a 1b2d1b2c 1b2f1b2e
+%fcae5a88  1b311b30 1b331b32 1b351b34 1b371b36
+
+# .mo ffc1
+ffc1 semstr
+</PRE>
+
+
+<P><HR>
+
+<A HREF="158_L6_TheKernelSemaphoreKS.html">[Back: The Kernel Semaphore (KSEM)]</A> <BR>
+<A HREF="160_L6_PMSEMGRESEM.html">[Next: PMSEM/GRESEM]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,155 @@
+<HTML>
+<HEAD>
+<TITLE>The RPC Intermediate Layer</TITLE>
+</HEAD>
+<BODY>
+<H1>The RPC Intermediate Layer</H1><!-- entering slot 151 -->
+<P>
+The calls of the RPC intermediate layer are:<!-- lm: 0x2 0 -->
+<P>
+<B>Routine</B><!-- lm: 0x2 20 -->
+<UL><B>Description</B><!-- lm: 0x2 0 -->
+</UL>registerrpc ( )<!-- lm: 0x2 20 -->
+<UL>RegistersaprocedurewiththelocalPortmapper<!-- lm: 0x2 0 -->
+</UL>callrpc ( )<!-- lm: 0x2 20 -->
+<UL>Callsaremoteprocedureonthespecifiedsystem<!-- lm: 0x2 0 -->
+</UL>svc _ run ( )<!-- lm: 0x2 20 -->
+<UL>AcceptsRPCrequestsandcallstheappropriateserviceusingsvc
+_ getreq ( )<!-- lm: 0x2 0 -->
+</UL>
+<P>
+The transport mechanism is the User Datagram Protocol (UDP). The UDP transport
+mechanism handles only arguments and results that are less than 8K bytes
+in length. At this level, RPC does not allow timeout specifications, choice
+of transport, or process control, in case of errors. If you need this kind
+of control, consider the lowest layer of RPC.
+<P>
+With only these three RPC calls, you can write a powerful RPC-based network
+application.  The sequence of events follows:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 5 -->Use the registerrpc() call to register your remote
+program with the local Portmapper. See <A HREF="114_L2_Portmapper.html">Portmapper
+</A>for more information. The following is an example of an RPC server:
+
+<P>
+
+<PRE>/* define remote program number and version */
+
+#define RMTPROGNUM (u_long)0x3fffffffL
+#define RMTPROGVER (u_long)0x1
+#define RMTPROCNUM (u_long)0x1
+
+#include &lt;stdio.h&gt;
+#include &lt;rpc\rpc.h&gt;
+</PRE>
+ 
+<PRE>
+main()
+{
+ int *rmtprog();
+
+ /* register remote program with Portmapper */
+ registerrpc(RMTPROGNUM, RMTPROGVER, RMTPROCNUM, rmtprog,
+ xdr_int, xdr_int);
+ /* infinite loop, waits for RPC request from client */
+ svc_run();
+ printf("Error: svc_run should never reach this point \n");
+ exit(1);
+}
+
+int *
+rmtprog(inproc)          /* remote program */
+int *inproc;
+
+{
+int *outproc;
+...
+ /* Process request */
+...
+ return (outproc);
+}
+</PRE>
+ 
+<P>
+The registerrpc() call registers a C procedure rmtprog, which corresponds
+to a given RPC procedure number.
+<P>
+The registerrpc() call has six parameters:<!-- lm: 0x2 7 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 10 -->The first three parameters are the program, version,
+and procedure numbers of the remote procedure to be registered.<!-- lm: 0x2 7 -->
+<P>
+<LI><!-- lm: 0x2 10 -->The fourth parameter, rmtprog, is the name of the
+local procedure that implements the remote procedure.<!-- lm: 0x2 7 -->
+<P>
+<LI><!-- lm: 0x2 10 -->The last two parameters, xdr_int, are the XDR filters
+for the remote procedure's arguments and results.<!-- lm: 0x2 5 --> 
+</UL> After
+registering a procedure, the RPC server goes into an infinite loop waiting
+for a client request to service.<!-- lm: 0x2 1 -->
+</UL>  2.<!-- lm: 0x2 5 -->
+<UL>The
+RPC client uses callrpc() to make a service request to the RPC server. The
+following is an example of an RPC client using the callrpc() call:
+<PRE>/* define remote program number and version */
+
+#define RMTPROGNUM (u_long)0x3fffffffL
+#define RMTPROGVER (u_long)0x1
+#define RMTPROCNUM (u_long)0x1
+
+#include &lt;stdio.h&gt;
+#include &lt;rpc\rpc.h&gt;
+
+</PRE>
+ 
+<PRE>main()
+{
+  int inproc=100, outproc, rstat;
+
+...
+
+  /* service request to host RPCSERVER_HOST */
+  if (rstat = callrpc("RPCSERVER_HOST", RMTPROGNUM,
+              RMTPROGVER, RMTPROCNUM, xdr_int, (char *)&amp;inproc,
+              xdr_int, (char *)&amp;outproc)!= 0)
+     {
+      clnt_perrno(rstat);   /* Why  callrpc() failed ? */
+      exit(1);
+     }
+...
+
+  }
+
+</PRE>
+ 
+<P>
+The callrpc() call has eight parameters:<!-- lm: 0x2 7 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 10 -->The first is the name of the remote server machine.
+<!-- lm: 0x2 7 -->
+<P>
+<LI><!-- lm: 0x2 10 -->The next three parameters are the program, version,
+and procedure numbers.<!-- lm: 0x2 7 -->
+<P>
+<LI><!-- lm: 0x2 10 -->The fifth and sixth parameters are an XDR filter,
+and an argument to be encoded and passed to the remote procedure.<!-- lm: 0x2 7 -->
+<P>
+<LI><!-- lm: 0x2 10 -->The final two parameters are a filter for decoding
+the results returned by the remote procedure, and a pointer to the place
+where the procedure's results are to be stored.<!-- lm: 0x2 5 --> 
+</UL> You
+handle multiple arguments and results by embedding them in structures. The
+callrpc() call returns 0 if it succeeds, otherwise nonzero. The exact meaning
+of the returned code is in the &lt;RPC\CLNT.H&gt; header file and is an
+enum clnt_stat structure cast into an integer.<!-- lm: 0x2 0 -->
+</UL>
+
+<P><HR>
+
+<A HREF="143_L4_DestroyinganXDRDataS.html">[Back: Destroying an XDR Data Stream]</A> <BR>
+<A HREF="145_L2_TheRPCLowestLayer.html">[Next: The RPC Lowest Layer]</A> 
+</BODY>
+</HTML>

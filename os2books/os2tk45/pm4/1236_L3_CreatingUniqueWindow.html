@@ -1,0 +1,74 @@
+<HTML>
+<HEAD>
+<TITLE>Creating Unique Window-Message Atoms</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating Unique Window-Message Atoms</H1><!-- entering slot 1256 -->
+<P>
+You must create atoms for your application-defined window messages if other
+applications are likely to recognize those messages. For example, your application
+might communicate with another application by using an agreed-upon message
+that is not defined by the system. Both applications must use the same string
+identifier for the shared message type-for example, OUR_LINK_MESSAGE. Each
+time the applications run, they add this string to the system atom table
+and receive an atom in return. Both applications register the same string
+in the system atom table, so they both receive the same atom. Then, this
+atom can be used to identify the message without conflicting with other
+system-wide message identifiers. A consequence of using atoms to identify
+a window message is that the message cannot be decoded as a C-language case
+statement, as usually done, because the value of the atom cannot be known
+until run time. Instead, you must add a default case that checks the value
+of the message against the value of the atoms you have registered. The following
+sample code fragment shows how to add an application-defined message string
+to the system atom table, then use the resultant atom to broadcast and receive
+the message:
+<PRE>#define IDM_BROADCAST 25
+
+HATOMTBL hatomtblSystem;              /* System atom table handle     */
+ATOM atomLinkMessage;                 /* Atom message                 */
+
+/* Message text */
+UCHAR szLinkMessage[] = "OUR_LINK_MESSAGE";
+
+MRESULT EXPENTRY ClientWndProc(HWND hwnd,ULONG msg,
+  MPARAM mp1,MPARAM mp2)
+{
+
+ /* At create time obtain atom for text message */
+ switch (msg)
+ {
+   case WM_CREATE:
+     hatomtblSystem  = WinQuerySystemAtomTable();
+     atomLinkMessage = WinAddAtom(hatomtblSystem, szLinkMessage);
+     return FALSE;
+
+   /* Broadcast text message */
+   case WM_COMMAND:
+     if (SHORT1FROMMP(mp1) == IDM_BROADCAST)
+     {
+         WinBroadcastMsg(HWND_DESKTOP, atomLinkMessage,
+           (MPARAM) NULL, (MPARAM) NULL,
+            BMSG_DESCENDANTS | BMSG_POSTQUEUE);
+     }
+     return FALSE;
+
+   default;
+
+     /* Check for the atom representing "OUR_LINK_MESSAGE" */
+     if (msg == atomLinkMessage) return DoOurMessage(...);
+     break;
+ }
+
+ /* Execute default window procedure */
+ return WinDefWindowProc(hwnd,msg,mp1,mp2);
+}
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1235_L2_UsingAtomTables.html">[Back: Using Atom Tables]</A> <BR>
+<A HREF="1237_L3_CreatingDDEFormatsan.html">[Next: Creating DDE Formats and a Unique Clipboard Format]</A> 
+</BODY>
+</HTML>

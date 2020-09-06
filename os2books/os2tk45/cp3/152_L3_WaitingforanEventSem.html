@@ -1,0 +1,78 @@
+<HTML>
+<HEAD>
+<TITLE>Waiting for an Event Semaphore</TITLE>
+</HEAD>
+<BODY>
+<H1>Waiting for an Event Semaphore</H1><!-- entering slot 160 -->
+<P>
+Any thread in the process that created an event semaphore can wait for the
+semaphore to be posted by calling<A><!-- external link: 1D 0B C4 FC --> DosWaitEventSem</A>.
+Threads in other processes can also call<A><!-- external link: 1D 0B C4 FC --> DosWaitEventSem</A>,
+but they must first gain access to the semaphore by calling<A><!-- external link: 1D A0 C3 FC --> DosOpenEventSem</A>.
+
+<P>
+If the semaphore is already posted when<A><!-- external link: 1D 0B C4 3F --> DosWaitEventSem
+</A>is called, the function returns immediately, and the thread continues
+to run. Otherwise, the thread is blocked until the semaphore is posted.
+
+<P>
+The following code fragment causes the calling thread to wait until the
+specified event semaphore is posted. Assume that the handle of the semaphore
+has been placed into<I><A><!-- external link: 1D 97 C4 52 --> HEV</A></I> already.
+<I>ulTimeout</I> is the number of milliseconds that the calling thread will
+wait for the event semaphore to be posted. If the specified event semaphore
+is not posted during this time interval, the request times out.
+<PRE>    #define INCL_DOSSEMAPHORES   /* Semaphore values */
+    #define INCL_DOSERRORS       /* error codes      */
+
+    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+
+    HEV     hev;        /* Event semaphore handle         */
+    ULONG   ulTimeout;  /* Number of milliseconds to wait */
+    APIRET  ulrc;       /* Return code                    */
+
+    ulTimeout = 60000;  /* Wait for a maximum of 1 minute */
+
+    ulrc = DosWaitEventSem(hev,
+                           ulTimeout);
+
+    if (ulrc == ERROR_TIMEOUT) {
+        printf("DosWaitEventSem call timed out");
+        return;
+    }
+
+    if (ulrc == ERROR_INTERRUPT) {
+        printf("DosWaitEventSem call was interrupted");
+        return;
+    }
+
+    if (ulrc != 0) {
+        printf("DosWaitEventSem error: return code = %ld",
+               ulrc);
+        return;
+    }
+
+</PRE>
+
+<P>
+If the time limit specified in<I> ulTimeout</I> is reached before the semaphore
+is posted, ERROR_TIMEOUT is returned. If the waiting period is interrupted
+for some reason before the semaphore is posted, ERROR_INTERRUPT is returned.
+If SEM_IMMEDIATE_RETURN is specified for the time limit,<A><!-- external link: 1D 0B C4 3F --> DosWaitEventSem
+</A>returns to the calling thread immediately. If SEM_INDEFINITE_WAIT is
+specified for the time limit, the thread waits indefinitely.
+<P>
+Unlike multiple event semaphores in a muxwait list, which are level-triggered,
+single event semaphores are<I> edge-triggered</I>. This means that if an
+event semaphore is posted and then reset before a waiting thread gets a
+chance to run, the semaphore is considered to be posted for the rest of
+that thread's waiting period; the thread does not have to wait for the semaphore
+to be posted again.
+
+<P><HR>
+
+<A HREF="151_L3_PostinganEventSemaph.html">[Back: Posting an Event Semaphore]</A> <BR>
+<A HREF="153_L3_QueryinganEventSemap.html">[Next: Querying an Event Semaphore]</A> 
+</BODY>
+</HTML>

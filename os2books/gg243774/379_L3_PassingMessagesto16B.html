@@ -1,0 +1,61 @@
+<HTML>
+<HEAD>
+<TITLE>Passing Messages to 16-Bit Windows</TITLE>
+</HEAD>
+<BODY>
+<H1>Passing Messages to 16-Bit Windows</H1><!-- entering slot 421 -->
+<P>
+Passing data between 16-bit and 32-bit window procedures via message parameters
+also requires consideration of the internal representations of the data
+types passed within the parameter.  For system-defined message classes,
+this is handled automatically by OS/2 Version 2.0, but for application-defined
+message classes the conversion between addressing schemes must be handled
+by the application, since the operating system has no way of determining
+the intended contents of each parameter.
+<P>
+Simple "value" parameters (such as integers, characters, etc.) may be passed
+without the need for translation.  It is recommended that message parameters
+be constructed using the standard Presentation Manager macros described
+in <A HREF="255_L3_CreatingMessageParam.html">Creating Message Parameters</A>.
+
+<P>
+When a pointer or handle is passed in a message parameter to a 16-bit window
+procedure, the pointer or handle must be translated to the 16:16 addressing
+scheme by the application.  Since the 16-bit module is unlikely to have
+been written with code to achieve this conversion, it is the responsibility
+of the 32-bit module.
+<P>
+Conversion may be achieved using the<I> _Seg16</I> keyword to explicitly
+define a 16:16 pointer or handle, which is then placed in a message parameter
+using the MPFROMP macro.  This is illustrated in <A HREF="115_L2_Passinga1616Pointera.html">Figure
+"Passing a 16:16 Pointer as a Message Parameter"</A>.
+<P>
+The resulting message parameter may then be passed to a window in a 16-bit
+module using the normal<B> WinPostMsg()</B> or<B> WinSendMsg()</B> functions,
+using a 16:16 window handle obtained in the manner shown in <A HREF="114_L2_Creatinga16bitWindow.html">Figure
+"Creating a 16-bit Window From Within a 32-bit Module"</A>.  Note that the
+data structure referenced by the pointer may not be greater than 64 KB in
+size, and must not cross a segment boundary.  This is ensured in <A HREF="115_L2_Passinga1616Pointera.html">Figure
+"Passing a 16:16 Pointer as a Message Parameter"</A> by using the <A HREF="728_L2_#pragmaseg16.html"><B><I>#pragma
+seg16</B></I></A> directive, since a structure defined using this pragma
+will automatically be aligned on a segment boundary by the C Set/2 compiler.
+
+<P>
+Note also that defining a structure with the<I> #pragma seg16</I> directive
+does not implicitly qualify pointers within the structure with the<I> _Seg16
+</I>keyword.  Such pointers must be explicitly qualified, as shown in <A HREF="114_L2_Creatinga16bitWindow.html">Figure
+"Creating a 16-bit Window From Within a 32-bit Module"</A>.  Further information
+on the<I> #pragma seg16</I> directive can be found in the<I> IBM C Set/2
+User's Guide</I>.
+<P>
+A 0:32 pointer may also be converted to a 16:16 pointer using the<B> DosFlattoSel()
+</B>function provided by OS/2 Version 2.0.  This function provides the correct
+remapping of pointer formats from the 32-bit flat memory model to the 16-bit
+segmented memory model.
+
+<P><HR>
+
+<A HREF="378_L3_CreatingaWindow.html">[Back: Creating a Window]</A> <BR>
+<A HREF="380_L3_PassingMessagesto32B.html">[Next: Passing Messages to 32-Bit Windows]</A> 
+</BODY>
+</HTML>

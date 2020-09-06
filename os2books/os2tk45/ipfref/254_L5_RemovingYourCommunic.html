@@ -1,0 +1,68 @@
+<HTML>
+<HEAD>
+<TITLE>Removing Your Communication Object from the Chain</TITLE>
+</HEAD>
+<BODY>
+<H1>Removing Your Communication Object from the Chain</H1><!-- entering slot 268 -->
+<P>
+Your communication object must be able to remove itself from the chain and
+keep the chain intact. When the communication object does remove itself,
+it is no longer the active object. This can be carried out as follows:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Your communication object must process the WM_DESTROY
+message sent by IPF that corresponds to the closure of a window with which
+your communication object is associated.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Your communication object must query the current
+object window using HM_QUERY. This returns the handle of the current object
+window.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Your communication object can then send the HM_UPDATE_OBJCOM_WINDOW_CHAIN
+message to the handle of the current object window including the handle
+of your communication object, which was returned when you added your communication
+object to the chain (see <A HREF="252_L5_AddingYourCommunicat.html">Adding
+Your Communication Object to the Communication Chain</A>).<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following code fragment illustrates this process:
+<PRE>        case WM_DESTROY:
+
+            hwndPrevious = (HWND) WinQueryWindowULong (hwnd, COM_HWND);
+
+            hwndLatest = (HWND) WinSendMsg (hwnd,
+                                     HM_QUERY,
+                                     MPFROM2SHORT ((USHORT)0, HMQW_OBJCOM_WINDOW),
+                                     NULL);
+
+            WinMessageBox (HWND_DESKTOP,
+                           HWND_DESKTOP,
+                           (PCH)str,
+                           (PCH)"IPF Sample Error Message",
+                           1,
+                           MB_OK | MB_APPLMODAL |
+                           MB_MOVEABLE | MB_ICONASTERISK);
+            WinSendMsg (hwndLatest,
+                        HM_UPDATE_OBJCOM_WINDOW_CHAIN,
+                        (MPARAM) hwndPrevious,
+                        (MPARAM) WinQueryWindow (hwnd, QW_PARENT));
+
+            rValue = FALSE;
+            break;
+
+        default:
+
+            rValue = TRUE;
+            break;
+
+    }
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="253_L5_RespondingtotheRemov.html">[Back: Responding to the Removal of Another Object in the Chain]</A> <BR>
+<A HREF="255_L2_ChangingtheCoverpage.html">[Next: Changing the Coverpage Window]</A> 
+</BODY>
+</HTML>

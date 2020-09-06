@@ -1,0 +1,100 @@
+<HTML>
+<HEAD>
+<TITLE>Priority Inversion</TITLE>
+</HEAD>
+<BODY>
+<H1>Priority Inversion</H1><!-- entering slot 216 -->
+<P>
+Priority Inversion is a hybrid situation that involves both the involuntary
+and voluntary suspension of two threads.
+<P>
+Consider the following:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+A high priority thread is blocked on a resource.<!-- lm: 0x2 6 -->
+<P>
+A low priority thread owns the resource on which the high priority thread
+is blocked.<!-- lm: 0x2 6 -->
+<P>
+An independent thread of intermediate priority is running.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>  ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+  ³                                                 ³
+  ³   ÚÄÄÄÄÄÄÄÄÄÄ¿                                  ³
+  ³   ³ Thread 1 ³                                  ³
+  ³   ³  High    ³                                  ³
+  ³   ³  blk     ³                                  ³
+  ³   ÀÄÄÄÄÄÄÄÄÄÄÙ                                  ³
+  ³                                                 ³
+  ³       º                                         ³
+  ³       º                                         ³
+  ³       º                                         ³
+  ³ waits º                                         ³
+  ³  on   º                   ÚÄÄÄÄÄÄÄÄÄ¿           ³
+  ³ SEM   º                   ³Thread 3 ³           ³
+  ³ owned º &lt; - - - - - - - - ³ Medium  ³           ³
+  ³  by   º                   ³  run    ³           ³
+  ³ thd 2 º                   ÀÄÄÄÄÄÄÄÄÄÙ           ³
+  ³       º                                         ³
+  ³       V                                         ³
+  ³                                                 ³
+  ³    ÚÄÄÄÄÄÄÄÄÄ¿                                  ³
+  ³    ³Thread 2 ³                                  ³
+  ³    ³  Low    ³                                  ³
+  ³    ³  rdy    ³                                  ³
+  ³    ÀÄÄÄÄÄÄÄÄÄÙ                                  ³
+  ³                                                 ³
+  ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+</PRE>
+
+<P>
+Thread 1 will not run until thread 2 gets a time-slice that allows it to
+run and release the semaphore thread 1 is waiting for.
+<P>
+Since thread 3 is a higher priority than thread 2 and is CPU bound, thread
+2 never runs, nor does thread 1.
+<P>
+Thread 1's priority has effectively been reduced to that of thread 2's by
+a lower priority thread - thread 3. Thread 1 is said to have its priority
+inverted with respect to thread 3.
+<P>
+The Kernel implements an automatic inversion protection mechanism whenever
+a process blocks using a KSEM. Essentially this amounts to boosting the
+KSEM owner's thread priority by setting TCBPriorityMin to be just greater
+than the waiter's priority. This mechanism is implemented by the following
+three routines:<!-- lm: 0x2 1 -->
+<P>
+TKEnterInversion<!-- lm: 0x11 11 -->
+<UL> Called to protect against priority
+inversion.  For example, when a mutex KSEM is obtained increments TCBcBoostLock.
+<!-- lm: 0x2 1 -->
+</UL>TKExitInversion<!-- lm: 0x11 11 -->
+<UL> When an
+inversion protected KSEM is released TCBcboostlock is decremented.  When
+TCBcBoostlock is zero and TCBPriorityMin and is not zero then it is set
+to zero and the priority recalculated.<!-- lm: 0x2 1 -->
+</UL> TKDeclareInversion
+<!-- lm: 0x11 11 -->
+<UL>Used to set the minimum priority of a thread to
+be waited on.  If owner's TCBPriorityMin &lt; waiter's TCBPriority and owner
+is in ready state then the owner's TCBPriorityMin to the waiter's TCBPriority+1.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+For this mechanism to work, it must be possible to determine ownership from
+the semaphore so that TKDeclareInversion can determine which thread's priority
+to alter.  It is also necessary to be able to determine whether raising
+the priority of thread will lead to other synchronisation problems or deadlocks
+through race conditions. Since the Kernel is a special case, and because
+pre-emption cannot occur while running in kernel mode, the kernel limits
+inversion protection to the KSEM only. Outside kernel mode, inversion is
+automatically protected against (for regular and foreground server threads)
+by application of the starvation priority boost. 
+
+<P><HR>
+
+<A HREF="164_L5_SuspensionandFreezin.html">[Back: Suspension and Freezing]</A> <BR>
+<A HREF="166_L2_ProgramDesignIssuesa.html">[Next: Program Design Issues and Weaknesses]</A> 
+</BODY>
+</HTML>

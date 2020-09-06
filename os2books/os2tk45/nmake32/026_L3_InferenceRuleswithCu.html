@@ -1,0 +1,89 @@
+<HTML>
+<HEAD>
+<TITLE>Inference Rules with Curly Braces</TITLE>
+</HEAD>
+<BODY>
+<H1>Inference Rules with Curly Braces</H1><!-- entering slot 27 -->
+<P>
+Inference rules can be combined with specified target/dependency paths for
+each rule. Given the inference rule below, if a dependent file with the
+given extension is found in the dep_path directory during inference rule
+processing, then the target will be updated in the specified target_path
+directory. These paths are specified in the inference rules inside curly
+braces. Only single paths are supported inside curly braces on inference
+rules. However, multiple inference rules using the same extensions and different
+paths can be specified. The first matching inference rule is the rule that
+is used if multiple inference rules are specified in the description file.
+
+<PRE>{dep_path}.extension1{target_path}.extension2:
+    command block
+</PRE>
+
+<P>
+<B>Example:</B>
+<PRE># Build objects in the p2 directory from source
+# in the p1 directory
+
+{p1}.c{p2}.obj:
+    icc /c /Fo$@  $&lt;
+
+p2\file.obj: p1\file.c
+</PRE>
+
+<P>
+When using paths or target/dependency statements and curly brace paths on
+inference rules, all paths must be carefully matched. When a  target/dependency
+statement dependent path does not match the curly brace  path on the inference
+dependent extension, it is deemed a mismatch. The following example combines
+inference rules, paths and explicit rules to demonstrate correct application
+of the rule concepts.
+<P>
+<B>Example:</B>
+<PRE>{p1}.c{p2}.obj:                 #  Valid .SUFFIXES: extensions
+    $CC) $(CFLAGS) /Fo$@ $&lt;     #  First inference rule
+
+{p3}.c{p4}.obj:                 #  Valid .SUFFIXES: extensions
+    $(CC) $(CPPFLAGS) /Fo$@ $&lt;  #  Second inference rule
+
+{p1}.c{p4}.obj:                 #  Valid .SUFFIXES: extensions
+    $(CC) $(CPPFLAGS) /Fo$@ $&lt;  #  Third inference rule
+
+p2\dep.obj : p1\dep.c           #  Target / dependency statement
+    @echo Bogus explicit rule   #  Explicit rule
+
+p4\dep.obj : p1\dep.c           #  Target / dependency statement
+                                #  with no explicit rule
+</PRE>
+
+<P>
+The application of the inference rules for the target/dependency with no
+explicit rule is as follows:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->The first rule does not apply, because it is
+an inference rule to create objects in the p2 directory from source in the
+p1 directory.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->The second rule does not apply, because it is
+an inference rule to create objects in the p4 directory from source in the
+p3 directory.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->The third inference rule creates objects in the
+p4 directory from source in the p1 directory.  This rule is used.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Although the paths for the dependent and target
+on the first target\dependency statement match the first inference rule,
+the inclusion of an explicit rule in this dependency precludes it from being
+built using any inference rule processing.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The third inference rule is the rule that applies to the second target/dependency
+statement. The target will be updated in the p4 directory from the dependent
+in the p1 directory, if required.
+
+<P><HR>
+
+<A HREF="025_L3_DefaultInferenceRule.html">[Back: Default Inference Rules]</A> <BR>
+<A HREF="027_L3_InferenceRuleandCurl.html">[Next: Inference Rule and Curly Braces on Target/Dependents]</A> 
+</BODY>
+</HTML>

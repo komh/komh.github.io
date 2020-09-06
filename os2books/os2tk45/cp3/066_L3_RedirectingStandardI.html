@@ -1,0 +1,108 @@
+<HTML>
+<HEAD>
+<TITLE>Redirecting Standard I/O for Child Processes</TITLE>
+</HEAD>
+<BODY>
+<H1>Redirecting Standard I/O for Child Processes</H1><!-- entering slot 67 -->
+<P>
+An application can use unnamed pipes to redirect the standard input and
+the standard output for a child process.
+<P>
+A typical use of an unnamed pipe is to read the output of a child process.
+An application creates a pipe and then duplicates the standard output handle.
+When the child process is started, its standard output will be written into
+the pipe, where the application can read and display it. The following code
+fragment shows how to do this:
+<PRE>
+    #define INCL_DOSPROCESS
+    #define INCL_DOSNMPIPES
+
+    #include &lt;os2.h&gt;
+
+    #define PIPESIZE 256
+    #define HF_STDOUT 1      /* Standard output handle */
+
+    HPIPE hpR, hpW;
+    RESULTCODES resc;
+    ULONG ulRead, ulWritten;
+    CHAR achBuf[PIPESIZE],
+         szFailName[CCHMAXPATH];
+
+    HFILE hfSave = -1,
+          hfNew = HF_STDOUT;
+
+    DosDupHandle(HF_STDOUT,
+                 &amp;hfSave); /* Saves standard output handle      */
+
+    DosCreatePipe(&amp;hpR,
+                  &amp;hpW,
+                  PIPESIZE); /* Creates pipe                      */
+
+    DosDupHandle(hpW,
+                 &amp;hfNew); /* Duplicates standard output handle */
+
+
+    DosExecPgm(szFailName,
+               sizeof(szFailName), /* Starts child process      */
+               EXEC_ASYNC,
+               (PSZ) NULL,
+               (PSZ) NULL,
+               &amp;resc,
+               "DUMMY.EXE");
+
+    DosClose(hpW);                /* Closes write handle to ensure     */
+                                  /* Notification at child termination */
+
+    DosDupHandle(hfSave,
+                 &amp;hfNew);     /* Brings stdout back                */
+
+    /*
+     * Read from the pipe and write to the screen
+     * as long as there are bytes to read.
+     *
+     */
+
+    do {
+        DosRead(hpR,
+                achBuf,
+                sizeof(achBuf),
+                &amp;ulRead);
+
+        DosWrite(HF_STDOUT,
+                 achBuf,
+                 ulRead,
+                 &amp;ulWritten);
+
+    } while(ulRead);
+
+</PRE>
+
+<P>
+A parent process can also use unnamed pipes to communicate with a child
+process by redirecting both the standard input and the standard output for
+the child process. To do this, the parent process:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Uses<A><!-- external link: 1D 7C C3 3F --> DosDupHandle
+</A>to redefine the read handle of one pipe as standard input (0000), and
+the write handle of the other pipe as standard output (0001).<!-- lm: 0x2 2 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 6 -->Starts the child process with<A><!-- external link: 1D 83 C3 FC --> DosExecPgm</A>.
+<!-- lm: 0x2 2 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 6 -->Uses the remaining pipe handles to read and write
+to the pipes.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The parent process controls the meanings for standard I/O for the child
+process. Thus, when the child process uses standard I/O handles with<A><!-- external link: 1D D7 C3 43 --> DosRead
+</A>and<A><!-- external link: 1D 0F C4 FC --> DosWrite</A>, it reads from
+and writes to the pipes of its parent instead of reading from the keyboard
+and writing to the display.
+
+<P><HR>
+
+<A HREF="065_L3_ReadingfromandWritin.html">[Back: Reading from and Writing to Unnamed Pipes]</A> <BR>
+<A HREF="067_L2_UsingNamedPipes.html">[Next: Using Named Pipes]</A> 
+</BODY>
+</HTML>

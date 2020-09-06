@@ -1,0 +1,95 @@
+<HTML>
+<HEAD>
+<TITLE>Registering an Exception Handler</TITLE>
+</HEAD>
+<BODY>
+<H1>Registering an Exception Handler</H1><!-- entering slot 851 -->
+<P>
+An application uses<A><!-- external link: 1D E6 C3 41 --> DosSetExceptionHandler
+</A>to register its own exception handling routines. More than one routine
+can be registered; the last routine registered will be called first.
+<P>
+One or more exception handlers can be registered for each thread in a process.
+Moreover, exception handlers can be specified not only for system exceptions,
+but also for user-defined exceptions that are anticipated for a particular
+thread.
+<P>
+Only Process Termination exceptions are sent to all threads in a process.
+Other exceptions (synchronous exceptions) are sent only to the exception
+handler registered for the thread where the exception occurred. The application
+must register an exception handler for each thread that is handling exceptions.
+
+<P>
+The following code fragment shows how an application registers an exception
+handling routine:
+<PRE>    #define INCL_BASE
+    #define INCL_DOSEXCEPTIONS
+    #include &lt;os2.h&gt;
+
+    ULONG _System myHandler(PEXCEPTIONREPORTRECORD,
+                           PEXCEPTIONREGISTRATIONRECORD,
+                           PCONTEXTRECORD,
+                           PVOID);
+
+    VOID main(VOID)
+    {
+        EXCEPTIONREGISTRATIONRECORD xcpthand = { 0, &amp;myHandler };
+
+        DosError(FERR_DISABLEEXCEPTION | FERR_DISABLEHARDERR);
+
+        DosSetExceptionHandler(&amp;xcpthand);
+
+        /*
+         .
+         . Other processing occurs here; myHandler will handle the exceptions.
+         .
+         */
+
+        DosUnsetExceptionHandler(&amp;xcpthand);
+    }
+
+</PRE>
+
+<P>
+If a procedure registers an exception handler, it must deregister the handler
+by calling<A><!-- external link: 1D 08 C4 42 --> DosUnsetExceptionHandler
+</A>before returning.
+<P>
+<B>Note: </B><!-- lm: 0x2 6 -->
+<UL>
+<P>
+A procedure must not call<A><!-- external link: 1D E6 C3 41 --> DosSetExceptionHandler
+</A>if it performs language-specific exception or unwind handling. This
+restriction is not enforced, but unpredictable results could occur if it
+is violated.<!-- lm: 0x2 6 -->
+<P>
+<A><!-- external link: 1D E6 C3 41 -->DosSetExceptionHandler</A> and<A><!-- external link: 1D 08 C4 42 --> DosUnsetExceptionHandler
+</A>provide the portable means of implementing exception handlers. The non-portable
+approach is taken by directly manipulating the exception handler chain.
+High level languages generate code that abides by this restriction. Assembly
+language programmers must assume responsibility for verifying that handler
+registration and deregistration occur correctly.<!-- lm: 0x2 6 -->
+<P>
+<A HREF="181_L2_EXCEPTIONREGISTRATIO.html">EXCEPTIONREGISTRATIONRECORD</A> must
+be created on the application's stack. That is, it must be local to the
+routine that registers the exception handler, rather than a global variable.
+It cannot be stored in the data segment of the program.<!-- lm: 0x2 6 -->
+<P>
+Note that in the code fragment above, the declaration is placed inside the
+braces (see figure below).  Therefore<I> xcpthand</I> is local to the<I> main()
+</I>routine and is stored on the program's stack.
+<PRE>
+    EXCEPTIONREGISTRATIONRECORD xcpthand = { 0, &amp;myHandler };
+
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+
+
+<P><HR>
+
+<A HREF="831_L3_ExampleExceptionHand.html">[Back: Example Exception Handler]</A> <BR>
+<A HREF="833_L2_SystemExceptions.html">[Next: System Exceptions]</A> 
+</BODY>
+</HTML>

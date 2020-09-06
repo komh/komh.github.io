@@ -1,0 +1,196 @@
+<HTML>
+<HEAD>
+<TITLE>longjmp - Restore Stack Environment</TITLE>
+</HEAD>
+<BODY>
+<H1>longjmp - Restore Stack Environment</H1><!-- entering slot 190 -->longjmp - Restore Stack Environment<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>#include &lt;setjmp.h&gt;
+void longjmp(jmp_buf <I>env</I>, int <I>value</I>);
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Description
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+longjmp restores a stack environment previously saved in<I> env</I> by setjmp.
+setjmp and longjmp provide a way to perform a nonlocal goto. They are often
+used in signal handlers.
+<P>
+A call to setjmp causes the current stack environment to be saved in<I> env</I>.
+ A subsequent call to longjmp restores the saved environment and returns
+control to a point in the program corresponding to the setjmp call.  Execution
+resumes as if the setjmp call had just returned the given<I> value</I>.
+
+<P>
+All variables (except register variables) that are accessible to the function
+that receives control contain the values they had when longjmp was called.
+The values of variables that are allocated to registers by the compiler
+are unpredictable. Because any auto variable could be allocated to a register
+in optimized code, you should consider the values of all auto variables
+to be unpredictable after a longjmp call.
+<P>
+<B>Note: </B> Ensure that the function that calls setjmp does not return
+before you call the corresponding longjmp function. Calling longjmp after
+the function calling setjmp returns causes unpredictable program behavior.
+<!-- lm: 0x2 10 -->
+<P>
+
+<P>
+The<I> value</I> argument must be nonzero. If you give a zero argument for
+<I>value</I>, longjmp substitutes 1 in its place.
+<P>
+<B>C++ Considerations </B> When you call setjmp in a C++ program, ensure
+that that part of the program does not also create C++ objects that need
+to be destroyed. When you call longjmp, objects existing at the time of
+the setjmp call will still exist, but any destructors called after setjmp
+are not called. For example, given the following program:<!-- lm: 0x2 10 -->
+<P>
+
+<PRE>#include &lt;stdio.h&gt;
+#include &lt;setjmp.h&gt;
+
+class A {
+   int i;
+   public:
+      A(int I) {i = I; printf("Constructed at line %d\n", i);}
+      ~A() {printf("Destroying object constructed at line %d\n",i);}
+   };
+jmp_buf jBuf;
+
+int main(void) {
+   A a1(__LINE__);
+   if (!setjmp(jBuf)) {
+     A a2(__LINE__);
+     printf("Press y (and Enter) to longjmp; anything else to return norm
+     char c = getchar();
+     if (c == 'y')
+        longjmp(jBuf, 1);
+   }
+   A a3(__LINE__);
+   return 0;
+}
+</PRE>
+
+<P>
+If you return normally, the output would be:
+<PRE>Constructed at line 13
+Constructed at line 15
+Press y (and Enter) to longjmp; anything else to return normally
+x
+Destroying object constructed at line 15
+Constructed at line 21
+Destroying object constructed at line 21
+Destroying object constructed at line 13
+</PRE>
+
+<P>
+If you called longjmp, the output would be:
+<PRE>Constructed at line 13
+Constructed at line 15
+Press y (and Enter) to longjmp; anything else to return normally
+y
+Constructed at line 21
+Destroying object constructed at line 21
+Destroying object constructed at line 13
+</PRE>
+
+<P>
+Notice that the object from line 15 is not destroyed.<!-- lm: 0x2 1 -->
+</UL> Returns
+
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+longjmp does not use the normal function call and return mechanisms;  it
+has no return value.<!-- lm: 0x2 1 -->
+</UL> Example Code
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+This example saves the stack environment at the statement:
+<PRE>   if(setjmp(mark) != 0) ...
+</PRE>
+
+<P>
+When the system first performs the if statement, it saves the environment
+in mark and sets the condition to FALSE because setjmp returns a 0 when
+it saves the environment. The program prints the message:
+<PRE>   setjmp has been called
+</PRE>
+
+<P>
+The subsequent call to function p tests for a local error condition, which
+can cause it to call longjmp.  Then, control returns to the original setjmp
+function using the environment saved in mark.  This time, the condition
+is TRUE because -1 is the return value from longjmp. The example then performs
+the statements in the block, prints longjmp has been called, calls recover,
+and leaves the program.
+<PRE>#include &lt;stdio.h&gt;
+#include &lt;setjmp.h&gt;
+
+jmp_buf mark;
+
+int main(void)
+{
+   if (setjmp(mark) != 0) {
+      printf("longjmp has been called\n");
+      recover();
+      exit(1);
+   }
+   printf("setjmp has been called\n");
+
+   p();
+
+   return 0;
+
+   /****************************************************************************
+      The output should be:
+
+      setjmp has been called
+      longjmp has been called
+   ****************************************************************************/
+}
+
+int p(void)
+{
+   int error = 0;
+
+   error = 9;
+
+   if (error != 0)
+      longjmp(mark, -1);
+
+}
+
+int recover(void)
+{
+}
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Related Information
+<P>
+<!-- lm: 0x2 10 -->
+<UL><!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 --><A HREF="236_L2_setjmpPreserveEnviro.html">setjmp
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 -->goto in the<I> Language Reference</I><!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="180_L2_log10CalculateBase10.html">[Back: log10 - Calculate Base 10 Logarithm]</A> <BR>
+<A HREF="182_L2_lseekMoveFilePointer.html">[Next: lseek - Move File Pointer]</A> 
+</BODY>
+</HTML>

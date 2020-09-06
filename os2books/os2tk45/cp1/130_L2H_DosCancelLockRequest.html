@@ -1,0 +1,77 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosCancelLockRequest - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosCancelLockRequest - Example Code</H1><!-- entering slot 133 -->
+<P>
+This example opens a file named "CANLOCK.DAT", locks a block of the data,
+writes some data to it, and then cancels the lock request.
+<PRE>#define INCL_DOSFILEMGR       /* File Manager values */
+#define INCL_DOSERRORS        /* DOS Error values    */
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+int main(VOID) {
+
+HFILE     FileHandle   = NULLHANDLE;  /* File handle */
+ULONG     Action       = 0,           /* Action taken by DosOpen */
+          Wrote        = 0;           /* Number of bytes written by DosWrite */
+CHAR      FileData[40] = "Forty bytes of demonstration text data\r\n";
+APIRET    rc           = NO_ERROR;    /* Return code */
+
+FILELOCK  LockArea     = {0},         /* Area of file to lock */
+          UnlockArea   = {0};         /* Area of file to unlock */
+
+rc = DosOpen("canlock.dat",                 /* File to open */
+             &amp;FileHandle,                   /* File handle */
+             &amp;Action,                       /* Action taken */
+             256L,                          /* File primary allocation */
+             FILE_ARCHIVED,                 /* File attributes */
+             FILE_OPEN | FILE_CREATE,       /* Open function type */
+             OPEN_ACCESS_READWRITE | OPEN_SHARE_DENYNONE,
+             0L);                           /* No extended attributes */
+if (rc != NO_ERROR) {                       /* If open failed */
+   printf("DosOpen error: return code = %u\n", rc);
+   return 1; }
+
+LockArea.lOffset = 0L;              /* Start locking at beginning of file */
+LockArea.lRange =  40L;             /* Use a lock range of 40 bytes       */
+
+rc = DosSetFileLocks(FileHandle,        /* File handle   */
+                     &amp;UnlockArea,       /* No unlock area */
+                     &amp;LockArea,         /* Lock current record */
+                     2000L,             /* Lock time-out value of 2 seconds */
+                     0L);               /* Exclusive lock, not atomic */
+if (rc != NO_ERROR) {
+   printf("DosSetFileLocks error: return code = %u\n", rc);
+   return 1;
+}
+
+rc = DosWrite(FileHandle, FileData, sizeof(FileData), &amp;Wrote);
+if (rc != NO_ERROR) {
+   printf("DosWrite error: return code = %u\n", rc);
+   return 1;
+}
+/* Should check if (rc != NO_ERROR) here... */
+
+rc = DosCancelLockRequest(FileHandle, &amp;LockArea);
+if (rc != NO_ERROR) {
+   printf("DosCancelLockRequest error: return code = %u\n", rc);
+   return 1;
+}
+rc = DosClose(FileHandle);
+/* Should check if (rc != NO_ERROR) here... */
+
+return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="129_L2H_DosCancelLockRequest.html">[Back: DosCancelLockRequest - Related Functions]</A> <BR>
+<A HREF="131_L2H_DosCancelLockRequest.html">[Next: DosCancelLockRequest - Topics]</A> 
+</BODY>
+</HTML>

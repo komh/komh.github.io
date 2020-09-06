@@ -1,0 +1,477 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Source code of ConvIni.CMD - part 4</TITLE>
+</HEAD>
+<BODY>
+<H1>Source code of ConvIni.CMD - part 4</H1><!-- entering slot 596 -->
+<PRE> 
+/***       Start of Part 4 of the source code of TEMPLATE.CMD       ***/
+                                                                   /*!*/
+
+/* ------------------------------------------------------------------ */
+/* function: main procedure of the program                            */
+/*                                                                    */
+/* call:     called by the runtime system with:                       */
+/*           =&gt; call main parameter_of_the_program                    */
+/*                                                                    */
+/* returns:  program return code                                      */
+/*           If no return code is returned, the value of the variable */
+/*           prog.__ExitCode is returned to the calling program.      */
+/*                                                                    */
+Main: PROCEDURE expose (exposeList)
+
+/* ------------------------------ */
+                        /* strings which should not be written into   */
+                        /* the log file                               */
+  prog.__LogExcludeWords = screen.__fgYellow ,
+                           screen.__highlight ,
+                           screen.__AttrOff ,
+                           screen.__DelEOL
+
+/* ------------------------------ */
+                        /* init the global variables                  */
+  onlySelectedApps = 0
+  curApps.0 = 0
+
+/* ------------------------------ */
+                        /* unprintable chars for the screen output    */
+  global.__testString = xrange( '00'x, '1F'x ) || xrange( '7F'x, 'FF'x )
+
+/* ------------------------------ */
+                        /* get the parameter of the program           */
+  parse arg curIniFile curREXXProg applications
+
+                        /* convert the filenames to uppercase         */
+  parse upper var curIniFile curIniFile
+  parse upper var curREXXProg curREXXProg
+
+                        /* check the parameter                        */
+  if curIniFile = '' | curREXXProg = '' then
+    call ShowError 1, 'Parameter missing'
+
+  if curIniFile &lt;&gt; 'USER' &amp; curIniFile &lt;&gt; 'SYSTEM' then
+    if stream( curIniFile, 'c', 'QUERY EXIST' ) = '' then
+      call ShowError 2, 'Inifile "' || curIniFile || '" not found'
+
+  if stream( curREXXProg, 'c', 'QUERY EXIST' ) &lt;&gt; '' then
+    call ShowError 3, 'Outputfile "' || curREXXProg || '" already exist'
+
+  if applications &lt;&gt; '' then
+  do
+                    /* check for the #1 - #2 format                   */
+    parse var applications fromApp '-' toApp
+    if datatype( fromApp ) = 'NUM' &amp; dataType( toApp ) = 'NUM' then
+    do
+                    /* application parameter is in the #1 - #2 format */
+      onlySelectedApps = 2
+    end /* if datatype( fromApp ) = 'NUM' &amp; dataType( toApp ) = 'NUM' then */
+    else
+    do
+                    /* application parameter is in the format         */
+                    /* app1 ... app#                                  */
+                    /* -&gt; split the parameter into the application    */
+                    /*    names (use " or ' to surround application   */
+                    /*    names with imbedded blanks)                 */
+      onlySelectedApps = 1
+
+      i = curApps.0
+      do while applications &lt;&gt; ''
+
+        applications = strip( applications )
+
+        parse var applications tc +1
+        if tc = '"' | tc = "'" then
+          parse var applications (tc) curApp (tc) applications
+        else
+          parse var applications curApp applications
+
+        i = i +1;
+        curApps.i = curApp
+
+      end /* do while applications &lt;&gt; '' */
+      curApps.0 = i
+
+    end /* else */
+  end /* if applications &lt;&gt; '' then */
+
+                        /* ------------------------------------------ */
+                        /* load the dll REXXUTIL                      */
+
+  global.__rexxUtilLoaded = LoadDll(,
+     'SysLoadFuncs', ,  /* dll init function                          */
+     'REXXUTIL',     ,  /* dll name                                   */
+     'SysLoadFuncs', ,  /* dll init entry point                       */
+     ''              ,  /* dll exit function                          */
+     'SysDropFuncs', ,  /* check function                             */
+     1,              ,  /* 1: ignore rc of rxfuncadd (for WARP)       */
+     '',             ,  /* errorcode of the init function             */
+     1 )                /* 1: abort if loading failed                 */
+                        /* 0: do not abort if loading failed          */
+
+/* ------------------------------ */
+                        /* create the stem with the applications to   */
+                        /* convert                                    */
+
+  call log ' Reading the file ' || AddColor1( '"', curIniFile )
+  call log ' Creating the REXX program ' || AddColor1( '"', curREXXProg )
+
+  select
+
+    when onlySelectedApps = 2 then
+    do
+
+                        /* convert the applications #n to #m          */
+
+                    /* read the whole INI file                        */
+      thisRC = SysIni( curIniFile, 'ALL:', 'tempApps.' )
+      if thisRC = 'ERROR:' then
+        call ShowError 4, 'Error reading the ini file'
+
+      if toApp = '-1' then
+        toApp = tempApps.0
+
+      call log ' Converting applications no. ' || AddColor1( , fromApp ) || ,
+               ' to no. ' || Addcolor1( , toApp  )
+
+      j = curApps.0
+      do i = fromApp to toApp by 1
+        if i &gt; tempApps.0 then
+          leave
+        j = j+1;
+        curApps.j = tempApps.i
+      end /* do i = fromApp to toApp by 1 */
+      curApps.0 = j
+
+      drop tempApps.
+
+    end /* when */
+
+    when onlySelectedApps = 0 then
+    do
+                        /* convert ALL applications                   */
+
+      call log ' Converting ' || AddColor1( , 'ALL' ) || ' applications.'
+
+                    /* read the whole INI file                        */
+      thisRC = SysIni( curIniFile, 'ALL:', 'curApps.' )
+      if thisRC = 'ERROR:' then
+        call ShowError 4, 'Error reading the ini file'
+
+      call log ' ' || AddColor1( , curApps.0 ) || ,
+               ' application(s) found in the ini file.'
+
+    end /* when curApps.0 = 0 then */
+
+    otherwise
+    do
+                        /* convert only selected applications         */
+      call log ' Converting ' || AddColor1( , curApps.0 ) || ' applications.'
+    end /* otherwise */
+
+  end /* select */
+
+                        /* read the applications from the INI file    */
+  appsStem.0 = 0
+  do i = 1 to curApps.0
+
+    thisApp = curApps.i
+    call log '  Reading the application ' || AddColor1( '"', thisApp ) ,
+             '(' || i || ' of ' || curApps.0 || ') ...'
+
+    thisRC = SysIni( curIniFile, thisApp, 'ALL:', 'tempStem.' )
+    if thisRC = 'ERROR:' then
+      call ShowWarning 'Error reading the application "' || thisApp || '"!'
+    else
+    do
+      call log '   ' || AddColor1( , tempStem.0 ) || ,
+               ' keys found for this application.'
+
+      j = AppsStem.0+1
+      AppsStem.j.__name = thisApp
+      AppsStem.j.__Keys.0 = 0
+      AppsStem.0 = j
+
+      call log '   Reading the keys for this application ...'
+
+      n = 0
+      do k = 1 to tempStem.0
+        thisKey = tempStem.k
+        call log '    Reading the key ' || AddColor1( '"', thisKey )
+        thisRC = SysIni( curIniFile, thisApp, thisKey )
+        if thisRC = 'ERROR:' then
+          call ShowWarning 'Error reading the key "' ||,
+                           thisKey || '" of the application "' || ,
+                           thisApp || '"!'
+        else
+        do
+          n = n +1
+          AppsStem.j.__Keys.n.__Key = thisKey
+          AppsStem.j.__Keys.n.__Val = thisRC
+        end /* else */
+
+      end /* do k = 1 to tempStem.0 */
+      AppsStem.j.__Keys.0 = n
+
+    end /* else */
+
+    drop tempStem.
+  end /* do i = 1 to curApps.0 */
+
+/* ------------------------------ */
+                    /* define some constants used in the code to      */
+                    /* create the REXX program                        */
+
+  crLf = '0D0A'x
+  cmtStart = '/' || '* '
+  cmtEnd =   ' *' || '/'
+  cmtEnd1 = cmtEnd || crLF
+
+  separatorLine = cmtStart || copies( '-', 66 ) || cmtEnd1
+  emptyCmtLine     = cmtStart || copies( ' ', 66 ) || cmtEnd1
+
+  progDesc = ,
+    cmtStart ||,
+    'REXX program to recreate some or all entries of the INI file      ' || ,
+    cmtEnd1
+                        /* write the header for the output file       */
+  call log ' Writing the output file ...'
+
+  call log '  Writing the header ...'
+
+  call LineOut curREXXProg ,,
+    separatorLine || ,
+    cmtStart || left( fileSpec( 'N', curREXXProg ), 66 ) || cmtEnd1 || ,
+    emptyCmtLine || ,
+    progDesc || ,
+    cmtStart || '  ' || left( fileSpec( 'N', curIniFile ), 64 ) || cmtEnd1 || ,
+    emptyCmtLine || ,
+    cmtStart || 'Created on ' || <!-- entering slot 597 -->date() || ' at ' || time() || ,
+           ' with                           ' || cmtEnd1 || ,
+    cmtStart || '  ' || left( prog.__name, 64 ) || cmtEnd1 || ,
+    emptyCmtLine || ,
+    separatorLine || ,
+    crLF || ,
+    cmtStart || ' --------------- Name of the ini file to create or update         ' || cmtEnd1 || ,
+    '  curIniFile = "' || curIniFile || '"' || crlf ,
+    crLF || ,
+    cmtStart || ' --------------- load the necessary REXXUTIL function(s)          ' || cmtEnd1 || ,
+    '  call rxFuncAdd "SysIni", "REXXUTIL", "SysIni"' || crLF ,
+    crLF || ,
+    separatorLine || crLF || ,
+    crLF || ,
+    cmtStart || ' --------------- init the stem with the data                      ' || cmtEnd1 || ,
+    '  iniFileApps.0 = 0 ' || crLF || ,
+    '  i = iniFileApps.0 ' || crLF
+
+  call log '  Writing the stem with the data ...'
+
+  do i = 1 to AppsStem.0
+    curApp = AppsStem.i.__Name
+    call log '  Writing the keys for the application ' || ,
+             AddColor1( '"', curApp )
+
+    call LineOut curREXXProg ,,
+      crLF || ,
+      separatorLine || ,
+      cmtStart 'Application: ' || curApp || cmtEnd1 || ,
+      crLF || ,
+      '  i=i+1' || crLF || ,
+      '  IniFileApps.i.__Application = ' || ,
+      ConvertString( AppsStem.i.__Name, 33,32 ) || crLF || ,
+      '  IniFileApps.i.__Keys.0 = 0 ' ||  crLF || ,
+      crLF || ,
+      '  j = IniFileApps.i.__Keys.0 ' || crLF || ,
+      ''
+
+    do j = 1 to AppsStem.i.__Keys.0
+      curKey = AppsStem.i.__Keys.j.__Key
+      call log '   Writing the key ' || AddColor1( '"', curKey )
+
+      call LineOut curREXXProg ,,
+        '  j = j+1 ' || crLF || ,
+        '  IniFileApps.i.__Keys.j.__Key = ' || ,
+           ConvertString( AppsStem.i.__Keys.j.__Key, 33, 32 ) || crLF || ,
+        '  IniFileApps.i.__Keys.j.__Val = ' || ,
+           ConvertString( AppsStem.i.__Keys.j.__Val, 33, 32 ) || crLF || ,
+        ''
+    end /* do j = 1 to AppsStem.j.__Keys.0 */
+
+    call LineOut curREXXProg ,,
+      '  IniFileApps.i.__Keys.0 = j ' || crLF || ,
+      ''
+
+  end /* do i = 1 to AppsStem.0 */
+
+  call LineOut curREXXProg , ,
+    separatorLine || ,
+    crLF || ,
+    '  iniFileApps.0 = i ' || crLF || ,
+    ''
+
+  call log '  Writing the code to write the data to the ini file ...'
+
+  call LineOut curREXXProg ,,
+    separatorLine || ,
+    '  say "Creating or updating the ini file "                 ' || crLF || ,
+    '  say "  " || curIniFile                                   ' || crLF || ,
+    '  say "(" || iniFileApps.0 || " applications.)"            ' || crLF || ,
+    '  say ""                                                   ' || crLF || ,
+    '  say "Press any key to continue or CTRL-C to abort ..."   ' || crLF || ,
+    '  "@PAUSE &gt;NUL"                                            ' || crLF || ,
+    '                                                           ' || crLF || ,
+    '  do i = 1 to IniFileApps.0                                ' || crLF || ,
+    '                                                           ' || crLF || ,
+    '    curApplication = IniFileApps.i.__Application           ' || crLF || ,
+    '                                                           ' || crLF || ,
+    '    say " Writing the keys for the application """ || ,    ' || crLF || ,
+    '        ConvertString( curApplication ) || ,               ' || crLF || ,
+    '        """ (" || i || " of " || IniFileApps.0 || ")"      ' || crLF || ,
+    '                                                           ' || crLF || ,
+    '    do j = 1 to IniFileApps.i.__Keys.0                     ' || crLF || ,
+    '      curKey = IniFileApps.i.__Keys.j.__Key                ' || crLF || ,
+    '      curVal = IniFileApps.i.__Keys.j.__Val                ' || crLF || ,
+    '                                                           ' || crLF || ,
+    '      say "  Writing the key """ || ,                      ' || crLF || ,
+    '          convertString( curKey ) || ,                     ' || crLF || ,
+    '          """ (" || j || " of " || ,                       ' || cRLF || ,
+    '          IniFileApps.i.__Keys.0 || ")"                    ' || crLF || ,
+    '                                                           ' || crLF || ,
+    '      thisRC = SysIni( curIniFile,,                        ' || crLF || ,
+    '                       curApplication,,                    ' || crLF || ,
+    '                       curKey,,                            ' || crLF || ,
+    '                       curVal )                            ' || crLF || ,
+    '      if thisRC = "ERROR:" then                            ' || crLF || ,
+    '        say "Warning: Error writing the key &lt;" || ,        ' || crLF || ,
+    '            ConvertString( curKey ) || "&gt;!"                ' || crLF || ,
+    '    end /* do j = 1 to IniFileApps.i.__Keys.0 */           ' || crLF || ,
+    '                                                           ' || crLF || ,
+    '  end /* do i = 1 to IniFileApps.0 */                      ' || crLF || ,
+    '                                                           ' || crLF || ,
+    'exit                                                       ' || crLF || ,
+    '                                                           ' || crLF || ,
+    separatorLine                                                 || crLF || ,
+    'ConvertString: PROCEDURE                                   ' || crLF || ,
+    '  parse arg sourceString                                   ' || crLF || ,
+    '  return translate( sourceString,,                         ' || crLF || ,
+    '               "????????????????????????????????" ,,       ' || crLF || ,
+    '               "000102030405060708090A0B0C0D0E0F"x || ,    ' || crLF || ,
+    '               "101112131415161718191A1B1C1D1E1F"x )       ' || crLF || ,
+    '                                                           ' || crLF || ,
+    separatorLine                                                 || crLF || ,
+    ''
+
+/* ------------------------------ */
+                        /* exit the program                           */
+
+RETURN
+
+/* ------------------------------------------------------------------ */
+/* Function: Split a string into sub strings                          */
+/*                                                                    */
+/* Usage:    ConvertString sourceString, indent, maxLength            */
+/*                                                                    */
+ConvertString: PROCEDURE expose (exposeList) crLF
+  parse arg sourceString, indent, maxLength
+
+  maxLength = maxLength % 2
+
+  i = verify( sourceString , global.__testString , 'MATCH' )
+
+  if pos( '"', sourceString ) &lt;&gt; 0 then
+    stringDelimiter = "'"
+  else
+    stringDelimiter = '"'
+
+  select
+
+    when i = 0 then
+      targetString = stringDelimiter || sourceString || stringDelimiter
+
+    when i = length( sourceString ) then
+      targetString = stringDelimiter || dbrright( sourceString,1 ) || ,
+                     stringDelimiter || ' || "' || ,
+                     c2x( right( sourceString, 1 ) ) || '"x'
+
+    otherwise
+
+      curLength = length( sourceString )
+
+      if curLength &gt; maxLength then
+      do
+
+        LineEnd = ' || , ' || CrLF || copies( ' ', indent ) || '"'
+
+        maxLength = maxLength + 1
+
+        parse var sourceString tempString =(maxLength) sourceString
+        targetString = '"' || c2x( tempString ) || '"x'
+
+        do until sourceString = ''
+          parse var sourceString tempString =(maxLength) sourceString
+
+          targetString = targetString || lineEnd || c2x( tempString ) || '"x'
+
+        end /* do until sourceString = '' */
+
+      end /* if curLength &gt; maxLength then */
+      else
+        targetString = '"' || c2x( sourceString ) || '"x'
+
+  end /* select */
+
+RETURN targetString
+
+/* ------------------------------------------------------------------ */
+/* Function: add quote chars and color codes to a string              */
+/*                                                                    */
+/* call:     AddColor1( quoteChar ,myString )                         */
+/*                                                                    */
+/* where:    quoteChar - leading and trailing character for the       */
+/*                       converted string (may be omitted)            */
+/*           myString - string to convert                             */
+/*                                                                    */
+/* returns:  converted string                                         */
+/*                                                                    */
+AddColor1: PROCEDURE expose (exposeList)
+  parse arg quoteChar, myString
+
+return quoteChar || screen.__fgYellow || screen.__highlight || ,
+       myString || ,
+              screen.__AttrOff || quoteChar
+
+/* ------------------------------------------------------------------ */
+/* function: Show the invocation syntax                               */
+/*                                                                    */
+/* call:     called by the runtime system with                        */
+/*           =&gt; call ShowUsage                                        */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  ''                                                       */
+/*                                                                    */
+/* Note:     YOU SHOULD FILL THIS ROUTINE WITH CODE.                  */
+/*           You may change the return code for your program in this  */
+/*           routine. The default for the return code is 253.         */
+/*           (The variable for the return code is prog.__ExitCode)    */
+/*                                                                    */
+/*                                                                    */
+ShowUsage: PROCEDURE expose (exposeList)
+  call ShowString I!.__GetMsg( 14 ) || ' ',,
+                  prog.__name  global.__MyParms prog.__DefParms
+RETURN ' '                                                   /* v3.03 */
+
+/* ------------------------------------------------------------------ */
+
+/***        End of Part 4 of the source code of TEMPLATE.CMD        ***/
+/**********************************************************************/
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="553_L4_SourcecodeofConvIniC.html">[Back: Source code of ConvIni.CMD - part 1]</A> <BR>
+<A HREF="555_L3_LoadMaccmd.html">[Next: LoadMac.cmd]</A> 
+</BODY>
+</HTML>

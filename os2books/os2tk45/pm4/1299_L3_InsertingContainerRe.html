@@ -1,0 +1,132 @@
+<HTML>
+<HEAD>
+<TITLE>Inserting Container Records</TITLE>
+</HEAD>
+<BODY>
+<H1>Inserting Container Records</H1><!-- entering slot 1320 -->
+<P>
+After the memory is allocated, you can insert one or more container records
+by using the CM_INSERTRECORD message.
+<P>
+The following sample code inserts records into a container for which memory
+was allocated in the previous code fragment:
+<PRE>/**********************************************************************/
+/*  We will need the first record's address to                        */
+/*  insert them into the container.                                   */
+/**********************************************************************/
+    FirstRec = Address;
+
+/**********************************************************************/
+/*  Loop through the address book, loading as we go.                  */
+/*  Because the CM_ALLOCRECORD returns a linked                       */
+/*  list, the address of the next record is retrieved                 */
+/*  from each record as we go (preccNextRecord).                      */
+/**********************************************************************/
+    for (x = 0; x &lt; MAXFRIENDS; x++)
+    {
+       Address-&gt;cb = sizeof(RECORDCORE);    /* Standard records       */
+       Address-&gt;hptrIcon = hIcon;           /* File icon              */
+       Address-&gt;pszIcon = Friends[x].NickName;
+       Address-&gt;pszName = Friends[x].FullName;
+       Address-&gt;pszText = Friends[x].FullName;
+       Address = Address-&gt;preccNextRecord;  /* Next record in list    */
+    }
+
+/**********************************************************************/
+/*  Set up the insert record structure to place the                   */
+/*  records in the container.                                         */
+/**********************************************************************/
+    recsIn.cb = sizeof(RECORDINSERT);
+
+    /* Put the records in after any others */
+    recsIn.pRecordOrder = (PRECORDCORE)CMA_END;
+
+    /* All the records are top level (not children of other records) */
+    recsIn.pRecordParent = NULL;
+
+    /* The icons are top level */
+    recsIn.zOrder = (USHORT)CMA_TOP;
+
+    /* Redraw the container */
+    recsIn.fInvalidateRecord = TRUE;
+
+    /* Set the number of records to insert */
+    recsIn.cRecordsInsert = MAXFRIENDS;
+
+/**********************************************************************/
+/*  Insert the records into the container.                            */
+/**********************************************************************/
+    WinSendMsg(hWnd,
+               CM_INSERTRECORD,
+               (PRECORDCORE)FirstRec,
+               &amp;recsIn);
+}
+
+</PRE>
+
+<P>
+The CM_INSERTRECORD message requires you to provide two pointers. The first
+pointer points to the record that is to be inserted, which is specified
+in the<I> FirstRec</I> parameter. When you are inserting multiple records,
+use this parameter to specify a pointer to a linked list of records.
+<P>
+The second pointer points to a RECORDINSERT data structure (<I>&amp;recsIn</I>),
+which specifies information the container needs for inserting records.
+<P>
+One of the elements of information that this data structure contains is
+the order in which the records are to be inserted, which is specified in
+the<I> pRecordOrder</I> field. In this field you have two options. The first
+option is to specify a pointer to a container record. The records being
+inserted are placed immediately after that record. In this case, the<I> pRecordParent
+</I>field is ignored.
+<P>
+The second option is to specify whether the records being inserted are to
+be placed at the beginning or end of a list of records. This is done by
+specifying either the CMA_FIRST or CMA_END attributes. If you choose this
+option, the list of records used depends on the value of the<I> pRecordParent
+</I>field.
+<P>
+If CMA_FIRST or CMA_END is specified and the value of the<I> pRecordParent
+</I>field is NULL, the inserted records are placed at the beginning or end
+of the root-level records. However, if CMA_FIRST or CMA_END is specified
+and<I> pRecordParent</I> contains a pointer to a parent item record, the
+records are inserted at the beginning or end of the list of child item records
+that this parent record contains.
+<P>
+The RECORDINSERT data structure also lets you specify the z-order position
+of the records being inserted. The CMA_TOP and CMA_BOTTOM attributes of
+the<I> zOrder</I> field place the record at the top or bottom, relative
+to the other records in the z-order list. This field applies to the Icon
+view only.
+<P>
+To specify the number of records that are being inserted, use the<I> cRecordsInsert
+</I>field. The value of this field must be greater than 0.
+<P>
+The last field in the RECORDINSERT data structure is<I> flInvalidateRecord</I>,
+which enables you to control whether the records are displayed automatically
+when they are inserted. If you specify TRUE in this field, the display is
+updated automatically.  However, if you specify FALSE, the application must
+send the CM_INVALIDATERECORD message after the records are inserted to update
+the display.
+<P>
+Where items are positioned in a container depends on the view the user has
+specified. If the Icon view is specified and the CCS_AUTOPOSITION style
+bit is not set, the<I> x-</I> and<I> y-</I>coordinates for each record,
+which are stored in the<I> ptlIcon</I> field of the RECORDCORE and<!-- entering slot 1321 --> MINIRECORDCORE
+data structures, determine its position. Records displayed in the Name view,
+Text view, Tree view, and Details view are positioned as previously described
+in this section.
+<P>
+<B>Note: </B> Records inserted into a list of child record items can be
+displayed in the Tree view only. These records are visible only if the parent
+record item to which these child record items belong is expanded.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+
+<P><HR>
+
+<A HREF="1298_L3_AllocatingMemoryforC.html">[Back: Allocating Memory for Container Columns]</A> <BR>
+<A HREF="1300_L3_RemovingContainerRec.html">[Next: Removing Container Records]</A> 
+</BODY>
+</HTML>

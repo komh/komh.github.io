@@ -1,0 +1,49 @@
+<HTML>
+<HEAD>
+<TITLE>Can I redirect stdin and stdout in a child process?</TITLE>
+</HEAD>
+<BODY>
+<H1>Can I redirect stdin and stdout in a child process?</H1><!-- entering slot 117 -->
+<P>
+This is what I use to redirect stderr, stdout to a file from a program I
+start using DosStartSession. You could do the same type of thing using a
+pipe.
+<PRE>    ULONG  ulAction;
+    ULONG  ulNew;
+    HFILE  hfFile, hfNewStdOut = -1, hfNewStdErr = -1,
+           hfStdOut = 1, hfStdErr = 2;
+
+    // Open output file
+    DosOpen( szOutputFile, &amp;hfFile, &amp;ulAction, 1, 0,
+             FILE_OPEN | FILE_CREATE,
+             OPEN_ACCESS_READWRITE | OPEN_SHARE_DENYNONE, 0L );
+    // Duplicate handles
+    DosDupHandle( hfStdOut, phfNewStdOut );
+    DosDupHandle( hfStdErr, phfNewStdErr );
+    // Close existing handles for current process
+    DosClose( hfStdOut );
+    DosClose( hfStdErr );
+    // Redirect existing handles to new file
+    DosDupHandle( hfFile, &amp;hfStdOut );
+    DosDupHandle( hfFile, &amp;hfStdErr );
+    // Let started program inherit handles from parent
+    stdata.InheritOpt = SSF_INHERITOPT_PARENT;
+    // Start new session
+    DosStartSession( &amp;stdata, &amp;ulSessionID, &amp;pidSession );
+    // Get back original handles
+    DosDupHandle( hfNewStdOut, &amp;hfStdOut );
+    DosDupHandle( hfNewStdErr, &amp;hfStdErr );
+    // Close the duplicated handles - no longer needed
+    DosClose( hfNewStdOut );
+    DosClose( hfNewStdErr );
+</PRE>
+
+<P>
+Credit:  Rick Fishman 
+
+<P><HR>
+
+<A HREF="098_L2_CanweuseVioinv20Wher.html">[Back: Can we use Vio in v2.0? Where are the docs for it?]</A> <BR>
+<A HREF="100_L2_HowdoIuseDosMontostu.html">[Next: How do I use DosMon*() to stuff the kbd buf?]</A> 
+</BODY>
+</HTML>

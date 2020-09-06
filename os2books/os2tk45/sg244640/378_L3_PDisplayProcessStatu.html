@@ -1,0 +1,440 @@
+<HTML>
+<HEAD>
+<TITLE>.P - Display Process Status</TITLE>
+</HEAD>
+<BODY>
+<H1>.P - Display Process Status</H1><!-- entering slot 541 --><!-- Unable to decode bitmap format --><IMG SRC="378_L3_PDisplayProcessStatu_146.gif" WIDTH=32 HEIGHT=32><!-- Unable to decode bitmap format --><IMG SRC="378_L3_PDisplayProcessStatu_147.gif" WIDTH=32 HEIGHT=32>
+<P>
+Display <A HREF="3318_L0_.html">process</A> and <A HREF="3319_L0_.html">thread
+</A>status information from the Per Task Data Area (<A HREF="3335_L0_.html">PTDA</A>),
+Thread Control Block (<A HREF="3345_L0_.html">TCB</A>) and Thread Swappable
+Data (<A HREF="3346_L0_.html">TSD</A>).
+<P>
+<U><I>Syntax:</I></U>
+<PRE>ÄÄÄÄ.P ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+                                ÃÄÄ #    ÄÄ´
+                                ÃÄÄ *    ÄÄ´
+                                ÀÄÄ slot ÄÄÙ
+</PRE>
+
+<P>
+<U><I>Parameters:</I></U><!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B><I>slot</B></I><!-- lm: 0x11 11 -->
+<UL> Display process status for <A HREF="3320_L0_.html">thread
+slot</A><B><I> slot</B></I>.
+<P>
+The following short-hand may be used for the slot number:<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->The current (last) thread the dispatcher gave control
+to. This value is taken from the word a global label:
+<PRE>    <B>_TaskNumber</B>
+</PRE>
+<!-- lm: 0x2 11 -->
+<BR>
+<LI><!-- lm: 0x2 26 -->The debugger default thread slot. This defaults to
+the current slot unless overridden by the <A HREF="386_L3_SSetorDisplayDefault.html">.S
+command</A>.<!-- lm: 0x2 11 -->
+<P>
+If no slot number is given then all thread slots are displayed, grouped
+by process.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<U><I>Results &amp; Notes:</I></U>
+<P>
+The<B> .P command</B> locates a thread's TCB from either the thread slot
+table, the linear address of which is given by global variable:
+<PRE><B>_papTCBSlots</B></PRE>
+
+<P>
+or by traversing the process tree using<B> TCBpTCBNext</B> (<B>TCB</B> +0x14),
+<B>TCBpPTDA</B> (<B>TCB</B> +0x08) and<B> ptda_pTCBHead</B> (<B>PTDA</B> +
+0x20) fields. Output from the<B> .P</B> command appears in tabular form
+as follows: 
+<PRE>
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 0001  0001 0000 0000 0001 blk 0100 ffe3a000 ffe3c7d4 ffe3c61c 1eb4 00 *ager
+ 0002  0001 0000 0000 0002 blk 0200 7b7ca000 ffe3c7d4 7b9c8020 1f3c 00 *tsd
+ 0003  0001 0000 0000 0003 blk 0200 7b7cc000 ffe3c7d4 7b9c81d8 1f50 00 *ctxh
+ 0004  0001 0000 0000 0004 blk 081f 7b7ce000 ffe3c7d4 7b9c8390 1f48 00 *kdb
+ 0005  0001 0000 0000 0005 blk 0800 7b7d0000 ffe3c7d4 7b9c8548 1f20 00 *lazyw
+ 0006  0001 0000 0000 0006 blk 0800 7b7d2000 ffe3c7d4 7b9c8700 1f3c 00 *asyncr
+*0008  0002 0001 0002 0001 blk 0500 7b7d6000 7b9e4020 7b9c8a70 1eb8 01 pmshell
+ 000a# 0002 0001 0002 0002 blk 0800 7b7da000 7b9e4020 7b9c8de0 1ed4 01 pmshell
+
+</PRE>
+
+<P>
+Each of the fields has the following meaning:<!-- lm: 0x2 1 -->
+<P>
+<B>slot</B><!-- lm: 0x11 11 -->
+<UL> The unique (hexadecimal) index in to
+the thread slot table of all threads.
+<P>
+This value may be flagged with:<!-- lm: 0x2 11 -->
+<P>
+<B><LI></B><!-- lm: 0x2 17 -->to the left to signify the current (or last)
+dispatched thread.<!-- lm: 0x2 11 -->
+<BR>
+<B><LI></B><!-- lm: 0x2 17 -->to the right to signify the Kernel Debugger
+or Dump Formatter default thread slot.<!-- lm: 0x2 11 -->
+<P>
+<B>Slot</B> may be found in the<B> TCBNumber</B> (<B>TCB</B> + 0x2) field
+of the<B> TCB</B><!-- lm: 0x2 1 -->
+</UL><B> Pid</B><!-- lm: 0x11 11 -->
+<UL> The
+<A HREF="3322_L0_.html">process id</A> this thread slot is assigned to.
+<!-- lm: 0x2 1 -->
+</UL><B>Ppid</B><!-- lm: 0x11 11 -->
+<UL> The parent
+<A HREF="3322_L0_.html">process id</A> that created this thread. A value
+of zero signifies a detached process.<!-- lm: 0x2 1 -->
+</UL><B> Csid</B><!-- lm: 0x11 11 -->
+<UL> The
+<A HREF="3323_L0_.html">command subtree id</A>.
+<P>
+This is normally the same value as the<B> Pid</B>.  When the parent process
+dies any orphaned children are adopted by their grandparent by making<B> Ppid
+</B> equal to the grandparent's<B> Pid</B>.  Each orphan inherits the<B> Csid
+</B> of its dying parent.  This mechanism ensures that orphaned PTDAs are
+not retained for returning termination information to their parent (via
+DosWaitChild).
+<P>
+<B>Csid</B> is taken from the<B> Csid</B> (<B>PTDA</B> +0x4be (H<!-- entering slot 542 -->/
+R :+ 0x4b6 ) )fieldofthe<B>PTDA</B><!-- lm: 0x2 1 -->
+</UL><B>Ord</B><!-- lm: 0x11 11 -->
+<UL>Thethreadordinalforthisthreadslot
+. Thisistheunique<A HREF="3321_L0_.html">threadid</A> assignedtothethreadwithintheprocesstowhichitbelongs
+.
+<P>
+<B>Ord</B> is taken from the<B> TCBOrdinal</B> (<B>TCB</B>+ 0x0) field of
+the<B> TCB</B><!-- lm: 0x2 1 -->
+</UL><B> Sta</B><!-- lm: 0x11 11 -->
+<UL> The
+thread's ascending <A HREF="3314_L0_.html">scheduler</A> state taken from
+the<B> TCBState</B> (<B>TCB</B> +0x161) field.
+<P>
+Except when a state transition is progress this is the same as the current
+state of the thread (see<B> Qst</B> field of the <A HREF="381_L3_PQDisplaySchedulerQu.html">.PQ
+command</A>.)
+<P>
+The following states are possible:
+<PRE>ÚÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³<I>abrv</I>³<I>Sta</I>             ³<I>TCBState</I>³<I>description</I>                   ³
+³    ³                ³<I>value</I>   ³                              ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³--- ³STATE_VOID      ³0       ³Uninitialized or Dead thread  ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³rdy ³STATE_READY     ³1       ³Thread ready to run           ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³blk ³STATE_BLOCKED   ³2       ³Blocked on a <A HREF="3351_L0_.html">Block Id</A>         ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³sus ³STATE_SUSPENDED ³3       ³*** Not in Use ***            ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³crt ³STATE_CRITSEC   ³4       ³Blocked by another CritSec    ³
+³    ³                ³        ³thread (after attempting to   ³
+³    ³                ³        ³run)                          ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³run ³STATE_RUNNING   ³5       ³Thread currently running      ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³bst ³STATE_READYBOOST³6       ³Ready, but apply an IO boost  ³
+³    ³                ³        ³after swapping in a TSD       ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³tsd ³STATE_TSD       ³7       ³Thread waiting for the TSD    ³
+³    ³                ³        ³daemon to page in the TSD.    ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³dly ³STATE_DELAYED   ³8       ³Delayed TKWakeup (Almost      ³
+³    ³                ³        ³Ready)                        ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³frz ³STATE_FROZEN    ³9       ³Frozen Thread via             ³
+³    ³                ³        ³DosSuspendThread,             ³
+³    ³                ³        ³DosCreateThread, DosExecPgm or³
+³    ³                ³        ³DosSystemService              ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³gsk ³STATE_GETSTACK  ³10      ³TSD daemon is waiting for the ³
+³    ³                ³        ³page manager to page in a TSD ³
+ÃÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³bad ³STATE_BADSTACK  ³11      ³TSD failed to page in         ³
+ÀÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+<B>Notes: </B>
+<P>
+The scheduler manages threads on queues by priority and state. See <A HREF="381_L3_PQDisplaySchedulerQu.html">.PQ
+command</A> for displaying scheduler queues.
+<P>
+The scheduler uses a <A HREF="379_L4_SchedulerFiniteState.html">finite state
+machine</A> to manipulate thread queues.<B> TCBQState</B> and<B> TCBState
+</B>are the state transition drivers.  They hold a thread's current and
+desired state.  Except during a state transition current and desired state
+will be identical.
+<P>
+<B>STATE_RUNNING</B> is set when the next potential runner has been selected.
+The running thread's context is then switched and various dispatcher flags
+checked before finally giving control to user code. It is therefore possible
+for the running state to be set and for the user code not to run.
+<P>
+<B>STATE_READYBOOST</B> is a modified ready state and never becomes the
+current state, instead a priority boost is applied and the state becomes
+<B>STATE_READY</B>
+<P>
+<B>STATE_CRTSEC</B> This state applies to non-critical section threads only.
+It is only set when a critical section thread within the same process has
+given up the processor, while still in critical section, and another thread
+in the same process is selected to run. If this thread is thread 1 of the
+process and there are pending signals to process, the thread's signal handler
+will be dispatched. When there are no more pending signals or this thread
+is not thread 1 then<B> STATE_CRITSEC</B> will be set.
+<P>
+<B>STATE_FROZEN</B> is normally only seen when an application uses the DosSuspendThread
+API or creates a thread (or process) that is initially suspended. DosSystemService
+is used by the<!-- entering slot 543 --> session manage to freeze all threads
+of a process in one system call.
+<P>
+Many states are transient accordingly the persistent appearance of a particular
+state might indicate a problem of the following nature:<!-- lm: 0x2 11 -->
+<P>
+<!-- lm: 0x2 26 -->
+<UL><!-- lm: 0x2 26 -->
+<BR>
+<B>rdy</B><!-- lm: 0x2 41 -->
+<UL> Many ready threads might indicate contention
+for processor time. Tends to indicate the existence of a higher priority
+CPU bound thread.<!-- lm: 0x2 26 -->
+</UL><B> run</B><!-- lm: 0x2 41 -->
+<UL> Under
+the Dump Formatter this would indicate a trapped or processor bound thread.
+Under the Kernel Debugger a processor bound thread.<!-- lm: 0x2 26 -->
+</UL><B> blk
+</B><!-- lm: 0x2 41 -->
+<UL>All threads blocked could indicate no-work or
+a deadlock. Under Dump Formatter this would imply a manually invoked dump
+using Ctrl-Alt-Numlock-Numlock or use of the DosForceSystemDump API.<!-- lm: 0x2 26 -->
+</UL> ---
+<!-- lm: 0x2 41 -->
+<UL>The void state is rarely seen. Under Dump Formatter
+this probably indicates an incorrect version of the Dump Formatter for the
+system dumped.<!-- lm: 0x2 26 -->
+</UL><B> crt</B><!-- lm: 0x2 41 -->
+<UL> Another
+thread in the same process is in critical section and is either blocking
+without exiting critical section or is processor bound.<!-- lm: 0x2 26 -->
+</UL><B> dly
+</B><!-- lm: 0x2 41 -->
+<UL>Another thread is processor bound.<!-- lm: 0x2 26 -->
+</UL><B> frz
+</B><!-- lm: 0x2 41 -->
+<UL>A deadlock, loop or no-work for the freezing
+thread<!-- lm: 0x2 26 -->
+</UL><B> sus</B><!-- lm: 0x2 41 -->
+<UL> Is not
+used, so probably indicates a mismatch between the Dump Formatter and dump.
+<!-- lm: 0x2 26 -->
+</UL><B>tsd</B><!-- lm: 0x2 41 -->
+<UL> Physical storage
+overcommitted. Swapper very large. System may be <A HREF="3305_L0_.html">thrashing</A>.
+<!-- lm: 0x2 26 -->
+</UL><B>bst</B><!-- lm: 0x2 41 -->
+<UL> Physical storage
+overcommitted. Swapper very large. Very busy processor bound system System
+may be <A HREF="3305_L0_.html">thrashing</A>.<!-- lm: 0x2 26 -->
+</UL><B> gsk
+</B><!-- lm: 0x2 41 -->
+<UL>Physical storage overcommitted. Swapper very
+large. Very busy processor bound system System may be <A HREF="3305_L0_.html">thrashing</A>.
+<!-- lm: 0x2 26 -->
+</UL><B>bad</B><!-- lm: 0x2 41 -->
+<UL> Excessive swapper.
+System may die. Physical storage overcommitted. Very busy processor bound
+system.<!-- lm: 0x2 26 --><!-- lm: 0x2 11 --><!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL><B> Pri
+</B><!-- lm: 0x11 11 -->
+<UL>Thread priority (word length field) in<B> TCBPriority
+</B>(<B>TCB</B> +0x168).
+<P>
+This is the current priority calculated by the scheduler based upon priority
+class (<B>TCBPriClass</B> (<B>TCB</B> +0x164)), priority class level (<B>TCBPrilevel
+</B>(<B>TCB</B> +0x165)) and priority boosts (<B>TCBPriClassMod</B> (<B>TCB
+</B>+0x166)).
+<P>
+The following priority classes are defined:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³<I>class</I>               ³<I>value</I>³<I>description</I>         ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³CLASS_IDLE_TIME     ³0x01 ³Idle-Time class     ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³CLASS_REGULAR       ³0x02 ³Regular class       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³CLASS_TIME_CRITICAL ³0x03 ³Time-Critical class ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³CLASS_SERVER        ³0x04 ³Client-Server Server³
+³                    ³     ³class               ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+The following priority boosts (class modifiers) are defined:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³<I>Boost</I>                         ³<I>Value</I>³<I>Description</I>         ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³CLASSMOD_KEYBOARD             ³0x04 ³Keyboard boost      ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³CLASSMOD_STARVED              ³0x08 ³Starvation boost    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³CLASSMOD_DEVICE               ³0x10 ³Device I/O Done     ³
+³                              ³     ³Boost               ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³CLASSMOD_FOREGROUND           ³0x20 ³Foreground boost    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³CLASSMOD_WINDOW               ³0x40 ³Window Boost        ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³CLASSMOD_VDM_INTERRUPT        ³0x80 ³VDM simulated       ³
+³                              ³     ³interrupt boost     ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+<B>Note: </B>
+<P>
+<B>CLASSMOD_KEYBOARD</B> has no effect on<B> CLASS_SERVER</B>
+<P>
+The priority level is a value between 0x0 and 0x1f.
+<P>
+Priority class and modifier values are logically ORed to form an index into
+the priority class translation table, which is located at global symbol:
+
+<PRE><B>_schPriClassTbl</B>
+</PRE>
+
+<P>
+The<!-- entering slot 544 --> resulting value is logically ORed with the
+priority level. The final value is subject to the minimum thread priority
+(<B>TCBPriorityMin</B> (<B>TCB</B> +016a)).
+<P>
+Priority boosts do not affect the priority of idle and time-critical threads.
+
+<P>
+Priority level has little or no effect on the priority of boosted regular
+and server class threads. threads<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL><B> pTSD
+</B><!-- lm: 0x11 11 -->
+<UL>Linear address of the <A HREF="3346_L0_.html">TSD
+</A>control block associated with this thread this thread taken from the
+<B>TCBpTSD</B> (<B>TCB</B> +0x0c).
+<P>
+<B>Note: </B>
+<P>
+The TSD contains the ring 0 stack for the associated thread. For the current
+thread this is addressable from selector 30 however the base address of
+selector 30 is entirely different from<B> TCBpTSD.</B> This is because the
+two addresses are aliased using two <A HREF="3327_L0_.html">PTEs</A> to
+pin the same physical frame. This device allows the TSD for be accessed
+out-of-context by the system, at the same time protecting system code from
+erroneous stack references.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL><B> pPTDA
+</B><!-- lm: 0x11 11 -->
+<UL>Linear address of the <A HREF="3335_L0_.html"></A>
+control block representing the process to which this thread belongs. The
+address is taken from<B> TCBpPTDA</B> (<B>TCB</B> +0x08).<!-- lm: 0x2 1 -->
+</UL><B> pTCB
+</B><!-- lm: 0x11 11 -->
+<UL>Linear address of the <A HREF="3345_L0_.html">TCB
+</A>control block which represents the thread.
+<P>
+<B>Note: </B>
+<P>
+The output from<B> .P</B> is ordered by process and child process. TCBs
+are initially located from the thread table then the chain pointer<B> TCBpTCBNext
+</B>(<B>TCB</B> +0x14) is used to locate the remaining threads of a process.
+
+<P>
+Under the Dump Formatter<B> .P</B> will occasionally miss a thread because
+of the non-sequential manner in which the thread table slots are re-used.
+To ensure all active threads are displayed use <A HREF="383_L3_PUDisplayThreadUserS.html">.PU</A>,
+<A HREF="380_L3_PBDisplayBlockedThre.html"></A> or <A HREF="381_L3_PQDisplaySchedulerQu.html">.PQ
+</A>commands.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL><B> Disp</B><!-- lm: 0x11 11 -->
+<UL> The
+displacement into the <A HREF="3346_L0_.html">TSD</A> for the current thread
+that the dispatcher will use for its ESP after having switched back to this
+thread's context.
+<P>
+This value is calculated from<B> TSDKernelESP,</B> therefore requires the
+<B>TSD</B> to be present. If the<B> TSD</B> is not present then a blank
+value is given. The<B> TSD</B> may be forced present under the Kernel Debugger
+by use of the <A HREF="334_L3_ISwapinStorage.html">.I command</A>.<!-- lm: 0x2 1 -->
+</UL><B> SG
+</B><!-- lm: 0x11 11 -->
+<UL><A HREF="3315_L0_.html">Screen Group ID</A> currently
+assigned to this process.
+<P>
+The Screen Groups ID is taken from the console locus structure (<B>Cons_Loc
++0x2)</B> embedded in the <A HREF="3335_L0_.html">PTDA</A> ((<B>PTDA</B> +0x526
+(H/R: +0x51e))).<!-- lm: 0x2 1 -->
+</UL><B> Name</B><!-- lm: 0x11 11 -->
+<UL> The
+name of the primary executable running in this process.
+<P>
+Except for process 1 and Dos Virtual Machines the name is obtained from
+the <A HREF="3353_L0_.html">hmte</A> stored in<B> ptda_module</B> (<B>PTDA
+</B>+0x5a6 (H/R: +0x59e)). If the <A HREF="3343_L0_.html">SMTE</A> is paged
+in then the name is taken from the file name pointed to by<B> smte_path
+</B>otherwise it it taken from mte_module and prefixed with an ! point.
+See <A HREF="338_L3_LMFormatLoaderStruct.html">.LM command</A> for information
+on formating loader control blocks.
+<P>
+Process 1 comprises internal threads, that is threads which run in the kernel
+and are not separately loaded modules.<B> ptda_module</B> is zero for this
+process so the Dump Formatter and Kernel Debugger translate the Tids for
+Pid 1 as follows:
+<PRE><!-- entering slot 545 -->ÚÄÄÄÂÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³<I>Tid</I>³<I>name</I>    ³<I>description</I>                   ³
+ÃÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³1  ³*ager   ³Ager thread used for          ³
+³   ³        ³compressing the Swap File.    ³
+ÃÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³2  ³*tsd    ³Scheduler's Daemon Thread used³
+³   ³        ³to page in TSDs               ³
+ÃÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³3  ³*ctxh   ³Default Global Context Hook   ³
+³   ³        ³dispatching thread.           ³
+ÃÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³4  ³*kdb    ³Kernel Debugger Daemon thread ³
+³   ³        ³used to process page-in       ³
+³   ³        ³requests from the <A HREF="334_L3_ISwapinStorage.html">.ID command</A> ³
+ÃÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³5  ³*lazyw  ³File system cache lazy writer ³
+³   ³        ³thread.                       ³
+ÃÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³6  ³*asyncr ³File system asynchronous read ³
+³   ³        ³ahead thread.                 ³
+ÃÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³7  ³*sysinit³System initialisation thread. ³
+ÃÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³8-n³        ³Other transient internal      ³
+³   ³        ³threads associated with system³
+³   ³        ³initialisation have a blank   ³
+³   ³        ³name.                         ³
+ÀÄÄÄÁÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+Virtual DOS Machines run the <A HREF="3326_L0_.html">DEM</A> component of
+OS/2 to provide DOS emulation. DOS programs are loaded by the DEM and not
+known to the (OS/2) loader. Thus ptda_module is zero and the Kernel Debugger
+and Dump Formatter use the name<B> *vdm</B> to indicate a VDM. The <A HREF="3312_L0_.html">PSP
+</A>of the first loaded DOS program in a process may be located from<B> CurrentPDB
+</B>(<B>PTDA</B> +0x2ea), which contains its segment address. The preceding
+<A HREF="3310_L0_.html">paragraph</A> contains the DOS arena record, the
+last 8 bytes of which contains the DOS program name currently executing.
+<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="377_L3_OOverridedefaultbeha.html">[Back: .O - Override default behaviour]</A> <BR>
+<A HREF="379_L4_SchedulerFiniteState.html">[Next: Scheduler Finite State Machine]</A> 
+</BODY>
+</HTML>

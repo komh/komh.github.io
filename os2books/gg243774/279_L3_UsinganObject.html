@@ -1,0 +1,241 @@
+<HTML>
+<HEAD>
+<TITLE>Using an Object</TITLE>
+</HEAD>
+<BODY>
+<H1>Using an Object</H1><!-- entering slot 306 -->
+<P>
+A user typically accesses an object by opening a <A HREF="706_L2_view.html"><B>view
+</B></A>of that object.  For example, to access the contents of a folder
+object, the user opens the default view (usually an icon view) of the folder,
+which then displays its contents.  This is certainly true for container
+objects such as folders, and for the password-protected folder class used
+as an example in this chapter, although other "device" objects such as printers
+or the shredder may be used without a view.
+<P>
+When no view of an object is open,<I> and</I> the folder within which the
+object resides is not open, the object is said to be <A HREF="550_L2_dormant.html"><B>dormant</B></A>;
+ typically, no system resources are allocated to the object and its instance
+data is in an unknown state.  Opening and closing views of an object therefore
+involve not only the opening and closing of windows, but also allocating
+and freeing resources, and saving and restoring the instance data of the
+object.  Similarly, opening a folder requires saving and restoring the instance
+data of the objects in that folder.
+<P>
+<B>Opening an Object</B>
+<P>
+As mentioned above, a user typically interacts with an object using a view
+of that object.  An object may support various types of view; for example,
+the<I> WPFolder</I> object class supports icon, tree, details and settings
+views. By default, an object class supports the view types defined by its
+ancestors, and a programmer may also define new view types for the object
+class.
+<P>
+When a view of an object is opened, a method named<I> _wpOpen</I> is invoked
+by the Workplace Shell.  This method is defined and implemented by the base
+storage class<I> WPObject</I>, and may be overridden by a new object class
+to perform its own class-specific processing.  The supported views for each
+object class are implemented as part of the<I> _wpOpen</I> method, using
+Presentation Manager windows.
+<P>
+When a view is opened by the user from a context menu, the<I> _wpMenuItemSelected
+</I>method is invoked (see <A HREF="271_L3_Methods.html">Methods (Attaching
+a Method to the Context Menu)</A> for more detailed discussion of this method).
+ The<I> _wpMenuItemSelected</I> method typically invokes the<I> _wpOpen
+</I>method, and passes the identifier of the requested view as the third
+parameter.  The<I> _wpOpen</I> method may then interrogate this parameter
+to decide which view to open.
+<P>
+When the user opens a view by double-clicking the mouse on an object's icon,
+the system invokes the<I> _wpOpen</I> method and passes an OPEN_DEFAULT
+value.  The default processing for the<I> _wpOpen</I> method invokes the
+<I>_wpQueryDefaultView</I> method to determine the default view for the
+object, and immediately invokes the<I> _wpOpen</I> method a second time
+with the identifier for that view.
+<P>
+An example of an overridden<I> _wpOpen</I> method is given in <A HREF="058_L2_OpeninganObject.html">Figure
+"Opening an Object"</A>.  This example shows a password-protection facility
+being added to a folder to prevent access by unauthorized users.  Upon invocation
+of the<I> _wpOpen</I> method, the password-protected folder object class
+displays a dialog box to accept a password from the user.  It then compares
+that password with the correct password for that folder before actually
+opening the folder.  Visual cues such as the folder's icon and the word
+"Locked" on the folder's title are modified or removed during the<I> _wpOpen
+</I>processing.
+<P>
+Since the view being opened in this case is the icon view defined by the
+<I>WPFolder</I> class, the actual opening of the view and presentation of
+the folder's contents is handled using the default processing supplied by
+the parent class, which is called after the class-specific processing has
+completed.
+<P>
+If an object class wishes to create a new view, it must add the name of
+the view to the<I> Open</I> submenu in the object's context menu, and include
+a case for that view in the<I> _wpMenuItemSelected</I> method. This method
+then invokes<I> _wpOpen</I> with a specific value in the<I> ulView</I> parameter,
+indicating the view to be opened.  The class-specific processing for<I> _wpOpen
+</I>must test for this value, open a window and display the correct information
+using Presentation Manager functions.
+<P>
+The example in <A HREF="058_L2_OpeninganObject.html">Figure "Opening an
+Object"</A> does not include the code to set the folder's icon to the "unlocked"
+state.  This code is identical to the code used in <A HREF="046_L2_AddingaNewMethod.html">Figure
+"Adding a New Method"</A> to set the icon to the "locked" state; the resource
+identifier of the "unlocked" icon is simply substituted in the<I> _wpOpen
+</I>method for the identifier of the "locked" icon.
+<P>
+Note that in many cases, it is important for an object class to allow the
+default processing for<I> _wpOpen</I> to occur<I> before</I> it<!-- entering slot 307 --> attempts
+to carry out its own processing.  This allows instance data and control
+information to be established and initialized before the object attempts
+any processing using these items.  In <A HREF="058_L2_OpeninganObject.html">Figure
+"Opening an Object"</A> however, the additional class-specific processing
+determines whether the object should open<I> at all</I>; if processing is
+allowed to proceed, no alteration to the default processing takes place.
+ The default processing may therefore be carried out after the additional
+class-specific processing introduced by the password-protected folder class.
+
+<P>
+The default processing for the<I> _wpOpen</I> method supports a number of
+views, depending upon the parent class of the object; for example, the processing
+for the<I> WPFolder</I> class supports ICON, TREE and DETAILS views.  For
+new object classes which support additional views, the<I> _wpOpen</I> method
+must be overridden and the additional view types opened explicitly as windows
+using appropriate Presentation Manager functions.  Since a view of an object
+is essentially a window, new views can be implemented as normal Presentation
+Manager windows and the correct information displayed using text or graphical
+programming functions, according to the requirements of the object class.
+
+<P>
+Note that upon opening a view using a Presentation Manager window, an object
+should add itself to the "Use List" maintained by the Workplace Shell.  If
+the view is the first view of the object to be opened, this causes the Workplace
+Shell to modify the object's icon to indicate the "in use" state.  The object
+should also register the view with the Workplace Shell, which will then
+subclass the view's frame window, automatically attach the object's context
+menu to the window's system menu icon, and add the view to the Workplace
+Shell's Window List.  These steps are done using the<I> _wpAddToObjUseList
+</I>and<I> _wpRegisterView</I> methods, as shown in <A HREF="059_L2_OpeningaCustomViewof.html">Figure
+"Opening a Custom View of an Object"</A>.
+<P>
+The Workplace Shell makes use of a USEITEM and a VIEWITEM structure in the
+<I>_wpAddToObjUseList</I> method.  It assumes that these structures are
+contiguous in memory; hence they should be allocated as part of a larger
+data structure such as the OBJECTVIEW structure shown in <A HREF="059_L2_OpeningaCustomViewof.html">Figure
+"Opening a Custom View of an Object"</A>.  A pointer to this structure is
+stored in the window words of the view window, so that information such
+as the object's pointer can be accessed from the view's window procedure.
+
+<P>
+Note that upon closing a view, the view's window procedure should invoke
+the<I> _wpDeleteFromObjUseList</I> method to remove the view from the Use
+List.  If the view is the only open view of the object, the object's icon
+is modified to remove the "in use" emphasis.
+<P>
+<B>Automatic Opening Upon Instantiation</B>
+<P>
+In many cases, it is desirable to automatically open a view of an object
+when the object is created.  This may be achieved by using the OPEN= keyword
+in the setup string passed to the<B> WinCreateObject()</B> function.  An
+example of this technique is shown in <A HREF="060_L2_AutomaticallyInstant.html">Figure
+"Automatically Instantiating an Object"</A>.
+<P>
+The opening of the view specified in the OPEN= keyword is handled by the
+default processing for the<I> _wpSetup</I> method, as defined by the<I> WPObject
+</I>class.  The default processing supports the icon, tree and details views,
+specified using the ICON, TREE and DETAILS values for the OPEN= keyword
+respectively.  For new object classes that support additional views, the
+<I>_wpSetup</I> method must be overridden and the additional view types
+opened explicitly as windows using appropriate Presentation Manager functions.
+
+<P>
+<B>Closing an Object</B>
+<P>
+When all open views of an object are to be closed, the<I> _wpClose</I> method
+is invoked.  This method is normally invoked when the user selects the<I> Close
+</I>option from a view's context menu.
+<P>
+The<I> _wpClose</I> method may be overridden to perform class-specific processing
+for closing views, or to free system resources allocated during processing
+of the<I> _wpOpen</I> method.  For example, <A HREF="061_L2_ClosinganObject.html">Figure
+"Closing an Object"</A> shows the<I> _wpClose</I> method being overridden
+to automatically lock a password-protected folder whenever it is closed
+by the user.
+<P>
+When a view of an object is closed, the system sends a WM_DESTROY message
+to the view's frame window.  This allows the object to release any allocated
+resources and save its instance data, so that the object may be reopened
+in its<!-- entering slot 308 --> current state at some future time.
+<P>
+Note that since the<I> _wpClose</I> method is defined by the parent class
+and is overridden, the default processing performed by the parent is called
+after the class-specific processing has completed.
+<P>
+<B>Saving and Restoring the Object State</B>
+<P>
+As already mentioned, an object is persistent; that is, it remains in existence
+even when all views of the object are closed.  In order to maintain its
+instance data so that it may subsequently be opened in the same state in
+which it was closed, the object must save this data when its views are closed
+and restore it when a view is opened.  The Workplace Shell provides methods
+that handle the saving and restoration of instance data on behalf of object
+classes; these methods are automatically invoked by the system at the appropriate
+times, and are described below.
+<P>
+When an object is made dormant, the system invokes the object's<I> _wpSaveState
+</I>method, which allows the object to save its instance data.  A number
+of predefined methods are available to the object to save its data, such
+as<I> _wpSaveString</I>. These methods may be called by the object during
+the processing of its<I> _wpSaveState</I> method, in order to save instance
+data.  An example of the<I> _wpSaveState</I> method for the password-protected
+folder example is given in <A HREF="062_L2_SavinganObjectsState.html">Figure
+"Saving an Object's State"</A>.
+<P>
+An object's instance data items are saved in different locations, depending
+upon the class of the object.  Object classes that are descendants of the
+<I>WPAbstract</I> class store their instance data in the OS/2 initialization
+file OS2.INI.  Object classes that are descendants of the<I> WPFileSystem
+</I>class store their instance data in extended attributes.  Since the password-protected
+folder class is descended from the<I> WPFolder</I> class defined by the
+Workplace Shell, which in turn is a descendant of the<I> WPFileSystem</I> class,
+the instance data of this object class is saved as extended attributes in
+the OS/2 file system.
+<P>
+The class-defined key passed to the<I> _wpSaveString</I> method is used
+to save the data item in a particular location, which can then be accessed,
+using the same key, to restore the item.  In addition to strings, numeric
+data may be saved using the<I> _wpSaveLong</I> method, and other binary
+data such as application-defined data structures may be saved using the
+<I>_wpSaveData</I> method.
+<P>
+Note that since the<I> _wpSaveState</I> method is defined by the object's
+class's ancestors and overridden, it must invoke the default processing
+supplied by the parent class in order to correctly save any instance data
+defined by ancestor classes.  Failure to do so may cause unpredictable results
+upon awakening the object from its dormant state.
+<P>
+An object must retrieve its instance data and restore its state whenever
+it is made awake.  At this point, the system invokes an object's<I> _wpRestoreState
+method</I>, which allows the object to restore its state.  During the processing
+of this method, the object can invoke other methods such as<I> _wpRestoreString</I>,
+which restore specific instance data items.  An example of the<I> _wpRestoreState
+</I>method is given in <A HREF="063_L2_RestoringanObjectsSt.html">Figure
+"Restoring an Object's State"</A>.
+<P>
+The class-defined key passed to the<I> _wpRestoreString</I> method is used
+to locate the required data item, and the item is restored into the specified
+target string variable.  Numeric data can be restored using the<I> _wpRestoreLong
+</I>method, and other binary data such as application-defined structures
+can be restored using the<I> _wpRestoreData</I> method.
+<P>
+Since the<I> _wpRestoreState</I> method is an overridden method, it is important
+that the default processing supplied by the parent class be invoked. Failure
+to do so will result in any instance data defined by ancestor classes being
+in an unknown state, with unpredictable results.
+
+<P><HR>
+
+<A HREF="278_L3_CreatinganObject.html">[Back: Creating an Object]</A> <BR>
+<A HREF="280_L3_DestroyinganObject.html">[Next: Destroying an Object]</A> 
+</BODY>
+</HTML>

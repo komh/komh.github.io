@@ -1,0 +1,127 @@
+<HTML>
+<HEAD>
+<TITLE>The DRAGITEM Structure</TITLE>
+</HEAD>
+<BODY>
+<H1>The DRAGITEM Structure</H1><!-- entering slot 324 -->
+<P>
+The DRAGITEM structure contains information about an individual dragitem.
+A drag operation may include one or more dragitems, and a separate DRAGITEM
+structure is used for each.  The number of dragitems, and an array of pointers
+to the DRAGITEM structures, is contained in the DRAGINFO structure.  In
+conjunction with the information contained in the DRAGINFO structure, the
+DRAGITEM structure provides the information required by a potential or actual
+target window, to determine whether a drop operation is valid for the dragitem.
+
+<P>
+Several of the fields in the DRAGITEM structure are defined as being of
+type HSTR.  These fields refer to ordinary null-terminated character strings
+that are given string handles by Presentation Manager when the<B> DrgAddStrHandle()
+</B>function is called.  It is the string handles that are stored in the
+DRAGITEM structure; the strings themselves are stored by Presentation Manager
+and may be accessed by any other process that has access to the string handle,
+using the<B> DrgQueryStrName()</B> function.
+<P>
+For Presentation Manager windows, the DRAGITEM structure is normally allocated
+by the source of the drag/drop operation as a local variable, since it only
+persists for the duration of the operation.  For Workplace Shell objects,
+the structure is allocated by the Workplace Shell and a pointer to it is
+passed to the object by the Workplace Shell when it invokes the object's
+<I>_wpFormatDragItem</I> method when the drag is initiated.
+<P>
+A number of fields in the DRAGITEM structure are of primary importance;
+these fields are described in the following sections.
+<P>
+<B>lItemID</B>
+<P>
+This field contains a value provided by the source window, which uniquely
+identifies the dragitem.  For example, the value might be a listbox index
+value, a customer number, or any other value that is unique and meaningful
+to the source window.  The reason for having this identification is that
+later in the drag/drop processing, the target window may need to ask the
+source window for more information about the dragged item.  The identifier
+can then be used to identify the item concerned.
+<P>
+<B>hstrType and hstrRMF</B>
+<P>
+These values refer to character strings containing details of the type of
+data represented by the dragitem, and the rendering mechanisms and formats
+that the source is able support for the item.  The types correspond to the
+<I>file type</I> extended attribute, and are identified by names of the
+form DRT_xxxx; for example, DRT_TEXT for plain text, or DRT_BITMAP for bitmap
+data.
+<P>
+The rendering mechanism is specified in the<I> hstrRMF</I> field, and may
+refer to any of the standard mechanisms described in <A HREF="292_L3_RenderingMechanisms.html">Rendering
+Mechanisms</A>, identified by the names DRM_PRINT, DRM_DISCARD, DRM_OS2FILE
+and DRM_DDE, or to any user-defined rendering mechanism for which a similar
+name should be defined.  More than one rendering mechanism can be specified;
+for example, a program that allows the dragging of files may allow the file
+to be moved or copied to another directory, or to be printed by being dropped
+on a printer object.  In this case the program would include the names of
+both the Print and OS/2 File rendering mechanisms in its hstrRMF string,
+allowing the target window to decide which is more suitable.
+<P>
+The format specifications, which are also contained in the<I> hstrRMF</I> field,
+inform a target window of the data formats supported by the dragitem for
+each of its supported rendering mechanisms.  Data format names use the convention
+DRF_xxxx.
+<P>
+To illustrate the use of format specifications and rendering mechanisms,
+consider a spreadsheet program that allows the user to drag an icon representing
+a particular spreadsheet; the user may choose to drag the data into a word-processor,
+into another spreadsheet, or onto a printer object for printing. For dragging
+the file to another spreadsheet or to a word-processing document, the DRM_OS2FILE
+rendering mechanism is<!-- entering slot 325 --> appropriate but for dragging
+to a printer object, the DRM_PRINT mechanism is required.  In the case where
+the target is the printer or the word-processing document, clearly the required
+format for the data is text, but in the case of a drag to another spreadsheet
+it would be more convenient to have the numerical data and the cell relationships
+transferred too, so a different data format should be used, perhaps SYLK.
+
+<P>
+The dragitem therefore needs to indicate that it supports the following
+rendering mechanism/data format combinations:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->DRM_OS2FILE with DRF_TEXT<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->DRM_PRINT with DRF_TEXT<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->DRM_OS2FILE with DRF_SYLK.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+The<I> hstrRMF</I> string provides a syntax for defining this in a fairly
+straightforward way.  Complete details are given in the<I> OS/2 2.0 Programming
+Guide Volume II</I> but, for the above example, the<I> hstrRMF</I> string
+is as follows:
+<PRE>&lt;DRM_OS2FILE,DRF_TEXT&gt;,&lt;DRM_PRINT,DRF_TEXT&gt;,&lt;DRM_OS2FILE,DRF_SYLK&gt;
+</PRE>
+
+<P>
+This can be expressed slightly more concisely as:
+<PRE>(DRM_OS2FILE,DRM_PRINT)x(DRF_TEXT),&lt;DRM_OS2FILE,DRF_SYLK&gt;
+</PRE>
+
+<P>
+Here the first two bracketed items, connected with an "x", indicate that
+all possible pairs made up of one from the first bracket and one from the
+second, are implied.  This notation is very useful in more complex examples,
+where it can save the programmer from having to enumerate all possible combinations
+in the string.
+<P>
+<B>hstrContainerName, hstrSourceName, hstrTargetName</B>
+<P>
+The meaning of these three fields depends on the rendering mechanism to
+be used; with some rendering mechanisms, certain fields are not needed.
+ They apply most directly to the DRM_OS2FILE mechanism where they are used
+to define the source directory, source file name, and a suggested target
+filename (which may be overridden by the target window if it so chooses).
+
+
+<P><HR>
+
+<A HREF="294_L3_TheDRAGINFOStructure.html">[Back: The DRAGINFO Structure]</A> <BR>
+<A HREF="296_L3_TheDRAGIMAGEStructur.html">[Next: The DRAGIMAGE Structure]</A> 
+</BODY>
+</HTML>

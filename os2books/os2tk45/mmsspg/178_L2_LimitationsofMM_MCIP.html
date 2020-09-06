@@ -1,0 +1,57 @@
+<HTML>
+<HEAD>
+<TITLE>Limitations of MM_MCIPOSITIONCHANGE Verification</TITLE>
+</HEAD>
+<BODY>
+<H1>Limitations of MM_MCIPOSITIONCHANGE Verification</H1><!-- entering slot 231 -->
+<P>
+There are limitation to what you can verify in the P2STRING tool using event
+notification lines.  The MM_MCIPOSITIONCHANGE line requires the use of the
+"return<I> value</I>" item in the respective string commands.  This line
+also does not provide for timing start point; for example, playing has started.
+ The P2STRING tool can only count the number of messages received for a
+specific user parameter (used as a key) and check if subsequent messages
+have positions approximate to the given expected position interval.  The
+script writer must determine how many SETPOSITIONADVISE messages are expected,
+considering the duration of playing, time format, and start position of
+the play/record.  The reference<I> position</I> given in the expected notification
+line must be in MMTIME units.  If the "expected number of messages" parameter
+is omitted, the tool only verifies the position interval (not the number).
+ In case of scripts where play, seek, or record are used to cover non-monotonic
+ranges, P2STRING might report failures on position-advises because it expects
+each SETPOSITIONADVISE to be in the next position interval from the previous
+message.  If the script makes a jump to a position that does not conform
+to this, the status will be logged as failed.
+<P>
+For example:
+<PRE>setpositionadvise SomeDevice every 10000 on return 5
++MM_MCIPOSITIONCHANGE 10000 %5
+play SomeDevice from 35000 to 55000 notify (produce 3 positionchange msgs)
+seek SomeDevice to 30000 wait
+play SomeDevice notify (produces a number of messages starting at 30000)
+</PRE>
+
+<P>
+MM_MCIPOSITIONCHANGE messages are logged as failed, because of the lapse
+in position interval.  A way to handle this situation is to disable the
+MM_MCIPOSITIONCHANGE before an explicit position jump is made and enable
+the same SETPOSITIONADVISE with a different user parameter.
+<P>
+For example:
+<PRE>setpositionadvise SomeDevice every 10000 on return 5
++MM_MCIPOSITIONCHANGE 10000 %5
+play SomeDevice from 35000 to 55000 notify (produce 3 positionchange msgs)
+setpositionadvise SomeDevice every 10000 off
+seek SomeDevice to 30000 wait
+setpositionadvise SomeDevice every 10000 on return 6
++MM_MCIPOSITIONCHANGE 10000 %6
+play SomeDevice notify (produce a number of messages starting at 30000)
+</PRE>
+
+
+<P><HR>
+
+<A HREF="177_L4_PositionChangeNotifi.html">[Back: Position Change Notifications]</A> <BR>
+<A HREF="179_L2_ProcessingLogic.html">[Next: Processing Logic]</A> 
+</BODY>
+</HTML>

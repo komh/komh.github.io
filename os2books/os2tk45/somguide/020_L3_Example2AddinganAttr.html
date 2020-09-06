@@ -1,0 +1,143 @@
+<HTML>
+<HEAD>
+<TITLE>Example 2-Adding an Attribute to the Hello class</TITLE>
+</HEAD>
+<BODY>
+<H1>Example 2-Adding an Attribute to the Hello class</H1><!-- entering slot 27 -->
+<P>
+Example 1 introduced a class "Hello" which has a method "sayHello" that
+prints the fixed string "Hello, World!"  Example 2 extends the "Hello" class
+so that clients can customize the output from the method "sayHello".<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Modify the interface declaration for the class
+definition in "hello.idl."
+<P>
+Class "Hello" is extended by adding an attribute that we call "msg".  Declaring
+an<I> attribute</I> is equivalent to defining "get" and "set" methods.  For
+example, specifying:
+<PRE>   attribute string msg;
+</PRE>
+
+<P>
+is equivalent to defining the two methods:
+<PRE>   string _get_msg();
+   void  _set_msg(in string msg);
+</PRE>
+
+<P>
+Thus, for convenience, an attribute can be used (rather than an instance
+variable) in order to use the automatically defined "get" and "set" methods
+without having to write their method procedures. The new interface specification
+for "Hello" that results from adding attribute "msg" to the "Hello" class
+is as follows (with some comment lines omitted):
+<PRE>   #include &lt;somobj.idl&gt;
+
+   interface Hello : SOMObject
+   {
+     void  sayHello();
+
+     <B>attribute string msg;</B>
+          //# This is equivalent to defining the methods:
+          //#     string _get_msg();
+          //#      void  _set_msg(string msg);
+   };
+</PRE>
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Re-run the SOM Compiler on the updated idl file,
+as in example 1.  This produces new header files and updates the existing
+implementation file, if needed, to reflect changes made to the .idl file.
+ In this example, the implementation file is not modified by the SOM Compiler.
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Customize the implementation.
+<P>
+Customize the implementation file by modifying the print statement in the
+"sayHello" method procedure. This example prints the contents of the "msg"
+attribute (which must be initialized in the client program) by invoking
+the "_get_msg" method. Notice that, because the "_get_msg" method name begins
+with an underscore, the method is invoked with<I> two</I> leading underscores
+(for C only).
+<PRE>   SOM_Scope void   SOMLINK sayHello(Hello somSelf, Environment  *ev)
+   {
+       /* HelloData *somThis = HelloGetData(somSelf); */
+       HelloMethodDebug("Hello", "sayHello");
+
+       <B>printf("%s\n", __get_msg(somSelf, ev));</B>
+
+       /* for  C++, use   <B>somSelf-&gt;_get_msg(ev);</B>  */
+   }
+</PRE>
+
+<P>
+This implementation assumes that "_set_msg" has been invoked to initialize
+the "msg" attribute before the "_get_msg" method is invoked by the "sayHello"
+method.  This initialization can be done within the client program.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Update the client program.
+<P>
+Modify the client program so that the "_set_msg" method is invoked to initialize
+the "msg" attribute before the "sayHello" method is invoked.  Notice that,
+because the "_set_msg" method name begins with an underscore, the C client
+program invokes the method with<I> two</I>  leading underscores.
+<P>
+For C programmers:
+<PRE>   #include &lt;hello.h&gt;
+
+   int main(int argc, char *argv[])
+   {
+       Hello obj;
+
+       obj = HelloNew();
+       /* Set the msg text */
+       <B>__set_msg(obj, somGetGlobalEnvironment(), "Hello World Again");</B>
+
+       /* Execute the "sayHello" method */
+       _sayHello(obj, somGetGlobalEnvironment());
+
+       _somFree(obj);
+       return (0);
+   }
+</PRE>
+
+<P>
+For C++ programmers:
+<PRE>   #include &lt;hello.xh&gt;
+
+   int main(int argc, char *argv[])
+   {
+       Hello *obj;
+       obj = new Hello;
+
+       /* Set the msg text */
+       <B>obj-&gt;_set_msg(somGetGlobalEnvironment(), "Hello World Again");</B>
+
+       /* Execute the "sayHello" method */
+       obj-&gt;sayHello(<B>somGetGlobalEnvironment()</B>);
+
+       obj-&gt;somFree();
+       return (0);
+   }
+</PRE>
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Compile and link the client program, as before.
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Execute the client program:
+<PRE>   &gt; hello
+   Hello World Again
+</PRE>
+
+<P>
+The next example extends the "Hello" class to override (redefine) one of
+the methods it inherits from its parent class,<B> SOMObject</B>.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="019_L3_Example1Implementing.html">[Back: Example 1-Implementing a Simple Class with One Method]</A> <BR>
+<A HREF="021_L3_Attributesvsinstance.html">[Next: Attributes vs instance variables]</A> 
+</BODY>
+</HTML>

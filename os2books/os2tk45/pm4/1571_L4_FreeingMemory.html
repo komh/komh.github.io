@@ -1,0 +1,79 @@
+<HTML>
+<HEAD>
+<TITLE>Freeing Memory</TITLE>
+</HEAD>
+<BODY>
+<H1>Freeing Memory</H1><!-- entering slot 1605 -->
+<P>
+How memory for the hook is freed depends on the type of hook chain an event
+is linked to:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Queue (current) hook chain<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->System hook chain<!-- lm: 0x2 1 -->
+</UL>
+<P>
+A queue hook chain is a private hook chain. It applies only to the current
+calling thread that created the queue with which the hook chain is associated.
+It may or may not reside in a DLL. If it is not associated with a DLL, its
+memory can be freed by WinReleaseHook, as shown in the previous sample code.
+
+<P>
+A system hook chain must reside in a DLL; therefore, it affects the entire
+system. WinSetHook allocates memory and associates it with a DLL. This memory
+is not freed until the DLL module is freed. WinReleaseHook cannot free the
+DLL's memory, because another process cannot free the DLL and its associated
+memory. However, this memory can be freed by launching a thread that does
+the following:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Loads the DLL and sets the hook<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->When the playback sequence is complete, releases the
+hook and frees the DLL, thus relinquishing its memory<!-- lm: 0x2 1 -->
+</UL>
+<P>
+As long as any DLL associated with the hook is alive, WinReleaseHook cannot
+free the memory.
+<P>
+The implication here is straightforward:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->If a queue hook is being installed and it is not associated
+with a DLL, WinReleaseHook can free its memory.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If a system hook is being installed, its memory cannot
+be freed until the DLL is freed.  WinReleaseHook has to do a DosFreeModule,
+but it cannot do this for another process. The application must use DosFreeModule
+to relinquish hook-allocated memory associated with a DLL.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following sample code shows a function, called from an application's
+main routine, that releases the hook and frees the memory of the hook installed
+in a sample code shown earlier.
+<PRE>/***********************************************************************//*  StopInputHook: This function stops the hook filtering.             */
+/***********************************************************************/
+void EXPENTRY StopInputHook(void)
+{
+
+/***********************************************************************/
+/*  Drop a hook to our input filter routine.                           */
+/***********************************************************************/
+    WinReleaseHook(habDLL, NULLHANDLE, HK_INPUT, pfnInput, hMod);
+
+/***********************************************************************/
+/*  Decrement the DLL usage count.                                     */
+/***********************************************************************/
+    DosFreeModule(hMod);
+}
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1570_L3_ReleasingHookFunctio.html">[Back: Releasing Hook Functions]</A> <BR>
+<A HREF="1572_L3_RecordingandPlayingB.html">[Next: Recording and Playing Back Input Events]</A> 
+</BODY>
+</HTML>

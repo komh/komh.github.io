@@ -1,0 +1,152 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Get the desktop directory</TITLE>
+</HEAD>
+<BODY>
+<H1>Get the desktop directory</H1><!-- entering slot 362 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* captured from a message in a public CompuServe forum               */
+/*                                                                    */
+/* Note: Seems not to work in OS/2 WARP 4!                            */
+/*                                                                    */
+
+/**********************************************************************/
+/*                                                                    */
+/* GETDESK.CMD                                                        */
+/*                                                                    */
+/* Version: 1.2                                                       */
+/*                                                                    */
+/* Written by: Georg Haschek (see <A HREF="950_L2H_EMailaddressesH.html">EMail Addresses</A>)                    */
+/*                                                                    */
+/* Description: Return the desktop's directory name to the caller.    */
+/*                                                                    */
+/* Note: If the debug parameter ("/D") is set, the output goes to the */
+/*       terminal.                                                    */
+/*                                                                    */
+/**********************************************************************/
+
+/**************/
+/* Initialize */
+/**************/
+
+  Parse Upper Arg argstring
+  debug = 0
+  If Wordpos( "/D",argstring ) &gt; 0 Then
+    debug = 1
+
+  If RxFuncQuery( "SysLoadFuncs" ) Then
+  Do
+    Call RxFuncAdd "SysLoadFuncs", "REXXUTIL", "SysLoadFuncs"
+    Call SysLoadFuncs
+  End
+
+  If debug = 0 Then
+    Return Getpath( Substr( SysIni( "USER",,
+                   "PM_Workplace:Location", "&lt;WP_DESKTOP&gt;" ),1,2 ) )
+
+  Call Charout ,"Your desktop directory is: "
+  Say Getpath( Substr( SysIni( "USER", "PM_Workplace:Location",,
+               "&lt;WP_DESKTOP&gt;" ),1,2 ) )
+Exit 0
+
+/***********************************************/
+/* Loop through the nodes to get the path info */
+/***********************************************/
+Getpath: Procedure Expose nodes.
+  If Getnodes( ) &lt;&gt; 0 Then
+    Return ""
+
+  gpinode = Arg( 1 )
+
+  If nodes.gpinode = "" Then
+    Return ""
+
+  gp = Substr( nodes.gpinode,33,Length( nodes.gpinode )-33 )
+  gpparent = Substr( nodes.gpinode,9,2 )
+
+  If gpparent &lt;&gt; "0000"x Then
+  Do
+    Do Until gpparent = "0000"x
+      gp = Substr( nodes.gpparent,33,Length( nodes.gpparent )-33 ) || ,
+           "\" || gp
+      gpparent = Substr( nodes.gpparent,9,2 )
+    End
+  End
+Return gp
+
+/*****************/
+/* Get the nodes */
+/*****************/
+Getnodes: Procedure Expose nodes.
+  handlesapp = SysIni( "SYSTEM","PM_Workplace:ActiveHandles",,
+                       "HandlesAppName" )
+
+  If handlesapp = "ERROR:" Then
+    handlesapp = "PM_Workplace:Handles"
+
+  block1 = ""
+  Do i = 1 to 999
+    block = SysIni( "SYSTEM", handlesapp, "BLOCK" || i )
+    If block = "ERROR:" Then
+    Do
+      If i = 1 Then
+      Do
+        Say "Unable to locate the NODE table, you are probably",
+            "using OS/2 2.0 without the Service Pack."
+        Return 1
+      End
+      Leave
+    End
+    block1 = block1 || block
+  End
+
+  l = 0
+  nodes. = ""
+  Do Until l &gt;= Length( block1 )
+    If Substr( block1,l+5,4 ) = "DRIV" Then
+    Do
+      xl = Pos( "00"x || "NODE" || "01"x, block1,l+5 )-l
+      If xl &lt;= 0 Then
+        Leave
+      l = l + xl
+      Iterate
+    End
+    Else
+    Do
+      If Substr( block1,l+1,4 ) = "DRIV" Then
+      Do
+        xl = Pos( "00"x || "NODE" || "01"x, block1,l+1 )-l
+        If xl &lt;= 0 Then
+          Leave
+        l = l + xl
+        Iterate
+      End
+      Else
+      Do
+        data = Substr( block1,l+1,32 )
+        xl = C2D( Substr( block1,l+31,1 ) )
+        If xl &lt;= 0 Then
+          Leave
+        data = data || Substr( block1,l+33,xl+1 )
+        l = l + Length( data )
+      End
+    End
+    xnode = Substr( data,7,2 )
+    nodes.xnode = data
+  End
+Return 0
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="350_L4_Listallassociations.html">[Back: List all associations]</A> <BR>
+<A HREF="352_L4_Getalistofallprinter.html">[Next: Get a list of all printers]</A> 
+</BODY>
+</HTML>

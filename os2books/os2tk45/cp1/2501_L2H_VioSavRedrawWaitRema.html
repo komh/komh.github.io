@@ -1,0 +1,55 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>VioSavRedrawWait - Remarks</TITLE>
+</HEAD>
+<BODY>
+<H1>VioSavRedrawWait - Remarks</H1><!-- entering slot 2521 -->
+<P>
+The OS/2 operating system uses VioSavRedrawWait to notify a graphics-mode
+application to save or restore its screen image at screen switch time. The
+application in the outgoing foreground session is notified to perform a
+save. The application in the incoming foreground session is notified to
+perform a restore. The application must perform the action requested and
+immediately reissue VioSavRedrawWait. When an application performs a save,
+it saves its physical display buffer, video mode, and any other information
+the application needs to completely redraw its screen at restore time.
+<P>
+Only one process per session can issue VioSavRedrawWait.  The process that
+first issues it becomes the owner of the function.
+<P>
+A text-mode application must issue VioSavRedrawWait only if the application
+writes directly to the registers on the display adapter.  Assuming VioSavRedrawWait
+is not issued by a text-mode application, the OS/2 operating system performs
+the required saves and restores.
+<P>
+An application that issues VioSavRedrawWait might also need to issue <A HREF="2431_L2_VioModeWait.html">VioModeWait</A>.
+This would allow the application to be notified when it must restore its
+mode at the completion of an application or hard-error pop-up. See <A HREF="2431_L2_VioModeWait.html">VioModeWait
+</A>for more information. Two application threads would be required to perform
+these operations, in this case.
+<P>
+At the time a VioSavRedrawWait thread is notified, the session is in transition
+to or from the background. Although the session's official status is background,
+any selector to the physical display buffer previously obtained by the VioSavRedrawWait
+process (through VioGetPhysBuf) is valid, at this time. The physical display
+buffer must be accessed without issuing <A HREF="2512_L2_VioScrLock.html">VioScrLock</A>.
+Because the session's official status is background, any thread waits if
+it issues VioScrLock with the "wait if unsuccessful" option.
+<P>
+An application containing a VioSavRedrawWait thread should be designed so
+that the process does not cause any hard errors while the VioSavRedrawWait
+thread is running; otherwise, a system lockout might occur.
+<P>
+An application's VioSavRedrawWait thread might be notified to perform a
+restore before it is notified to perform a save. This happens if the application
+was running in the background the first time it issued VioSavRedrawWait.
+The return from this function call provides the notification. The thread
+that issues the call performs the save or redraw and then reissues VioSavRedrawWait
+to wait until its screen image must be saved or redrawn again.
+
+<P><HR>
+
+<A HREF="2500_L2H_VioSavRedrawWaitPara.html">[Back: VioSavRedrawWait - Parameters]</A> <BR>
+<A HREF="2502_L2H_VioSavRedrawWaitTopi.html">[Next: VioSavRedrawWait - Topics]</A> 
+</BODY>
+</HTML>

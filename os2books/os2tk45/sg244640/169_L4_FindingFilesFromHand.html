@@ -1,0 +1,92 @@
+<HTML>
+<HEAD>
+<TITLE>Finding Files From Handles</TITLE>
+</HEAD>
+<BODY>
+<H1>Finding Files From Handles</H1><!-- entering slot 220 -->
+<P>
+Open file system objects (files, named pipes, devices etc.) are represented
+by the <A HREF="3297_L0_.html">SFT</A> control block. The<B> SFT</B> contains
+three sections:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Kernel data<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->File system independent data<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->File system dependent data<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The kernel data section contains information to link the<B> SFT</B> to other
+system control blocks and to make the SFT usable by Kernel APIs. Of principle
+interest in this section are flags, handle, and pointer to the <A HREF="3295_L0_.html">MFT
+</A>and a chain pointer to other<B> SFTs</B> that represent other open instances
+of the same object. The kernel data is split into two discontiguous sections
+at each end of the<B> SFT</B>.
+<P>
+The file system independent data section contains information common to
+all <A HREF="3303_L0_.html">FSDs</A> needed to drive the file system. Of
+principle interest are the file attributes, open mode flags, opening process
+id and handle to the associated <A HREF="3299_L0_.html">VPB</A>.
+<P>
+The file system dependent data section is, as the name suggests, a work
+area private to the<B> FSD</B> that manages the file system object.
+<P>
+<B>Note: </B>
+<P>
+The <A HREF="322_L3_DDisplayanOS2SystemS.html">.D SFT command</A> formats
+the<B> SFT</B> always as if it is a <A HREF="3267_L0_.html">FAT</A> file.
+The information displayed in the file system dependent section may be misleading
+for non-FAT objects. The names of the fields formatted by<B> .D SFT</B> are
+prefixed<B> sfdFAT_</B> for the file system dependent data so make it clear
+which information to treat with circumspection. The kernel and file system
+independent data name are prefixed with<B> sf_</B> and<B> sfi_</B> respectively.
+<!-- lm: 0x2 1 -->
+<P>
+ 
+<P>
+When a file system object is opened, DosOpen returns a handle that represents
+the open object for all subsequent file system manipulation by the process
+until the object is closed. This handle is unique only within process and
+is referred to as the <A HREF="3292_L0_.html">JFN</A>. In protect mode processes
+the<B> JFN</B> is a 16-bit entity. In <A HREF="3272_L0_.html">VDMs</A>,
+however, to be consistent with<B> DOS</B> the<B> JFN</B> is an 8-bit entity,
+which may be correlated to the<I> real</I><B> JFN</B> through a table in
+the <A HREF="3311_L0_.html">PDB</A>. This is illustrated later.
+<P>
+Each open file system object is also known by a system-wide unique handle,
+the <A HREF="3291_L0_.html">SFN</A>. Once the<B> SFN</B> is known then the
+corresponding<B> SFT</B> may be located and thence all file system information
+relating to the object.
+<P>
+Each process is assigned by default a table of 20 words, which is indexed
+by the<B> JFN</B>. Each word of the<B> JFN_table</B> contains the corresponding
+<B>SFN</B> for the open file. The default<B> JFN_table</B> is imbedded within
+the <A HREF="3335_L0_.html">PTDA</A>. Prefixing the<B> JFN_table</B> is
+a double-word pointer (<B>JFN_ptable</B>) that points to this table. If
+the table is expanded (using<B> DosSetMaxFH</B>) then<B> JFN_ptable</B> is
+updated to point to the current<B> JFN_table</B>.
+<P>
+The key to finding information about open object in a given process is to
+locate<B> JFN_ptable</B> and<B> JFN_table</B>. Since both of these fields
+are part of the<B> PTDA</B> they may be refered to by name as symbols<B><I> for
+the current (system) context only</B></I>. For other contexts we may still
+use the<B> PTDA</B>  symbols but in a relative fashion.  The<B> PTDA</B>
+symbols are defined for the current process, which means that to use them
+successfully for another process, one must relocate them to the PTDA one
+wishes to reference.  This is easily done by subtracting the label<B> PTDA_START
+</B> from the desired symbol, then adding the address of the<B> PTDA</B>
+one wishes to see.  For example:  to see the<B> jfn_table</B>  field, enter
+
+<PRE>         dw &lt;ptda address&gt;+jfn_table-ptda_start L2.</PRE>
+ 
+<P>
+The relationships between the<B> JFN_table</B>,<B> PTDA</B> and the<B> SFT
+</B>is illustrated in the following diagram:<!-- Unable to decode bitmap format --><IMG SRC="169_L4_FindingFilesFromHand_12.gif" WIDTH=717 HEIGHT=1011>
+
+<P><HR>
+
+<A HREF="168_L3_HowtoFindFileSystemI.html">[Back: How to Find File System Information]</A> <BR>
+<A HREF="170_L5_FileSystemControlBlo.html">[Next: File System Control Block Relationships]</A> 
+</BODY>
+</HTML>

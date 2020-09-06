@@ -1,0 +1,135 @@
+<HTML>
+<HEAD>
+<TITLE>DIVE Palettes</TITLE>
+</HEAD>
+<BODY>
+<H1>DIVE Palettes</H1><!-- entering slot 160 -->
+<P>
+Applications must inform DIVE of the state of the physical palette upon
+initialization and whenever the physical palette changes.  At application
+initialization, and in response to a WM_REALIZEPALETTE message, the application
+calls the following sequence:
+<PRE>BYTE       pbPal[1024];
+
+/* Query the physical palette from PM   */
+GpiQueryRealColors( hps, 0, 0, 256, (PLONG)pbPal);
+
+/* Pass it to DIVE              */
+DiveSetDestinationPalette( hDive, (PBYTE)pbPal);
+</PRE>
+
+<P>
+If the application itself is using palettes, these palettes must also be
+communicated to DIVE through the DiveSetSourcePalette function. For example,
+if the application is using DIVE to blit 256-color palettized images to
+the screen, the application must send the image palette with a call to DiveSetSourcePalette.
+ If a sequence of images is being used for animation and the palette remains
+constant through the series, it is necessary to call DiveSetSourcePalette
+only once before blitting the first image in the series.
+<P>
+DIVE provides high-speed screen updates by bypassing PM. In order to maintain
+the integrity of the PM desktop, DIVE applications must notify DIVE whenever
+the visible region of the application window changes so that output may
+be clipped accordingly.
+<P>
+Every DIVE application will request visible region notification at window
+initialization time with the following call:
+<PRE>WinSetVisibleRegionNotify( hwnd, TRUE);
+</PRE>
+
+<P>
+The first parameter is the handle of the window where the graphics operations
+will appear, and the second parameter turns on notification for that window.
+ (A corresponding WinSetVisibleRegionNotify(hwnd, FALSE) call should be
+made to turn notification off at window termination time.)
+<P>
+Whenever the window's visible region begins to change, either because the
+window is being moved or sized or another window or icon overlaying the
+window is being moved or sized, the window will receive a WM_VRNDISABLED
+message.  In response to this message, the DIVE application will call DiveSetupBlitter
+(hDiveInst, 0).  Once the movement is complete, the window will receive
+a WM_VRNENABLED message.  In response to this message, the DIVE application
+will query the new visible region, using WinQueryVisibleRegion as follows:
+
+<PRE>hps = WinGetPS( hwnd );
+hrgn = GpiCreateRegion( hps, 0, NULL);
+WinQueryVisibleRegion( hwnd, hrgn);
+</PRE>
+
+<P>
+Whenever the visible region, source color format, or image source or destination
+size changes, the DIVE application must pass the changes to DIVE with a
+call to DiveSetupBlitter.  Note that it is necessary to pass the rectangles
+for the region in window coordinates and the position of the window in desktop
+coordinates.  First, get the rectangles and window coordinates:
+<PRE>RECTL   rctls[50];      /* Rectangles for visible rgn   */
+RGNRECT rgnCtl;         /* Region control struct        */
+SETUP_BLITTER   SetupBlitter;   /* DiveSetupBlitter struct      */
+POINTL  pointl;
+SWP     swp;
+HPS     hps;
+HRGN    hrgn;
+
+rgnCtl.ircStart = 0;    /* Enumerate rectangles */
+rgnCtl.crc = 50;        /* Starting with first  */
+rgnCtl.ulDirection = RECTDIR_LFRT_TOPBOT;
+
+/* Get rectangles for the visible region        */
+GpiQueryRegionRects( hps, hrgn, NULL, &amp;rgnCtl, rctls);
+
+/* Find the window position relative to its parent.     */
+WinQueryWindowPos( hwnd, &amp;swp );
+
+/* Map window position to the desktop.  */
+pointl.x = swp.x;
+pointl.y = swp.y;
+WinMapWindowPoints( WinQueryWindow( hwnd, QW_PARENT ),
+        HWND_DESKTOP, &amp;pointl, 1);
+</PRE>
+
+<P>
+Then, pass the information to DIVE:
+<PRE>/* Tell DIVE about the new settings.  */
+SIZEL   sizlSrcImg;     /* <!-- entering slot 161 -->Size of source image */
+FOURCC  fccSrcColors;   /* Source image format  */
+
+SetupBlitter.ulStructLen = sizeof ( SETUP_BLITTER );
+SetupBlitter.fInvert = 0;
+SetupBlitter.fccSrcColorFormat = fccSrcColors;
+SetupBlitter.ulSrcLineSizeBytes = ulScanLineBytes;
+SetupBlitter.ulSrcWidth = sizlSrcImg.cx;
+SetupBlitter.ulSrcHeight = sizlSrcImg.cy;
+SetupBlitter.ulSrcPosX = 0;
+SetupBlitter.ulSrcPosY = 0;
+SetupBlitter.fccDstColorFormat = FOURCC_SCRN;
+SetupBlitter.ulDstLineSizeBytes = 0;
+SetupBlitter.ulDstWidth = swp.cx;
+SetupBlitter.ulDstHeight = swp.cy;
+SetupBlitter.ulDstPosX = 0;
+SetupBlitter.ulDstPosY = 0;
+SetupBlitter.lScreenPosX = pointl.x;
+SetupBlitter.lScreenPosY = pointl.y;
+SetupBlitter.ulNumDstRects = rgnCtl.crcReturned;
+SetupBlitter.pVisDstRects = rctls;
+DiveSetupBlitter ( hDive, &amp;SetupBlitter );
+</PRE>
+
+<P>
+The color format of the source image is described by<I> fccSrcColors</I>.
+
+<P>
+Note that, in this example, the DIVE blitter is set up to blit to the screen,
+but that need not be the case.  DIVE could also be used to perform color
+conversion and/or stretch blitting to a destination image.  The destination
+color-encoding format would be indicated in<I> fccDstColorFormat</I>;<I> ulDstWidth
+</I>and<I> ulDstHeight</I> would be set to the size of the destination image;
+<I>ulNumDstRects</I> would be set to 1; and<I> pVisDstRects</I> would point
+to a single rectangle with<I> xLeft</I>=<I>yBottom</I>=0<I> xRight</I>=<I>ulDstWidth
+</I>and<I> yTop</I>=<I>ulDstHeight</I>.
+
+<P><HR>
+
+<A HREF="148_L3_DIVEImageBuffers.html">[Back: DIVE Image Buffers]</A> <BR>
+<A HREF="150_L3_BlitterOperation.html">[Next: Blitter Operation]</A> 
+</BODY>
+</HTML>

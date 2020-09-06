@@ -1,0 +1,109 @@
+<HTML>
+<HEAD>
+<TITLE>DBG_C_MapROAlias</TITLE>
+</HEAD>
+<BODY>
+<H1>DBG_C_MapROAlias</H1><!-- entering slot 707 -->
+<P>
+<B>Debug Command 18 and 19 - Map Read-Only or Read-Write Memory Alias Command
+</B>
+<P>
+<B>Parameters</B><!-- lm: 0x2 1 -->
+<UL>
+<P>
+Pid<!-- lm: 0x2 8 -->
+<UL>= Process ID of debuggee<!-- lm: 0x2 1 -->
+</UL>Cmd<!-- lm: 0x2 8 -->
+<UL>= DBG_C_MapROAlias (Read Only)  (<I>Not always
+supported</I>)<!-- lm: 0x2 1 -->
+</UL>Cmd<!-- lm: 0x2 8 -->
+<UL>= <A HREF="697_L3_DBG_C_MapRWAlias.html">DBG_C_MapRWAlias
+</A>(Read Write)<!-- lm: 0x2 1 -->
+</UL>Buffer<!-- lm: 0x2 8 -->
+<UL>= Reserved, must be zero.<!-- lm: 0x2 1 -->
+</UL>Addr<!-- lm: 0x2 8 -->
+<UL>= Start of debuggee region to alias (Page-Aligned)
+<!-- lm: 0x2 1 -->
+</UL>Len<!-- lm: 0x2 8 -->
+<UL>= Requested length of alias region (Page-Multiple)
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Returns</B><!-- lm: 0x2 1 -->
+<P>
+Buffer<!-- lm: 0x2 8 -->
+<UL>= Address of the start of the debugger alias
+region<!-- lm: 0x2 1 -->
+</UL>
+<P>
+An alias to the debuggee's memory region of the requested length is mapped
+into the debugger's memory space. This region is reserved for use as an
+alias region until it is unmapped.
+<P>
+The access rights for the alias area are determined by the command number.
+The DBG_C_MapROAlias command maps a read-only alias region, while the <A HREF="697_L3_DBG_C_MapRWAlias.html">DBG_C_MapRWAlias
+</A>command maps a read-write alias region.
+<P>
+For read-write aliases, if the region is shared and read-only in the debuggee's
+context, a private copy of the aliased pages will be created in the debuggee's
+context, and dynamic RAS tracepoints will be removed from that region. This
+prevents debugging from affecting other areas of the system, while allowing
+access to shared memory areas, and proper disassembly of regions where dynamic
+RAS tracepoints are in use.
+<P>
+Because the read-write aliases may convert objects to private, using up
+system resources, it is recommended that read-only aliases be used when
+simply perusing memory.  See the following<B> Restrictions</B> regarding
+read-only aliases on the 80386 processor.
+<P>
+Because the entire aliased region may map both valid and invalid regions
+of memory, debuggers should issue<A><!-- external link: 1D C6 C3 51 --> DosQueryMem
+</A>just before accessing the alias region to determine if the region is
+valid. Debuggers should not access this region while the debuggee is executing,
+as portions of this region may become invalid without notifying the debugger.
+It is possible that no valid pages will exist in the alias region.
+<P>
+When the debuggee frees an aliased object, or shrinks the underlying object
+such that the alias would span a region outside the resultant object, an
+alias-free notification is returned to the debugger. This notification will
+be returned before the alias is invalidated. See <A HREF="710_L2_DosDebugNotification.html">DosDebug
+Notifications</A> for details.
+<P>
+These commands may be performed while the debuggee is executing code via
+a <A HREF="686_L3_DBG_C_Go.html">DBG_C_Go</A> command.
+<P>
+<B>Restrictions</B>
+<P>
+Because debuggers can execute code at ring 2, and the read-only bit in the
+page tables entries is effective only at ring 3, the read-only aliases cannot
+be supported. When the read-only bit becomes effective at all rings, as
+is expected on later processors, the read-only aliases will again be supported.
+
+<P>
+Most memory management calls may not be used on these aliases.<A><!-- external link: 1D C6 C3 51 --> DosQueryMem
+</A>is permitted, but for interrogation only.
+<P>
+The passed starting addresses must be aligned on a page boundary, and the
+length of the aliased region must be a multiple of the page size. This restriction
+is due to the underlying hardware.
+<P>
+Aliased regions must be completely contained within a single debuggee memory
+object.
+<P>
+No interface is available for moving an alias to point to another section
+of debuggee memory. To move an alias, the debugger must free an existing
+alias, and then map a new alias to the desired region.
+<P>
+Aliases will only be permitted to the user space memory region of the debuggee.
+No aliases will be provided to system space.
+<P>
+The alias region will only be provided at the linear level. No debugger
+Local Descriptor Table (<!-- entering slot 708 --> LTD) selector will be
+available to access the alias region.
+
+<P><HR>
+
+<A HREF="695_L3_DBG_C_ThrdStat.html">[Back: DBG_C_ThrdStat]</A> <BR>
+<A HREF="697_L3_DBG_C_MapRWAlias.html">[Next: DBG_C_MapRWAlias]</A> 
+</BODY>
+</HTML>

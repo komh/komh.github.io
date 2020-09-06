@@ -1,0 +1,100 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Delete a directory(-tree)</TITLE>
+</HEAD>
+<BODY>
+<H1>Delete a directory(-tree)</H1><!-- entering slot 483 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* function: Delete all files in a directory and in all its           */
+/*           sub directories!                                         */
+/*                                                                    */
+/* call:     DeleteDirectory dirToDelete                              */
+/*                                                                    */
+/* where:    dirToDelete - directory to delete                        */
+/*                                                                    */
+/* returns:  0 - okay                                                 */
+/*          -1 - drive not ready                                      */
+/*          -2 - missing or invalid parameter                   v3.10 */
+/*                                                                    */
+/* note:     see also <A HREF="316_L3_ThefunctionSysDestro.html">The function SysDestroyObject</A>                   */
+/*                                                                    */
+DeleteDirectory: PROCEDURE
+  parse arg dirToDelete
+
+  signal off error                                           /* v3.20 */
+  signal off notready                                        /* v3.20 */
+  signal off failure                                         /* v3.20 */
+
+  if dirToDelete = '' then                                   /* v3.10 */
+  do                                                         /* v3.10 */
+                        /* check for missing parameter          v3.10 */
+    thisRC = -2                                              /* v3.10 */
+    signal DeleteDirectoryError                              /* v3.10 */
+  end /* if */
+
+                        /* file or device for messages                */
+  prog.__LogAll = "2&gt;NUL 1&gt;NUL"
+
+                        /* init the return code                       */
+  thisRC = -1
+                        /* check if the drive is ready                */
+  SIGNAL ON NOTREADY Name DeleteDirectoryError
+  call stream fileSpec( "drive", dirToDelete ) || "\*"
+
+                        /* flush the REXX queue                 v3.20 */
+  do while queued() &lt;&gt; 0; parse pull; end;
+
+                        /* put a list of all subdirectories in the    */
+                        /* queue                                      */
+  "@dir /s/f /Ad " dirToDelete "2&gt;NUL | RXQUEUE /lifo "
+
+  do while queued() &lt;&gt; 0
+    dirToDel = lineIn( "QUEUE:" )
+    if dirTodel &lt;&gt; "" &amp; right( dirToDel,2 ) &lt;&gt; "\." &amp; ,
+       right( dirToDel,3 )  &lt;&gt; "\.." then
+    do
+                    /* also delete hidden, system and read-only files */
+                                                             /* v3.20 */
+      '@attrib -r -s -h "' || dirToDel || '\*.*"' "2&gt;NUL 1&gt;NUL"
+
+                                                             /* v3.20 */
+      if stream( dirToDel || '\*.*', 'c', 'QUERY EXISTS' ) &lt;&gt; '' then
+        '@del /n "' || dirToDel || '\*.*"' prog.__LogAll     /* v3.00 */
+
+      if dirToDel &lt;&gt; dirToDelete then
+        '@rd  "' || dirToDel || '"' prog.__LogAll            /* v3.00 */
+    end /* if dirToDel &lt;&gt; "" then */
+  end /* do while queued &lt;&gt; 0 */
+
+                    /* also delete hidden, system and read-only files */
+                                                             /* v3.20 */
+  '@attrib -r -s -h "' || dirToDelete || '\*.*"' "2&gt;NUL 1&gt;NUL"
+
+                                                             /* v3.20 */
+  if stream( dirToDelete || '\*.*', 'c', 'QUERY EXISTS' ) &lt;&gt; '' then
+    '@del /n "' || dirToDelete || '\*.*"' prog.__LogAll
+
+  '@rd "' || dirToDelete || '"' prog.__logAll                /* v3.00 */
+
+  thisRC = 0
+
+DeleteDirectoryError:
+
+RETURN thisRC
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="464_L3_Createadirectorytree.html">[Back: Create a directory(-tree)]</A> <BR>
+<A HREF="466_L3_Checkifanamedescribe.html">[Next: Check if a name describes a device or a file]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,158 @@
+<HTML>
+<HEAD>
+<TITLE>Exporting MLE Text</TITLE>
+</HEAD>
+<BODY>
+<H1>Exporting MLE Text</H1><!-- entering slot 1697 -->
+<P>
+Before using the MLM_EXPORT message the number of characters to export needs
+to be determined. The MLM_QUERYFORMATTEXTLENGTH message is used to determine
+the number of characters to be copied from the MLE to the buffer (including
+LF and CR) and to allocate the room in the buffer. MLM_EXPORT is then used
+to export the MLE text into the buffer.
+<P>
+<B>Note: </B> The MLM_QUERYTEXTLENGTH message does not consider the CR and
+LF characters as the MLM_QUERYFORMATTEXTLENGTH message does.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+The following code fragment reads text from a file to a buffer, then imports
+the text to an MLE field:
+<PRE>HWND  hwndMle;
+CHAR  szMleBuf[512];
+IPT   lOffset = 0;
+PSZ   pszTextFile;
+HFILE hf;
+ULONG cbCopied;
+ULONG ulAction;
+ULONG cbBytesRead;
+
+/* Obtain a file name from the user */
+
+/* Open the file */
+DosOpen(pszTextFile,
+        &amp;hf,
+        &amp;ulAction,
+        0,
+        FILE_NORMAL,
+        FILE_OPEN |
+        FILE_CREATE,
+        OPEN_ACCESS_READONLY |
+        OPEN_SHARE_DENYNONE,
+        NULL);
+
+/* Zero-fill the buffer using memset, a C run-time function */
+memset(szMleBuf, 0, sizeof(szMleBuf));
+
+/* Set the MLE import-export buffer */
+WinSendMsg(hwndMle,
+           MLM_SETIMPORTEXPORT,
+           MPFROMP(szMleBuf),
+           MPFROMSHORT((USHORT) sizeof(szMleBuf)));
+
+/**********************************************************************/
+/*  Read the text from the file to the buffer,                        */
+/*  then import it to the MLE.                                        */
+/**********************************************************************/
+
+do {
+     DosRead(hf,
+             szMleBuf,
+             sizeof(szMleBuf),
+             &amp;cbBytesRead);
+
+     cbCopied = (ULONG) WinSendMsg(hwndMle,
+                        MLM_IMPORT,
+                        MPFROMP( &amp;lOffset),
+                        MPFROMP(&amp;cbBytesRead));
+   } while (cbCopied);
+
+/* Close the file */
+DosClose(hf);
+
+</PRE>
+To export MLE text, an application sends the MLM_EXPORT message to the MLE
+control. Like MLM_IMPORT, the MLM_EXPORT message takes the<I> plOffset</I> and
+<I>cbCopy</I> parameters. The<I> plOffset</I> parameter is a pointer to
+a variable that specifies the offset to the first character to export. A
+value of -1 specifies the current cursor position. On return, the variable
+contains the offset to the first character in the MLE field not copied to
+the buffer. The<I> cbCopy</I> parameter is a pointer to a variable that
+specifies the number of bytes to export. On return, this variable equals
+0 if the number of characters actually copied does not exceed the number
+specified to be copied. The following code fragment shows how to export
+text from an MLE field, then store the text in a file:
+<PRE>HWND  hwndMle;
+CHAR  szMleBuf[512];
+IPT   lOffset = 0;
+PSZ   pszTextFile;
+HFILE hf;
+
+ULONG cbCopied;
+ULONG ulAction;
+ULONG cbBytesWritten;
+ULONG cbCopy;
+
+/* Zero-fill the buffer using memset, a C run-time function */
+memset(szMleBuf, 0, sizeof(szMleBuf));
+
+/* Set the MLE import-export buffer */
+WinSendMsg(hwndMle,
+           MLM_SETIMPORTEXPORT,
+           MPFROMP(szMleBuf),
+           MPFROMSHORT ((USHORT) sizeof(szMleBuf)));
+
+   .
+   .
+   .
+
+/* Obtain a filename from the user */
+   .
+   .
+   .
+
+/* Open the file */
+DosOpen(pszTextFile,
+        &amp;hf,
+        &amp;ulAction,
+        0,
+        FILE_NORMAL,
+        FILE_OPEN |
+        FILE_CREATE,
+        OPEN_ACCESS_WRITEONLY |
+        OPEN_SHARE_DENYNONE,
+        NULL);
+
+/* Find out how much text is in the MLE */
+cbCopy = (ULONG) WinSendMsg(hwndMle,
+                            MLM_QUERYFORMATTEXTLENGTH,
+                            MPFROMLONG(lOffset),
+                            MPFROMLONG((-1)));
+
+/* Copy the MLE text to the buffer */
+cbCopied = (ULONG) WinSendMsg(hwndMle,
+                              MLM_EXPORT,
+                              MPFROMP(&amp;lOffset),
+                              MPFROMP(&amp;cbCopy));
+
+/* Write the contents of the buffer to the file */
+DosWrite(hf,
+         szMleBuf,
+         sizeof(szMleBuf),
+         &amp;cbBytesWritten);
+
+/* Close the file */
+DosClose(hf);
+
+</PRE>
+
+<P>
+
+
+<P><HR>
+
+<A HREF="1659_L4_ImportingMLEText.html">[Back: Importing MLE Text]</A> <BR>
+<A HREF="1661_L3_SearchingMLEText.html">[Next: Searching MLE Text]</A> 
+</BODY>
+</HTML>

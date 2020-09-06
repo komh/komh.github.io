@@ -1,0 +1,146 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Check if a queue exists</TITLE>
+</HEAD>
+<BODY>
+<H1>Check if a queue exists</H1><!-- entering slot 248 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+There is no function to check if a queue exists. To do this, you can use
+either the procedure shown below or the function<B> RxProcQueueExists</B> from
+the RXPROC.DLL from the <A HREF="696_L3_SRE2003InternetInter.html">SRE2003
+Internet Interface package</A>. 
+<PRE> 
+/* sample code to extend the RXQUEUE function with code to check if   */
+/* a queue exists                                                     */
+
+                        /* stem with the names of the test queues     */
+  testQueue.0 = 2
+  testQueue.1 = "QUEUEA"
+  testQueue.2 = "QUEUEB"
+
+                        /* install some error handlers to ensure the  */
+                        /* deletion of the test queues at program     */
+                        /* end if the program is aborted due to an    */
+                        /* error!                                     */
+  SIGNAL ON SYNTAX  Name ProgramEnd
+  SIGNAL ON ERROR   Name ProgramEnd
+  SIGNAL ON HALT    Name ProgramEnd
+
+                        /* create the test queues                     */
+  say "Creating some queues for testing ..."
+
+  do i = 1 to TestQueue.0
+    call CharOut, " Creating the queue """ || testQueue.i || """ ..."
+    if rxQueue( "CREATE", testQueue.i ) = testQueue.i then
+      call LineOut, " done."
+    else
+      call LineOUt, " failed."
+  end /* do i = 1 to TestQueue.0 */
+  say ''
+
+  do until myInput = ""
+    say "Enter the name of the queue to check (RETURN to exit): "
+    myInput = strip( lineIn() )
+    if myInput &lt;&gt; "" then
+    do
+      queueExist = rxqueue( "QUERY", myInput )
+
+      select
+        when queueExist = 0 then
+          say "The queue """ || myInput || """ does not exist."
+
+        when queueExist = 1 then
+          say "The queue """ || myInput || """ exist."
+
+        otherwise
+          say "Error """ || queueExist || """ executing RXQUEUE!"
+
+      end /* select */
+
+    end /* if myInput &lt;&gt; "" then */
+  end /* do until myInput = "" */
+
+ProgramEnd:
+                        /* delete the test queues                     */
+  say "Deleting the queues for testing ..."
+
+  do i = 1 to TestQueue.0
+    say " Deleting the queue """ || testQueue.i || """ ..."
+
+                        /* use the _original_ function to avoid       */
+                        /* endless loops if the new RXQUEUE function  */
+                        /* is buggy!                                  */
+    call "RXQUEUE"  "DELETE", testQueue.i
+  end /* do i = 1 to TestQueue.0 */
+
+exit 0
+
+/* ------------------------------------------------------------------ */
+/* function: Extended RXQUEUE function                                */
+/*                                                                    */
+/* usage:    RXQUEUE action {,queue_name}                             */
+/*                                                                    */
+/* where:    action                                                   */
+/*             - QUERY - check if the queue "queue_name" exists       */
+/*             All other values for action are processed by the       */
+/*             original RXQUEUE function.                             */
+/*                                                                    */
+/* returns:  if action = "QUERY":                                     */
+/*             1 - the queue exist                                    */
+/*             0 - the queue does not exist                           */
+/*             else                                                   */
+/*               error code of the original RXQUEUE function          */
+/*           if action &lt;&gt; "QUERY":                                    */
+/*             return code of the original RXQUEUE function           */
+/*             or "SYNTAX ERROR" if called with invalid parameter(s)  */
+/*                                                                    */
+RXQUEUE: PROCEDURE
+  parse arg action, queue_name
+
+                        /* init the return code                       */
+  rc = "SYNTAX ERROR"
+
+                        /* install a local error handler              */
+  SIGNAL ON SYNTAX NAME RxQueueError
+
+  if translate( action ) = "QUERY" then
+  do
+    if queue_name &lt;&gt; "" then
+    do
+      queue_name = translate( strip( queue_name ) )
+                        /* try to create the queue ...                */
+      tempQueue = "RXQUEUE"( "CREATE", queue_name )
+
+                        /* ... and delete the just created queue      */
+      call "RXQUEUE" "DELETE", tempQueue
+
+                        /* set the return code                        */
+      rc = ( tempQueue &lt;&gt; translate( queue_name ) )
+    end /* if queue_name &lt;&gt; "" then */
+  end /* if translate( action ) = "QUERY" then */
+  else
+  do
+                        /* call the original RXQUEUE function         */
+    if queue_name &lt;&gt; "" then
+      rc = "RXQUEUE"( action, queue_name )
+    else
+      rc = "RXQUEUE"( action )
+  end /* else */
+
+RxQueueError:
+
+RETURN rc
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="249_L3_Checkingaqueue.html">[Back: Checking a queue]</A> <BR>
+<A HREF="251_L3_Flushingaqueue.html">[Next: Flushing a queue]</A> 
+</BODY>
+</HTML>

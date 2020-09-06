@@ -1,0 +1,291 @@
+<HTML>
+<HEAD>
+<TITLE>DosListIO</TITLE>
+</HEAD>
+<BODY>
+<H1>DosListIO</H1><!-- entering slot 44 -->
+<P>
+<B>Purpose</B>
+<P>
+DosListIO performs the specified number of seek/read and/or seek/write operations.
+
+<P>
+<B>Syntax</B>
+<PRE>#define INCL_DOSFILEMGR
+#include  os2.h&gt;
+
+</PRE>
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+APIRET DosListIO<!-- lm: 0x2 11 -->
+<UL><B> (ULONG CmdMode, ULONG NumEntries,
+PLISTIO pListIO)</B><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Parameters</B><!-- lm: 0x2 1 -->
+<P>
+CmdMode (ULONG)  input<!-- lm: 0x11 11 -->
+<UL> This specifies the mode
+in which the operations should be performed. Valid modes are <!-- lm: 0x2 11 -->
+<P>
+LISTIO_ORDERED<!-- lm: 0x11 20 -->
+<UL> Operations are performed synchronously
+in the given order.<!-- lm: 0x2 11 -->
+</UL> LISTIO_UNORDERED<!-- lm: 0x11 20 -->
+<UL> Operations
+are performed independent of order.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL> NumEntries
+(ULONG)  input<!-- lm: 0x11 11 -->
+<UL> The number of seek/read or seek/write
+operations in the list.<!-- lm: 0x2 1 -->
+</UL> pListIO (PLISTIO)  input/output
+<!-- lm: 0x11 11 -->
+<UL>Pointer to an array of<I> NumEntries</I><B> LISTIO
+</B>data structures which contain the information necessary to perform the
+seek/read and seek/write operations.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Returns</B><!-- lm: 0x2 1 -->
+<P>
+ulrc (APIRET)  returns<!-- lm: 0x11 11 -->
+<UL> Return Code.
+<P>
+DosListIO returns one of the following values <!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->NO_ERROR<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->ERROR_ACCESS_DENIED<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->ERROR_INVALID_HANDLE<!-- lm: 0x2 11 -->
+<P>
+19<!-- lm: 0x2 26 -->
+<UL> ERROR_WRITE_PROTECT<!-- lm: 0x2 11 -->
+</UL> 26
+<!-- lm: 0x2 26 -->
+<UL>ERROR_NOT_DOS_DISK<!-- lm: 0x2 11 -->
+</UL> 29<!-- lm: 0x2 26 -->
+<UL> ERROR_WRITE_FAULT
+<!-- lm: 0x2 11 -->
+</UL>33<!-- lm: 0x2 26 -->
+<UL> ERROR_LOCK_VIOLATION
+<!-- lm: 0x2 11 -->
+</UL>87<!-- lm: 0x2 26 -->
+<UL> ERROR_INVALID_PARAMETER
+<!-- lm: 0x2 11 -->
+</UL>109<!-- lm: 0x2 26 -->
+<UL> ERROR_BROKEN_PIPE<!-- lm: 0x2 11 -->
+</UL> 234
+<!-- lm: 0x2 26 -->
+<UL>ERROR_MORE_DATA<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Remarks</B>
+<P>
+DosListIO applies the same restrictions for each seek/read and seek/write
+control block as would be applied if the requests were issued separately
+with DosSetFilePtr, DosRead, and DosWrite.
+<P>
+Each request control block contains fields for the Actual number of bytes
+read/written and the operation return code. These fields are updated upon
+completion of each request, therefore care must be taken that the memory
+containing the control block array not be deallocated or manipulated by
+another thread before the DosListIO request returns.
+<P>
+There are two valid modes for the list of I/O operations to be processed
+ <!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Ordered - This mode guarantees the order in which
+the operations will be performed. The API will return with an error code
+corresponding to the first failed request and will leave the following requests
+unissued. This provide a synchronous sequence of automatic seek/read and
+seek/write requests. This is the only mode that is compatible with file
+systems other than the raw file system.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Unordered - This mode does not guarantee the order
+of issue or completion of the requests. The API will return with an error
+code if any request fails. Additionally, each request in the list will be
+issued, even those following a failed operation. This mode is valid for
+the raw file system only.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Related Functions</B><!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->DosOpen<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosSetFilePtr<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosRead<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosWrite<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Example Code</B>
+<P>
+The following is NOT a complete usable program.  It is simply intended to
+provide an idea of how to use Raw I/O File System APIs (e.g. DosOpen, DosListIO,
+and DosClose).
+<P>
+This example opens physical disk #1 for reading and physical disk #2  for
+writing.  Using DosListIO, 10 megabytes of data is transferred disk #1 to
+disk #2.  Finally, DosClosed is issued to close the disk handles.
+<P>
+It is assumed that the size of each of the two disks is at least 10 megabytes.
+
+<PRE>#define INCL_DOSFILEMGR          /* Include File Manager APIs */#define INCL_DOSMEMMGR           /* Includes Memory Management APIs */
+#define INCL_DOSERRORS           /* DOS <!-- entering slot 45 -->Error values */
+#include  os2.h&gt;
+#include  stdio.h&gt;
+#include  stdlib.h&gt;
+#include  string.h&gt;
+
+#define SIXTY_FOUR_K 0x10000
+#define ONE_MEG     0x100000
+#define TEN_MEG     10*ONE_MEG
+
+#define UNC_DISK1  "\\\\.\\Physical_Disk1"
+#define UNC_DISK2  "\\\\.\\Physical_Disk2"
+
+int main(void) {
+   LISTIO listIOCtrlBlks[2];          /* List IO control blocks   */
+   ULONG  ulNumCtrlBlks;              /* Number of control blocks */
+   HFILE  hfDisk1        = 0;         /* Handle for disk #1 */
+   HFILE  hfDisk2        = 0;         /* Handle for disk #2 */
+   ULONG  ulAction       = 0;         /* Action taken by DosOpen */
+   UCHAR  uchFileName1[20]  = UNC_DISK1, /* UNC Name of disk 1 */
+          uchFileName2[20]  = UNC_DISK2; /* UNC Name of disk 2 */
+   PBYTE  pBuffer        = 0;
+   ULONG  cbTotal        = 0;
+
+   APIRET rc = NO_ERROR;              /* Return code */
+
+   /* Open a raw file system disk #1 for reading */
+   rc = DosOpen(uchFileName1,               /* File name */
+                 hfDisk1,                   /* File handle */
+                 ulAction,                  /* Action taken by DosOpen */
+                0L,                         /* no file size */
+                FILE_NORMAL,                /* File attribute */
+                OPEN_ACTION_OPEN_IF_EXISTS, /* Open existing disk */
+                OPEN_SHARE_DENYNONE |       /* Access mode */
+                OPEN_ACCESS_READONLY,
+                0L);                        /* No extented attributes */
+   if (rc != NO_ERROR) {
+      printf("DosOpen error rc = %u\n", rc);
+      return(1);
+   } /* endif */
+
+   /* Open a raw file system disk #2 for writing */
+   rc = DosOpen(uchFileName2,               /* File name */
+                 hfDisk2,                   /* File handle */
+                 ulAction,                  /* Action taken by DosOpen */
+                0L,                         /* no file size */
+                FILE_NORMAL,                /* File attribute */
+                OPEN_ACTION_OPEN_IF_EXISTS, /* Open existing disk */
+                OPEN_SHARE_DENYNONE |       /* Access mode */
+                OPEN_ACCESS_READWRITE,
+                0L);                        /* No extented attributes */
+   if (rc != NO_ERROR) {
+      printf("DosOpen error rc = %u\n", rc);
+      return(1);
+   } /* endif */
+
+
+   /* Allocate 64K of memory for transfer operations */
+   rc = DosAllocMem((PPVOID) pBuffer, /* Pointer to buffer */
+                     SIXTY_FOUR_K,      /* Buffer size */
+                     PAG_COMMIT |     /* Allocation flags */
+                     PAG_READ |
+                     PAG_WRITE);
+   if (rc != NO_ERROR) {
+      printf("DosAllocMem error rc = %u\n", rc);
+      return(1);
+   } /* endif */
+
+   /* Initialize listIO control blocks */
+   memset(listIOCtrlBlks, 0, sizeof(listIOCtrlBlks));
+
+   listIOCtrlBlks[0].hFile = hfDisk1;       /* Handle for disk 1 */
+   listIOCtrlBlks[0].CmdFlag = LISTIO_READ | /* Read operation */
+                               FILE_CURRENT;
+   listIOCtrlBlks[0].Offset = 0;
+   listIOCtrlBlks[0].pBuffer = (PVOID)pBuffer;
+   listIOCtrlBlks[0].NumBytes = SIXTY_FOUR_K;
+
+   listIOCtrlBlks[1].hFile = hfDisk2;        /* Handle for disk 2 */
+   listIOCtrlBlks[1].CmdFlag = LISTIO_WRITE | /* Write operation */
+                               FILE_CURRENT;
+   listIOCtrlBlks[1].Offset = 0;
+   listIOCtrlBlks[1].pBuffer = (PVOID)pBuffer;
+   listIOCtrlBlks[1].NumBytes = SIXTY_FOUR_K;
+
+   while (cbTotal   TEN_MEG) {
+
+
+      ulNumCtrlBlks = 2;
+      rc = DosListIO(LISTIO_ORDERED,
+                     ulNumCtrlBlks,
+                     listIOCtrlBlks);
+      if (rc != NO_ERROR) {
+         printf("DosListIO error  rc = %u\n", rc);
+         break;
+      } else {
+
+         /* Check return code from the read operation */
+         if (listIOCtrlBlks[0].RetCode != NO_ERROR) {
+            printf("DosListIO read operation failed, rc = %u\n",
+                    listIOCtrlBlks[0].RetCode);
+           return 1;
+         }
+
+         /* Check return code from the write operation */
+         if (listIOCtrlBlks[0].RetCode != NO_ERROR) {
+            printf("DosListIO write operation failed, rc = %u\n",
+                    listIOCtrlBlks[0].RetCode);
+            return 1;
+         }
+      }
+
+      if (listIOCtrlBlks[0].Actual != listIOCtrlBlks[1].Actual) {
+         printf("Bytes read (%u) does not equal bytes written (%u)\n",
+                listIOCtrlBlks[0].Actual, listIOCtrlBlks[1].Actual);
+         return 1;
+      }
+
+      cbTotal += SIXTY_FOUR_K; /* Update total transferred */
+
+   } /* end while */
+
+   printf("Transfer successfully %d bytes from disk #1 to disk #2.\n",
+          cbTotal);
+
+   /* Free allocated memmory */
+   rc = DosFreeMem(pBuffer);
+   if (rc != NO_ERROR) {
+      printf("DosFreeMem error  return code = %u\n", rc);
+      return 1;
+   }
+
+   rc = DosClose(hfDisk1);
+   if (rc != NO_ERROR) {
+      printf("DosClose error  return code = %u\n", rc);
+      return 1;
+   }
+
+   rc = DosClose(hfDisk2);
+   if (rc != NO_ERROR) {
+      printf("DosClose error  return code = %u\n", rc);
+      return 1;
+   }
+return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="031_L2_DosGetProcessorStatu.html">[Back: DosGetProcessorStatus]</A> <BR>
+<A HREF="033_L2_DosListIOL.html">[Next: DosListIOL]</A> 
+</BODY>
+</HTML>

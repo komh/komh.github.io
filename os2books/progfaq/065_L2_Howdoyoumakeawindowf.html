@@ -1,0 +1,207 @@
+<HTML>
+<HEAD>
+<TITLE>How do you make a window float above all others?</TITLE>
+</HEAD>
+<BODY>
+<H1>How do you make a window float above all others?</H1><!-- entering slot 77 -->
+<P>
+Here's a sample program showing floating windows (derived from dvipm).  The
+advantages over the WM_TIMER approach [which was presented in v2.2 -ed]
+are:<!-- lm: 0x2 0 -->
+<P>
+o<!-- lm: 0x2 2 -->
+<UL>there's no delay<!-- lm: 0x2 0 -->
+</UL>o<!-- lm: 0x2 2 -->
+<UL>repainting is minimized<!-- lm: 0x2 0 -->
+</UL>o<!-- lm: 0x2 2 -->
+<UL>avoids timing problems<!-- lm: 0x2 0 -->
+</UL>o<!-- lm: 0x2 2 -->
+<UL>the floating windows are not unconditionally
+moved to the very top (that is, when moving the base window B (with floating
+window F) behind a window W, the order of the windows is this: BFW, not
+BWF!)<!-- lm: 0x2 0 -->
+</UL>
+<P>
+The excessive repainting caused by other solutions was quite annoying with
+dvipm as recomputing the dvipm status window is slow.
+<P>
+Credit: Eberhard Mattes
+<PRE>/* floatwin.c */
+/* This program shows how to implement floating windows.  The source
+   code works with both 16-bit and 32-bit C compilers.
+
+   If the Z-order of the base window is changed, the floating window
+   will be moved on top of the base window.
+
+   Generalizing this approach to many windows floating on many windows
+   (floating on many windows ...) is left as exercise. */
+
+#define INCL_WIN
+#define INCL_GPI
+#include &lt;os2.h&gt;
+
+/* Syntactic sugar for supporting both 16-bit and 32-bit compilers. */
+
+#ifdef __32BIT__
+#define MSG ULONG
+#define FLAGS fl
+#else
+#define MSG USHORT
+#define FLAGS fs
+#endif
+#ifndef NULLHANDLE
+#define NULLHANDLE NULL
+#endif
+
+/* The original frame window procedure. */
+static PFNWP pfOldBaseFrameProc = NULL;
+
+/* The handle of the floating window. */
+static HWND hwndFloat = NULLHANDLE;
+
+/* This frame window procedure is used for subclassing base windows.
+   When changing the Z-order of the frame window, the floating window
+   is moved instead of the base window and the hwndInsertBehind field
+   is modified to move the base window behind the floating window. */
+
+MRESULT EXPENTRY
+BaseFrameProc (HWND hwnd, MSG msg, MPARAM mp1, MPARAM mp2)
+{
+  PSWP pswp;
+
+  switch (msg)
+    {
+    case WM_ADJUSTWINDOWPOS:
+      pswp = PVOIDFROMMP (mp1);
+      if ((pswp-&gt;FLAGS &amp; SWP_ZORDER) &amp;&amp; hwndFloat != NULLHANDLE
+           &amp;&amp; WinIsWindowVisible (hwndFloat))
+        {
+          WinSetWindowPos (hwndFloat, pswp-&gt;hwndInsertBehind,
+                           0, 0, 0, 0, SWP_ZORDER);
+          /* This is the trick! */
+          pswp-&gt;hwndInsertBehind = hwndFloat;
+        }
+      break;
+    }
+  return pfOldBaseFrameProc (hwnd, msg, mp1, mp2);
+}
+
+
+/* Common client window procedure for base windows and floating
+   windows.  Display TXT and use CLR for filling the background. */
+
+MRESULT CommonClientWndProc (HWND hwnd, MSG msg, MPARAM mp1, MPARAM mp2,
+                             PCH txt, COLOR clr)
+{
+  HPS hps;
+  RECTL rcl;
+
+  switch (msg)
+    {
+    case WM_PAINT:
+      hps = WinBeginPaint (hwnd, 0L, 0L);
+      WinQueryWindowRect (hwnd, &amp;rcl);
+      GpiSetColor (hps, CLR_DARKCYAN);
+      GpiSetBackColor (hps, clr);
+      WinDrawText (hps, -1, txt, &amp;rcl, 0, 0,
+                   DT_TEXTATTRS | DT_CENTER | DT_VCENTER | DT_ERASERECT);
+      WinEndPaint (hps);
+      return 0;
+    }
+  return WinDefWindowProc (hwnd, msg, mp1, mp2);
+}
+
+
+/* Client window procedure for floating windows. */
+
+MRESULT EXPENTRY FloatClientWndProc (HWND hwnd, MSG msg, MPARAM mp1, MPARAM mp2)
+{
+  return CommonClientWndProc (hwnd, msg, mp1, mp2, "Floating Window", CLR_RED);
+}
+
+/* Client window procedure for base windows. */
+
+MRESULT EXPENTRY BaseClientWndProc (HWND hwnd, MSG msg, MPARAM mp1, MPARAM mp2)
+{
+  return CommonClientWndProc (hwnd, msg, mp1, mp2, "Base Window", CLR_YELLOW);
+}
+
+
+/* Start here. */
+
+int main (void)
+{
+  static char szBaseClientClass[] = "floatwin.base";
+  static char szFloatClientClass[] = "floatwin.float";
+  ULONG flFrameFlags;
+  <!-- entering slot 78 -->HAB hab;
+  HMQ hmq;
+  QMSG qmsg;
+  HWND hwndBase;
+
+  /* Initialize Presentation Manager. */
+
+  hab = WinInitialize (0);
+  hmq = WinCreateMsgQueue (hab, 0);
+
+  /* Create client window classes. */
+
+  WinRegisterClass (hab, szBaseClientClass, BaseClientWndProc,
+                    CS_SIZEREDRAW, 0);
+  WinRegisterClass (hab, szFloatClientClass, FloatClientWndProc,
+                    CS_SIZEREDRAW, 0);
+
+  /* Create the base window and the floating window.  Note: the
+     windows are initially invisible. */
+
+  flFrameFlags = (FCF_TITLEBAR      | FCF_SYSMENU |
+                  FCF_SIZEBORDER    | FCF_MINMAX  |
+                  FCF_TASKLIST);
+
+  /* Create and subclass the base window. */
+
+  hwndBase = WinCreateStdWindow (HWND_DESKTOP, 0,
+                                 &amp;flFrameFlags, szBaseClientClass,
+                                 "floatwin - Base Window",
+                                 0L, 0, 1, NULL);
+  pfOldBaseFrameProc = WinSubclassWindow (hwndBase, BaseFrameProc);
+
+  /* Create the floating window. */
+
+  hwndFloat = WinCreateStdWindow (HWND_DESKTOP, 0,
+                                  &amp;flFrameFlags, szFloatClientClass,
+                                  "floatwin - Floating Window",
+                                  0L, 0, 1, NULL);
+
+  /* Set the position, size and Z-order of the windows and make them
+     visible.  It's important to use SWP_ZORDER for the base
+     window. */
+
+  WinSetWindowPos (hwndFloat, HWND_TOP, 10, 10, 300, 80,
+                   SWP_SHOW | SWP_MOVE | SWP_SIZE | SWP_ZORDER);
+  WinSetWindowPos (hwndBase, HWND_TOP, 100, 50, 300, 80,
+                   SWP_SHOW | SWP_MOVE | SWP_SIZE | SWP_ZORDER | SWP_ACTIVATE);
+
+  /* The message loop. */
+
+  while (WinGetMsg (hab, &amp;qmsg, 0L, 0, 0))
+    WinDispatchMsg (hab, &amp;qmsg);
+
+  /* Clean up. */
+
+  WinDestroyWindow (hwndBase);
+  WinDestroyWindow (hwndFloat);
+  WinDestroyMsgQueue (hmq);
+  WinTerminate (hab);
+
+  return 0;
+}
+</PRE>
+ 
+
+<P><HR>
+
+<A HREF="064_L2_HowdoIsaveandrestore.html">[Back: How do I save and restore my window size and position?]</A> <BR>
+<A HREF="066_L2_Howtoensurethesizing.html">[Next: How to ensure the sizing's correct so the dlg "fits" in the notebook...?]</A> 
+</BODY>
+</HTML>

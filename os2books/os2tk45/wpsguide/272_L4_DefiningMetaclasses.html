@@ -1,0 +1,96 @@
+<HTML>
+<HEAD>
+<TITLE>Defining Metaclasses</TITLE>
+</HEAD>
+<BODY>
+<H1>Defining Metaclasses</H1><!-- entering slot 292 -->
+<P>
+In the implementation of the Dog, BigDog, and LittleDog classes, a metaclass
+is not specified in the Metaclass section of the class definition files.
+This means that the metaclass of each of these classes is the metaclass
+of their parent class. The metaclass of the BigDog and LittleDog classes
+is the metaclass of its parent class, Dog. The metaclass of the Dog class
+is the metaclass of its parent class, SOMObject. The metaclass of the SOMObject
+class is SOMClass. SOMClass, then, supplies the constructors for the Dog,
+BigDog, and LittleDog classes, as well as for SOMObject.
+<P>
+If a metaclass is specified in the Metaclass section of the IDL files, a
+new metaclass is defined for the classes. The new metaclass provides new
+constructors for the classes. As an example, a new metaclass M_Dog is defined
+for the Dog class and added to DOG.IDL. The following sample code shows
+the new DOG.IDL file, including the changes made to the original DOG.IDL
+file.
+<PRE>/*
+ *  Define a metaclass of the Dog class.
+ *  By convention, metaclasses are the class name prefixed with M_
+ */
+
+#ifndef dogmeta_idl
+#define dogmeta_idl
+
+#include &lt;somcls.idl&gt;
+#include &lt;somobj.idl&gt;
+
+interface Dog;   /* Declared later in this file */
+interface M_Dog : SOMClass
+{
+  Dog   CreateADog();
+
+  // Create an instance of the Dog class and return a pointer to it
+  #ifdef __SOMIDL__
+  implementation
+
+  {
+    releaseorder:  CreateADog;
+
+    //# Class modifiers
+
+    callstyle = oidl;    // For compatibility with SOM1
+    majorversion = 1;
+    minorversion = 2;
+  };
+  #endif   /* __SOMIDL__ */
+};
+
+/*
+ *   A class defining a set of objects (dogs) with metaclass M_Dog
+ */
+
+interface Dog : SOMObject
+{
+  attribute string breed;
+
+  // The breed for the dog
+  void display();
+
+  // Display characteristics for this dog.
+  // Show the breed and make the dog speak.
+  void bark();
+
+  // Have the dog bark
+  #ifdef __SOMIDL__
+  implementation
+
+  {
+    releaseorder:  _get_breed, _set_breed, display, bark;
+
+    //# Class modifiers
+
+    callstyle = oidl;    // For compatibility with SOM1
+    majorversion = 1;
+    minorversion = 2;
+    metaclass = M_Dog;   // Explicitly specify a metaclass
+  };
+  #endif   /* __SOMIDL__ */
+};
+#endif   /* dogmeta.idl */
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="271_L4_AccessingPublicMetho.html">[Back: Accessing Public Methods]</A> <BR>
+<A HREF="273_L4_DefiningMethods.html">[Next: Defining Methods]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,92 @@
+<HTML>
+<HEAD>
+<TITLE>Anonymous Pipe Structures for OS/2 Warp V4.0 and OS/2 Warp V3.0</TITLE>
+</HEAD>
+<BODY>
+<H1>Anonymous Pipe Structures for OS/2 Warp V4.0 and OS/2 Warp V3.0</H1><!-- entering slot 3510 -->
+<P>
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B>Pointers</B><!-- lm: 0x11 11 -->
+<UL> SFT field<B> sfi_hVPB</B> contains
+the selector that maps IOBLOCK structure. <!-- lm: 0x2 1 -->
+</UL><B> Locations
+</B><!-- lm: 0x11 11 -->
+<UL>The pipe IOBLOCK is allocated from the kernel
+heaps. <!-- lm: 0x2 1 -->
+</UL><B> VM Owner</B><!-- lm: 0x11 11 -->
+<UL><B> pipe
+(0xffa0)</B>.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B><A HREF="3252_L0_.html">Format</A></B>
+<P>
+<U><I>IOBLOCK</I></U> Anonymous Pipe data structure 
+<P>
+A 'pipe' is a connection between (among) file handles (JFN's). Data written
+to the 'write end' of the pipe are made available for reading on the 'read
+end'.  The $Pipe system call creates a pipe and returns two file handles,
+one for the read end and one for the write end.  These handles are manipulated
+in the same way as normal file handles; they may be 'dup'ed and are inherited
+in the same way.  Data are written into a pipe via a 'write' system call
+on the write end of the pipe.  Likewise, data are read from the pipe via
+a 'read' call on the read end. 
+<P>
+Data that are written to a pipe are captured in a circular buffer. The size
+of the buffer is specified when the pipe is created; if no size is specified,
+a default size is used. 
+<P>
+The circular buffer is described by an 'ioblock'.  The ioblock is the buffer's
+header; the circular buffer proper follows the ioblock in a heap memory
+object (mapped by a GDT selector) allocated when the pipe is created.  The
+ioblock contains all of the per-pipe information, such as reader, writer,
+and reference counts, and also holds the pointers into the circular buffer
+proper. 
+<P>
+The selector that points to the circular buffer is stored in the SFT, at
+sfi_hVPB. 
+<P>
+When the in and out pointers are equal, the circular buffer is empty.  When
+the in pointer trails the out pointer by 1, the buffer is full.  Thus, a
+512 byte buffer can hold only 511 bytes; one byte is lost so that full and
+empty conditions can be distinguished.  So that the user can put 512 bytes
+in a pipe that they created with a size of 512, we allow for this byte lost
+when allocating the segment. 
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÂÄÄÄÄÄÄÂÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³<I>Field Name</I>    ³<I>Offset</I>³<I>Length</I>³<I>Type</I>³<I>Description</I>                             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³io_inprogcnt  ³+0    ³1     ³B   ³count of read/wrts in progress          ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³io_refcnt     ³+1    ³1     ³B   ³count of references                     ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³io_rdrcnt     ³+2    ³1     ³B   ³count of readers                        ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³io_wtrcnt     ³+3    ³1     ³B   ³count of writers                        ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³io_selector   ³+4    ³2     ³W   ³buffer selector                         ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³io_first      ³+6    ³2     ³W   ³ptr to base of circular buffer          ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³io_in         ³+8    ³2     ³W   ³ptr to next free byte                   ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³io_out        ³+a    ³2     ³W   ³ptr to next byte of data                ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³io_last       ³+c    ³2     ³W   ³ptr to end+1 of buffer                  ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³io_rdlksem    ³+e    ³2     ³W   ³read lock semaphore                     ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³io_wtlksem    ³+10   ³2     ³W   ³write lock semaphore                    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³io_rdsem      ³+12   ³2     ³W   ³read sync semaphore                     ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³io_wtsem      ³+14   ³2     ³W   ³write sync semaphore                    ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÁÄÄÄÄÄÄÁÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+
+<P><HR>
+
+<A HREF="3220_L3_NamedPipeStructuresf.html">[Back: Named Pipe Structures for OS/2 Warp V4.0 and OS/2 Warp V3.0]</A> <BR>
+<A HREF="3222_L2_IOSystemControlBlock.html">[Next: I/O System Control Block Reference]</A> 
+</BODY>
+</HTML>

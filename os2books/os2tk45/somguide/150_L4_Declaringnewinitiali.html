@@ -1,0 +1,133 @@
+<HTML>
+<HEAD>
+<TITLE>Declaring new initializers in SOM IDL</TITLE>
+</HEAD>
+<BODY>
+<H1>Declaring new initializers in SOM IDL</H1><!-- entering slot 181 -->
+<P>
+When defining SOMobjects classes, programmers can easily declare and implement
+new initializers. Classes can have as many initializers as desired, and
+subclassers can invoke whichever of these they want. When introducing new
+initializers, developers must adhere to the following rules:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->All initializer methods take a<B> somInitCtrl</B> data
+structure as an initial<B> inout</B> parameter (its type is defined in the
+SOMobjects header file somapi.h), and<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->All initializers return<B> void.</B><!-- lm: 0x2 1 -->
+</UL>
+<P>
+Accordingly, the<B> somDefaultInit</B> initializer introduced by<B> SOMObject
+</B>takes a<B> somInitCtrl</B> structure as its (only) argument, and returns
+<B>void.</B> Here is the IDL syntax for this method, as declared in somobj.idl:
+
+<PRE><B>void  somDefaultInit (inout somInitCtrl </B>ctrl);</PRE>
+
+<P>
+When introducing a new initializer, it is also necessary to specify the
+<B>init</B> modifier in the<B> implementation</B> section. The<B> init</B> modifier
+is what tells emitters that the new method is actually an initializer, so
+the method can be properly supported from the language bindings. As described
+below, this support includes the generation of special initializer stub
+procedures in the implementation template file, as well as bindings containing
+ancestor-initialization macros and object constructors that invoke the class
+implementor's new initializers.
+<P>
+It is a good idea to begin the names of initializer methods with the name
+of the class (or some other string that can be unique for the class). This
+is important because all initializers available on a class must be newly
+introduced by that class (that is, you cannot override initializers - except
+for<B> somDefaultInit).</B> Using a class-unique name means that subclasses
+will not be unnecessarily constrained in their choice of initializer names.
+
+<P>
+Here are two classes that introduce new initializers:
+<PRE>interface Example1 : SOMObject
+{
+   void <B>Example1_withName</B> (inout somInitCtrl ctrl,in string name);
+   void <B>Example1_withSize</B> (inout somInitCtrl ctrl,in long size);
+   void <B>Example1_withNandS</B>(inout somInitCtrl ctrl,in string name,
+                                                   in long size);
+        implementation {
+                releaseorder: Example1_withName,
+                              Example1_withSize,
+                              Example1_withNandS; <B>
+                somDefaultInit: override, </B>init;<B>
+                somDestruct: override;</B>
+                Example1_withName: <B>init;</B>
+                Example1_withSize: <B>init;</B>
+                Example1_withNandS:<B> init;</B>
+        };
+};
+
+interface Example2 : Example1
+{
+   void <B>Example2_withName</B>(inout somInitCtrl ctrl, in string name);
+   void <B>Example2_withSize</B>(inout somInitCtrl ctrl, in long size);
+        implementation {
+                releaseorder: Example2_withName,
+                              Example2_withSize; <B>
+                somDefaultInit: override, init;
+                somDestruct: override;</B>
+                Example2_withName: <B>init;</B>
+                Example2_withSize: <B>init;</B>
+        };
+};
+</PRE>
+
+<P>
+Here, interface "Example1" declares three new initializers. Notice the use
+of<B> inout somInitCtrl</B> as the first argument of each initializer, and
+also note that the<B> init</B> modifier is used in the<B> implementation
+</B>section. These two things are required to declare initializers. Any
+number of initializers can be declared by a class. "Example2" declares two
+initializers.
+<P>
+"Example1" and "Example2" both override the<B> somDefaultInit</B> initializerThis
+initializer method is introduced by<B> SOMObject</B> and is special for
+two resons: First,<B> somDefaultInit</B> is the only initializer that can
+be overridden And, second, SOMobjects arranges that this initializer will
+always be available on any class (as further explained below).
+<P>
+Historically in the SOMobjects Toolkit, object#initialization methods by
+default have invoked the<B> somInit</B> method, which class implementors
+could override to customize initialization as appropriate. SOMobjects continues
+to support this approach, so that existing code (and class binaries) will
+execute correctly. However, the<B> somDefaultInit</B> method is now the
+preferred form of initialization because it offers greatly improved efficiency.
+
+<P>
+Even if no specialized initialization is needed for a class, you should
+still<B> override</B> the<B> somDefaultInit</B> method in the interest of
+efficiency. If you do not override<B> somDefaultInit,</B> then a generic
+(and therefore less efficient)<B> somDefaultInit</B> method<!-- entering slot 182 --> procedure
+will be used for your class. This generic method procedure first invokes
+<B>somDefaultInit</B> on the appropriate ancestor classes. Then (for consistency
+with earlier versions of SOMobjects), it checks to determine if the class
+overrides<B> somInit</B> and, if so, calls any customized somInit code provided
+by the class.
+<P>
+When you override<B> somDefaultInit,</B> the emitter's implementation template
+file will include a stub procedure similar to those used for other initializers,
+and you can fill it in as appropriate (or simply leave it as is). Default
+initialization for your class will then run much faster than with the generic
+method procedure. Examples of initializer stub procedures (and customizations)
+are given below.
+<P>
+In summary, the initializers available for any class of objects are<B> somDefaultInit
+</B>(which you should always<B> override)</B> plus any new initializers
+explicitly declared by the class designer. Thus, "Example1" objects may
+be initialized using any of four different initializers (the three that
+are explicitly declared, plus<B> somDefaultInit).</B> Likewise, there are
+three initializers for the "Example2" objects. Some examples of using initializers
+are provided below.
+<P>
+
+
+<P><HR>
+
+<A HREF="149_L3_Initializermethods.html">[Back: Initializer methods]</A> <BR>
+<A HREF="151_L4_ConsiderationsresomI.html">[Next: Considerations re: 'somInit' initialization from earlier SOM releases]</A> 
+</BODY>
+</HTML>

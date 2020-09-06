@@ -1,0 +1,193 @@
+<HTML>
+<HEAD>
+<TITLE>Font Size Handling</TITLE>
+</HEAD>
+<BODY>
+<H1>Font Size Handling</H1><!-- entering slot 112 -->
+<P>
+The system font is used in window components, such as title bars and menus.
+This font is also used as the default font for graphics text output with
+several WIN and GPI calls. The following shows the actual sizes of the system
+fonts of the DBCS PM and the SBCS PM.<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->DBCS PM (for DA/2) [Each character may not have the
+exact width shown here if the system font of the DBCS PM is a proportional
+font. ]<!-- lm: 0x2 6 -->
+<UL>
+<P>
+<!-- lm: 0x2 23 -->
+<UL>12<A HREF="272_L0_.html">(**)</A>x24<A HREF="273_L0_.html">(**)
+</A><!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL>SBCS
+PM (for VGA) [Each character may not have the exact width shown here if
+the system font of the SBCS PM is a proportional font. ]<!-- lm: 0x2 6 -->
+<P>
+<!-- lm: 0x2 23 -->
+<UL>6x16<!-- lm: 0x2 6 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+This difference of the system font will affect the amount of text which
+can be displayed in a window.  To understand the problem caused by the difference,
+consider the entry field control as an example. Suppose you want to create
+an entry field in the client area of a standard window.  For example:
+<PRE>hwndFrame = WinCreateStdWindow(             HWND_DESKTOP,
+             WS_VISIBLE,
+             (PULONG)&amp;flCreate,
+             "MyWindow",
+             "",
+             0L,
+             NULL,
+             ID_WINDOW,
+             (PHWND)&amp;hwndClient
+             );
+
+/* Setting the window control data of the entry field */
+
+efdata.cb = sizeof( ENTRYFDATA);
+efdata.cchEditLimit = 20;
+efdata.ichMinSel = 0;
+efdata.ichMaxSel = 0;
+
+hwndEntry = WinCreateWindow( hwndClient,
+                             WC_ENTRYFIELD,
+                             (PSZ)NULL,
+                             WS_VISIBLE | ES_MARGIN,
+                             200,200,
+                             200,16,         /* Size of the entry field */
+                             hwndClient,
+                             HWND_TOP,
+                             ID_ENTRY,
+                             &amp;efdata,
+                             NULL);
+</PRE>
+
+<P>
+If you execute this program under the SBCS PM with VGA, the entry field
+can correctly display the text string in it.  The entry field of the same
+size, however, cannot display the text string correctly under the DBCS PM.
+ The height of the entry field, 16 pels, is not enough to accommodate characters
+from the system font of the DBCS PM.  The upper part of those characters
+is clipped away.  You may modify the above program to avoid this problem
+as follows:
+<PRE>hwndEntry = WinCreateWindow( hwndClient,
+                             WC_ENTRYFIELD,
+                             (PSZ)NULL,
+                             WS_VISIBLE | ES_MARGIN,
+                             200,200,
+                             200,24,         /* Size of the entry field */
+                             hwndClient,
+                             HWND_TOP,
+                             ID_ENTRY,
+                             &amp;efdata,
+                             NULL);
+</PRE>
+
+<P>
+This is the easiest way to cope with the above problem.  But it is not a
+good one because 24 pels in height may be a little bit too large for the
+system font of the SBCS PM.  The best way is to dynamically change the size
+of the entry field.  In the following example, the size of the entry field
+is calculated according to the information given by the<B> DevQueryCaps
+</B>call.
+<PRE>HDC hdc;
+ULONG devcaps[2];
+
+hwndFrame = WinCreateStdWindow(
+             HWND_DESKTOP,
+             WS_VISIBLE,
+             (PULONG)&amp;flCreate,
+             "MyWindow",
+             "",
+             0L,
+             NULL,
+             ID_WINDOW,
+             (PHWND)&amp;hwndClient
+             );
+
+hdc = WinOpenWindowDC( hwndClient);
+
+DevQueryCaps( hdc,
+              CAPS_GRAPHICS_CHAR_WIDTH,
+              2L,
+              <B>devcaps</B>);
+
+/* Setting the window control data of the entry field */
+
+efdata.cb = sizeof( ENTRYFDATA);
+efdata.cchEditLimit = 20;
+efdata.ichMinSel = 0;
+efdata.ichMaxSel = 0;
+
+hwndEntry = WinCreateWindow( hwndClient,
+                             WC_ENTRYFIELD,
+                             (PSZ)NULL,
+                             WS_VISIBLE | ES_MARGIN,
+                             200,200,
+                             <B>devcaps[0]</B> * efdata.cchEditLimit,
+                             <B>devcaps[1]</B>,
+                             hwndClient,
+                             HWND_TOP,
+                             ID_ENTRY,
+                             &amp;efdata,
+                             NULL);
+</PRE>
+
+<P>
+In the above example, the first and second elements of the array<B> devcaps
+</B>contain the default graphics character box width and height in pels
+respectively.  You may consider these values as the width and height of
+a character in the system font.  The actual values of these two elements
+are the same as the values shown at the beginning of this section.  The
+height of the entry field is calculated according to the height of the character
+box. In the above example, the width of the entry field is also defined
+so as to accommodate the maximum number of characters without scrolling.
+
+<P>
+Besides the entry field control, you must be aware of this difference whenever
+you use a system-provided control with some text in the client area of a
+standard window.
+<P>
+When you directly draw some text in a client window, you also have to take
+into account the difference of the system font size.  For example, suppose
+you draw a couple of strings with the<B> GpiCharStringAt</B> call:
+<PRE>#define STRINGLENGTH 20
+
+CHAR sz1[STRINGLENGTH];
+CHAR <!-- entering slot 113 -->sz2[STRINGLENGTH];
+
+
+  switch( msg )
+  {
+    case WM_CREATE:
+      WinLoadString( hab, NULL, IDS_1, STRINGLENGTH, sz1);
+      WinLoadString( hab, NULL, IDS_2, STRINGLENGTH, sz2);
+      hps = WinGetPS(hwnd);
+      GpiQueryFontMetrics( hps, sizeof(FONTMETRICS), &amp;fm);
+      WinReleasePS(hps);
+      break;
+    case WM_PAINT:
+      hps = WinBeginPaint( hwnd, NULL, &amp;rc );
+      GpiSetColor( hps, SYSCLR_WINDOWTEXT );
+      GpiSetBackColor( hps, SYSCLR_WINDOW );
+      GpiSetBackMix( hps, BM_OVERPAINT );
+      pt.x = 50;
+      pt.y = 100;
+      GpiCharStringAt( hps, &amp;pt, (LONG)strlen( sz1), sz1);
+      pt.y -= fm.lMaxBaselineExt;
+      GpiCharStringAt( hps, &amp;pt, (LONG)strlen( sz2), sz2);
+      WinEndPaint( hps );
+      break;
+        .
+        .
+        .
+</PRE>
+
+
+<P><HR>
+
+<A HREF="106_L4_FontHandlingConsider.html">[Back: Font Handling Consideration in DBCS PM]</A> <BR>
+<A HREF="108_L5_DialogUnitandDialogS.html">[Next: Dialog Unit and Dialog Size Handling]</A> 
+</BODY>
+</HTML>

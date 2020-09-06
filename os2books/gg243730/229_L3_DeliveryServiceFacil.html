@@ -1,0 +1,177 @@
+<HTML>
+<HEAD>
+<TITLE>Delivery Service Facilities</TITLE>
+</HEAD>
+<BODY>
+<H1>Delivery Service Facilities</H1><!-- entering slot 253 -->
+<P>
+The SCB architecture defines two forms of control block delivery, known
+as<B> locate mode</B> and<B> move mode</B>. As the IBM SCSI adapters use
+locate mode delivery only this mode will be described. The following section
+provide an overview of the services, functions and protocols defined for
+locate mode and a brief description of their underlying control structures.
+
+<P>
+<B>Locate Mode</B>
+<P>
+Locate mode is generally used for traditional I/O protocols where there
+is a single system unit that requests a feature adapter to perform work
+on its behalf. The format of the control structure in locate mode is relatively
+fixed. The structure allows various command, status, and indirect list control
+blocks, connected with pointers, to represent a request from a client to
+a server. <A HREF="047_L2_OverviewofDeliverySu.html">Figure "Overview of
+Delivery Support"</A> shows an overview of the control block and data delivery
+support.
+<P>
+The delivery support delivers one request at a time. A control block request
+is initiated by the client, which passes the physical address of the control
+block to the server through a command register (port) in I/O. The I/O space
+ports are described in <A HREF="227_L3_IOPortDefinitions.html">I/O Port
+Definitions</A>.
+<P>
+Locate mode provides:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B>Requests to Devices</B>
+<P>
+To use a device, a client sends requests in the form of control blocks to
+the device ID that represents the device and receives replies from it for
+each such request.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B>Support for Multiple Devices per Adapter</B>
+<P>
+Adapters may provide support for multiple devices. For example, multiple
+I/O devices may be connected to a single SCSI adapter. The delivery support
+enables the delivery of requests to specific devices through the use of
+unique device identification numbers.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B>Adapter Management</B>
+<P>
+To be able to manage the adapter and deliver device/resource control information
+to it, the adapter's unit manager is assigned device ID 0. It receives all
+adapter unit management information.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B>Command and Data Chaining and Detailed Status</B>
+<P>
+The control structure defined for locate mode provides for:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 5 -->Immediate command type requests<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 5 -->Requests that contain one command control and status
+block<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 5 -->Requests made up of multiple chained command control
+blocks.<!-- lm: 0x2 2 -->
+</UL> Command blocks may point to data directly
+or via an indirect address list. <A HREF="048_L2_LocateModeControlBlo.html">Figure
+"Locate Mode Control Block Delivery Structure"</A> shows a sample request
+control structure consisting of two command control blocks (command chaining).
+The first control block uses an indirect list control block to reference
+multiple buffers (data chaining). The second control block has a direct
+pointer to a single buffer. The pointer to the first control block is communicated
+via the shared I/O address space.<!-- lm: 0x2 0 -->
+</UL> <!-- lm: 0x2 2 -->
+<UL><B>Use
+of DMA</B>
+<P>
+In locate mode, both the control block structure for a request and the data
+associated with the request are transferred between the system unit and
+the adapter using DMA. This DMA operation is managed by the adapter's delivery
+support. The IBM SCSI adapters have a DMA with a 32-bit addressing capability,
+hence they are not limited by the fact that the DMA in the IBM PS/2 system
+units currently only supports 24-bit addressing.<!-- lm: 0x2 0 -->
+</UL> <!-- lm: 0x2 2 -->
+<UL><B>Interrupts
+</B>
+<P>
+The delivery service allows the client to define when and under what conditions
+interrupts should be generated. Generally, a single interrupt is generated
+for each completed request. When a request contains a chain of control blocks,
+additional interrupts may be requested for synchronization at intermediate
+points within the request.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+There are<!-- entering slot 254 --> three different control block structures
+used by locate mode requests:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B>Command Control Blocks</B>
+<P>
+The base command control block is a variable length structure created and
+maintained in shared memory by the client in the system unit. It is used
+to convey requests to a subsystem or device in an adapter. These requests
+are used to direct the operation of the subsystem or device. In <A HREF="049_L2_SCBStructureUsedbyth.html">Figure
+"SCB Structure Used by the IBM SCSI Adapter"</A> we show the structure of
+the command control block as used by the IBM SCSI adapters.
+<P>
+The<B> command word</B> specifies the operation to be executed, for example
+read or write.  The<B> enable word</B> controls optional features to be
+used during the operation, for example whether the system buffer address
+points to actual data or is an indirect reference.
+<P>
+The OS/2 V2.0 disk device driver builds the SCB and other control blocks
+required. It then calls the ABIOS transfer SCB function to initiate the
+operation. ABIOS uses the adapter's I/O ports to pass the SCB address. The
+adapter then uses its DMA controller to read the SCB into private memory
+on the adapter where it decodes it and initiates the required operation.
+Data is read from or written to system memory using the adapters DMA controller.
+
+<P>
+The IBM SCSI adapters support chaining of SCBs.  The adapter then uses the
+chain address to find the next SCB in a chain. All SCBs in a chain must
+be for the same device.  SCBs are executed in the order that they are chained
+in.  The device driver will try to sort the SCBs into an order that will
+minimize head movement unless requested not to.  Where the order of execution
+is critical (for example, paging might require that certain writes be done
+before reads) this optimization will be disabled.
+<P>
+A single IBM SCSI adapter can overlap processing of one command for up to
+15 attached devices.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B>Indirect Address Lists</B>
+<P>
+An indirect address list is a variable length list containing address-count
+pairs, and is used to support data chaining. The location of the indirect
+list control block and its length are specified by the System Buffer Address
+and System Buffer Byte Count fields in the command control block.
+<P>
+Each entry in the list is 8 bytes (4 byte address and 4 byte length).
+<P>
+The IBM SCSI adapters use the indirect address list structure for specifying
+scatter/gather lists. The layout of a scatter/gather list is shown in <A HREF="050_L2_IBMSCSIAdapterScatte.html">Figure
+"IBM SCSI Adapter Scatter/Gather List"</A>. When passing a memory address
+to an adapter, the actual physical address at which the data is located
+must be used. Because of the mapping of virtual memory to pages in the physical
+address space, a data buffer could be split across multiple discontiguous
+pages. This means that a single logical disk I/O operation could require
+several physical operations. The scatter/gather list allows one I/O operations
+to access data in more than one physical memory location. Each entry in
+the list specifies a physical memory address and a data length.
+<P>
+During a write to disk, data is then gathered from different memory locations
+and written to a contiguous block on disk. During a read from disk, data
+can be scattered to different locations in system memory. The IBM SCSI adapters
+support scatter/gather lists with up to 16 entries.
+<P>
+When coupled with the ability to chain SCBs together, scatter/gather lists
+form an efficient mechanism for communicating paging I/O operations. By
+being able to chain SCBs together, both reads and writes can be specified
+in a single call from the paging subsystem to the<!-- entering slot 255 --> file
+system. Scatter/gather lists allow multiple page reads or writes for a single
+SCB.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B>Termination Status Control Blocks</B>
+<P>
+In addition to the status indication in the ISP (Interrupt Status Port),
+the SCB architecture allows status information to be reported for each command.
+This information can be reported in a termination status block, which is
+connected to each command control block. The adapter writes request completion
+status or termination status into this control block. The layout of the
+termination status block used by the IBM SCSI adapters is shown in <A HREF="051_L2_IBMSCSIAdapterTermin.html">Figure
+"IBM SCSI Adapter Termination Status Block"</A>.<!-- lm: 0x2 0 -->
+
+<P><HR>
+
+<A HREF="228_L3_DeliveryServiceStruc.html">[Back: Delivery Service Structure]</A> <BR>
+<A HREF="230_L3_AdditionalInformatio.html">[Next: Additional Information]</A> 
+</BODY>
+</HTML>

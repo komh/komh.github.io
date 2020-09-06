@@ -1,0 +1,59 @@
+<HTML>
+<HEAD>
+<TITLE>Exception declarations</TITLE>
+</HEAD>
+<BODY>
+<H1>Exception declarations</H1><!-- entering slot 78 -->
+<P>
+As discussed in Chapter 4 in the section entitled "SOM Interface Definition
+Language," a method may be declared to return zero or more<B> exceptions</B>.
+IDL exceptions are implemented by simply passing back error information
+after a method call, as opposed to the "catch/throw" model where an exception
+is implemented by a long jump or signal. Associated with each type of exception
+is a name, and optionally, a struct-like data structure for holding error
+information. A method declares the types of exceptions it may return in
+a<B> raises</B> expression.
+<P>
+Below is an example IDL declaration of a "BAD_FLAG" exception, which may
+be "raised" by a"checkFlag" method, as part of a "MyObject" interface:
+<PRE>   interface MyObject {<B>
+      exception</B> BAD_FLAG { long ErrCode; char Reason[80];}
+
+      void checkFlag(in unsigned long flag) <B>raises</B>(BAD_FLAG);
+   };
+</PRE>
+
+<P>
+An exception structure contains whatever information is necessary to help
+the caller understand the nature of the error. The exception declaration
+can be treated like a<B> struct</B> definition:  i.e., whatever you can
+access in an IDL<B> struct</B>, you can access in an<B> exception</B> declaration.
+Alternatively, the structure can be<I> empty</I>, whereby the exception
+is just identified by its name.
+<P>
+The SOM Compiler will map the exception declaration in the above example
+to the following C language constructs:
+<PRE>   typedef struct BAD_FLAG {
+      long ErrCode;
+      char Reason[80];
+   } BAD_FLAG;
+
+   #define ex_BAD_FLAG "MyObject::BAD_FLAG"
+</PRE>
+
+<P>
+When an exception is detected, the "checkFlag" method must call<B> SOMMalloc
+</B>to allocate a "BAD_FLAG" structure, initialize it with the appropriate
+error information, and make a call to<B> somSetException</B> (see "Setting
+an exception value," below) to record the exception value in the<B> Environment
+</B>structure passed in the method call. The caller, after invoking "checkFlag",
+can check the<B> Environment</B> structure that was passed to the method
+to see if there was an exception, and if so, extract the exception value
+from the<B> Environment</B> (see "Getting an exception value," below.)
+
+<P><HR>
+
+<A HREF="060_L3_Exceptionsanderrorha.html">[Back: Exceptions and error handling]</A> <BR>
+<A HREF="062_L4_Standardexceptions.html">[Next: Standard exceptions]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,75 @@
+<HTML>
+<HEAD>
+<TITLE>Determining and Setting the State of a File or Device Handle</TITLE>
+</HEAD>
+<BODY>
+<H1>Determining and Setting the State of a File or Device Handle</H1><!-- entering slot 943 -->
+<P>
+After a file has been opened, the file handle state flags set with a<A><!-- external link: 1D 9F C3 4C --> DosOpen
+</A>can be queried and reset by calling<A><!-- external link: 1D C1 C3 4D --> DosQueryFHState
+</A>and<A><!-- external link: 1D E8 C3 4E --> DosSetFHState</A> . The handle
+returned by<A><!-- external link: 1D E8 C3 4E --> DosSetFHState</A> is used
+for subsequent input and output to the file.
+<P>
+The following code fragment calls DosSetFHState to set the File Write-Through
+flag for an opened file. Writes to the file may go through the file system
+buffer, but the sectors are to be written before any synchronous write call
+returns. DosQueryFHState is called first to obtain the file handle state
+bits. Assume that the appropriate file handle has been placed into<I> FileHandle
+</I>already.
+<PRE>    #define INCL_DOSFILEMGR        /* File system values */
+    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+
+    HFILE   hfFileHandle;         /* File handle        */
+    ULONG   ulFileHandleState;    /* File handle state  */
+    APIRET  ulrc;                 /* Return code        */
+
+    ulrc = DosQueryFHState(hfFileHandle,
+                           &amp;FileHandleState);
+
+    if (ulrc != 0) {
+        printf("DosQueryFHState error: return code = %ld",
+               ulrc);
+        return;
+    }
+
+    ulFileHandleState |= OPEN_FLAGS_WRITE_THROUGH;
+
+    ulrc = DosSetFHState(hfFileHandle,
+                         ulFileHandleState);
+
+    if (ulrc != 0) {
+        printf("DosSetFHState error: return code = %ld",
+               ulrc);
+        return;
+    }
+
+</PRE>
+
+<P>
+Here are two scenarios involving the use of this function.<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->An application requires that data be written in a
+specific order. To guarantee the order of the data written, it must perform
+separate synchronous write operations. The application can call<A><!-- external link: 1D E8 C3 4E --> DosSetFHState
+</A>to set the Write-Through flag for the file. This action does not affect
+any previous asynchronous writes, whose data can remain in the buffers.
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->An application cannot handle a certain critical error
+situation.<A><!-- external link: 1D E8 C3 4E --> DosSetFHState</A> can be
+called to reset critica l error handling as OS/2's responsibility. The I/O
+function that caused the critical error must be called again so the error
+can recur, causing control to be passed to OS/2. In the case where asynchronous
+I/O is being done, the precise time the results of this function will be
+available to the application is unpredictable.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="919_L3_CreatingDuplicateFil.html">[Back: Creating Duplicate File or Device Handles]</A> <BR>
+<A HREF="921_L3_DeterminingtheHandle.html">[Next: Determining the Handle Type]</A> 
+</BODY>
+</HTML>

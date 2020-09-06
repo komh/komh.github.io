@@ -1,0 +1,309 @@
+<HTML>
+<HEAD>
+<TITLE>Operation</TITLE>
+</HEAD>
+<BODY>
+<H1>Operation</H1><!-- entering slot 876 -->
+<P>
+The "Operation" section contains an algorithmic description of the instruction
+which uses a notation similar to the Algol or Pascal language. The algorithms
+are composed of the following elements:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Comments are enclosed within the symbol pairs "(*"
+and "*)".<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Compound statements are enclosed between the keywords
+of the "if" statement (IF, THEN, ELSE, FI) or of the "do" statement (DO,
+OD), or of the "case" statement (CASE ... OF, ESAC).<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Execution continues until the END statement is encountered.
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A register name implies the contents of the register.
+A register name enclosed in brackets implies the contents of the location
+whose address is contained in that register. For example, ES:[DI] indicates
+the contents of the location whose ES segment relative address is in register
+DI. [SI] indicates the contents of the address contained in register SI
+relative to SI's default segment (DS) or overridden segment.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Brackets are also used for memory operands, where
+they mean that the contents of the memory location is a segment-relative
+offset. For example, [SRC] indicates that the contents of the source operand
+is a segment-relative offset.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A  B; indicates that the value of B is assigned to
+A.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The symbols =, &lt;&gt;, ò, and ó are relational operators
+used to compare two values, meaning equal, not equal, greater or equal,
+less or equal, respectively. A relational expression such as A = B is TRUE
+if the value of A is equal to B; otherwise it is FALSE.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A * B indicates that the value of A is multiplied
+by the value of B.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following identifiers are used in the algorithmic descriptions:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 --><B>OperandSize</B> represents the operand-size attribute
+of the instruction, which is either 16 or 32 bits.<B> AddressSize</B> represents
+the address-size attribute, which is either 16 or 32 bits. For example,
+
+<P>
+IF instruction = CMPSW THEN OperandSize  16;
+<BR>
+ELSE
+<BR>
+ IF instruction = CMPSD
+<BR>
+ THEN OperandSize  32;
+<BR>
+ FI;
+<BR>
+FI;
+<BR>
+
+<P>
+indicates that the operand-size attribute depends on the form of the CMPS
+instruction used. Refer to the explanation of address-size and operand-size
+attributes at the beginning of this chapter for general guidelines on how
+these attributes are determined.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><B>StackAddrSize</B> represents the stack address-size
+attribute associated with the instruction, which has a value of 16 or 32
+bits, as explained earlier in the chapter.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><B>SRC</B> represents the source operand. When there
+are two operands, SRC is the one on the right.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><B>DEST</B> represents the destination operand. When
+there are two operands, DEST is the one on the left.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><B>LeftSRC, RightSRC</B> distinguishes between two
+operands when both are source operands.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><B>eSP</B> represents either the SP register or the
+ESP register depending on the setting of the B-bit for the current stack
+segment.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following functions are used in the algorithmic descriptions:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 --><B>Truncate to 16 bits(value)</B> reduces the size
+of the value to fit in 16 bits by discarding the uppermost bits as needed.
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><B>Addr(operand)</B> returns the effective address
+of the operand (the result of the effective address calculation prior to
+adding the segment base).<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><B>ZeroExtend(value)</B> returns a value zero-extended
+to the operand-size attribute of the instruction. For example, if OperandSize
+= 32, ZeroExtend of a byte value of -10 converts the byte from F6H to doubleword
+with hexadecimal value 000000F6H. If the value passed to ZeroExtend and
+the operand-size attribute are the same size, ZeroExtend returns the value
+unaltered.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><B>SignExtend(value)</B> returns a value sign-extended
+to the operand-size attribute of the instruction. For example, if OperandSize
+= 32, SignExtend of a byte containing the value -10 converts the byte from
+F6H to a doubleword with hexadecimal value FFFFFFF6H. If the value passed
+to SignExtend and the operand-size attribute are the same size, SignExtend
+returns the value unaltered.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><B>Push(value)</B> pushes a value onto the stack.
+The number of bytes pushed is determined by the operand-size attribute of
+the instruction. The action of Push is as follows: IF StackAddrSize = 16
+THEN
+<BR>
+  IF OperandSize = 16
+<BR>
+  THEN
+<BR>
+   SP  SP -2;
+<BR>
+   SS:[SP]  value; (* 2 bytes assigned starting at byte address in SP *)
+<BR>
+  ELSE (* OperandSize = 32 *)
+<BR>
+   SP  SP -4;
+<BR>
+   SS:[SP]  value; (* 4 bytes assigned starting at byte address in SP *)
+<BR>
+  FI;
+<BR>
+ELSE (* StackAddrSize = 32 *)
+<BR>
+  IF OperandSize = 16
+<BR>
+  THEN
+<BR>
+  ESP  ESP -2;
+<BR>
+   SS:[ESP]  value; (* 2 bytes assigned starting at byte address in ESP*)
+<BR>
+  ELSE (* OperandSize = 32 *)
+<BR>
+   ESP  ESP -4;
+<BR>
+   SS:[ESP]  value; (* 4 bytes assigned starting at byte address in ESP*)
+<BR>
+  FI;
+<BR>
+FI;
+<BR>
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><B>Pop(value)</B> removes the value from the top of
+the stack and returns it. The statement EAX  Pop( ); assigns to EAX the
+32-bit value that Pop took from the top of the stack. Pop will return either
+a word or a doubleword depending on the operand-size attribute. The action
+of Pop is as follows: IF StackAddrSize = 16
+<BR>
+THEN
+<BR>
+  IF OperandSize = 16
+<BR>
+  THEN
+<BR>
+   ret<!-- entering slot 877 --> val  SS:[SP]; (* 2-byte value *)
+<BR>
+   SP  SP + 2;
+<BR>
+  ELSE (* OperandSize = 32 *)
+<BR>
+   ret val  SS:[SP]; (* 4-byte value *)
+<BR>
+   SP  SP + 4;
+<BR>
+  FI;
+<BR>
+ELSE (* StackAddrSize = 32 *)
+<BR>
+  IF OperandSize = 16
+<BR>
+  THEN
+<BR>
+   ret val  SS:[ESP]; (* 2 byte value *)
+<BR>
+   ESP  ESP + 2;
+<BR>
+  ELSE (* OperandSize = 32 *)
+<BR>
+   ret val  SS:[ESP]; (* 4 byte value *)
+<BR>
+   ESP  ESP + 4;
+<BR>
+  FI;
+<BR>
+FI;
+<BR>
+RETURN(ret val); (*returns a word or doubleword*)
+<BR>
+
+<P>
+Pop ST is used on floating-point instruction pages to mean<I> pop the FPU
+register stack</I>.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><B>Bit[BitBase, BitOffset]</B> returns the value of
+a bit within a bit string, which is a sequence of bits in memory or a register.
+Bits are numbered from low-order to high-order within registers and within
+memory bytes. In memory, the two bytes of a word are stored with the low-order
+byte at the lower address.
+<P>
+If the base operand is a register, the offset can be in the range 0..31.
+This offset addresses a bit within the indicated register. An example, 'BIT[EAX,
+21]' is illustrated in the following figure.
+<BR>
+Bit Offset for BIT[EAX,21]
+<BR>
+
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³     31            21                            0    ³
+³   ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿   ³
+³   ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ   ³
+³                                                    ³
+³                    ³                             ³   ³
+³                    ÀÄÄÄÄÄÄÄÄBITOFFSET=21ÄÄÄÄÄÄÄÄÄÙ   ³
+³                                                      ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+If BitBase is a memory address, BitOffset can range from -2 gigabits to
+2 gigabits. The addressed bit is numbered (Offset MOD 8) within the byte
+at address (BitBase + (BitOffset DIV 8)), where DIV is signed division with
+rounding towards negative infinity, and MOD returns a positive number. This
+is illustrated in the following figure.
+<BR>
+Memory Bit Indexing
+<BR>
+
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³   7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0    ³
+³   ÚÄÄÂÄÄÂÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿   ³
+³   ÀÄÄÁÄÄÁÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ   ³
+³   ³  BITBASE+1   ³    BITBASE     ³   BITBASE-1  ³   ³
+³                                  ³                  ³
+³       ÀÄÄÄÄÄÄOFFSET=+13ÄÄÄÄÄÄÄÄÄÄÄÙ                  ³
+³                                                      ³
+³                                                      ³
+³   7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0    ³
+³   ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿   ³
+³   ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ   ³
+³   ³  BITBASE     ³   BITBASE-1    ³   BITBASE-2  ³   ³
+³                  ³                                  ³
+³                  ÀÄÄÄÄÄOFFSET=-11ÄÄÄÄÄÄÄÙ            ³
+³                                                      ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><B>I-O-Permission(I-O-Address, width)</B> returns
+TRUE or FALSE depending on the I/O permission bitmap and other factors.
+This function is defined as follows: IF TSS type is 16-bit THEN RETURN FALSE;
+FI;
+<BR>
+Ptr [TSS+66]; (* fetch bitmap pointer *)
+<BR>
+BitStringAddr  SHR (I-O-Address, 3) + Ptr;
+<BR>
+MaskShift  I-O-Address AND 7;
+<BR>
+CASE width OF:
+<BR>
+ BYTE: nBitMask  1;
+<BR>
+ WORD: nBitMask  3;
+<BR>
+ DWORD: nBitMask  15;
+<BR>
+ESAC;
+<BR>
+mask  SHL (nBitMask, MaskShift);
+<BR>
+CheckString  [BitStringAddr] AND mask;
+<BR>
+IF CheckString = 0
+<BR>
+THEN RETURN (TRUE);
+<BR>
+ELSE RETURN (FALSE);
+<BR>
+FI;
+<BR>
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><B>Switch-Tasks</B> is described in detail in the
+Intel documentation.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="862_L4_Description.html">[Back: Description]</A> <BR>
+<A HREF="864_L4_FlagsAffected.html">[Next: Flags Affected]</A> 
+</BODY>
+</HTML>

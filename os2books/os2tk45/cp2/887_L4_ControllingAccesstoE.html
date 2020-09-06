@@ -1,0 +1,75 @@
+<HTML>
+<HEAD>
+<TITLE>Controlling Access to Extended Attributes</TITLE>
+</HEAD>
+<BODY>
+<H1>Controlling Access to Extended Attributes</H1><!-- entering slot 908 -->
+<P>
+Like the file objects they are associated with, extended attributes (EAs)
+can have more than one process accessing them at the same time. This means
+that one process could be querying EAs for a file object, while another
+is setting EAs for the same file object.
+<P>
+In addition, operations on EAs are not atomic. That is, a query or set operation
+might not complete before another query or set operation is performed on
+the same object. If an error occurs before an entire list of EAs has been
+set, all, some, or none of them may actually remain set on the file object.
+This means that EAs may not remain in a consistent state unless the order
+in which the operations are performed can be guaranteed.
+<P>
+Sharing protection is provided so that unpredictable results do not occur
+during multiple simultaneous operations on extended attributes. EA manipulation
+is associated with the access permission to the related file object (file
+or directory).
+<P>
+<I>Handle-based access permission</I> is controlled by the sharing/access
+mode of the associated file object:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->If the file object is open for read access, querying
+EAs (using<A><!-- external link: 1D C2 C3 FC --> DosQueryFileInfo</A>) is
+permitted.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If the file object is open for write access, setting
+EAs (using<A><!-- external link: 1D E9 C3 FC --> DosSetFileInfo</A>) is
+permitted.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<I>Path-based access permission</I> is controlled by adding the file object
+to the sharing set for the duration of the call: an application requires
+read access and file-sharing permission must be set to deny-write.<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->For setting EAs (using<A><!-- external link: 1D F2 C3 FC --> DosSetPathInfo</A>),
+an application requires write access and file-sharing permission must be
+deny-read-write.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+
+<P>
+<B>Note: </B> The functions that set and query EAs fail if another process
+holds conflicting sharing rights to the file object.<!-- lm: 0x2 1 -->
+<P>
+
+<P>
+No explicit EA sharing is performed for<A><!-- external link: 1D 80 C3 FC --> DosEnumAttribute</A>.
+Implicit sharing exists if the caller passes the handle of an open file,
+since sharing access to the associated file is required to modify its EA.
+No sharing is performed if the caller passes the path name. This means that
+if some other process is editing the EAs, and changes them between two calls
+to<A><!-- external link: 1D 80 C3 FC --> DosEnumAttribute</A>, inconsistent
+results might be returned (for example, the same values might be returned
+twice, some values might be missed, and so on).
+<P>
+To prevent the modification of EAs for the handle case, the file should
+be opened in deny-write mode before calling<A><!-- external link: 1D 80 C3 FC --> DosEnumAttribute</A>.
+To prevent the modification of EAs for the path name case, the file should
+be open in deny-write mode before calling<A><!-- external link: 1D 80 C3 FC --> DosEnumAttribute</A>.
+For the directory name case, no sharing is possible.
+
+<P><HR>
+
+<A HREF="886_L3_ManagingExtendedAttr.html">[Back: Managing Extended Attributes]</A> <BR>
+<A HREF="888_L4_ExtendedAttributeDat.html">[Next: Extended Attribute Data Structures]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,101 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>TypeCode_parameter - Parameters</TITLE>
+</HEAD>
+<BODY>
+<H1>TypeCode_parameter - Parameters</H1><!-- entering slot 2779 --><!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B>tc</B> (TypeCode)<!-- lm: 0x11 4 -->
+<UL> The<B> TypeCode</B> whose parameter
+is desired.<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+<B>env</B> (Environment *)<!-- lm: 0x11 4 -->
+<UL> A pointer to an<B> Environment
+</B>structure. The CORBA standard mandates the use of this structure as
+a standard way to return exception information when an error condition is
+detected.<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+<B>index</B> (long)<!-- lm: 0x11 4 -->
+<UL> The number of the desired parameter.
+Parameters are numbered from 0 to N-1, where N is the value returned by
+the<B> Typecode_param_count</B> function.<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+<B>rc</B> (any)<!-- lm: 0x11 4 -->
+<UL> Returns the requested parameter
+in the form of an<B> any</B>. This function raises the Bounds exception
+if the value of the index exceeds the number of parameters available in
+the given<B> TypeCode</B>. Because the values exist within the specified
+<B>TypeCode</B>, you should not free the results returned from this function.
+
+<P>
+A bounds exception is also raised if this function is called on any of the
+IDL basic data types (see note above).
+<P>
+An<B> any</B> is a basic IDL data type that is represented as the following
+structure in C or C++:
+<PRE>typedef struct any {    TypeCode _type;
+    void *   _value;
+} any;
+</PRE>
+
+<P>
+Since all<B> TypeCode</B> parameters have one of only three types (<B>string</B>,
+<B>TypeCode</B>, or<B> long</B>), the<B> _type</B> member will always be
+set to<B> TC_string</B>,<B> TC_TypeCode</B>, or<B> TC_long,</B> as appropriate.
+The<B> _value</B> member always points to the actual parameter datum. For
+example, the following code can be used to extract the name of a structure
+from a<B> TypeCode</B> of kind<B> tk_struct</B> in C:
+<PRE>#include &lt;repostry.h&gt;  /* Interface Repository class */
+#include &lt;typedef.h&gt;   /* Interface Repository TypeDef class */
+#include &lt;somtcnst.h&gt;  /* TypeCode constants */
+TypeCode x;
+Environment *ev = somGetGlobalEnvironment ();
+TypeDef aTypeDefObj;
+sequence(Contained) sc;
+any parm;
+string name;
+Repository repo;
+
+...
+
+/* 1st, obtain a TypeCode from an Interface Repository object,
+ * or use a TypeCode constant.
+ */
+
+repo = RepositoryNew ();
+sc = _lookup_name (repo, ev,
+     "AttributeDescription", -1, "TypeDef", TRUE);
+if (sc._length) {
+    aTypeDefObj = sc._buffer[0];
+    x = __get_type (aTypeDefObj, ev);
+    }
+else
+    x = TC_AttributeDescription;
+
+if (TypeCode_kind (x, ev) == tk_struct) {
+    parm = TypeCode_parameter (x, ev, 0); /* Get structure name */
+    if (TypeCode_kind (parm._type, ev) != tk_string) {
+        printf ("Error, unexpected TypeCode: ");
+        TypeCode_print (parm._type, ev);
+    } else {
+        name = *((string *)parm._value);
+        printf ("The struct name is %s\n", name);
+    }
+} else {
+    printf ("TypeCode is not a tk_struct: ");
+    TypeCode_print (x, ev);
+}
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="2777_L2H_TypeCode_parameterPa.html">[Back: TypeCode_parameter Parameter - rc]</A> <BR>
+<A HREF="2779_L2H_TypeCode_parameterRe.html">[Next: TypeCode_parameter - Remarks]</A> 
+</BODY>
+</HTML>

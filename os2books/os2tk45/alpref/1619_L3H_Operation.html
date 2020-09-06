@@ -1,0 +1,390 @@
+<HTML XPOS=RIGHT YPOS=BOTTOM WIDTH=70% HEIGHT=60%HIDDEN>
+<HEAD>
+<!-- extra bytes: 0B 00 44 02 00 08 00 11 46 00 3C 00 38 27 --><TITLE>Operation</TITLE>
+</HEAD>
+<BODY>
+<H1>Operation</H1><!-- entering slot 1634 -->IF<I> rel/16</I> or<I> rel32</I> type of call
+
+<BR>
+THEN (* near relative call *)
+<BR>
+  IF OperandSize = 16
+<BR>
+  THEN
+<BR>
+    Push(IP);
+<BR>
+    EIP  (EIP +<I> rel16</I>) AND 0000FFFFH;
+<BR>
+  ELSE (* OperandSize = 32 *)
+<BR>
+    Push(EIP);
+<BR>
+    EIP  EIP +<I> rel32</I>;
+<BR>
+  FI;
+<BR>
+FI;
+<BR>
+IF<I> r/m16</I> or<I> r/m32</I> type of call
+<BR>
+THEN (* near absolute call *)
+<BR>
+IF OperandSize = 16
+<BR>
+  THEN
+<BR>
+    Push(IP);
+<BR>
+    EIP  [<I>r/m16</I>] AND 0000FFFFH;
+<BR>
+  ELSE (*OperandSize = 32 *)
+<BR>
+    Push(EIP);
+<BR>
+    EIP [<I>r/m32</I>]
+<BR>
+  FI;
+<BR>
+FI
+<BR>
+
+<BR>
+IF (PE = 0 OR (PE = 1 AND VM = 1))
+<BR>
+(* real mode or virtual 8086 mode *)
+<BR>
+  AND instruction = far CALL
+<BR>
+   (* i.e., operand type is<I> m16:16, m16:32, ptr16:16, ptr16:32</I>*)
+<BR>
+THEN
+<BR>
+  IF OperandSize = 16
+<BR>
+  THEN
+<BR>
+    Push(CS);
+<BR>
+    Push(IP); (* address of next instruction; 16 bits *)
+<BR>
+  ELSE
+<BR>
+    Push(CS); (* padded with 16 high-order bits *)
+<BR>
+    Push(EIP); (* address of next instruction; 32 bits *)
+<BR>
+FI;
+<BR>
+IF operand type is<I> m16:16</I> or<I> m16:32</I>
+<BR>
+THEN (* indirect far call *)
+<BR>
+  IF OperandSize = 16
+<BR>
+  THEN
+<BR>
+    CS:IP  [<I>m16:16</I>];
+<BR>
+  EIP  EIP AND 0000FFFFH; (* clear upper 16 bits *)
+<BR>
+  ELSE (* OperandSize = 32 *)
+<BR>
+    CS:EIP  [<I>m16:32</I>[;
+<BR>
+  FI;
+<BR>
+FI;
+<BR>
+IF operand type is<I> ptr:16</I> or<I> ptr16:32</I>
+<BR>
+THEN (* direct far call *)
+<BR>
+  IF OperandSize = 16
+<BR>
+  THEN
+<BR>
+    CS:IP <I> ptr:16</I>;
+<BR>
+    EIP  EIP AND 0000FFFFH; (* clear upper 16 bits *)
+<BR>
+  ELSE (* OperandSize = 32 *)
+<BR>
+    CS:EIP <I> ptr16:32</I>;
+<BR>
+  FI;
+<BR>
+ FI;
+<BR>
+FI;
+<BR>
+
+<BR>
+IF (PE = 1 AND VM = 0) (* Protected mode, not V86 mode *)
+<BR>
+ AND instruction = far CALL
+<BR>
+THEN
+<BR>
+ If indirect, then check access of EA doubleword;
+<BR>
+  #GP(0) if limit violation;
+<BR>
+ New CS selector must not be null else #GP(0);
+<BR>
+ Check that new CS selector index is within its
+<BR>
+  descriptor table limits; else #GP(new CS selector);
+<BR>
+ Examine AR byte of selected descriptor for various legal values;
+<BR>
+  depending on value:
+<BR>
+  go to CONFORMING-CODE-SEGMENT;
+<BR>
+  go to NONCONFORMING-CODE-SEGMENT;
+<BR>
+  go to CALL-GATE;
+<BR>
+  go to TASK-GATE;
+<BR>
+  go to TASK-STATE-SEGMENT;
+<BR>
+ ELSE #GP(code segment selector);
+<BR>
+FI;
+<BR>
+
+<BR>
+CONFORMING-CODE-SEGMENT:
+<BR>
+ DPL must be ó CPL ELSE #GP(code segment selector);
+<BR>
+ Segment must be present ELSE #NP(code segment selector);
+<BR>
+ Stack must be big enough for return address ELSE #SS(0);
+<BR>
+ Instruction pointer must be in code segment limit ELSE #GP(0);
+<BR>
+ Load code segment descriptor into CS register;
+<BR>
+ Load CS with new code segment selector;
+<BR>
+ Load EIP with zero-extend(new offset);
+<BR>
+ IF OperandSize=16 THEN EIP  EIP AND 0000FFFFH; FI;
+<BR>
+
+<BR>
+NONCONFORMING-CODE-SEGMENT:
+<BR>
+ RPL must be ó CPL ELSE #GP(code segment selector)
+<BR>
+ DPL must be = CPL ELSE #GP(code segment selector)
+<BR>
+ Segment must be present ELSE #NP(code segment selector)
+<BR>
+ Stack must be big enough for return address ELSE #SS(0)
+<BR>
+ Instruction pointer must be in code segment limit ELSE #GP(0)
+<BR>
+ Load code segment descriptor into CS register
+<BR>
+ Load CS with new code segment selector
+<BR>
+ Set RPL of CS to CPL
+<BR>
+ Load EIP with zero-extend(new offset);
+<BR>
+ IF OperandSize=16 THEN EIP  EIP AND 0000FFFFH; FI;
+<BR>
+
+<BR>
+ CALL-GATE
+<BR>
+ Call gate DPL must be ò CPL ELSE #GP(call gate elector)
+<BR>
+ Call gate DPL must be ò RPL ELSE #GP(call gate elector)
+<BR>
+ Call gate just be present ELSE #NP(call gate selector)
+<BR>
+ Examine code segment selector in call gate descriptor:
+<BR>
+  Selector must not be null ELSE #GP(0)
+<BR>
+  Selector must be within its descriptor table
+<BR>
+   limits ELSE #GP(code segment selector)
+<BR>
+  AR byte of selected descriptor must indicate code
+<BR>
+   segment ELSE #GP(code segment selector)
+<BR>
+  DPL of selected descriptor must be ó CPL ELSE
+<BR>
+   #GP(code segment selector)
+<BR>
+  IF non-conforming code segment AND DPL &lt; CPL
+<BR>
+  THEN go to MORE-PRIVILEGE
+<BR>
+  ELSE go to SAME-PRIVILEGE
+<BR>
+  FI;
+<BR>
+
+<BR>
+MORE-PRIVILEGE:
+<BR>
+ Get new SS selector for new privilege level from TSS
+<BR>
+  Check selector and descriptor for new SS:
+<BR>
+   Selector must not be null ELSE #TS(0)
+<BR>
+   Selector index must be within its descriptor
+<BR>
+    table limits ELSE #TS(SS selector)
+<BR>
+   Selector's RPL must equal DPL of code segment
+<BR>
+    ELSE #TS(SS selector)
+<BR>
+   Stack segment DPL must equal DPL of code
+<BR>
+    segment ELSE #TS(SS selector)
+<BR>
+   Descriptor must indicate writable data segment
+<BR>
+    ELSE #TS(SS selector)
+<BR>
+   Segment present ELSE #SS(SS selector)
+<BR>
+IF OperandSize=32
+<BR>
+ THEN
+<BR>
+   New stack must have room for parameters plus 16 bytes
+<BR>
+    ELSE #SS(SS selector)
+<BR>
+   EIP must be in code segment limit ELSE #GP(0)
+<BR>
+   Load new SS:eSP value from TSS
+<BR>
+   Load new CS:EIP value from gate
+<BR>
+ ELSE
+<BR>
+  New stack must have room for parameters plus 8 bytes
+<BR>
+   ELSE #SS(SS selector)
+<BR>
+  IP must be in code segment limit ELSE #GP(0)
+<BR>
+  Load new SS:eSP value from TSS
+<BR>
+  Load new CS:IP value from gate
+<BR>
+ FI;
+<BR>
+ Load CS descriptor
+<BR>
+ Load SS descriptor
+<BR>
+ Push long pointer of old stack onto new stack
+<BR>
+ Get word count from call gate, mask to 5 bits
+<BR>
+ Copy parameters from old stack onto new stack
+<BR>
+ Push return address onto new stack
+<BR>
+ Set CPL to stack segment DPL
+<BR>
+ Set RPL of CS to CPL
+<BR>
+
+<BR>
+SAME-PRIVILEGE:
+<BR>
+ IF OperandSize=32
+<BR>
+ THEN
+<BR>
+  Stack must have room for 6-byte return address (padded to 8 bytes)
+<BR>
+   ELSE #SS(0)
+<BR>
+  EIP must be within code segment limit ELSE #GP(0)
+<BR>
+  Load CS:EIP from gate
+<BR>
+ ELSE
+<BR>
+  Stack must have room for 4-byte return address ELSE #SS(0)
+<BR>
+  IP must be within code segment limit ELSE #GP(0)
+<BR>
+  Load CS:IP from gate
+<BR>
+FI;
+<BR>
+Push return address onto stack
+<BR>
+Load code segment descriptor into CS register
+<BR>
+Set RPL of CS to CPL
+<BR>
+
+<BR>
+TASK-GATE:
+<BR>
+  Task gate DPL must be ó CPL ELSE #TS(gate selector)
+<BR>
+  Task gate DPL must be ó RPL ELSE #TS(gate selector)
+<BR>
+  Task Gate must be present ELSE #NP(gate selector)
+<BR>
+  Examine selector to TSS, given in Task Gate descriptor:
+<BR>
+   Must specify global in the local/global bit ELSE #TS(TSS selector)
+<BR>
+   Index must be within GDT limits ELSE #TS(TSS selector)
+<BR>
+   TSS descriptor AR byte must specify nonbusy TSS
+<BR>
+    ELSE #TS(Tss selector)
+<BR>
+   Task State Segment must be present ELSE #NP(TSS selector)
+<BR>
+ SWITCH-TASKS (with nesting) to TSS
+<BR>
+ IP must be in code segment limit ELSE #TS(0)
+<BR>
+
+<BR>
+TASK-STATE-SEGMENT
+<BR>
+ TSS DPL must be ó CPL ELSE #TS(TSS selector)
+<BR>
+ TSS DPL must be ó RPL ELSE #TS(TSS selector)
+<BR>
+ TSS descriptor AR byte must specify available TSS
+<BR>
+   ELSE #TS(TSS selector)
+<BR>
+ Task State Segment must be present ELSE #NP(TSS selector)
+<BR>
+ SWITCH-TASKS (with nesting) to TSS
+<BR>
+ IP must be in code segment limit ELSE #TS(0)
+<BR>
+
+
+<P><HR>
+
+<A HREF="1618_L3H_Description.html">[Back: Description]</A> <BR>
+<A HREF="1620_L3H_FlagsAffected.html">[Next: Flags Affected]</A> 
+</BODY>
+</HTML>

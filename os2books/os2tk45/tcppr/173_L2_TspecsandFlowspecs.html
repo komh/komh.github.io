@@ -1,0 +1,88 @@
+<HTML>
+<HEAD>
+<TITLE>Tspecs and Flowspecs</TITLE>
+</HEAD>
+<BODY>
+<H1>Tspecs and Flowspecs</H1><!-- entering slot 183 -->
+<P>
+The sender tspec contains a structure with five fields that define the flow.
+The two receiver flowspecs also contain this structure.
+<PRE>    typedef struct {
+       float32_t  IS_Tspec_r; /* Token bucket rate (IP packet bytes/sec) */
+       float32_t  IS_Tspec_b; /* Token bucket depth (bytes) */
+       float32_t  IS_Tspec_p; /* Peak data rate (IP packet bytes/sec) */
+       u_int32_t  IS_Tspec_m; /* Min Policed Unit (bytes) */
+       u_int32_t  IS_Tspec_M; /* Max packet size (bytes) */
+    }   IS_Tspec_t;
+</PRE>
+
+<P>
+The token bucket rate (<I>r</I>) is in bytes of IP datagrams per second.
+ That is, the packets must include the IP packet header (20 bytes) and either
+the UDP header (8 bytes) or the TCP header (20 bytes), as well as the data
+in the packet, when computing packet sizes.  The valid value of<I> r</I> may
+range from 1 byte per second to 40 terabytes per second.  The bucket depth
+(<I>b</I>) may range from 1 byte to 250 gigabytes.
+<P>
+The maximum packet size (<I>M</I>) should be no bigger than the maximum
+transmission unit (MTU) of the path between sender and receiver. The value
+of m must be no bigger than<I> M</I>.
+<P>
+In a tspec the sender indicates, for any arbitrary time period of<I> T</I> seconds,
+that the amount of data sent in that period will not be greater than<I> r</I>*<I>T</I>+<I>b</I>.
+ When computing this, any packet that is less than the minimum policed unit
+(m) in size should be counted as<I> m</I> bytes.
+<P>
+The token bucket model is a way of viewing the transmission of data. The
+sender has a stream of data that comes from some source, and the sender
+expects to send it using RSVP.  The sender may need to send at a specified
+rate dictated by the data stream source, for example an audio or video data
+stream.  The receiver may need to output the data in a timely fashion after
+receiving it as well.  The token bucket rate is the rate at which the sender
+will send.  Imagine bytes (tokens) filling the token bucket.  When enough
+accumulate so that the above formula is not violated, a packet is built
+and sent.  The bucket is reduced by the amount that was sent.
+<P>
+The peak data rate (<I>p</I>) is mainly used in guaranteed flowspecs. It
+can be set the same as r, for controlled load flowspecs.  In guaranteed
+flowspecs, it is required that for any time period<I> T</I>, that the amount
+of data sent in that period cannot exceed<I> M</I>+<I>p</I>*<I>T</I>.
+<P>
+A Guaranteed flowspec has a tspec and an rspec. An rspec is shown below.
+
+<PRE>    typedef struct {
+       float32_t  Guar_Rspec_R; /* Guaranteed Rate (IP packet bytes/sec) */
+       u_int32_t  Guar_Rspec_S; /* Slack term (microseconds) */
+    }   Guar_Rspec_t;
+</PRE>
+
+<P>
+The guaranteed rate (<I>R</I>) and slack term (<I>S</I>) are computed by
+the receiver based upon the values in the adspec in the path message.  They
+are explained in a later section.
+<P>
+A sender and receiver in an RSVP session negotiate reasonable values of
+packet size, and so forth, by using information in the path and reservation
+messages.  Typically, a sender specifies the largest packet it is willing
+to send.  This value will be in the path message tspec.  When the path message
+is seen by a receiver, the packet size (in the adspec) will be the maximum
+that can be handled by all the RSVP-enabled nodes that the message passed
+through. (If one or more nodes was not RSVP-enabled, then that fact is also
+indicated in the adspec.  In that case, the reservation that is made should
+be considered unreliable.) Once the receiver makes a reservation, if the
+reservation is subsequently merged with other<!-- entering slot 184 --> reservations
+then a similar process can happen as the reservation message goes toward
+the sender.  Thus the sender can see what the maximum packet size should
+be for the packets to be sent reliably to all receivers.  If a packet is
+larger than that size, it will be sent by "best effort" technique rather
+than according to the reservation that was made.
+<P>
+A similar process occurs for delay through the network, so that the receiver
+has an estimate of what sort of service it can expect and request.
+
+<P><HR>
+
+<A HREF="172_L2_ReservationStyles.html">[Back: Reservation Styles]</A> <BR>
+<A HREF="174_L2_Adspecs.html">[Next: Adspecs]</A> 
+</BODY>
+</HTML>

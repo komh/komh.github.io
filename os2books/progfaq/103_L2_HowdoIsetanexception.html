@@ -1,0 +1,117 @@
+<HTML>
+<HEAD>
+<TITLE>How do I set an exception handler?</TITLE>
+</HEAD>
+<BODY>
+<H1>How do I set an exception handler?</H1><!-- entering slot 122 -->
+<PRE>/*
+ * Simple example of an exception handler
+ */
+
+#define INCL_DOS
+#include &lt;os2.h&gt;
+#include &lt;setjmp.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+extern int main(void);
+
+ /*
+ * Exception registration record.  Stored on stack, with first
+ * pointer to next registeration record, second pointer to
+ * exception handler, and the rest defined by the author of
+ * the exception handler.
+ */
+
+typedef struct {
+  struct _EXCEPTIONREGISTRATIONRECORD * volatile prev_structure;
+   _ERR * volatile ExceptionHandler;
+   jmp_buf env;
+} MYEXCEPTIONREGISTRATIONRECORD, *PMYEXCEPTIONREGISTRATIONRECORD;
+
+/*
+ * Exception handler that returns traps via longjmp().
+ */
+
+extern ULONG APIENTRY MyExceptionHandler
+    (PEXCEPTIONREPORTRECORD pReportRecord,
+    PEXCEPTIONREGISTRATIONRECORD pRegRecord,
+    PCONTEXTRECORD pContextRecord, PVOID pReserved)
+{
+  ULONG rc = XCPT_CONTINUE_SEARCH;
+
+  if (pReportRecord-&gt;ExceptionNum == XCPT_ACCESS_VIOLATION)
+    longjmp(((PMYEXCEPTIONREGISTRATIONRECORD) pRegRecord)-&gt;env, -1);
+
+  /*
+   * If we return to here then we could not handle the exception.
+   */
+
+  return rc;
+}
+
+extern BOOL Trapper(PSZ psz)
+{
+  MYEXCEPTIONREGISTRATIONRECORD myExceptionRegRecord;
+
+  /*
+   * Insert my exception handler into the chain.
+   */
+
+  myExceptionRegRecord.prev_structure = NULL;
+  myExceptionRegRecord.ExceptionHandler = MyExceptionHandler;
+  DosSetExceptionHandler((PEXCEPTIONREGISTRATIONRECORD) &amp;myExceptionRegRecord);
+
+  if (setjmp(myExceptionRegRecord.env))
+    goto OnException;
+
+  /*
+   * Now go about my business in safety.
+   */
+
+  if (strlen(psz))
+    printf("Trapper says okay to '%s'\n", psz);
+  else
+    printf("Trapper says it is empty\n");
+
+  /*
+   * I'm done, so unchain my exception handler.
+   */
+
+  DosUnsetExceptionHandler((PEXCEPTIONREGISTRATIONRECORD)&amp;myExceptionRegRecord)
+
+  return TRUE;
+
+  /*
+   * The code below is only executed if a trap occurs.
+   */
+
+OnException:
+  printf("Trapper says 'ouch!'\n");
+
+  DosUnsetExceptionHandler((PEXCEPTIONREGISTRATIONRECORD)&amp;myExceptionRegRecord)
+
+  return FALSE;
+}
+
+extern int main()
+{
+  Trapper("Hello");
+  Trapper(NULL);
+  Trapper("");
+  Trapper((PSZ) 42);
+  Trapper("Goodbye");
+
+  return 0;
+}
+</PRE>
+
+<P>
+Credit:  Dan Kehn 
+
+<P><HR>
+
+<A HREF="102_L2_HowdoIgettheerrormes.html">[Back: How do I get the error message from a DOS API call?]</A> <BR>
+<A HREF="104_L2_HowcanIdetermineadis.html">[Next: How can I determine a diskette format and if a disk is in a drive?]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,70 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>GpiBitBlt - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>GpiBitBlt - Example Code</H1><!-- entering slot 81 -->
+<P>
+This example uses GpiBitBlt to copy a bit map from one presentation space
+to another. Two presentation spaces are created: one associated with a memory
+context, and the other associated with a screen context. The function copies
+the memory context bit map that is 100 pels wide and 100 pels high into
+a 50-by-50-pel rectangle at the location (300,400) on the screen, thereby
+causing the bit map to be visible in the window. Since the raster operation
+is ROP_SRCCOPY, GpiBitBlt replaces the image previously in the target rectangle.
+The function compresses the bit map to fit the new rectangle by discarding
+extra rows and columns as specified by the BBO_IGNORE option.
+<PRE>#define INCL_GPIBITMAPS         /* Bit map functions            */
+#define INCL_DEV                /* Device Function definitions  */
+#define INCL_GPICONTROL         /* GPI control Functions        */
+#define INCL_WINWINDOWMGR       /* Window Manager Functions     */
+#include &lt;os2.h&gt;
+
+HAB     hab;            /* anchor-block handle                  */
+HPS    hpsMemory;       /* presentation-space handle            */
+HPS    hpsScreen;       /* presentation-space handle            */
+HDC    hdcScreen;       /* Device-context handle                */
+HDC    hdcMemory;       /* Device-context handle                */
+SIZEL  sizl={0, 0};     /* use same page size as device         */
+/* context data structure */
+DEVOPENSTRUC dop = {0L, "DISPLAY", NULL, 0L, 0L, 0L, 0L, 0L, 0L};
+POINTL aptl[4] = {
+    300, 400,           /* lower-left corner of target          */
+    350, 450,           /* upper-right corner of target         */
+    0, 0,               /* lower-left corner of source          */
+    100, 100 };         /* upper-right corner of source         */
+HWND   hwnd;
+
+/* create memory device context and presentation space, associating
+   DC with the PS */
+hdcMemory = DevOpenDC(hab, OD_MEMORY, "*", 5L, (PDEVOPENDATA)&amp;dop,
+                      NULLHANDLE);
+hpsMemory = GpiCreatePS(hab, hdcMemory, &amp;sizl, GPIA_ASSOC
+                                               | PU_PELS);
+
+/* create window device context and presentation space, associating
+   DC with the PS */
+hdcScreen = WinOpenWindowDC(hwnd); /* Open window device context */
+hpsScreen = GpiCreatePS(hab, hdcScreen, &amp;sizl, PU_PELS | GPIF_LONG
+                                               | GPIA_ASSOC);
+
+
+/*
+  .
+  . get bit map, associate bit map with memory device context,
+  .     draw into bit map
+  .
+  */
+
+/* display the bit map on the screen by copying it from the memory
+   device context into the screen device context */
+GpiBitBlt(hpsScreen, hpsMemory, 4L, aptl, ROP_SRCCOPY, BBO_IGNORE);
+</PRE>
+
+
+<P><HR>
+
+<A HREF="075_L2H_GpiBitBltRelatedFunc.html">[Back: GpiBitBlt - Related Functions]</A> <BR>
+<A HREF="077_L2H_GpiBitBltTopics.html">[Next: GpiBitBlt - Topics]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,225 @@
+<HTML>
+<HEAD>
+<TITLE>DosClose</TITLE>
+</HEAD>
+<BODY>
+<H1>DosClose</H1><!-- entering slot 29 -->
+<P>
+<B>Purpose</B>
+<P>
+DosClose closes a handle to a disk.
+<P>
+<B>Syntax</B>
+<PRE>#define INCL_DOSFILEMGR
+#include  os2.h&gt;
+
+</PRE>
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+APIRET DosClose<!-- lm: 0x2 11 -->
+<UL><B> (HFILE hFile)</B><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Parameters</B><!-- lm: 0x2 1 -->
+<P>
+hFile (HFILE)  input<!-- lm: 0x11 11 -->
+<UL> The handle returned by DosOpen.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Returns</B><!-- lm: 0x2 1 -->
+<P>
+ulrc (APIRET)  returns<!-- lm: 0x11 11 -->
+<UL> Return Code.
+<P>
+DosClose returns one of the following values <!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->NO_ERROR<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 --> ERROR_FILE_NOT_FOUND<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->ERROR_ACCESS_DENIED<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->ERROR_INVALID_HANDLE<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Remarks</B>
+<P>
+The disk can no longer be accessed using this handle. If opened with the
+OPEN_SHARE_DENYREADWRITE flag, the disk is unlocked.
+<P>
+<B>Related Functions</B><!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->DosOpen<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Example Code</B>
+<P>
+The following is NOT a complete usable program.  It is simply intended  to
+provide an idea of how to use Raw I/O File System APIs (e.g. DosOpen, DosRead,
+DosWrite, DosSetFilePtr, and DosClose).
+<P>
+This example opens physical disk #1 for reading and physical disk #2 for
+writing.  DosSetFilePtr is used to set the pointer to the beginning of the
+disks. Using DosRead and DosWrite, 10 megabytes of data is transferred from
+disk #1 to disk #2. Finally, DosClosed is issued to close the disk handles.
+
+<P>
+It is assumed that the size of each of the two disks is at least 10 megabytes.
+
+<PRE>#define INCL_DOSFILEMGR          /* Include File Manager APIs */#define INCL_DOSMEMMGR           /* Includes Memory Management APIs */
+#define INCL_DOSERRORS           /* DOS Error values */
+#include  os2.h&gt;
+#include  stdio.h&gt;
+#include  string.h&gt;
+
+#define SIXTY_FOUR_K 0x10000
+#define ONE_MEG     0x100000
+#define TEN_MEG     10*ONE_MEG
+
+#define UNC_DISK1  "\\\\.\\Physical_Disk1"
+#define UNC_DISK2  "\\\\.\\Physical_Disk2"
+
+int main(void) {
+   HFILE  hfDisk1        = 0;      /* Handle for disk #1 */
+   HFILE  hfDisk2        = 0;      /* Handle for disk #2 */
+   ULONG  ulAction       = 0;      /* Action taken by DosOpen */
+   ULONG  cbRead         = 0;      /* Bytes to read */
+   ULONG  cbActualRead   = 0;      /* Bytes read by DosRead */
+   ULONG  cbWrite        = 0;      /* Bytes to write */
+   ULONG  ulLocation     = 0;
+   ULONG  cbActualWrote  = 0;      /* Bytes written by DosWrite */
+   UCHAR  uchFileName1[20]  = UNC_DISK1, /* UNC Name of disk 1 */
+          uchFileName2[20]  = UNC_DISK2; /* UNC Name of disk 2 */
+   PBYTE  pBuffer        = 0;
+   ULONG  cbTotal        = 0;
+
+   APIRET rc             = NO_ERROR;            /* Return code */
+
+   /* Open a raw file system disk #1 for reading */
+   rc = DosOpen(uchFileName1,               /* File name */
+                 hfDisk1,                   /* File handle */
+                 ulAction,                  /* Action taken by DosOpen */
+                0L,                         /* no file size */
+                FILE_NORMAL,                /* File attribute */
+                OPEN_ACTION_OPEN_IF_EXISTS, /* Open existing disk */
+                OPEN_SHARE_DENYNONE |       /* Access mode */
+                OPEN_ACCESS_READONLY,
+                0L);                        /* No extented attributes */
+   if (rc != NO_ERROR) {
+      printf("DosOpen error rc = %u\n", rc);
+      return(1);
+   } /* endif */
+
+   /* Set the pointer to the begining of the disk */
+   rc = DosSetFilePtr(hfDisk1,      /* Handle for disk 1 */
+                      0L,           /* Offset must be multiple of 512 */
+                      FILE_BEGIN,   /* Begin of the disk */
+                       ulLocation); /* New pointer location */
+   if (rc != NO_ERROR) {
+      printf("DosSetFilePtr error rc = %u\n", rc);
+      return(1);
+   } /* endif */
+
+   /* Open a raw file system disk #2 for writing */
+   rc = DosOpen(uchFileName2,               /* File name */
+                 hfDisk2,                   /* File handle */
+                 ulAction,                  /* Action taken by DosOpen */
+                0L,                         /* no file size */
+                FILE_NORMAL,                /* File attribute */
+                OPEN_ACTION_OPEN_IF_EXISTS, /* Open existing disk */
+                OPEN_SHARE_DENYNONE |       /* Access mode */
+                OPEN_ACCESS_READWRITE,
+                0L);                        /* No extented attributes */
+   if (rc != NO_ERROR) {
+      printf("DosOpen error rc = %u\n", rc);
+      return(1);
+   } /* endif */
+
+   /* Set the pointer to the begining of the disk */
+   rc = DosSetFilePtr(hfDisk2,      /* Handle for disk 1 */
+                      0L,           /* Offset must be multiple of 512 */
+                      FILE_BEGIN,   /* Begin of the disk */
+                       ulLocation); /* New pointer location */
+   if (rc != NO_ERROR) {
+      printf("DosSetFilePtr error rc = %u\n", rc);
+      return(1);
+   } /* endif */
+
+
+   /* Allocate 64K of memory for <!-- entering slot 30 -->transfer operations */
+   rc = DosAllocMem((PPVOID) pBuffer, /* Pointer to buffer */
+                     SIXTY_FOUR_K,      /* Buffer size */
+                     PAG_COMMIT |     /* Allocation flags */
+                     PAG_READ |
+                     PAG_WRITE);
+   if (rc != NO_ERROR) {
+      printf("DosAllocMem error rc = %u\n", rc);
+      return(1);
+   } /* endif */
+
+   cbRead = SIXTY_FOUR_K;
+   while (rc == NO_ERROR    cbTotal   TEN_MEG) {
+
+      /* Read from #1 */
+      rc = DosRead(hfDisk1,         /* Handle for disk 1 */
+                   pBuffer,         /* Pointer to buffer */
+                   cbRead,          /* Size must be multiple of 512 */
+                    cbActualRead);  /* Actual read by DosOpen */
+      if (rc) {
+         printf("DosRead error  return code = %u\n", rc);
+         return 1;
+      }
+
+      /* Write to disk #2 */
+      cbWrite = cbActualRead;
+      rc = DosWrite(hfDisk2,         /* Handle for disk 2 */
+                    pBuffer,         /* Pointer to buffer */
+                    cbWrite,         /* Size must be multiple of 512 */
+                     cbActualWrote); /* Actual written by DosOpen */
+      if (rc) {
+         printf("DosWrite error  return code = %u\n", rc);
+         return 1;
+      }
+      if (cbActualRead != cbActualWrote) {
+         printf("Bytes read (%u) does not equal bytes written (%u)\n",
+                cbActualRead, cbActualWrote);
+         return 1;
+      }
+      cbTotal += cbActualRead; /* Update total transferred */
+   }
+
+   printf("Transfer successfully %d bytes from disk #1 to disk #2.\n",
+          cbTotal);
+
+   /* Free allocated memmory */
+   rc = DosFreeMem(pBuffer);
+   if (rc != NO_ERROR) {
+      printf("DosFreeMem error  return code = %u\n", rc);
+      return 1;
+   }
+
+   rc = DosClose(hfDisk1);
+   if (rc != NO_ERROR) {
+      printf("DosClose error  return code = %u\n", rc);
+      return 1;
+   }
+
+   rc = DosClose(hfDisk2);
+   if (rc != NO_ERROR) {
+      printf("DosClose error  return code = %u\n", rc);
+      return 1;
+   }
+return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="023_L2_DosCancelLockRequest.html">[Back: DosCancelLockRequestL]</A> <BR>
+<A HREF="025_L2_DosCreateEventSem.html">[Next: DosCreateEventSem]</A> 
+</BODY>
+</HTML>

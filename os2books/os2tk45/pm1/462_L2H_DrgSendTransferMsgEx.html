@@ -1,0 +1,97 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DrgSendTransferMsg - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DrgSendTransferMsg - Example Code</H1><!-- entering slot 470 -->
+<P>
+This function is used to send a message from one window to another when
+a direct manipulation is in progress. In this example, the function is used
+to inform the target that the operation is complete and successful.
+<PRE>#define INCL_WINSTDDRAG  /* Direct Manipulation (Drag) Functions */
+#include &lt;os2.h&gt;
+
+PDRAGINFO pdinfo;
+MPARAM    mp1;
+TID       tid;
+
+case DM_DROP:
+  pdinfo = (PDRAGINFO) mp1;
+
+  /***************************************************************/
+  /* If this is a copy operation, spawn a thread to do the copy  */
+  /***************************************************************/
+  if (pdinfo-&gt;usOperation == DO_COPY)
+  {
+    DosCreateThread (&amp;tid, CopyThread, pdinfo, FALSE, 4096);
+  }
+  break;
+
+void Copy Thread (PDRAGINFO pdinfo)
+{
+  PDRAGITEM pditem;
+  USHORT    i;
+  ULONG     flResult;
+  HAB       hab;
+  HMQ       hmq;
+  char      szSource[CCH_MAXPATH];
+  char      szTarget[CCH_MACPATH];
+
+  /***************************************************************/
+  /* DrgSendTransferMsg needs a message queue, so create one for */
+  /* this thread                                                 */
+  /***************************************************************/
+  hab = WinInitialize (0);
+  hmq = WinCreateMsgQueue (hab, 0);
+
+  /***************************************************************/
+  /* Try to copy each item that was dragged                      */
+  /***************************************************************/
+  for (i = 0; i &lt; pdinfo-&gt;cditem; i++)
+  {
+    /*************************************************************/
+    /* Get a pointer to the DRAGITEM                             */
+    /*************************************************************/
+    pditem = DrgQueryDragitemPtr (pdinfo, i);
+
+    /*************************************************************/
+    /* If we could query the source and target names, and the    */
+    /* copy was successful, return success                       */
+    /*************************************************************/
+    if (DrgQueryStrName (pditem-&gt;hstrSourceName, sizeof (szSource),
+                         szSource)
+        DrgQueryStrName (pditem-&gt;hstrTargetName, sizeof (szTarget),
+                         szTarget)
+        !DosCopy (szSource, szTarget, 0))
+    {
+      flResult = DMFL_TARGETSUCCESSFUL;
+    }
+
+    /*************************************************************/
+    /* Otherwise, return failure                                 */
+    /*************************************************************/
+    else
+    {
+      flResult = DMFL_TARGETFAIL;
+    }
+
+    /*************************************************************/
+    /* Let the source know we're done with this item             */
+    /*************************************************************/
+    DrgSendTransferMsg (pditem-&gt;hwndItem, DM_ENDCONVERSATION,
+                        (MPARAM) pditem-&gt;ulItemID,
+                        (MPARAM) flResult);
+  }
+
+  WinDestroyMsgQueue (hmq);
+  WinTerminate (hab);
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="461_L2H_DrgSendTransferMsgRe.html">[Back: DrgSendTransferMsg - Related Functions]</A> <BR>
+<A HREF="463_L2H_DrgSendTransferMsgTo.html">[Next: DrgSendTransferMsg - Topics]</A> 
+</BODY>
+</HTML>

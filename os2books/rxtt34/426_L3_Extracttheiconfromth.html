@@ -1,0 +1,119 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Extract the icon from the EAs</TITLE>
+</HEAD>
+<BODY>
+<H1>Extract the icon from the EAs</H1><!-- entering slot 440 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+A lot of programs save their icon in the Extended Attribute<B> .ICON</B>.
+You may use the following code to extract the icon from the EAs of a program
+(see also <A HREF="424_L3_Iconresourcesindefau.html">Icon resources in default
+OS/2 DLLs</A> and <A HREF="425_L3_GeticonsfromtheOS2IN.html">Get icons from
+the OS2.INI file</A>): 
+<PRE> 
+/*                                                                    */
+/* Name:     GetIcon.CMD                                              */
+/*                                                                    */
+/* Function:                                                          */
+/*   sample program to get the icons from the OS2.INI file            */
+/*                                                                    */
+/* Usage:                                                             */
+/*   GetIcon fileName                                                 */
+/*                                                                    */
+/* Where:                                                             */
+/*   fileName - name of the file with the .ICON EA                    */
+/*                                                                    */
+/* Returns:                                                           */
+/*   -                                                                */
+/*                                                                    */
+/* Credits:                                                           */
+/*   -                                                                */
+/*                                                                    */
+/* History:                                                           */
+/*   RXT&amp;T v2.00 /bs                                                  */
+/*     - initial release                                              */
+/*   RXT&amp;T v2.10 /bs                                                  */
+/*     - added some error checking code                               */
+/*                                                                    */
+/* Notes:                                                             */
+/*                                                                    */
+/*   The .ICO files are created in the current directory.             */
+/*                                                                    */
+/*   Tested only with WARP.                                           */
+/*                                                                    */
+/*                                                                    */
+/* (c) 1996 <A HREF="002_L1_GeneralForeword.html">Bernd Schemmer</A>, Germany, EMail: Bernd.Schemmer@gmx.de     */
+/*                                                                    */
+
+  parse arg sourceFileName
+  sourceFileName = strip( sourceFileName )
+
+                    /* load the necessary REXXUTIL function           */
+  call RxFuncAdd "SysGetEA", "REXXUTIL", "SysGetEA"
+
+                    /* check the parameter                            */
+  if sourceFileName = "" then
+  do
+    say "Usage: GetIcon fileName"
+    exit 2
+  end /* if sourceFileName = "" then */
+
+  iconData = ""
+
+                    /* use ".ICON1" to retrieve the Animation icon of */
+                    /* folder                                         */
+  if SysGetEA( sourceFileName, ".ICON", "iconData" ) &lt;&gt; 0 | iconData = "" then
+  do
+    say "Error: Either the file does not exist or the file has no .ICON EA"
+    exit 3
+  end /* if SysGetEA( ... */
+
+                    /* check the type and format of the EA      v2.10 */
+  parse var iconData EAType +2 EALength +2 IconData          /* v2.10 */
+  EALength = c2d( translate( "12", EALength, "21" ) )        /* v2.10 */
+
+  if EAType &lt;&gt; "F9FF"x | ,                                   /* v2.10 */
+     EALength &lt;&gt; length( iconData ) then                     /* v2.10 */
+  do                                                         /* v2.10 */
+    say "Error: The .ICON EA is corrupted!"                  /* v2.10 */
+    exit 5                                                   /* v2.10 */
+  end /* if EAType &lt;&gt; "F9FF"x | ...  */                      /* v2.10 */
+
+                    /* create the name for the target file            */
+  i = lastPos( ".", sourceFileName )
+  j = lastPos( "\", sourceFileName )
+
+  if i = 0 | ( i &lt; j ) then
+    targetFileName = sourceFileName || ".ICO"
+  else
+    targetFileName = substr( sourceFileName, 1, i ) || "ICO"
+
+  if stream( targetFileName, "c", "QUERY EXISTS" ) &lt;&gt; "" then
+  do
+    say "Error: The targetfile " || ,
+        targetFileName || ,
+        " already exist!"
+    exit 4
+  end /* if stream( ...  */
+
+                    /* create, write and close the ICON file          */
+  call stream targetFileName, "c", "OPEN WRITE"
+  call CharOut targetFileName, iconData
+  call stream targetFileName, "c", "CLOSE"
+
+  say "Iconfile " || targetFileName || " created."
+exit 0
+
+</PRE>
+
+<P>
+
+
+<P><HR>
+
+<A HREF="425_L3_GeticonsfromtheOS2IN.html">[Back: Get icons from the OS2.INI file]</A> <BR>
+<A HREF="427_L2_Formatofthefilecreat.html">[Next: Format of the file created with 'Print settings']</A> 
+</BODY>
+</HTML>

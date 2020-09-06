@@ -1,0 +1,115 @@
+<HTML>
+<HEAD>
+<TITLE>clntudp_create()</TITLE>
+</HEAD>
+<BODY>
+<H1>clntudp_create()</H1><!-- entering slot 334 -->
+<P>
+The clntudp_create() call creates an RPC client transport handle for the
+remote program using UDP transport.
+<P>
+<B>Syntax</B>
+<PRE>#include &lt;rpc\rpc.h&gt;
+#include &lt;netdb.h&gt;
+
+CLIENT *
+clntudp_create(<I>addr</I>, <I>prognum</I>, <I>versnum</I>, <I>wait</I>, <I>sockp</I>)
+struct sockaddr_in *<I>addr</I>;
+u_long <I>prognum</I>;
+u_long <I>versnum</I>;
+struct timeval <I>wait</I>;
+int *<I>sockp</I>;
+</PRE>
+
+<P>
+<B>Parameters</B><!-- lm: 0x2 0 -->
+<P>
+<I>addr</I><!-- lm: 0x11 2 -->
+<UL> Pointer to the internet address of the
+remote program. If<I> addr</I> points to a port number of 0,<I> addr</I> is
+set to the port on which the remote program is receiving. The remote PORTMAP
+service is used for this.<!-- lm: 0x2 0 -->
+</UL><I> prognum</I><!-- lm: 0x11 2 -->
+<UL> Remote
+program number.<!-- lm: 0x2 0 -->
+</UL><I> versnum</I><!-- lm: 0x11 2 -->
+<UL> Version
+number of the remote program.<!-- lm: 0x2 0 -->
+</UL><I> wait</I><!-- lm: 0x11 2 -->
+<UL> Interval
+at which UDP resends the call request, until either a response is received
+or the call times out. Set the time-out length using the clnt_call() procedure.
+<!-- lm: 0x2 0 -->
+</UL><I>sockp</I><!-- lm: 0x11 2 -->
+<UL> Pointer to
+the socket. If<I> sockp</I> is RPC_ANYSOCK, this routine opens a new socket
+and sets<I> sockp</I>.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>Description</B>
+<P>
+The clntudp_create() call creates a client transport handle for the remote
+program (<I>prognum</I>) with version (<I>versnum</I>).  UDP is used as
+the transport layer.
+<P>
+<B>Note: </B> Do not use this procedure with procedures that use large arguments
+or return large results. UDP RPC messages can contain only 2K bytes of encoded
+data.<!-- lm: 0x2 0 -->
+<P>
+
+<P>
+<B>Return Values</B>
+<P>
+NULL indicates failure.
+<P>
+<B>Examples</B>
+<PRE>#define RMTPROGNUM   (u_long)0x3fffffffL#define RMTPROGVER   (u_long)0x1L
+
+register CLIENT *clnt;
+int sock = RPC_ANYSOCK; /* can be also valid socket descriptor */
+struct hostent *hp;
+struct timeval pertry_timeout;
+struct sockaddr_in server_addr;
+
+/* get the internet address of RPC server */
+if ((hp = gethostbyname("RPC_HOST") == NULL)
+  {
+   fprintf(stderr,"Can't get address for %s\n",argv[2]);
+   exit (-1);
+  }
+
+pertry_timeout.tv_sec = 3;
+pertry_timeout.tv_usec = 0;
+bcopy(hp-&gt;h_addr, (caddr_t)&amp;server_addr.sin_addr.s_addr, hp-&gt;h_length);
+server_addr.sin_family = AF_INET;
+server_addr.sin_port = 0;
+
+/* create UDP handle */
+if ((clnt = clntudp_create(&amp;server_addr, RMTPROGNUM, RMTPROGVER,
+                                pertry_timeout, &amp;sock)) == NULL)
+   {
+    clnt_pcreateerror("clntudp_create");
+    exit(-1);
+   }
+
+</PRE>
+
+<P>
+<B>Related Calls</B><!-- lm: 0x2 5 -->
+<UL>
+<P>
+<A HREF="288_L2_clnt_destroy.html">clnt_destroy()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="291_L2_clnt_pcreateerror.html">clnt_pcreateerror()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="294_L2_clntraw_create.html">clntraw_create()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="295_L2_clnttcp_create.html">clnttcp_create()</A><!-- lm: 0x2 0 -->
+</UL>
+
+<P><HR>
+
+<A HREF="295_L2_clnttcp_create.html">[Back: clnttcp_create()]</A> <BR>
+<A HREF="297_L2_get_myaddress.html">[Next: get_myaddress()]</A> 
+</BODY>
+</HTML>

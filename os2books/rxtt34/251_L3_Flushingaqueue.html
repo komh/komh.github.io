@@ -1,0 +1,107 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Flushing a queue</TITLE>
+</HEAD>
+<BODY>
+<H1>Flushing a queue</H1><!-- entering slot 249 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+Some user (including myself in one of the last versions of RXT&amp;T) say
+that using rxqueue</A><B> /CLEAR</B> to flush the REXX queue is significantly
+faster than flushing the queue with LINEIN</A> or PULL</A> if there are
+a lot of entries in the queue.
+<P>
+Well, I've done some tests and in my tests, the PULL statement was<B> always
+</B>faster. But you may use the code below to test this behaviour on your
+PC.
+<P>
+
+<PRE> 
+/* program to test the speed of flushing the REXX queue               */
+
+                        /* init the variables                         */
+  queueThreshold = 1000
+  queueLines = 1000
+  queueLineLength = 100
+
+  do forever
+
+    call LineOut , "Enter EXIT on any question to exit the program"
+
+    call CharOut , "  Enter the queue threshold ("""" for " || ,
+                   queueThreshold || "): "
+    userInput = translate( lineIn() )
+    if userInput = "EXIT" then
+      exit
+    if userInput &lt;&gt; "" then
+      queueThreshold = userInput
+
+    call CharOut , "  Enter the no. of lines for the queue ("""" for " || ,
+                   queueLines || "): "
+    userInput = translate( lineIn() )
+    if userInput = "EXIT" then
+      exit
+    if userInput &lt;&gt; "" then
+      queueLines = userInput
+
+    call CharOut , "  Enter the length for the lines in the queue " || ,
+                   "("""" for " || queueLineLength || "): "
+    userInput = translate( lineIn() )
+    if userInput = "EXIT" then
+      exit
+    if userInput &lt;&gt; "" then
+      queueLineLength = userInput
+
+                        /* fill the queue                             */
+    call CharOut , "  Now filling the queue with " || queueLines || ,
+                   " lines with " || queueLineLength || " characters  ..."
+
+    do i = 1 to queueLines
+      push copies( "X", queueLineLength )
+    end /* do i = 1 to queueLines */
+    call LineOut , " done."
+    call LineOut , "  There are now " || queued() || " lines in the queue."
+
+    call CharOut , "  Now flushing the queue ..."
+    call time "R"
+    call FlushQueue
+    call LineOut , " done. Time used: " || time("E")
+  end /* do forever */
+
+exit
+
+/* ------------------------------------------------------------------ */
+/* function: flush the default REXX queue                             */
+/*                                                                    */
+/* call:     FlushQueue                                               */
+/*                                                                    */
+/* returns:  nothing                                                  */
+/*                                                                    */
+/*                                                                    */
+FlushQueue:
+  queueCount = queued()
+  if queueCount &gt;= queueThreshold then
+  do
+    call LineOut , "  Using rxqueue ..."
+    ADDRESS "CMD" "RXQUEUE /CLEAR"
+  end /* if */
+  else
+  do
+    call LineOut , "  Using parse pull ..."
+    do i = 1 to queueCount
+      parse pull
+    end /* do i = 1 to queueCount */
+  end /* else */
+return
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="250_L3_Checkifaqueueexists.html">[Back: Check if a queue exists]</A> <BR>
+<A HREF="252_L3_Queuesversusfiles.html">[Next: Queues versus files]</A> 
+</BODY>
+</HTML>

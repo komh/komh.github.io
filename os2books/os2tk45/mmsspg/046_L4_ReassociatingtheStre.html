@@ -1,0 +1,70 @@
+<HTML>
+<HEAD>
+<TITLE>Reassociating the Stream on MCI_LOAD</TITLE>
+</HEAD>
+<BODY>
+<H1>Reassociating the Stream on MCI_LOAD</H1><!-- entering slot 53 -->
+<P>
+Typically, a stream is destroyed, recreated, and then associated with a
+new file.  However, you can bypass these steps and reassociate a new file
+with an existing stream as long as the file is of the same data type as
+the stream was created to handle.  For example, in the case of waveaudio,
+if you had a 16-bit 11KB WAVE stream, the file you want to associate with
+the stream must be of the same data type and sub type.
+<P>
+Note that only one data object may be associated with a stream once the
+stream is created, and it is specific to a particular stream handler (source
+or target).  Associations may be changed, but the stream cannot be active;
+it must be stopped first (discard stop, flush stop, or EOS).
+<PRE>/*************************************************
+* Reassociate The Stream Handlers with the new
+* stream object if the stream has been created
+* in the correct direction already.
+*************************************************/
+if (ulpInstance-&gt;ulCreateFlag == PREROLL_STATE)
+    {
+    /*********************************************
+    * Fill in Associate Control Block Info for
+    * file system stream handler (FSSH).  FSSH will
+    * use the mmio handle we are associating to
+    * stream information.
+    *********************************************/
+    ulpInstance-&gt;StreamInfo.acbmmio.ulObjType = ACBTYPE_MMIO;
+    ulpInstance-&gt;StreamInfo.acbmmio.ulACBLen = sizeof (ACB_MMIO);
+    ulpInstance-&gt;StreamInfo.acbmmio.hmmio = ulpInstance-&gt;hmmio;
+
+    /***********************************************
+    * Associate FileSystem as source if Playing. Note
+    * the association is always done with the file
+    * system stream handler since it is involved with
+    * mmio operations.  If you try this with the
+    * audio stream handler, you will get invalid
+    * handle back.
+    ***********************************************/
+
+    if (AMPMIX.ulOperation == OPERATION_PLAY)
+       {
+       ulrc = SpiAssociate ( ulpInstance-&gt;StreamInfo.hStream,
+                             ulpInstance-&gt;StreamInfo.hidASource,
+                             (PVOID) &amp;ulpInstance-&gt;StreamInfo.acbmmio );
+       }
+    /***********************************************
+    * Associate FileSystem as target if recording
+    ***********************************************/
+
+    else
+       {
+       ulrc = SpiAssociate ( ulpInstance-&gt;StreamInfo.hStream,
+                             ulpInstance-&gt;StreamInfo.hidATarget,
+                             (PVOID) &amp;ulpInstance-&gt;StreamInfo.acbmmio );
+
+       } /* else we are in record mode */
+</PRE>
+
+
+<P><HR>
+
+<A HREF="045_L4_AssociatingaStream.html">[Back: Associating a Stream]</A> <BR>
+<A HREF="047_L4_PrerollingtheStreamP.html">[Next: Prerolling the Stream - Performance Considerations]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,280 @@
+<HTML XPOS=RIGHT YPOS=BOTTOM WIDTH=70% HEIGHT=60%HIDDEN>
+<HEAD>
+<!-- extra bytes: 0B 00 44 02 00 08 00 11 46 00 3C 00 38 27 --><TITLE>Operation</TITLE>
+</HEAD>
+<BODY>
+<H1>Operation</H1><!-- entering slot 2387 -->IF instruction = relative JMP  (* i.e. operand
+is<I> rel8</I>,<I> rel16</I>, or<I> rel32</I> *)
+<BR>
+THEN
+<BR>
+ EIP  EIP +<I> rel18/16/32</I>;
+<BR>
+ IF OperandSize = 16
+<BR>
+ THEN EIP  EIP AND 0000FFFFH;
+<BR>
+ FI;
+<BR>
+FI;
+<BR>
+
+<BR>
+IF instruction = near indirect JMP
+<BR>
+ (* i.e. operand is<I> r/m16</I> or<I> r/m32</I> *)
+<BR>
+THEN
+<BR>
+ IF OperandSize = 16
+<BR>
+ THEN
+<BR>
+  EIP  [<I>r/m16</I>] AND 0000FFFFH;
+<BR>
+ ELSE (* OperandSize = 32 *)
+<BR>
+  EIP  [<I>r/m32</I>;
+<BR>
+ FI;
+<BR>
+FI;
+<BR>
+
+<BR>
+IF (PE = 0 OR (PE = 1 AND VM = 1)) (* real mode or V86 mode *)
+<BR>
+ AND instruction = far JMP
+<BR>
+ (* i.e., operand type is<I> m16:16</I>,<I> m16:32, ptr16:16, ptr16:32</I> *)
+<BR>
+THEN GOTO REAL-OR-V86-MODE;
+<BR>
+ IF operand type =<I> m16:16</I> or<I> m16:32</I>
+<BR>
+ THEN (* indirect *)
+<BR>
+  IF OperandSize = 16
+<BR>
+  THEN
+<BR>
+   CS:IP  [<I>m16:16</I>];
+<BR>
+   EIP  EIP AND 0000FFFFH; (* clear upper 16 bits *)
+<BR>
+  ELSE (* OperandSize = 32 *)
+<BR>
+   CS:EIP  [<I>m16:32</I>];
+<BR>
+  FI;
+<BR>
+ FI;
+<BR>
+ IF operand type =<I> ptr16:16</I> or<I> ptr16:32</I>
+<BR>
+ THEN
+<BR>
+  IF OperandSize = 16
+<BR>
+  THEN
+<BR>
+   CS:IP <I> ptr16:16</I>;
+<BR>
+   EIP  EIP AND 0000FFFFH; (* clear upper 16 bits *)
+<BR>
+  ELSE (* OperandSize = 32 *)
+<BR>
+   CS:EIP <I> ptr16:32</I>;
+<BR>
+  FI;
+<BR>
+ FI;
+<BR>
+FI;
+<BR>
+
+<BR>
+IF (PE = 1 AND VM = 0) (* Protected mode, not V86 mode *)
+<BR>
+ AND instruction = far JMP
+<BR>
+THEN
+<BR>
+ IF operand type =<I> m16:16</I> or<I> m16:32</I>
+<BR>
+ THEN (* indirect *)
+<BR>
+  check access of EA dword;
+<BR>
+  #GP(0) or #SS(0) IF limit violation;
+<BR>
+ FI;
+<BR>
+ Destination selector is not null ELSE #GP(0)
+<BR>
+ Destination selector index is within its descriptor table limits ELSE #GP(selector)
+<BR>
+ Depending on AR byte of destination descriptor;
+<BR>
+  GOTO CONFORMING-CODE-SEGMENT;
+<BR>
+  GOTO NONCONFORMING-CODE-SEGMENT;
+<BR>
+  GOTO CALL-GATE;
+<BR>
+  GOTO TASK-GATE;
+<BR>
+  GOTO TASK-STATE-SEGMENT;
+<BR>
+ ELSE #GP(selector); (* illegal AR byte in descriptor *)
+<BR>
+FI;
+<BR>
+
+<BR>
+CONFORMING-CODE-SEGMENT:
+<BR>
+ Descriptor DPL must be ó CPL ELSE #GP(selector);
+<BR>
+ Segment must be present ELSE #NP(selector);
+<BR>
+ Instruction pointer must be within code-segment limit ELSE #GP(0);
+<BR>
+ IF OperandSize = 32
+<BR>
+ THEN Load CS:EIP from destination pointer;
+<BR>
+ ELSE Load CS:IP from destination pointer;
+<BR>
+ FI;
+<BR>
+ Load CS register with new segment descriptor;
+<BR>
+
+<BR>
+NONCONFORMING-CODE-SEGMENT:
+<BR>
+ RPL of destination selector must be ò CPL ELSE #GP(selector);
+<BR>
+ Descriptor DPL must be = CPL ELSE #GP(selector);
+<BR>
+ Segment must be present ELSE #NP(selector);
+<BR>
+ Instruction pointer must be within code-segment limit ELSE #GP(0);
+<BR>
+ IF OperandSize = 32
+<BR>
+ THEN Load CS:EIP from destination pointer;
+<BR>
+ ELSE Load CS:IP from destination pointer;
+<BR>
+ FI;
+<BR>
+ Load CS register with new segment descriptor;
+<BR>
+ Set RPL field of CS register to CPL;
+<BR>
+
+<BR>
+CALL-GATE:
+<BR>
+ Descriptor DPL must be ò CPL ELSE #GP(gate selector);
+<BR>
+ Descriptor DPL must be ò gate selector RPL ELSE #GP(gate selector);
+<BR>
+ Gate must be present ELSE #NP(gate selector);
+<BR>
+ Examine selector to code segment given in call gate descriptor:
+<BR>
+  Selector must not be null ELSE #GP(0);
+<BR>
+  Selector must be within its descriptor table limits ELSE
+<BR>
+   #GP(CS selector);
+<BR>
+  Descriptor AR byte must indicate code segment
+<BR>
+   ELSE #GP(CS selector);
+<BR>
+  IF non-conforming
+<BR>
+  THEN code-segment descriptor DPL must = CPL
+<BR>
+  ELSE #GP(CS selector);
+<BR>
+  FI;
+<BR>
+  IF conforming
+<BR>
+  THEN code-segment descriptor DPL must be ó CPL;
+<BR>
+  ELSE #GP(CS selector);
+<BR>
+  Code segment must be present ELSE #NP(CS selector);
+<BR>
+  Instruction pointer must be within code-segment limit ELSE #GP(0);
+<BR>
+  IF OperandSize = 32
+<BR>
+  THEN Load CS:EIP from call gate;
+<BR>
+  ELSE Load CS:IP from call gate;
+<BR>
+  FI;
+<BR>
+ Load CS register with new code-segment descriptor;
+<BR>
+ Set RPL of CS to CPL
+<BR>
+
+<BR>
+TASK-GATE:
+<BR>
+ Gate descriptor DPL must be ò CPL ELSE #GP(gate selector);
+<BR>
+ Gate descriptor DPL must be ò gate selector RPL ELSE #GP(gate selector);
+<BR>
+ Task Gate must be present ELSE #NP(gate selector);
+<BR>
+ Examine selector to TSS, given in Task Gate descriptor:
+<BR>
+  Must specify global in the local/global bit ELSE #GP(TSS selector);
+<BR>
+  Index must be within GDT limits ELSE #GP(TSS selector);
+<BR>
+  Descriptor AR byte must specify available TSS (bottom bits 00001);
+<BR>
+   ELSE #GP(TSS selector);
+<BR>
+  Task State Segment must be present ELSE #NP(TSS selector);
+<BR>
+ SWITCH-TASKS (without nesting) to TSS;
+<BR>
+ Instruction pointer must be within code-segment limit ELSE #GP(0);
+<BR>
+
+<BR>
+TASK-STATE-SEGMENT:
+<BR>
+ TSS DPL must be ò CPL ELSE #GP(TSS selector);
+<BR>
+ TSS DPL must be ò TSS selector RPL ELSE #GP(TSS selector);
+<BR>
+ Descriptor AR byte must specify available TSS (bottom bits 00001)
+<BR>
+  ELSE #GP(TSS selector);
+<BR>
+ Task State Segment must be present ELSE #NP(TSS selector);
+<BR>
+ SWITCH-TASKS (without nesting) to TSS;
+<BR>
+ Instruction pointer must be within code-segment limit ELSE #GP(0);
+<BR>
+
+
+<P><HR>
+
+<A HREF="2371_L3H_Description.html">[Back: Description]</A> <BR>
+<A HREF="2373_L3H_FlagsAffected.html">[Next: Flags Affected]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,84 @@
+<HTML>
+<HEAD>
+<TITLE>Writing to Files</TITLE>
+</HEAD>
+<BODY>
+<H1>Writing to Files</H1><!-- entering slot 939 -->
+<P>
+Once you open a file or have a file handle, you can read from and write
+to the file by using<A><!-- external link: 1D D7 C3 4C --> DosRead</A> and
+<A><!-- external link: 1D 0F C4 FC -->DosWrite</A>.
+<P>
+<A><!-- external link: 1D 0F C4 4D -->DosWrite</A> copies bytes from a buffer
+you specify to a file, device, or pipe.
+<P>
+Calling DosWrite with a handle for a file, pipe, or device transfers the
+number of bytes specified from a buffer location to the object. The system
+returns, in a parameter, the number of bytes actually written (which in
+the case of a disk file might not be the same as the number requested because
+of insufficient disk space).
+<P>
+To write to a file, you must first open it for writing or for reading and
+writing.
+<P>
+
+<P>
+The following code fragment shows how to open the file SAMPLE.TXT again
+and write 512 bytes to it:
+<PRE>    #define INCL_DOSFILEMGR   /* File System values */
+    #include &lt;os2.h&gt;
+
+    #define BUF_SIZE 512
+
+    HFILE   hf;
+    ULONG   ulAction;
+    BYTE    abBuffer[BUF_SIZE];
+    ULONG   cbWritten;
+    APIRET  ulrc;
+
+    ulrc = DosOpen("SAMPLE.TXT",
+                   &amp;hf,
+                   &amp;ulAction,
+                   0,
+                   FILE_NORMAL,
+                   FILE_CREATE,
+                   OPEN_ACCESS_WRITEONLY |
+                   OPEN_SHARE_DENYWRITE,
+                   (PEAOP2) NULL);
+
+    if (!ulrc) {
+        DosWrite(hf,
+                 abBuffer,
+                 sizeof(abBuffer),
+                 &amp;cbWritten);
+
+        DosClose(hf);
+    }
+
+</PRE>
+
+<P>
+<A><!-- external link: 1D 0F C4 4D -->DosWrite</A> writes the contents of
+the buffer to the file. If it fails to write 512 bytes (for example, if
+the disk is full), the function puts the number of bytes written in the
+<I>cbWritten</I> variable. The data is read and written exactly as given;
+the function does not format the data-that is, they do not convert binary
+data to decimal strings, or vice versa.
+<P>
+<B>The Write-Through Flag</B>
+<BR>
+If an application requires data to be written in a specific order, setting
+the<I> Write-Through flag</I> to 1 guarantees that actual I/O for a synchronous
+write is completed before the<A><!-- external link: 1D 0F C4 4D --> DosWrite
+</A> returns. If this flag has been set with<A><!-- external link: 1D 9F C3 4B --> DosOpen
+</A> for buffered I/O, and multiple synchronous writes are performed, the
+system cannot guarantee the actual order in which the data is written. For
+details on changing the state of the<I> Write-Through flag</I>, see <A HREF="920_L3_DeterminingandSettin.html">Determining
+and Setting the State of a File or Device Handle</A>.
+
+<P><HR>
+
+<A HREF="915_L3_ReadingfromFiles.html">[Back: Reading from Files]</A> <BR>
+<A HREF="917_L3_MovingtheFilePointer.html">[Next: Moving the File Pointer]</A> 
+</BODY>
+</HTML>

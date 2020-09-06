@@ -1,0 +1,105 @@
+<HTMLHIDDEN>
+<HEAD>
+<TITLE>DosGetPID</TITLE>
+</HEAD>
+<BODY>
+<H1>DosGetPID</H1><!-- entering slot 281 -->
+<PRE>typedef struct _PIDINFO {   /* pidi */
+ 
+  PID pid;                  /* current process' process ID */
+  TID tid;                  /* current process' thread ID */
+  PID pidParent;            /* process ID of the parent */
+ 
+} PIDINFO;
+
+#define INCL_DOSPROCESS
+
+USHORT  rc = DosGetPID(ProcessIDsArea);
+
+PPIDINFO         ProcessIDsArea; /* Process IDs (returned) */
+
+USHORT           rc;             /* return code */
+</PRE>
+
+<P>
+<B>Example</B>
+<P>
+The following example demonstrates how to create a process, obtain process
+ID information, and kill a process.  Process1 invokes process2 to run asynchronously.
+ It obtains and prints some PID information, and then kills process2.
+<PRE>/* ---- process1.c ---- */
+
+#define INCL_DOSPROCESS
+
+#include &lt;os2.h&gt;
+
+#define START_PROGRAM "process2.exe"   /* Program pointer */
+
+main()
+{
+
+  CHAR          ObjFail [50];       /* Object name buffer */
+  RESULTCODES   ReturnCodes;        /*
+  PIDINFO       PidInfo;
+  PID           ParentID;           /*
+  USHORT        rc;
+
+  printf("Process1 now running. \n");
+
+  /** Start a child process. **/
+  if(!(DosExecPgm(ObjFail,            /* Object name buffer */
+                  sizeof(ObjFail),    /* Length of obj. name buffer */
+                  EXEC_ASYNC,         /* Execution flag - asynchronous */
+                  NULL,               /* No args. to pass to process2*/
+                  NULL,               /* Process2 inherits process1's
+                                          environment */
+                  &amp;ReturnCodes,       /* Ptr. to resultcodes struct. */
+                  START_PROGRAM)))    /* Name of program file */
+    printf("Process2 started. \n");
+
+  /** Obtain Process ID information and print it **/
+  if(!(rc=DosGetPID(&amp;PidInfo)))       /* Process ID's (returned) */
+    printf("DosGetPID: current process ID is %d; thread ID is %d; parent process ID is %d.\n",
+            PidInfo.pid, PidInfo.tid, PidInfo.pidParent);
+  if(!(rc=DosGetPPID(
+           ReturnCodes.codeTerminate, /* Process whose parent is wanted */
+           &amp;ParentID)))               /* Address to put parent's PID */
+    printf("Child process ID is %d; Parent process ID is %d.\n",
+            ReturnCodes.codeTerminate, ParentID);
+
+  /** Terminate process2 **/
+  if(!(rc=DosKillProcess(DKP_PROCESSTREE,     /* Action code - kill process
+                                                     and descendants */
+                ReturnCodes.codeTerminate)))  /* PID of root of process tree */
+    printf("Process2 terminated by process1.\n");
+
+}
+
+
+/* ---- process2.c ---- */
+
+#define INCL_DOSPROCESS
+
+#include &lt;os2.h&gt;
+
+#define SLEEPTIME   500L
+#define RETURN_CODE 0
+
+main()
+{
+  printf("Process2 now running.\n");
+
+  /* Sleep to allow process1 to kill it */
+  DosSleep(SLEEPTIME);                /* Sleep interval */
+  DosExit(EXIT_PROCESS,               /* Action Code */
+          RETURN_CODE);               /* Result Code */
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="237_L2H_DosGetModName.html">[Back: DosGetModName]</A> <BR>
+<A HREF="239_L2H_DosGetPPID.html">[Next: DosGetPPID]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,58 @@
+<HTML>
+<HEAD>
+<TITLE>Recording and Playing Back Input Events</TITLE>
+</HEAD>
+<BODY>
+<H1>Recording and Playing Back Input Events</H1><!-- entering slot 1606 -->
+<P>
+To record and play back input events, use the journal record hook to create
+a local queue to store the recorded events, then use the journal playback
+hook to create a second thread to read from the queue. Do not attempt to
+spend any significant cycles within JournalRecordHook. Because the recorded
+events include semaphores, Win calls, and I/O functions, it can cause system
+deadlocks. The following pseudocode describes how to play back recorded
+functions:
+<PRE>Store the passed time as the current time
+
+If the system requests a new message to be prepared (skip is TRUE)
+   If all messages have been played back, release the Playback Hook
+      (After release, your playback hook function will still
+       be called a few times more.  So leave a null mouse move
+       message as the next message to be copied.)
+
+   Otherwise:
+      Save the last message time
+      Copy the new message to the passed qmsg buffer
+      Calculate the time until the next message
+      (You should know, from the recorded times, the
+       delta time which actually occurred between each
+       message.  During playback you will need to calculate
+       the amount of time remaining between the time passed
+       to you in the qmsg buffer, i.e., "current time", and
+       the time at which the next message is due to be
+       kicked off.)
+
+Otherwise (skip is FALSE, so the system wants a peek
+           at the current message):
+   Copy the existing (current) message to the passed qmsg buffer
+
+Recalculate and return the REMAINING delay for the current message
+
+</PRE>
+
+<P>
+An alternative method for installing a system-queue hook function is to
+provide an installation function in the DLL along with the hook function.
+With this method, the installing application does not need the handle of
+the DLL module. By linking with the DLL, the application gains access to
+the installation function, which can supply the DLL module handle and other
+details in the call to WinSetHook. The DLL can also contain a function that
+releases the system-queue hook function. The application can call this hook-releasing
+function when it ends.
+
+<P><HR>
+
+<A HREF="1571_L4_FreeingMemory.html">[Back: Freeing Memory]</A> <BR>
+<A HREF="1573_L2_SampleCodeforHooks.html">[Next: Sample Code for Hooks]</A> 
+</BODY>
+</HTML>

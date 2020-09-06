@@ -1,0 +1,89 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>GpiRemoveDynamics - Remarks</TITLE>
+</HEAD>
+<BODY>
+<H1>GpiRemoveDynamics - Remarks</H1><!-- entering slot 2129 -->
+<P>
+This function usually indicates that a dynamic segment is about to be updated;
+and that, having completed the update, <A HREF="527_L2_GpiDrawDynamics.html">GpiDrawDynamics
+</A>is called to redraw the dynamic segments.
+<P>
+If there is more than one dynamic segment, only those that are being updated
+need be removed. The section of the segment chain is identified by the first
+and last segments in the section.  If<I> lFirstSegid</I> and<I> lLastSegid
+</I>have the same value, this call erases only the parts drawn from the
+segment, and by calls from that segment.
+<P>
+Specifying the range of segment identifiers that are to be removed usually
+has a performance advantage, in that searching of the chain stops after
+<I>lLastSegid</I> has been processed. It can also be used to operate on
+less than the maximum number of dynamic segments, as in one of the following
+examples:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Several dynamic segments are currently drawn, but
+only one is to be updated. Identifying this segment with both<I> lFirstSegid
+</I>and<I> lLastSegid</I> means that only this one is removed. It can then
+be updated, and replaced with <A HREF="527_L2_GpiDrawDynamics.html">GpiDrawDynamics</A>.
+<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->A new dynamic segment can be created, while the rest
+remain drawn. GpiRemoveDynamics is issued before the segment has been created
+(or while it is unchained, if it already exists), identifying it with both
+<I>lFirstSegid</I> and<I> lLastSegid</I>. It is then created with this identifier
+(or chained, if it already exists), and <A HREF="527_L2_GpiDrawDynamics.html">GpiDrawDynamics
+</A>is issued, causing it to be drawn.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+In these examples, the other dynamic segments remain drawn throughout.
+<P>
+In all cases, after <A HREF="517_L2_GpiDrawChain.html">GpiDrawChain</A>,
+<A HREF="527_L2_GpiDrawDynamics.html">GpiDrawDynamics</A>, <A HREF="537_L2_GpiDrawFrom.html">GpiDrawFrom</A>,
+or <A HREF="549_L2_GpiDrawSegment.html">GpiDrawSegment</A>, where the DCTL_DYNAMIC
+draw control is set (see <A HREF="2536_L2_GpiSetDrawControl.html">GpiSetDrawControl</A>),
+<I>all</I> dynamic segments must be drawn. The<I> lFirstSegid</I> and<I> lLastSegid
+</I>parameters of GpiRemoveDynamics, cannot be used to cause a subset of
+dynamic segments to be drawn after the following <A HREF="527_L2_GpiDrawDynamics.html">GpiDrawDynamics</A>.
+If this is required, it can be done by unchaining the unwanted dynamic segments
+after first removing them.
+<P>
+Dynamic segments that are currently drawn must never be updated in the segment
+store, nor must any drawing in mix modes (other than exclusive-OR or leave-alone)
+be done to a presentation space while dynamic segments are drawn in it.
+
+<P>
+If a temporary re-association is to be done, this function must be issued
+to remove the dynamic segments from the display before the first dissociation.
+
+<P>
+It is necessary to ensure that attributes, model transform, current position,
+and viewing limits are reset to their default values, before processing
+the segments. This can either be done by ensuring that the first dynamic
+segment in the removed section does not have the ATTR_FASTCHAIN attribute
+(see <A HREF="2603_L2_GpiSetInitialSegment.html">GpiSetInitialSegmentAttrs</A>),
+or by issuing <A HREF="2133_L2_GpiResetPS.html">GpiResetPS</A> before the
+GpiRemoveDynamics. The latter method also resets the clip path to cause
+no clipping, which may also be necessary.
+<P>
+If this function is followed by primitives or attributes, without first
+opening a segment, the processing is as described for <A HREF="179_L2_GpiCloseSegment.html">GpiCloseSegment</A>.
+In particular, note that during GpiRemoveDynamics, the system forces the
+foreground mix to FM_XOR and the background mix to BM_LEAVEALONE. It may
+be necessary to set one or both of these before starting to draw.
+<P>
+If<I> lFirstSegid</I> does not exist, or is not in the segment chain, no
+removal or drawing occurs. However, the segment identifier range is still
+established for a subsequent <A HREF="527_L2_GpiDrawDynamics.html">GpiDrawDynamics
+</A>function.
+<P>
+If<I> lLastSegid</I> does not exist, or is not in the chain, or is chained
+before<I> lFirstSegid</I>, no error is raised, and processing continues
+to the end of the chain.
+
+<P><HR>
+
+<A HREF="2117_L2H_GpiRemoveDynamicsPar.html">[Back: GpiRemoveDynamics - Parameters]</A> <BR>
+<A HREF="2119_L2H_GpiRemoveDynamicsErr.html">[Next: GpiRemoveDynamics - Errors]</A> 
+</BODY>
+</HTML>

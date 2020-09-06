@@ -1,0 +1,59 @@
+<HTML>
+<HEAD>
+<TITLE>Allocating HPS Memory</TITLE>
+</HEAD>
+<BODY>
+<H1>Allocating HPS Memory</H1><!-- entering slot 59 -->
+<P>
+To allocate HPS memory, the application calls sysctl() as follows:
+<PRE>           int mib[4];
+           unsigned long ptrs[15];
+           size_t ptrslen;
+           int ret;
+           mib[0] = CTL_OS2;
+           mib[1] = PF_INET;
+           mib[2] = IPPROTO_IP;
+           mib[3] = OS2_MEMMAPIO;
+
+           memset(ptr, 0, sizeof(ptrs));
+           ptrslen = sizeof(ptrs);
+           ret = sysctl(mib, sizeof(mib) / sizeof(mib[0]), ptrs,
+                        &amp;ptrslen, NULL, 0);
+</PRE>
+
+<P>
+The TCP/IP stack will allocate 60K bytes of memory and return 15 pointers
+to 4K byte blocks.  These must be passed on subsequent send calls with the
+MSG_MAPIO flag.
+<P>
+To allocate memory and attach a shared-event semaphore to each block as
+well, the application should initialize the ptrs array with the shared-event
+semaphore handles before calling sysctl():
+<PRE>           int mib[4];
+           unsigned long ptrs[15];
+           size_t ptrslen;
+           int i;
+           APIRET rc;
+           int ret;
+
+           mib[0] = CTL_OS2;
+           mib[1] = PF_INET;
+           mib[2] = IPPROTO_IP;
+           mib[3] = OS2_MEMMAPIO;
+
+           for (i = 0; i &lt; sizeof(ptrs) / sizeof(ptrs[0]); i++) {
+               rc = DosCreateEventSemaphore(NULL, &amp;ptrs[i], DC_SEM_SHARED, FALSE);
+               if (rc != NO_ERROR)
+                  exit(1);
+           }
+           ptrslen = sizeof(ptrs);
+           ret = sysctl(mib, sizeof(mib) / sizeof(mib[0]), ptrs, &amp;ptrslen, NULL, 0);
+</PRE>
+
+
+<P><HR>
+
+<A HREF="053_L2_HighPerformanceSend.html">[Back: High Performance Send]</A> <BR>
+<A HREF="055_L3_UsingHPSMemorywithSe.html">[Next: Using HPS Memory with Send Calls]</A> 
+</BODY>
+</HTML>

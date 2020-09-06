@@ -1,0 +1,92 @@
+<HTML>
+<HEAD>
+<TITLE>Differences between OS/2 and Standard BSD Sockets</TITLE>
+</HEAD>
+<BODY>
+<H1>Differences between OS/2 and Standard BSD Sockets</H1><!-- entering slot 66 -->
+<P>
+Networking services sockets is based on the Berkeley Software Distribution
+version 4.4 sockets implementation.
+<P>
+The IBM OS/2 socket implementation differs from the Berkeley socket implementation
+as follows:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 5 -->Sockets are not OS/2 files or devices.  Socket numbers
+have no relationship to OS/2 file handles.  Therefore, the read(), write(),
+and close() calls do not work for sockets: using them gives incorrect results.
+ Use the recv(), send(), and soclose() calls instead.<!-- lm: 0x2 2 -->
+<P>
+<LI><!-- lm: 0x2 5 -->Error codes set by the OS/2 TCP/IP sockets implementation
+are not made available via the global<I> errno</I> variable.  Instead, error
+codes are accessed by using the sock_errno() call (see <A HREF="205_L2_sock_errno.html">sock_errno()</A>).
+Use the psock_errno() call, instead of the perror() call, to write a short
+error message to the standard error device describing the last error encountered
+during a call to a socket library function.  To access system return values,
+use the errno.h include statement supplied with the compiler.
+<P>
+This is intended to obtain per-thread error codes in a multithreaded application
+environment and to avoid conflict with standard ANSI C error constants.
+
+<P>
+BSD-style error checking is as follows:<!-- lm: 0x2 7 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 10 -->
+<PRE>rt = recv(s, buf, sizeof(buf), 0);
+if (rt == -1 &amp;&amp; errno == EWOULDBLOCK)
+{...}
+</PRE>
+<!-- lm: 0x2 7 -->
+<P>
+<LI><!-- lm: 0x2 10 -->
+<PRE>if (recv(s, buf, sizeof(buf), 0) &lt; 0) {
+perror("Recv()");
+exit(1);
+}
+</PRE>
+<!-- lm: 0x2 5 --> 
+</UL>The preferred OS/2-style error checking is as follows:
+<!-- lm: 0x2 7 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 10 -->
+<PRE>rt = recv(s, buf, sizeof(buf), 0);
+if (rt == -1 &amp;&amp; sock_errno() == SOCEWOULDBLOCK)
+{...}
+</PRE>
+<!-- lm: 0x2 7 -->
+<P>
+<LI><!-- lm: 0x2 10 -->
+<PRE>if (recv(s, buf, sizeof(buf), 0) &lt; 0)
+{
+psock_errno("Recv()");
+exit(1);
+}
+</PRE>
+<!-- lm: 0x2 5 --> 
+</UL>Error constants consistent with BSD sockets are
+provided for compatibility purposes; your application can use the error
+constant EWOULDBLOCK, instead of SOCEWOULDBLOCK.  See <A HREF="411_L1_SocketErrorConstants.html">Socket
+Error Constants</A>, or the &lt;NERRNO.H&gt; file for definitions of error
+constants.<!-- lm: 0x2 2 -->
+</UL> <!-- lm: 0x2 5 -->
+<UL>Unlike the Berkeley
+select() call, you cannot use the OS/2 select() call to wait for activity
+on devices other than sockets.  See <A HREF="197_L2_select.html">select()
+</A>for more information.<!-- lm: 0x2 2 -->
+</UL> <!-- lm: 0x2 5 -->
+<UL>The
+ioctl(), getsockopt(), setsockopt(), and sysctl() calls don't support all
+of the options supported by BSD and add some options not supported by BSD.
+See <A HREF="187_L2_ioctl.html">ioctl()</A>, <A HREF="186_L2_getsockopt.html">getsockopt()</A>,
+<A HREF="202_L2_setsockopt.html">setsockopt()</A>, and <A HREF="208_L2_sysctl.html">sysctl()
+</A>for more information.<!-- lm: 0x2 0 -->
+</UL>
+
+<P><HR>
+
+<A HREF="060_L2_AccessingaTCPIPAPIDL.html">[Back: Accessing a TCP/IP API DLL from an Intermediate DLL]</A> <BR>
+<A HREF="062_L2_CompilingandLinkinga.html">[Next: Compiling and Linking a Sockets API Application]</A> 
+</BODY>
+</HTML>

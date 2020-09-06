@@ -1,0 +1,382 @@
+<HTML>
+<HEAD>
+<TITLE>Processing an MCI_PLAY Command</TITLE>
+</HEAD>
+<BODY>
+<H1>Processing an MCI_PLAY Command</H1><!-- entering slot 62 -->
+<P>
+The CD audio MCD receives commands by means of the mciDriverEntry point,
+same as the waveform audio MCD.  The command is passed to the vendor-specific
+driver (VSD) module.
+<P>
+To see how the CD audio MCD processes these commands, let's trace the processing
+of an MCI_PLAY command.  To begin with, the vsdDriverEntry function makes
+a call to process_msg, passing the message and message parameters as shown
+in the following example.
+<PRE>ULONG APIENTRY vsdDriverEntry(PVOID pInstance, USHORT usMessage,
+                              ULONG *pulParam1, PVOID pParam2,
+                              USHORT usUserParm)
+{
+   ULONG  rc, ulP1Temp = MCI_WAIT;
+   USHORT try = 1;
+
+   if (pulParam1 == 0L)
+      pulParam1 = &amp;ulP1Temp;
+
+   /* check to see if the drive is open, unless it is an Open message */
+   if (usMessage == MCI_OPEN)
+      rc = CDAudOpen(*pulParam1, (MMDRV_OPEN_PARMS *)pParam2);
+   else
+   {
+      /* if the device is closed try reopening it unless you are closing */
+      if (((PINST) lpInstance)-&gt;hDrive == 0 &amp;&amp; usMessage != MCI_CLOSE)
+      {
+         rc = CD01_Open((PINST) lpInstance);
+         /* Clear commands not needing an open hardware device */
+         if (rc == MCIERR_DEVICE_NOT_READY)
+            if ((usMessage == MCI_DEVICESETTINGS) ||
+                (usMessage == MCI_GETDEVCAPS) ||
+                (usMessage == MCI_INFO) ||
+                (usMessage == MCIDRV_REGISTER_DRIVE) ||
+                (usMessage == MCI_SET_CUEPOINT) ||
+                (usMessage == MCI_SET_POSITION_ADVISE) ||
+                (usMessage == MCIDRV_CD_STATUS_CVOL) ||
+                (usMessage == MCIDRV_SYNC &amp;&amp;
+                   !(*pulParam1 &amp; MCIDRV_SYNC_REC_PULSE)))
+               rc = MCIERR_SUCCESS;
+
+      }  /* of if drive needs to be open */
+      else      /* drive was opened */
+         rc = MCIERR_SUCCESS;
+
+      if (!rc)
+         do
+         {
+            /* process message */
+<B>            rc = process_msg((PINST) lpInstance, usMessage,
+                             pulParam1, pParam2, usUserParm);
+</B>            if (rc == MCIERR_DEVICE_NOT_READY ||       /* ERROR RECOVERY */
+                rc == MCIERR_MEDIA_CHANGED)
+            {
+               if (((PINST)lpInstance)-&gt;Drive == '0') /* drive is closed */
+               {                               /* do not reissue commands */
+                  rc = MCIERR_SUCCESS;
+                  break;
+               }
+               else
+                  if (try == 2)
+                     break;                    /* quit after 2 tries. */
+                  else
+                  {
+                     rc = CDAudErrRecov((PINST) lpInstance);
+                     if (rc)               /* error is still there, exit */
+                        break;
+                     else
+                        try++;
+                  }  /* of else only tried the command once (try == 1) */
+
+            }  /* of if the drive was not ready */
+            else
+               break;                          /* clear flag to exit */
+
+         } while (try);  /* end of do loop and if no open error */
+
+   } /* of else command was not MCI_OPEN */
+
+   return(rc);
+
+}  /* of vsdDriverEntry() */
+</PRE>
+
+<P>
+The process_msg routine has a long case statement.  The case in which we
+are interested is for MCI_PLAY.  When process_msg calls CD01_Play, it passes
+the following information:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Instance<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->msgParam1<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->FROM value received from msgParam2<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->TO value received from msgParam2<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->MCI_PLAY command.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>static ULONG process_msg(PINST pInst, USHORT usMessage,                        ULONG *pulParam1, PVOID pParam2, USHORT usUserParm)
+{
+   ULONG rc;
+
+   DosRequestMutexSem(pInst-&gt;hInstSem, WAIT_FOREVER);
+   if (usMessage != MCI_PLAY)
+      DosReleaseMutexSem(pInst-&gt;hInstSem);       // No protection needed
+
+   /* process message */
+   switch(usMessage)
+   {
+      case MCI_CLOSE :
+         rc = CDAudClose(pInst, *pulParam1);
+         break;
+      case MCI_CUE :                         /* Pre-roll */
+         rc = CD01_Cue(pInst);
+         break;
+      case MCI_GETDEVCAPS :                  /* Get Device Capabilities */
+         rc = CD01_GetCaps(*pulParam1, (MCI_GETDEVCAPS_PARMS *)pParam2);
+         break;
+      case MCI_GETTOC :                        /* Get Table of Contents */
+         if (*pulParam1 &amp; WAIT_NOTIFY_MASK)
+            rc = MCIERR_INVALID_FLAG;
+         else
+            rc = CD01_GetTOC(pInst, (MCI_TOC_PARMS *)pParam2);
+         break;
+      case MCI_INFO :
+         rc = CDAudInfo(pInst, *pulParam1, (MCI_INFO_PARMS *)pParam2);
+         break;
+      /* case MCI_OPEN :     open was already done in vsdDriverEntry() */
+
+      case MCI_PAUSE :
+         rc = CD01_Stop(pInst, TIMER_PLAY_SUSPEND);
+         break;
+<B>      case MCI_PLAY :
+         rc = CD01_Play(pInst, pulParam1,
+                        ((MCI_PLAY_PARMS *)pParam2)-&gt;ulFrom,
+                        ((MCI_PLAY_PARMS *)pParam2)-&gt;ulTo, usUserParm,
+                        ((MCI_PLAY_PARMS *)pParam2)-&gt;hwndCallback);
+</B>         break;
+      case MCIDRV_REGISTER_DISC :                  /* Register Disc */
+         rc = CDAudRegDisc(pInst, REG_BOTH, (MCI_CD_REGDISC_PARMS *)
+           pParam2);
+         break;
+      case MCIDRV_REGISTER_DRIVE :                 /* Register Drive */
+         rc = <!-- entering slot 63 -->CDAudRegDrive(pInst, (MCI_CD_REGDRIVE_PARMS *)pParam2);
+         break;
+      case MCIDRV_REGISTER_TRACKS :                /* Register Tracks */
+         rc = CD01_RegTracks(pInst, (MCI_CD_REGTRACKS_PARMS *)pParam2);
+         break;
+      case MCIDRV_RESTORE :
+         rc = CD01_Restore(pInst, (MCIDRV_CD_SAVE_PARMS *)pParam2);
+         break;
+      case MCI_RESUME :                            /* Unpause */
+         rc = CD01_Resume(pInst);
+         break;
+      case MCIDRV_SAVE :
+         rc = CD01_Save(pInst, (MCIDRV_CD_SAVE_PARMS *)pParam2);
+         break;
+      case MCI_SEEK :
+         rc = CD01_Seek(pInst, ((MCI_SEEK_PARMS *)pParam2)-&gt;ulTo);
+         break;
+      case MCI_SET :
+         rc = CDAudSet(pInst, pulParam1, (MCI_SET_PARMS *)pParam2);
+         break;
+      case MCI_SET_CUEPOINT :
+         rc = CD01_CuePoint(pInst, *pulParam1, (MCI_CUEPOINT_PARMS *)
+            pParam2);
+         break;
+      case MCI_SET_POSITION_ADVISE :
+         rc = CD01_PosAdvise(pInst, *pulParam1, (MCI_POSITION_PARMS *)
+            pParam2);
+         break;
+      case MCIDRV_CD_SET_VERIFY :
+         rc = CDAudSetVerify(*pulParam1);
+         break;
+      case MCI_STATUS :
+         rc = CDAudStatus(pInst, *pulParam1, (MCI_STATUS_PARMS *)pParam2);
+         break;
+      case MCIDRV_CD_STATUS_CVOL :
+         rc = CDAudStatCVol(&amp;((MCI_STATUS_PARMS *)pParam2)-&gt;ulReturn);
+         break;
+      case MCI_STOP :
+         rc = CD01_Stop(pInst, TIMER_EXIT_ABORTED);
+         break;
+      case MCIDRV_SYNC :
+         rc = CD01_Sync(pInst, *pulParam1, (MCIDRV_SYNC_PARMS *)pParam2);
+         break;
+
+      /* List unsupported functions */
+
+      case MCI_ACQUIREDEVICE :  case MCI_CONNECTION :  case MCI_CONNECTOR :
+      case MCI_CONNECTORINFO :  case MCI_DEVICESETTINGS :
+      case MCI_DEFAULT_CONNECTION:                     case MCI_ESCAPE :
+      case MCI_LOAD:            case MCI_MASTERAUDIO : case MCI_RECORD :
+      case MCI_RELEASEDEVICE :  case MCI_SAVE :        case MCI_SPIN :
+      case MCI_STEP :           case MCI_SYSINFO :     case MCI_UPDATE :
+      case MCIDRV_CD_READ_LONG :
+         rc = MCIERR_UNSUPPORTED_FUNCTION;
+         break;
+      default : rc = MCIERR_UNRECOGNIZED_COMMAND;
+
+   }  /* of switch */
+
+   return(rc);
+</PRE>
+
+<P>
+When CD01_Play receives a PLAY command, processing goes to the line that
+issues the call to CallIOCtl.
+<PRE>ULONG CD01_Play(PINST pInst, ULONG *pulParam1, ULONG ulFrom, ULONG ulTo,
+                USHORT usUserParm, HWND hwndCallback)
+{
+   ULONG rc;
+   ULONG ulThreadID;
+   ULONG cnt;
+
+   /* Stop drive before issuing next play command */
+   if ((pInst-&gt;usPlayFlag == TIMER_PLAYING) ||
+       (pInst-&gt;usPlayFlag == TIMER_PLAY_SUSPEND) ||
+       (pInst-&gt;usPlayFlag == TIMER_PLAY_SUSP_2))
+      if (*pulParam1 &amp; MCI_NOTIFY)
+         CD01_Stop(pInst, TIMER_EXIT_SUPER);
+      else
+         CD01_Stop(pInst, TIMER_EXIT_ABORTED);
+
+   /* prepare for play call */
+   pInst-&gt;ulCurPos = ulFrom;
+   pInst-&gt;ulEndPos = ulTo;
+   pInst-&gt;usPlayNotify = (USHORT)(*pulParam1 &amp; (MCI_WAIT | MCI_NOTIFY));
+   if (*pulParam1 &amp; MCI_NOTIFY)
+   {
+      pInst-&gt;usPlayUserParm = usUserParm;
+      pInst-&gt;hwndPlayCallback = hwndCallback;
+      *pulParam1 ^= MCI_NOTIFY;
+   }  /* notify flag was used */
+
+   if (*pulParam1 &amp; MCI_WAIT)
+      rc = CD01_Timer(pInst);      /* returns when play commands end */
+   else
+   {
+      DosResetEventSem(pInst-&gt;hReturnSem, &amp;cnt);  /*force a wait
+      rc = DosCreateThread(&amp;ulThreadID, (PFNTHREAD)CD01_Timer,
+                           (ULONG)pInst, 0L, THREAD_STACK_SZ);
+      if (rc)
+      {
+         rc = MCIERR_OUT_OF_MEMORY;
+         DosPostEventSem(pInst-&gt;hReturnSem);
+      }
+      else  /* wait for new thread to process enough */
+      {
+         /* Let MCD know not to send notification by returning wait */
+         *pulParam1 = (*pulParam1 &amp; ~MCI_NOTIFY) | MCI_WAIT;
+
+         /* wait for new thread to process enough */
+         DosWaitEventSem(pInst-&gt;hReturnSem, WAIT_FOREVER);
+      }
+
+      DosReleaseMutexSem(pInst-&gt;hInstSem);
+
+   }  /* else no wait flag was used */
+
+   return(rc);
+
+}  /* of CD01_Play() */
+
+/************************************************************************/
+/*                                                                      */
+/* SUBROUTINE NAME:  CD01_PlayCont                                      */
+/*                                                                      */
+/* DESCRIPTIVE NAME:  CD Play Continue.                                 */
+/*                                                                      */
+/* FUNCTION:  Continue to play audio data to internal DAC(s) from a     */
+/*            MCIDRV_RESTORE or MCIDRV_SYNC command.                    */
+/*                                                                      */
+/* PARAMETERS:                                                          */
+/*      PINST pInst       -- Instance pointer.                          */
+/*      ULONG ulFrom      -- From address.                              */
+/*      ULONG ulTo        -- To address in MMTIME.                      */
+/*                                                                      */
+/* EXIT CODES:                                                          */
+/*      MCIERR_SUCCESS   -- action completed without error.             */
+/*      MCIERR_DEVICE_NOT_READY  -- device was not ready, no disc.      */
+/*      MCIERR_MEDIA_CHANGED     -- Disc changed.                       */
+/*                                                                      */
+/* NOTES:                                                               */
+/*                                                                      */
+/************************************************************************/
+ULONG CD01_PlayCont(PINST pInst, ULONG ulFrom, ULONG ulTo)
+{
+   ULONG rc;
+   BYTE param[PLAYAUD_PMAX] = {'C', 'D', '0', '1', RBMODE};
+   ULONG ulDataLen = STANDRD_DMAX, ulParamLen = PLAYAUD_PMAX;
+
+   /* <!-- entering slot 64 -->convert starting MM Time into Redbook 2 format */
+   * (ULONG *)&amp;param[STARTFFFLD] = REDBOOK2FROMMM(ulFrom);
+
+   /* convert ending MM Time into Redbook 2 format */
+   * (ULONG *)&amp;param[END_FF_FLD] = REDBOOK2FROMMM(ulTo);
+
+   /* Stop drive before issuing next play command */
+   CD01_Stop(pInst, TIMER_PLAY_SUSPEND);
+
+   /* play drive */
+<B>   rc = CallIOCtl(pInst, CDAUDIO_CAT, PLAY__AUDIO,
+                  param, ulParamLen, &amp;ulParamLen,
+                  NULL,  ulDataLen,  &amp;ulDataLen);
+</B>   if (!rc)
+      pInst-&gt;ulCurPos = ulFrom;
+
+   /* if Timer was stopped, continue timer loop */
+   if (pInst-&gt;usPlayFlag == TIMER_PLAY_SUSPEND)
+      pInst-&gt;usPlayFlag = TIMER_PLAYING;
+   DosPostEventSem(pInst-&gt;hTimeLoopSem);
+
+   return(rc);
+
+}  /* of CD01_PlayCont() */
+</PRE>
+
+<P>
+The CallIOCtl routine issues the DosDevIOCtl request, passing the following
+parameters:<I> hDrive</I> is the device handle retrieved from a DosOpen
+call,<I> ulCat</I> is the IOCtl category, and<I> ulFunction</I> is the function
+number. Also required are buffer pointers, buffer sizes and lengths, and
+pointers to the buffer lengths for the parameter and the data buffers.  The
+Parameter buffer is used for input, and the data buffer is used for output.
+The pointers to buffer lengths enable the physical device driver to return
+the actual lengths of the buffers.
+<PRE>ULONG CallIOCtl(PINST pInst,  ULONG ulCat,  ULONG ulFunction,
+                PVOID pParam, ULONG ulPLen, ULONG *pulPLen,
+                PVOID pData,  ULONG ulDLen, ULONG *pulDLen)
+{
+   ULONG rc;
+
+   DosRequestMutexSem(pInst-&gt;hIOSem, (ULONG)-1L);
+   rc = DosDevIOCtl(pInst-&gt;hDrive, ulCat, ulFunction,
+                    pParam, ulPLen, pulPLen,
+                    pData,  ulDLen, pulDLen);
+   DosReleaseMutexSem(pInst-&gt;hIOSem);
+
+   switch(rc)
+   {
+      case 0L :
+         rc = MCIERR_SUCCESS;
+         break;
+      case 0xFF03 :
+         rc = MCIERR_UNSUPPORTED_FUNCTION;
+         break;
+      case 0xFF06 :
+      case 0xFF08 :
+         rc = MCIERR_OUTOFRANGE;
+         break;
+      case 0xFF04 :
+      case 0xFF0C :
+         rc = MCIERR_HARDWARE;
+         break;
+      case 0xFF10 :
+         rc = MCIERR_MEDIA_CHANGED;
+         break;
+      default :
+         rc = MCIERR_DEVICE_NOT_READY;
+   }
+
+   return(rc);
+
+}  /* of CallIOCtl() */
+</PRE>
+
+
+<P><HR>
+
+<A HREF="051_L3_SettingAudioAttribut.html">[Back: Setting Audio Attributes]</A> <BR>
+<A HREF="053_L3_CDAudioMCDModules.html">[Next: CD Audio MCD Modules]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,120 @@
+<HTMLHIDDEN>
+<HEAD>
+<TITLE>DosSemSetWait</TITLE>
+</HEAD>
+<BODY>
+<H1>DosSemSetWait</H1><!-- entering slot 356 -->
+<PRE>#define INCL_DOSSEMAPHORES
+
+USHORT  rc = DosSemSetWait(SemHandle, Timeout);
+
+HSEM             SemHandle;     /* Semaphore handle */
+LONG             Timeout;       /* Timeout (in milliseconds) */
+
+USHORT           rc;            /* return code */
+</PRE>
+
+<P>
+<B>Example</B>
+<P>
+The following example illustrates the notification of an event between threads
+of different processes.  Process1 creates a nonexclusive system semaphore
+named process1.sem.  It then invokes process2 to run asynchronously. Finally,
+process1 sets the semaphore and waits, with a timeout of 4.5 seconds, for
+process2 to open the semaphore and clear it. Process1 resumes after this
+clearance. The following example is different from the one given for DosSemSet
+and DosSemWait only in that the set and wait functions are performed in
+one atomic step, via DosSemSetWait.  Hence, in the following example, there
+is no possibility for process1 to miss the notification because of a premature
+clear by process2.
+<PRE>/* ----- process1.c ---- */
+
+#define INCL_DOSSEMAPHORES
+#define INCL_DOSPROCESS
+
+#include &lt;os2.h&gt;
+
+#define SEM_NAME "\\SEM\\process1.sem" /* Semaphore name */
+#define TIMEOUT 4500L                  /* Timeout period */
+#define START_PROGRAM "process2.exe"   /* Name of program file */
+
+main()
+{
+  HSEM          SemHandle;
+  CHAR          ObjFail [50];
+  PSZ           Args;
+  PSZ           Envs;
+  RESULTCODES   ReturnCodes;
+  USHORT        rc;
+
+  printf("Process1 now running. \n");
+  rc = DosCreateSem(CSEM_PUBLIC,       /* Ownership indicator */
+                    &amp;SemHandle,        /* Semaphore handle (returned) */
+                    SEM_NAME);         /* Semaphore name string */
+  printf("Process1.sem created; return code is %d \n", rc);
+
+  /* Start a separate process */
+  if(!(DosExecPgm(ObjFail,           /* Object name buffer */
+                  sizeof(ObjFail),   /* Length of obj. name buffer */
+                  EXEC_ASYNC,        /* Execution flag - asynchronous */
+                  Args,              /* Ptr. to argument string */
+                  Envs,              /* Ptr. to environment string */
+                  &amp;ReturnCodes,      /* Ptr. to resultcodes struct. */
+                  START_PROGRAM)))   /* Name of program file */
+    printf("Process2 started. Process1 will try to wait for notification. \n");
+
+  /************* SET semaphore and WAIT for a notification ************/
+  /*************   from process2 on process1.sem           ************/
+
+  if((rc = DosSemSetWait(SemHandle,     /* Semaphore handle */
+                         TIMEOUT)))     /* Timeout period */
+
+  /****************************************/
+  {
+    /* No notification (either interrupt or timeout); error processing */
+  }
+  else
+  {
+    /* Notification received.  Normal processing */
+    printf("Process2 cleared semaphore; process1 running again. \n");
+  }
+}
+</PRE>
+
+<PRE>/* ----- process2.c ----*/
+
+#define INCL_DOSSEMAPHORES
+
+#include &lt;os2.h&gt;
+
+#define SEM_NAME "\\SEM\\process1.sem"    /* Semaphore name */
+
+main()
+{
+  HSEM SemHandle;
+  USHORT rc;
+
+  /* Obtain access to semaphore created by process1 via OPEN */
+  if((rc=DosOpenSem(&amp;SemHandle,           /* Semaphore handle
+                                                  (returned) */
+                    SEM_NAME)))           /* Semaphore Name */
+  {
+    /* Could not open -- error processing (switch on rc). */
+  }
+  else
+  {
+    /* Opened semaphore; normal processing.  Clear semaphore when done. */
+    printf("Semaphore OPENED. \n");
+    if(!(rc=DosSemClear(SemHandle)))      /* Semaphore handle */
+      printf("Semaphore CLEARED. \n");
+  }
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="312_L2H_DosSemSet.html">[Back: DosSemSet]</A> <BR>
+<A HREF="314_L2H_DosSemWait.html">[Next: DosSemWait]</A> 
+</BODY>
+</HTML>

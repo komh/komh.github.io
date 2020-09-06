@@ -1,0 +1,158 @@
+<HTML>
+<HEAD>
+<TITLE>Creating a Main Window</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating a Main Window</H1><!-- entering slot 1576 -->
+<P>
+An application can create a main window by using WinCreateStdWindow.  The
+following code fragment creates a typical main window-a frame window that
+has a system menu, title bar, menu, vertical and horizontal scroll bars,
+minimize and maximize (window-sizing) buttons, and a sizing border:
+<PRE>#define IDM_MENU 1
+
+HWND hwndFrame;
+ULONG flFrameControlFlags =
+      FCF_SYSMENU    |
+      FCF_TITLEBAR   |
+      FCF_SIZEBORDER |
+      FCF_MENU       |
+      FCF_MINMAX     |
+      FCF_HORZSCROLL |
+      FCF_VERTSCROLL |
+      FCF_SHELLPOSITION;
+
+hwndFrame = WinCreateStdWindow(
+            HWND_DESKTOP,           /* Frame-window parent       */
+            WS_VISIBLE,             /* Make window visible       */
+            &amp;flFrameControlFlags,   /* Frame-control flags       */
+            "MyClass",              /* Client-window class       */
+            "Main Window",          /* Window title              */
+            0,                      /* No client-window styles   */
+            (HMODULE)NULL,          /* App. module has resources */
+            IDM_MENU,               /* Resource ID               */
+            0);                     /* Client-window handle      */
+
+</PRE>
+
+<P>
+An application also can create a<I> standard</I> main window by creating
+a frame window with the FCF_STANDARD flag.  The application must include
+icon, menu, and accelerator-table resources if it uses the FCF_STANDARD
+flag.
+<P>
+The application creates the standard window by using WinCreateStdWindow,
+as shown in the following code fragment:
+<PRE>#define IDM_RESOURCES 1
+
+HWND hwndFrame;
+
+/* Set the frame-control flags. */
+ULONG flFrameControlFlags = FCF_STANDARD;
+
+/* Create the standard main window. */
+hwndFrame = WinCreateStdWindow(HWND_DESKTOP,
+                               WS_VISIBLE,
+                               &amp;flFrameControlFlags,
+                               "MyClass",
+                               "Main Window", 0,
+                               (HMODULE) NULL,
+                               IDM_RESOURCES, 0);
+
+</PRE>
+
+<P>
+Another way to create a main window and its frame controls is to use WinCreateWindow
+to create the frame window and the frame controls, then call WinCreateWindow
+again to create the client window.  One advantage of this approach is that,
+when creating the frame window, the application can specify the window's
+initial size and position. The following figure illustrates this approach:
+
+<PRE>#define ID_RESOURCES 1
+#define ID_FRAME     1
+ULONG flFrameControlFlags =
+                            FCF_ACCELTABLE |
+                            FCF_ICON       |
+                            FCF_MENU       |
+                            FCF_MINMAX     |
+                            FCF_SIZEBORDER |
+                            FCF_SYSMENU    |
+                            FCF_TASKLIST   |
+                            FCF_TITLEBAR;
+
+FRAMECDATA fcdata;
+HWND hwndFrame;
+HWND hwndClient;
+SWP swp;
+
+fcdata.cb            = sizeof(FRAMECDATA);
+fcdata.flCreateFlags = flFrameControlFlags;
+fcdata.hmodResources = (HMODULE) NULL;
+fcdata.idResources   = ID_RESOURCES;
+
+ /* Create the frame and client windows.  */
+hwndFrame = WinCreateWindow(
+            HWND_DESKTOP,    /* Frame-window parent        */
+            WC_FRAME,        /* Frame-window class         */
+            "Main Window",   /* Window title               */
+            0,               /* Initially invisible        */
+            0,0,0,0,         /* Size and position = 0      */
+            NULL,            /* No owner                   */
+            HWND_TOP,        /* Top z-order position       */
+            ID_FRAME,        /* Frame-window ID            */
+            &amp;fcdata,         /* Pointer to class data      */
+            NULL);           /* No presentation parameters */
+
+hwndClient = WinCreateWindow(
+             hwndFrame,      /* Client-window parent        */
+             "MyClass",      /* Client-window class         */
+             NULL,           /* No title for client window  */
+             0,              /* Initially invisible         */
+             0,0,0,0,        /* Size and position = 0       */
+             hwndFrame,            /* Owner is frame window */
+             HWND_BOTTOM,    /* Bottom z-order position     */
+             FID_CLIENT,     /* Standard client-window ID   */
+             NULL,           /* No class data               */
+             NULL);          /* No presentation parameters  */
+
+   .
+   .  /* Continue with initialization. */
+   .
+
+/* Set the size and position of the frame window.  */
+WinQueryWindowPos(HWND_DESKTOP, &amp;swp);
+WinSetWindowPos(hwndFrame,
+                HWND_TOP,
+                swp.x,
+                swp.cy / 2,
+                swp.cx,
+                swp.cy / 2,
+                SWP_MOVE |
+                SWP_SIZE);
+
+ /* Set the size and position of the client window. */
+WinQueryWindowPos(hwndFrame, &amp;swp);
+WinSetWindowPos(hwndClient,
+                HWND_TOP,
+                SV_CXSIZEBORDER,
+                SV_CYSIZEBORDER - 1,
+                swp.cx - SV_CXSIZEBORDER * 2,
+                (swp.cy - SV_CYSIZEBORDER * 2) + 1,
+                SWP_MOVE |
+                SWP_SIZE);
+
+/* Make the frame and client windows visible. */
+WinShowWindow(hwndFrame, TRUE);
+WinShowWindow(hwndClient, TRUE);
+
+</PRE>
+
+<P>
+
+
+<P><HR>
+
+<A HREF="1541_L2_UsingFrameWindows.html">[Back: Using Frame Windows]</A> <BR>
+<A HREF="1543_L3_RetrievingaFrameHand.html">[Next: Retrieving a Frame Handle]</A> 
+</BODY>
+</HTML>

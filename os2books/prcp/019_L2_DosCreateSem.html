@@ -1,0 +1,144 @@
+<HTML>
+<HEAD>
+<TITLE>DosCreateSem</TITLE>
+</HEAD>
+<BODY>
+<H1>DosCreateSem</H1><!-- entering slot 20 -->Bindings:  <A HREF="194_L2H_DosCreateSem.html">C</A>,
+<A HREF="369_L2H_DosCreateSem.html">MASM</A>
+<BR>
+
+<P>
+This call creates a system semaphore used by multiple asynchronous threads
+to serialize their access to resources.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+DosCreateSem<!-- lm: 0x2 18 -->
+<UL> (NoExclusive, SemHandle, SemName)<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+<B>NoExclusive</B> (USHORT) - input<!-- lm: 0x11 4 -->
+<UL> Indicates whether
+or not the process creating the semaphore wants exclusive use of the semaphore.
+The meanings for the settings of this flag are:<!-- lm: 0x2 4 -->
+<P>
+Value<!-- lm: 0x2 14 -->
+<UL> Definition<!-- lm: 0x2 4 -->
+</UL>0<!-- lm: 0x2 14 -->
+<UL> The creating process has exclusive use of
+the semaphore. Only threads of the creating process may alter the state
+of the semaphore with semaphore function calls.<!-- lm: 0x2 4 -->
+</UL>1<!-- lm: 0x2 14 -->
+<UL> The creating process has nonexclusive use
+of the semaphore. Threads of other processes, as well as those of the creating
+process, may alter the state of the semaphore with semaphore function calls.
+<!-- lm: 0x2 1 -->
+</UL><B>SemHandle</B> (PHSYSSEM) - output<!-- lm: 0x11 4 -->
+<UL> Address
+of handle of the new system semaphore.<!-- lm: 0x2 1 -->
+</UL><B> SemName
+</B>(PSZ) - input<!-- lm: 0x11 4 -->
+<UL> Address of the name of the system
+semaphore. A system semaphore is defined within the file system name space
+as a pseudo file; thus, a semaphore has a full path name. The ASCIIZ string
+specifying the name must include \SEM\ as the first element of the path.
+For example, \SEM\RETRIEVE\SIGNAL.SEM is a valid semaphore name.
+<P>
+Although a system semaphore name takes the form of a file in a subdirectory
+called \SEM, this subdirectory does not exist. System semaphores and their
+names are kept in memory.
+<P>
+If your application provides long name support for an installable file system,
+a semaphore name is not restricted to the DOS 8.3 filename format.<!-- lm: 0x2 1 -->
+</UL><B> rc
+</B>(USHORT) - return<!-- lm: 0x11 4 -->
+<UL> Return code descriptions are:
+<!-- lm: 0x2 4 -->
+<P>
+<LI><!-- lm: 0x2 14 -->NO_ERROR<!-- lm: 0x2 4 --> 87<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_PARAMETER
+<!-- lm: 0x2 4 -->
+</UL>100<!-- lm: 0x2 14 -->
+<UL> ERROR_TOO_MANY_SEMAPHORES<!-- lm: 0x2 4 -->
+</UL>123<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_NAME<!-- lm: 0x2 4 -->
+</UL>183<!-- lm: 0x2 14 -->
+<UL> ERROR_ALREADY_EXISTS<!-- lm: 0x2 1 -->
+</UL><B>Remarks</B>
+<P>
+A call to DosCreateSem creates a system semaphore, which can be manipulated
+by threads issuing semaphore function calls. Manipulation of a system semaphore
+is most often used to control access to a serially reusable resource. Manipulation
+of the semaphore is also used to signal the occurrence of an event to waiting
+threads.
+<P>
+To control access to a serially reusable resource, a process creates the
+system semaphore with a call to DosCreateSem. If the users of the resource
+are asynchronous threads of the creating process, NoExclusive=0 is specified
+to create an exclusive system semaphore. If the users of the resource include
+threads of other processes, NoExclusive=1 is specified to create a nonexclusive
+system semaphore.
+<P>
+DosCreateSem returns a semaphore handle used by the creating process and
+any of its threads to access the semaphore. If the semaphore is nonexclusive,
+a process other than the semaphore creator calls <A HREF="094_L2_DosOpenSem.html">DosOpenSem
+</A>for a handle to access the semaphore.
+<P>
+Ownership of the system semaphore is established by a successful <A HREF="136_L2_DosSemRequest.html">DosSemRequest
+</A>call. If another thread issues <A HREF="136_L2_DosSemRequest.html">DosSemRequest
+</A>while the semaphore is owned, the thread can block and wait for the
+semaphore to become available, or it can return immediately.
+<P>
+After accessing the resource, the owning thread can clear the semaphore
+by a call to <A HREF="135_L2_DosSemClear.html">DosSemClear</A>. If the semaphore
+is an exclusive system semaphore, it has a use count associated with it,
+which is incremented by <A HREF="136_L2_DosSemRequest.html">DosSemRequest
+</A>calls and decremented by <A HREF="135_L2_DosSemClear.html">DosSemClear
+</A>calls. The semaphore is not actually cleared and made available to the
+next thread waiting to use the resource until the semaphore has been cleared
+the same number of times it has been requested. This means that exclusive
+system semaphores can be used in recursive routines.
+<P>
+If a process has created a nonexclusive system semaphore and terminates
+while the semaphore is open, the system closes the handle to the semaphore
+that was returned by DosCreateSem. If the process is currently holding the
+semaphore when it terminates, OS/2 clears the semaphore and returns ERROR_SEM_OWNER_DIED
+to the next thread that gets the resource because of a <A HREF="136_L2_DosSemRequest.html">DosSemRequest
+</A>call. This error message alerts the holder of the semaphore that the
+semaphore owner may have ended abnormally; consequently, the resource is
+in an indeterminate state.  The thread should take appropriates<!-- entering slot 21 -->
+steps to protect the integrity of the resource.  Upon completion of cleanup
+activity, the thread can release the semaphore by calling <A HREF="135_L2_DosSemClear.html">DosSemClear</A>.
+This call resets the error condition flagged in the semaphore data structure
+and makes the semaphore available to the next user of the resource. The
+semaphore remains available to all processes that obtained handles to it
+with <A HREF="094_L2_DosOpenSem.html">DosOpenSem</A> requests until they
+call <A HREF="014_L2_DosCloseSem.html">DosCloseSem</A> to release the semaphore
+handles.
+<P>
+If a process has created an exclusive system semaphore and terminates while
+the semaphore is open, ownership of the semaphore is transferred to the
+thread executing any exit list routines. If no exit list routines have been
+identified to the system with <A HREF="036_L2_DosExitList.html">DosExitList</A>,
+the system closes the handle to the semaphore.
+<P>
+In addition to controlling access to serially reusable resources, a nonexclusive
+system semaphore is also used to signal an event, such as the removal of
+an element from a queue, to other processes. A process that sets the semaphore
+waits for another process to clear the semaphore, signaling the event. When
+the signaling process issues a <A HREF="135_L2_DosSemClear.html">DosSemClear</A>,
+any waiting threads resume execution. Calls that support setting and waiting
+upon a nonexclusive semaphore by one or more threads are <A HREF="137_L2_DosSemSet.html">DosSemSet</A>,
+<A HREF="139_L2_DosSemWait.html">DosSemWait</A>,  <A HREF="138_L2_DosSemSetWait.html">DosSemSetWait</A>,
+and <A HREF="089_L2_DosMuxSemWait.html">DosMuxSemWait</A>.
+<P>
+<B>Note: </B> If a thread needs to signal another thread of the same process,
+a RAM semaphore is used.<!-- lm: 0x2 1 -->
+<P>
+
+
+<P><HR>
+
+<A HREF="018_L2_DosCreateQueue.html">[Back: DosCreateQueue]</A> <BR>
+<A HREF="020_L2_DosCreateThread.html">[Next: DosCreateThread]</A> 
+</BODY>
+</HTML>

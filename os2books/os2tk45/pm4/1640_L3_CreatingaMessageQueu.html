@@ -1,0 +1,108 @@
+<HTML>
+<HEAD>
+<TITLE>Creating a Message Queue and Message Loop</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating a Message Queue and Message Loop</H1><!-- entering slot 1677 -->
+<P>
+An application needs a message queue and message loop to process messages
+for its windows.  An application creates a message queue by using the WinCreateMsgQueue
+function.  An application creates a message loop by using the WinGetMsg
+and WinDispatchMsg functions.  The application must create and show at least
+one window after creating the queue but before starting the message loop.
+The following code fragment shows how to create a message queue and message
+loop:
+<PRE>    MRESULT EXPENTRY ClientWndProc(HWND hwnd,ULONG msg,MPARAM mp1,MPARAM mp2);
+
+    HAB hab;
+
+    int main(VOID)
+    {
+        HMQ hmq;
+        QMSG qmsg;
+        HWND hwndFrame, hwndClient;
+        ULONG flFrameFlags = FCF_TITLEBAR      | FCF_SYSMENU |
+                             FCF_SIZEBORDER    | FCF_MINMAX  |
+                             FCF_SHELLPOSITION | FCF_TASKLIST;
+
+                                               /* Initialize the application for
+                                         Presentation Manager interface.      */
+
+        hab = WinInitialize(0);
+
+                                               /* Create the application
+                                               message queue.                 */
+        hmq = WinCreateMsgQueue(hab, 0);
+
+                                               /* Register the window class for your
+                                               client window.                 */
+        WinRegisterClass(hab,                  /* Anchor block handle         */
+                         "MyClientClass",      /* Class name                  */
+                         (PFNWP) ClientWndProc,/* Window procedure            */
+                         CS_SIZEREDRAW,        /* Class style                 */
+                         0);                   /* Extra bytes to reserve      */
+
+                                               /* Create a main window.       */
+        hwndFrame = WinCreateStdWindow(
+                        HWND_DESKTOP,          /* Parent window handle        */
+                        WS_VISIBLE,            /* Style of frame window       */
+                        &amp;flFrameFlags,         /* Frame controls              */
+                        "MyClientClass",       /* Window class for client     */
+                        (PSZ) NULL,            /* No title-bar text           */
+                        WS_VISIBLE,            /* Style of client window      */
+                        (HMODULE) NULL,        /* Module handle for resources */
+                        0,                     /* No resource identifier      */
+                        &amp;hwndClient);          /* Pointer to client handle    */
+
+                                               /* Start the message loop.     */
+        while (WinGetMsg(hab, &amp;qmsg, (HWND) NULL, 0, 0))
+            WinDispatchMsg(hab, &amp;qmsg);
+
+                                               /*. Destroy the main window.   */
+        WinDestroyWindow(hwndFrame);
+
+                                               /* Destroy the message queue.  */
+        WinDestroyMsgQueue(hmq);
+
+                                               /* Terminate the application.  */
+        WinTerminate(hab);
+    }
+
+</PRE>
+
+<P>
+Both the WinGetMsg and WinDispatchMsg functions take a pointer to a QMSG
+structure as a parameter.  If a message is available, WinGetMsg copies it
+to the QMSG structure; WinDispatchMsg then uses the data in the structure
+as arguments for the window procedure.
+<P>
+Occasionally, an application might need to process a message before dispatching
+it.  For example, if a message is posted but the destination window is not
+specified (that is, the message contains a NULL window handle), the application
+must process the message to determine which window should receive the message.
+ Then the WinDispatchMsg function can forward the message to the proper
+window.  The following code fragment shows how the message loop can process
+messages that have NULL window handles:
+<PRE>
+    HAB hab;
+    QMSG qmsg;
+
+    while (WinGetMsg (hab, &amp;qmsg, (HWND) NULL, 0, 0)) {
+        if (qmsg.hwnd == NULL) {
+            .
+            . /* Process the message. */
+            .
+        }
+        else
+            WinDispatchMsg (hab, &amp;qmsg);
+        }
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1639_L2_UsingMessages.html">[Back: Using Messages]</A> <BR>
+<A HREF="1641_L3_ExaminingtheMessageQ.html">[Next: Examining the Message Queue]</A> 
+</BODY>
+</HTML>

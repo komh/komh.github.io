@@ -1,0 +1,203 @@
+<HTML>
+<HEAD>
+<TITLE>Getting Control of a Shared Device</TITLE>
+</HEAD>
+<BODY>
+<H1>Getting Control of a Shared Device</H1><!-- entering slot 39 -->
+<P>
+The MM_MCIPASSDEVICE message sent with WinPostMsg by the multimedia system
+to applications and the MCI_ACQUIREDEVICE message sent by applications with
+mciSendCommand to the multimedia system provide a device-sharing scheme
+for the OS/2 multimedia environment.
+<P>
+To participate in device sharing, an application issues MCI_OPEN with the
+MCI_OPEN_SHAREABLE flag set. The system then attempts to acquire the device
+for the application. The application must wait until it receives the asynchronous
+MM_MCIPASSDEVICE message to gain control of the device.  The multimedia
+system sends the MM_MCIPASSDEVICE message to inform the application that
+the device context is becoming active (MCI_GAINING_USE).
+<P>
+Before an application receives an MM_MCIPASSDEVICE message with an event
+of MCI_GAINING_USE, it can make inquiries about the device and the media.
+MCI_STATUS, MCI_GETDEVCAPS, MCI_INFO, and MCI_CLOSE commands can be sent
+to an inactive device context.
+<P>
+<B>Note: </B> If your application has set an MCI_NOTIFY flag on the open
+request, notification will be posted to the application before the MM_MCIPASSDEVICE
+message is sent.  However, if the application message queue has other messages
+already queued, it is possible that the application may receive the MM_MCIPASSDEVICE
+message before it receives the notification message.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+The active instance of the application remains active until the application
+returns from the WinPostMsg (MCI_LOSING_USE). This guarantees that the application
+has an active device context until it returns from WinPostMsg. If the application
+receives an MM_MCIPASSDEVICE message with an event of MCI_GAINING_USE, it
+should return immediately. The following code fragment illustrates the device
+sharing architecture from the Clock Sample program.
+<PRE>  /*
+   * The next two messages are handled so that the Clock application
+   * can participate in device sharing.  Because it opens the devices
+   * as shareable devices, other applications can gain control of the
+   * devices.  When this happens, we will receive a pass device
+   * message.  We keep track of this device passing in the fPassed
+   * boolean variable.
+   * If we do not have access to the device when we receive an
+   * activate message, then we will issue an acquire device command
+   * to gain access to the device.
+   */
+
+case MM_MCIPASSDEVICE:
+   if (SHORT1FROMMP(mp2) == MCI_GAINING_USE)
+   {
+      fPassed = FALSE;               /* Gaining control of device   */
+   } else
+   {
+      fPassed = TRUE;                /* Losing control of device    */
+   }
+   return( WinDefSecondaryWindowProc( hwnd, msg, mp1, mp2 ) );
+
+case WM_ACTIVATE:
+
+   /* We use the WM_ACTIVATE message to participate in device sharing.
+    * We first check to see if this is an activate or a deactivate
+    * message (indicated by mp1). Then, we check to see if we've
+    * passed control of the device that we use.  If these conditions
+    * are true, we issue an acquire device command to regain
+    * control of the device, because we're now the active window on
+    * the screen.
+    *
+    * This is one possible method that can be used to implement
+    * device sharing. For applications that are more complex
+    * than this sample program, developers may wish to take
+    * advantage of a more robust method of device sharing.
+    * This can be done by using the MCI_ACQUIRE_QUEUE flag on
+    * the MCI_ACQUIREDEVICE command.
+    */
+
+   /*
+    * First we check to see if we've passed control of the device
+    */
+
+if ((BOOL)mp1 &amp;&amp; fPassed == TRUE) {
+
+   mciGenericParms.hwndCallback =  hwnd;
+
+   ulError = mciSendCommand( mciOpenParameters.usDeviceID,
+                             MCI_ACQUIREDEVICE,
+                             (ULONG)MCI_NOTIFY,
+                             (PVOID) &amp;mciGenericParms,
+                             (USHORT)NULL);
+   if (ulError)
+   {
+     ShowAMessage(acStringBuffer[IDS_NORMAL_ERROR_MESSAGE_BOX_TEXT-1];
+                  IDS_CHIME_FILE_ERROR,  /* ID of message      */
+                  MB_OK | MB_INFORMATION |
+                  MB_<!-- entering slot 40 -->HELP | MB_APPLMODAL |
+                  MB_MOVEABLE );         /* Style of msg box.  */
+   }
+ }
+ return( WinDefSecondaryWindowProc( hwnd, msg, mp1, mp2 ) );
+
+</PRE>
+
+<P>
+<B>Regaining Control of a Shared Device</B>
+<P>
+An application regains control of a shared device by issuing the MCI_ACQUIREDEVICE
+message with mciSendCommand after it has received a WM_ACTIVATE message.
+The application receives a WM_ACTIVATE message whenever its frame window
+is activated or deactivated by user selection. The time for the application
+to regain control of a shared device is during the period its window is
+activated. A "greedy" application that grabs back a device as soon as it
+loses it defeats the purpose of the WM_ACTIVATE message processing scheme,
+which is to give control of a shared device to the application with which
+the user is interacting.
+<P>
+Only dynamic single-context and limited multiple-context devices are acquired
+by applications. The MCI_ACQUIREDEVICE function does not perform any function
+for fixed single-context and unlimited-context devices, because device contexts
+are not saved or restored for these classes of devices.
+<P>
+To better understand the allocation of resources to multiple device contexts,
+imagine a stack of device contexts. The physical device is associated with
+the topmost device context on the stack.  Whenever a device context is opened,
+it is placed on top of the stack, and the physical device is associated
+with the new device context. When MCI_ACQUIREDEVICE is issued for a particular
+device context, that device context moves to the top of the stack, and the
+physical device is associated with the existing device context. Closing
+a device context removes it from the stack.
+<P>
+<B>Queued Acquire Command</B>
+<P>
+Setting the MCI_ACQUIRE_QUEUE flag of the MCI_ACQUIREDEVICE message enables
+the message to be queued and executed as soon as device resources become
+available.  An application can issue an MCI_ACQUIREDEVICE message and, at
+a later point, the device context becomes active.  This is true if either
+the MCI_NOTIFY or MCI_WAIT flag is specified.  If the MCI_WAIT flag is specified,
+the calling thread is blocked until the device context becomes active. If
+the MCI_ACQUIREDEVICE request can be satisfied immediately, the command
+is not queued.
+<P>
+The<B> acquire</B> command can be used to acquire a device instance when
+the resource becomes available:
+<PRE>open music1.wave alias wave1 shareable wait
+play wave1 notify
+.
+.
+.
+** <B>During this time a losing use message is received</B> **
+** <B>and this instance becomes inactive.</B>               **
+.
+.
+.
+acquire wave1 queue notify
+</PRE>
+
+<P>
+If an MCI_ACQUIREDEVICE is queued and an application issues MCI_RELEASEDEVICE
+or MCI_CLOSE for that instance, the queued MCI_ACQUIREDEVICE message is
+canceled.
+<P>
+<B>Releasing the Resource</B>
+<P>
+The release resource command is used in conjunction with the queued acquire
+command. An application can release a device instance from the active state
+and make the next available inactive device instance active by setting the
+MCI_RETURN_RESOURCE flag of the MCI_RELEASEDEVICE message.  When a device
+instance no longer needs its resources, the device instance can give up
+the resource to another device requesting the resources (with MCI_ACQUIRE_QUEUE).
+
+<P>
+The<B> release</B> command as shown in the following example can be used
+to release exclusive hold on a device.
+<PRE>open waveaudio alias wave2 shareable wait
+acquire wave2 exclusive wait
+record wave2 notify
+.
+.
+.
+** <B>Open the device exclusively to avoid interruptions</B> **
+** <B>during recording.</B>                                  **
+.
+.
+.
+stop wave2 wait
+release wave2 return resource wait
+</PRE>
+
+<P>
+The device instance will not be made active again unless an application
+issues an MCI_ACQUIREDEVICE message for this device context. This function
+is ignored if the instance is already in an inactive state.  The instance
+remains active if the resource used by this instance is not required by
+any other instance.
+
+<P><HR>
+
+<A HREF="031_L2_DeviceSharingByAppli.html">[Back: Device Sharing By Applications]</A> <BR>
+<A HREF="033_L3_UsingaDeviceExclusiv.html">[Next: Using a Device Exclusively]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,116 @@
+<HTML>
+<HEAD>
+<TITLE>EMS Object Mapping</TITLE>
+</HEAD>
+<BODY>
+<H1>EMS Object Mapping</H1><!-- entering slot 205 -->
+<P>
+Mappable windows are located by asking the Virtual DOS Machine Manager to
+provide free linear regions after other virtual device drivers have claimed
+the address ranges required for their hardware.  The base window (region
+from 256KB to RMSIZE) is mapped to an expanded object at VDM  creation time.
+ This window is used as normal memory by DOS or DOS applications, but can
+also be remapped by applications that wish to do so.
+<P>
+Some applications assume mappable regions begin on 17KB boundaries, although
+this is not part of the EMS specification.  OS/2 Version 2.0 follows this
+undocumented convention.
+<P>
+There are multiple techniques for saving and restoring mappings in LIM.
+Save tables and copies of parts of register sets copied to application memory
+can be used to save and restore mappings.  All contain a pairing of physical
+segment and &lt;handle, logical page&gt; pairs.  Saving of mappings is done
+by segment, handle, and logical page entries to the buffer in which the
+save is performed.  For saves that save the entire mapping, the register
+index need not be stored.  Mappings are restored by making a set of aliasing
+calls to the memory manager, and copying the new mapping into the active
+register set.
+<P>
+Illegal mappings are mapped to<B> black hole</B> pages. A black hole page
+is a page that does not cause faults, but which need not store values written
+to it. Black hole pages can be implemented as invalid addresses that float
+on the bus, ROM pages if there is no ROM caching, a wasted physical memory
+page, or a discardable page.
+<P>
+Structures returned to the client will use physical pages rather than segments
+since these are smaller for the client to store and are simpler to check
+for validity when restored.  All save structures held by the V86 client
+use a checksum to detect tampering by the V86 client.
+<P>
+LIM allows an application to reallocate the special handle that contains
+conventional memory, thus allowing the expanded memory to be reused.  This
+is supposed to be done only by an operating system program that knows the
+special handle is handle 0, but may conceivably be done by any application.
+Note that applications can deallocate the DOS memory area.  If they do this
+and fail to restore it, COMMAND.COM is unable to reload and the VDM will
+terminate.  This behavior is identical to a native DOS environment.
+<P>
+<B>Register Sets</B>
+<P>
+Application requests to map pages into a register set are handled by storing
+the new mappings in the register set data structure.  A call is made to
+the memory manager to alias pages or set them to a black hole for unmapped
+pages.
+<P>
+The current register set is changed to a new register set by aliasing linear
+memory through memory manager calls according to the new registers and changing
+the current register set variable.  Other calls allow saving and restoring
+register sets from an application-supplied<!-- entering slot 206 --> array
+similar to Save/Restore above.
+<P>
+<B>Allocating/Deallocating Objects</B>
+<P>
+Upon receiving an application request to allocate, reallocate, or deallocate
+an EMS object, VEMM transforms the request into corresponding calls to the
+OS/2 Version 2.0 memory manager.  Each EMS object is allocated as a separate
+memory object in a linear address range in the VDM's process address space,
+but outside the V86 mode address space.  The memory manager returns the
+start address and size of each EMS object to VEMM, which then updates its
+EMS handle table accordingly.
+<P>
+Allocations are made by selecting a free EMS object handle; a free handle
+has a start address of zero.  VEMM then requests the memory manager to allocate
+the required memory, and records the start address and size of the object
+as returned by the memory manager.  The total allocation size for each VDM
+and the total allocations across all VDMs are maintained so that the maximum
+allocation size is not exceeded.  If an allocation is of size zero, no actual
+allocation is made and a non-zero address and zero size are recorded in
+the handle entry.
+<P>
+When a deallocation request is made, the address in the handle is changed
+to 0 and the memory manager is called to free the allocation.  Reallocation
+requests are serviced by passing on the request to a VDH service and recording
+the new size and start address.  Since reallocations may lead to object
+movement, pages mapped from the object are unmapped before reallocation
+and remapped afterward.
+<P>
+When an application reallocates to zero, VEMM has the memory manager deallocate
+the memory object, and changes the handle table entry so it has zero pages
+with a meaningless non-zero address to indicate the handle is still in use.
+ Objects of size zero are allowed in VEMM, but not in OS/2, so VEMM will
+free the memory but retain its own data for the object handle. When a non-zero
+reallocation is performed on the object, a new object is transparently allocated.
+
+<P>
+LIM allows an application to deallocate memory that is mapped into the current
+register set, alternate register sets, or save maps (all internal structures
+that save mappings).  EMS is silent about what should happen if an application
+touches this mapped memory after deallocation.  Since 8086 applications
+are generally allowed to search through the address space without harm,
+these deallocated pages should be remapped to a black hole.
+<P>
+Searching through all 255 SaveMaps and 15 non-current register sets is expensive
+even with optimizations.  Exhaustive search slows deallocations and shrinking
+reallocations, and keeping track of the locations of mappings slows mapping
+operations.  Therefore, upon deallocation or shrinking reallocation, only
+the current register set is checked for deallocated pages.  Stored registers
+(255 SaveMaps and 15 RegSets for the VDM) will not be checked until they
+are reactivated.  When an invalid page is found during remapping, it is
+simply remapped to the black hole.
+
+<P><HR>
+
+<A HREF="186_L3_VirtualExpandedMemor.html">[Back: Virtual Expanded Memory Manager]</A> <BR>
+<A HREF="188_L3_PerVDMDataAllocation.html">[Next: Per-VDM Data Allocation]</A> 
+</BODY>
+</HTML>

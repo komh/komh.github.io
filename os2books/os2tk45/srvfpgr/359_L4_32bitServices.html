@@ -1,0 +1,57 @@
+<HTML>
+<HEAD>
+<TITLE>32-bit Services</TITLE>
+</HEAD>
+<BODY>
+<H1>32-bit Services</H1><!-- entering slot 467 -->
+<P>
+You can write a 32-bit service as pure 32-bit code, except for the files
+containing your main program and your signal handler. For those files, use
+a compiler that supports mixed-model programming, calling in particular
+16-bit OS/2 APIs from 32-bit code.
+<P>
+Because the OS/2 2.x toolkit does not supply a prototype for DosSetSigHandler(),
+you must supply it yourself. To do this, your main program should include
+the following:
+<PRE>#define INCL_DOSSIGNALS
+#include &lt;os2.h&gt;         /* From the TOOLKT21\C\OS2H directory             */
+#define INCL_32          /* Mixed-model LAN Server programming             */
+#include &lt;netcons.h&gt;     /* From the header files supplied with LAN Server */
+#include &lt;service.h&gt;     /* From the header files supplied with LAN Server */
+
+/* The typedef and the prototype come from the OS/2 1.3 toolkit            */
+typedef void (* APIENTRY16 PFNSIGHANDLER) (USHORT, USHORT);
+USHORT APIENTRY16 DosSetSigHandler(PFNSIGHANDLER   new_sigfunc,
+                                   PFNSIGHANDLER * old_sigfunc,
+                                   PUSHORT         old_signo,
+                                   USHORT          sig_flag,
+                                   USHORT          new_signo);
+.
+.
+.
+int main (void) /* or include argc, etc., to taste */
+{
+   
+.
+.
+.
+   DosSetSigHandler((PFNSIGHANDLER)&amp;sig_handler, /* Signal handler address  */
+                    NULL,                        /* Ignore previous handler */
+                    0,                           /* Ignore previous action  */
+                    SIGA_ACCEPT,                 /* Process the signal      */
+                    SERVICE_RCV_SIG_FLAG));      /* This constant is the
+                                                     same as SIG_PFLG_A     */
+   
+.
+.
+.
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="358_L4_16bitServices.html">[Back: 16-bit Services]</A> <BR>
+<A HREF="360_L3_StartingaService.html">[Next: Starting a Service]</A> 
+</BODY>
+</HTML>

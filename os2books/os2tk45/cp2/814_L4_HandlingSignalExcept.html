@@ -1,0 +1,60 @@
+<HTML>
+<HEAD>
+<TITLE>Handling Signal Exceptions</TITLE>
+</HEAD>
+<BODY>
+<H1>Handling Signal Exceptions</H1><!-- entering slot 832 -->
+<P>
+To handle signal exceptions, a process must first call<A><!-- external link: 1D E6 C3 30 --> DosSetExceptionHandler
+</A>to register a handler for the exceptions. Next, the process must call
+<A><!-- external link: 1D F7 C3 FC -->DosSetSignalExceptionFocus</A>, with
+the<I> Flag</I> parameter set to ON, in order to receive signal exceptions.
+
+<P>
+After a process calls<A><!-- external link: 1D F7 C3 FC --> DosSetSignalExceptionFocus</A>,
+it remains the signal focus for its screen group until it calls<A><!-- external link: 1D F7 C3 32 --> DosSetSignalExceptionFocus
+</A>again with the<I> Flag</I> parameter set to OFF, or until another process
+in the screen group makes a call to the same function with<I> Flag</I> set
+to ON.
+<P>
+Each call to<A><!-- external link: 1D F7 C3 32 --> DosSetSignalExceptionFocus
+</A>with<I> Flag</I> set to ON increments a counter in the per-task data
+area of the process. Each call with<I> Flag</I> set to OFF decrements the
+counter. When a signal exception occurs, the system checks to see whether
+the value of the counter is greater than 0. If it is, the signal is sent.
+
+<P>
+<A><!-- external link: 1D F7 C3 32 -->DosSetSignalExceptionFocus</A> returns
+ERROR_NESTED_TOO_DEEP if the value of the counter exceeds 65535. If a thread
+tries to turn off the signal focus when the value of the counter is 0, ERROR_ALREADY_RESET
+is returned.
+<P>
+All 32-bit exception handlers that are attached to thread 1 of the process
+will be given an opportunity to handle the signal. If no 32-bit exception
+handler returns XCPT_CONTINUE_EXECUTION in response to the signal, and if
+a 16-bit exception handler is registered, then the 16-bit handler for the
+signal will be executed. If none exists, then the process will be terminated.
+
+<P>
+In order to continue receiving signals, the process must either return XCPT_CONTINUE_EXECUTION
+from a 32-bit exception handler, or it must call the 16-bit DosSetSigHandler
+function, specifying SIG_ACKNOWLEDGE as the value of the<I> Action</I> parameter
+to acknowledge the signal, or it must call<A><!-- external link: 1D 5C C3 FC --> DosAcknowledgeSignalException</A>.
+
+<P>
+The typematic facility of the keyboard could cause a Ctrl+C or Ctrl+Break
+signal exception to repeat. For this reason, the system holds these exceptions
+until an exception handler returns XCPT_CONTINUE_EXECUTION, or calls<A><!-- external link: 1D 5C C3 FC --> DosAcknowledgeSignalException</A>.
+However, only one signal exception is actually held; they are not queued
+by the system.
+<P>
+See <A HREF="818_L3_MustCompleteSections.html">Must-Complete Sections</A> for
+information about how a process can defer the handling of signal exceptions.
+
+
+<P><HR>
+
+<A HREF="813_L3_SignalExceptions.html">[Back: Signal Exceptions]</A> <BR>
+<A HREF="815_L4_SendingSignalExcepti.html">[Next: Sending Signal Exceptions]</A> 
+</BODY>
+</HTML>

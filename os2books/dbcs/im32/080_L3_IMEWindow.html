@@ -1,0 +1,123 @@
+<HTML>
+<HEAD>
+<TITLE>IME Window</TITLE>
+</HEAD>
+<BODY>
+<H1>IME Window</H1><!-- entering slot 84 -->
+<P>
+IME Window
+<P>
+IME Window is an object window to receive any of the IME user interface
+related message in PM environment. Its main purpose is to receive display
+request event messages from Application, System or IME itself. If IME Window
+receives those request, IME Window communicates with the appropriate part
+windows(described below) to show the part contents. IME Window class is
+provided by IME and it is registered by the system at<B><I> ImeInitialize
+</B></I>timing. When an IMInstance is created, IME Window is automatically
+created by the system and it has following window words:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 --><B><I>QWL_IMEW_HIMI</B></I> - to retrieve IMInstance
+handle<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><B><I>QWL_IMEW_PRIVATE</B></I> - to save IMInstance
+specific data<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><B><I>QWL_IMEW_HWNDSTATUS</B></I> - to retrieve the
+default status window<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><B><I>QWL_IMEW_HWNDCONVERSION</B></I> - to retrieve
+the default conversion window<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><B><I>QWL_IMEW_HWNDCANDIDATE</B></I> - to retrieve
+the default candidate window<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><B><I>QWL_IMEW_HWNDINFOMSG</B></I> - to retrieve the
+default InfoMsg window<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><B><I>QWL_IMEW_HWNDREGWORD</B></I> - to retrieve the
+default RegWord window<!-- lm: 0x2 1 -->
+</UL>
+<P>
+IME Window is able to retrieve the IMInstance handle to access the IMInstance
+data, by calling<B><I> WinQueryWindowULong</B></I> with<B><I> QWL_IMEW_HIMI,
+</B></I>except that
+<P>
+QWL_HIMI field does not contain IMInstance handle at WM_CREATE message.
+
+<P>
+IME Window also have 4 byte area to hold instance specific data. It is accessible
+through<B><I> QWL_IMEW_PRIVATE</B></I>.
+<P>
+Other window words represents the window handle of each default part class
+which is supplied by the system. These areas are filled when the system
+needs to pass the<B><I> WM_IMEREQUEST</B></I> message to each part class.
+(Usually, it is<B><I> IMR_INSTANCEACTIVATE</B></I> event)
+<P>
+There is an option not to provide IME Window class if IME does not want
+to display any unique user interface. In that case the system creates the
+default IME Window and its Part Windows, i.e., default user interface is
+used.
+<P>
+System provides<B><I> WinDefImeWndProc</B></I> (See below) for the default
+window procedure for IME Window class. Typical IME Window procedure looks
+like follows:
+<PRE>MRESULT APIENTRY MyImeWindowProc( HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2 ){
+    switch ( msg )
+    {
+        case WM_CREATE:
+            // allocate private memory for this IMInstance.
+            pPrivate = alloc();
+            WinSetWindowULong(hwnd, QWL_IMEW_PRIVATE, pPrivate);
+            break;
+
+        case WM_DESTROY:
+            // free private memory
+            pPrivate = WinQueryWindowULong(hwnd, QWL_IMEW_PRIVATE);
+            free( pPrivate );
+            break;
+
+        case WM_QUERYIMEWINDOWCAPS:
+            switch ( (ULONG)mp1 )
+            {
+                case IWC_CONVERSIONANGLE:
+                    *((PULONG)mp2) = UIC_ANGLEANY;
+                    return (MRESULT)TRUE;
+
+                case IWC_CONVERSIONMARGIN:
+                    *((PULONG)mp2) = MARGIN;
+                    return (MRESULT)TRUE;
+
+                case IWC_FORCEPOSITION:
+                    *((PULONG)mp2) = TRUE;
+                    return (MRESULT)TRUE;
+            }
+            break;
+        case WM_IMEREQUEST:
+            pPrivate = WinQueryWindowULong(hwnd, QWL_IMEW_PRIVATE);
+            // IME specific processing.
+            // WinDefImeWindowProc can be callable if IME needs the
+            // default processing.
+                        :
+                break;
+
+        case WM_IMECONTROL:
+        case WM_IMENOTIFY:
+            // IME Window does not expect to see these messages.
+            break;
+
+        default:
+            return WinDefImeWindowProc( hwnd, msg, mp1, mp2 );
+    }
+
+    return (MRESULT)FALSE;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="079_L3_Part.html">[Back: Part]</A> <BR>
+<A HREF="081_L3_WinDefImeWindowProc.html">[Next: WinDefImeWindowProc]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,73 @@
+<HTMLHIDDEN>
+<HEAD>
+<TITLE>DosGetEnv</TITLE>
+</HEAD>
+<BODY>
+<H1>DosGetEnv</H1><!-- entering slot 274 -->
+<PRE>#define INCL_DOSMISC
+
+USHORT  rc = DosGetEnv(EnvSegment, CmdOffset);
+
+PUSHORT          EnvSegment;    /* Selector (returned) */
+PUSHORT          CmdOffset;     /* Command line offset (returned) */
+
+USHORT           rc;            /* return code */
+</PRE>
+
+<P>
+<B>Example</B>
+<P>
+The following example shows how one may obtain information for program initialization.
+ The program locates the environment segment and prints the name of the
+command from the command line.  It then obtains the OS/2 version number
+and prints it.
+<PRE>#define INCL_DOS
+
+#include &lt;os2.h&gt;
+
+#define ENVVARNAME "PATH"
+
+main()
+{
+  SEL       EnvSel;              /* Environment segment selector
+                                     (returned) */
+  USHORT    CmdOffset;           /* Offset into env. seg. of command line
+                                     (returned) */
+  PSZ FAR   *Commandline;        /* Pointer made by EnvSel and CmdOffset */
+  USHORT    Version;             /* Version numbers (returned) */
+  BYTE      MajorVer;            /* Major version number */
+  BYTE      MinorVer;            /* Minor version number */
+  USHORT    rc;                  /* return code */
+
+  /** Locate environment segment and offset of command line. **/
+  if(!(rc=DosGetEnv(&amp;EnvSel,       /* Env. seg. selector (returned) */
+                    &amp;CmdOffset)))  /* Offset of command line
+                                           (returned) */
+    printf("Environment located; selector is %x offset is %x\n", EnvSel,
+            CmdOffset);
+
+  /** Use a macro to make a far pointer out of selector:offset pair.**/
+  /** Notice the far-string pointer specification (%Fs) used to print **/
+
+  Commandline = MAKEP(EnvSel, CmdOffset);
+  printf("Command entered is %Fs.\n", Commandline);
+
+  /** Obtain and print version info; use macros to extract info. **/
+  /** We need to divide by 10 to obtain true version numbers.    **/
+
+  if(!(rc=DosGetVersion(&amp;Version)))
+  {
+    MajorVer = HIBYTE(Version) / 10;
+    MinorVer = LOBYTE(Version) / 10;
+    printf("This is OS/2 version %d.%d\n", MajorVer, MinorVer);
+  }
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="230_L2H_DosGetDBCSEv.html">[Back: DosGetDBCSEv]</A> <BR>
+<A HREF="232_L2H_DosGetHugeShift.html">[Next: DosGetHugeShift]</A> 
+</BODY>
+</HTML>

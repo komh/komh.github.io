@@ -1,0 +1,124 @@
+<HTML>
+<HEAD>
+<TITLE>Metaclasses</TITLE>
+</HEAD>
+<BODY>
+<H1>Metaclasses</H1><!-- entering slot 78 -->
+<P>
+A<I> metaclass</I> is a class you can use to create another class. REXX
+provides just one metaclass, the "Class" class. We've said that a class
+is a factory for creating<I> instances,</I> and the "Class" class is a factory
+for creating<I> factories.</I> Whenever you create a new factory, or class,
+the new class is an instance of Class. The<I> instance</I> methods of Class
+provide the operations needed to run the new factories. These instance methods
+are inherited by the new factory as its<I> class</I> methods.
+<P>
+The classes REXX provides do not permit changes or additions to their method
+definitions. As a result, all new factories inherit these unchangeable actions
+from the "Class" class, and thus operate the same way. So if you want to
+create a new class--a new<I> factory</I>--that behaves differently from
+the others, you can do one of two things:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Write additional class methods for the new class,
+using the ::METHOD directive with the CLASS option<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Use a metaclass<!-- lm: 0x2 1 -->
+</UL>
+<P>
+You can always do 1, and most of the time you will only want to do 1. But
+if you plan to create many factories with the same operational changes,
+you might elect to do 2.
+<P>
+Any metaclass you create will be a subclass of the Class class. To make
+your own metaclass, specify class as a SUBCLASS option in the ::CLASS directive:
+
+<PRE>/* Create a new metaclass  */::class <I>your_metaclass</I> subclass class
+</PRE>
+
+<P>
+The instance methods of<I> your_metaclass</I> will ultimately become the
+class methods for any new class created using<I> your_metaclass.</I> For
+example, you could create a metaclass called InstanceCounter that includes
+instance methods for tracking how many instances the class creates:
+<PRE>/* Create a new metaclass that will count its instances        */
+::class InstanceCounter subclass class
+  ::method init
+   .
+   .
+   .
+</PRE>
+
+<P>
+Now, instead of having to add instance-counting class methods to other new
+classes you write, you can make InstanceCounter their metaclass. When you
+create the new class, just specify InstanceCounter as a METACLASS option
+in the ::CLASS directive. If you were creating a Point class, it might look
+like this:
+<PRE>/* Create a public Point class using the InstanceCounter metaclass  */
+::class point public metaclass InstanceCounter
+  ::method init
+   .
+   .
+   .
+</PRE>
+
+<P>
+Instance methods in your new InstanceCounter metaclass will become the class
+methods of the Point class, and any other classes you create using a similar
+directive. Here is a complete example:
+<PRE>/* a metaclass example */
+
+a = .point~new(1,1)                   /* Create point instances       */
+say 'Created point instance' a        /* a, b, and c                  */
+b = .point~new(2,2)
+say 'Created point instance' b
+c = .point~new(3,3)
+say 'Created point instance' c
+
+                                      /* Ask the Point class how many */
+                                      /* instances it has created     */
+say 'The point class has created' .point~instances 'instances.'
+
+                                      /* Create a new metaclass that  */
+                                      /* will count its instances     */
+::class InstanceCounter subclass class
+  ::method init                       /* Create an INIT method to     */
+    expose instanceCount              /* initialize instanceCount     */
+    instanceCount = 0                 /* Forward INIT to superclass   */
+
+    .message~new(self, .array~of('INIT',super), 'a', arg(1,'A'))~send
+
+  ::method new                        /* Create a NEW instance method */
+    expose instanceCount              /* Create a new instance        */
+    instanceCount = instanceCount + 1 /* Bump the count               */
+
+                                      /* Forward NEW to superclass    */
+    return .message~new(self, .array~of('NEW',super), 'a', arg(1,'A'))~send
+
+
+  ::method instances                  /* Create an INSTANCES method   */
+    expose instanceCount              /* Return the instance count    */
+    return instanceCount
+
+                                      /* Create Point class using     */
+                                      /* InstanceCounter metaclass    */
+::class point public metaclass InstanceCounter
+  ::method init                       /* Create an INIT method        */
+    expose xVal yVal                  /* Set object variables         */
+    use arg xVal, yVal                /* as passed on NEW             */
+
+  ::method string                     /* Create a STRING method       */
+    expose xVal yVal                  /* Use object variables         */
+    return '('xVal','yVal')'          /* to return string value       */
+</PRE>
+
+<P>
+
+
+<P><HR>
+
+<A HREF="073_L3_MixinClasses.html">[Back: Mixin Classes]</A> <BR>
+<A HREF="075_L1_ACloserLookatObjects.html">[Next: A Closer Look at Objects]</A> 
+</BODY>
+</HTML>

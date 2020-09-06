@@ -1,0 +1,110 @@
+<HTML>
+<HEAD>
+<TITLE>Description Files</TITLE>
+</HEAD>
+<BODY>
+<H1>Description Files</H1><!-- entering slot 14 -->
+<P>
+The file that contains the set of customized rules for NMAKE32 is a special
+file referred to as a description file. The default description file that
+NMAKE32 will search for is named<B> makefile</B>.  The /f option is used
+to provide a description file name when the user does not want to use the
+default description file.  NMAKE32 will return an error if a description
+file is not provided.  A description file consists of the following elements:
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Description blocks<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Macro definitions<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Inference rules<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Directives<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following syntax rules apply to description files:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->A target/dependency statement must begin in column
+one.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A command line must begin with a space; it cannot
+start in column 1.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A backslash(\) at the end of a line tells NMAKE32
+that the next line is a continuation of the current line.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->An unescaped pound sign (#) anywhere on a line in
+a description file indicates that the remainder of the line is a comment.
+Since the lines in an in-line file are processed by the command shell, specifying
+comments is specific to the shell in use. In OS/2, CMD.EXE uses<B> rem</B>.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+NMAKE32 uses the target/dependency rules in the description file to determine
+if a target needs to be updated.  All dependents are recursively checked
+for being out of date with respect to their dependents.  Missing targets
+are considered to be out of date.  If a target is determined to be out of
+date, the command associated with the target/dependency statement is executed.
+ See the following example:
+<PRE>    program.exe:    program.obj  abcd.obj        ilink program abcd;
+
+    program.obj:    program.c   xxx.h
+        icc program.c
+
+    abcd.obj:       abcd.c      xxx.h
+        icc abcd.c
+</PRE>
+
+<P>
+The above example description file says that program.exe depends on two
+files, program.obj and abcd.obj, and that they in turn depend on their corresponding
+files, program.c, abcd.c and a common include file, xxx.h.
+<P>
+When NMAKE32 is executed with the above description file, it would determine
+that program.exe was the main target and that abcd.obj and program.obj are
+the files that it depends on. NMAKE32 would then recursively determine that
+program.obj depends on program.c and xxx.h, and that abcd.obj depends on
+abcd.c and xxx.h. Thus, NMAKE32 constructs a graph of file dependencies.
+Starting from each node of the graph, NMAKE32 compares the modification
+date of each node (file) to its immediate descendants. If a file is older
+than one or more of its descendants, then the command associated with the
+file is executed to bring the file up to date.
+<P>
+When the above description file is processed by NMAKE32, assuming that each
+.obj file is older than the corresponding .c file, the following commands
+would be executed:
+<PRE>   icc -c program.c
+   icc -c abcd.c
+   ilink program abcd;
+</PRE>
+
+<P>
+These are all the necessary commands to make program.exe from program.c,
+abcd.c, and xxx.h. If any of these commands encountered an error, NMAKE32
+would immediately terminate and report which command failed.
+<P>
+If the file abcd.c was modified, then executing NMAKE32 again would only
+execute the commands necessary to bring program.exe up to date. The commands
+executed now would be:
+<PRE>   icc -c abcd.c
+   ilink program abcd;
+</PRE>
+
+<P>
+If the file program.exe was missing, executing NMAKE32 would execute the
+following command:
+<PRE>   ilink program abcd;
+</PRE>
+
+<P>
+If the file xxx.h was modified, executing NMAKE32 would cause all the commands
+to be issued again because abcd.obj and program.obj depend on it.
+
+<P><HR>
+
+<A HREF="012_L3_TheBUILTINSMAKFile.html">[Back: The BUILTINS.MAK File]</A> <BR>
+<A HREF="014_L2_CaseSensitivity.html">[Next: Case Sensitivity]</A> 
+</BODY>
+</HTML>

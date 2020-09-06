@@ -1,0 +1,53 @@
+<HTML>
+<HEAD>
+<TITLE>Explain the SYS_DLLS keywords.</TITLE>
+</HEAD>
+<BODY>
+<H1>Explain the SYS_DLLS keywords.</H1><!-- entering slot 111 -->
+<P>
+Actually there are three key names that exist for the app name SYS_DLLS.
+
+<P>
+They are:<!-- lm: 0x2 0 -->
+<P>
+Load<!-- lm: 0x11 10 -->
+<UL> DLL loaded and ordinal 1 entry point called
+for every msg queue created in the system<!-- lm: 0x2 0 -->
+</UL> LoadPerProcess
+<!-- lm: 0x11 10 -->
+<UL>DLL loaded and ordinal 1 entry point called for
+only the first message queue created on a process<!-- lm: 0x2 0 -->
+</UL> LoadOneTime
+<!-- lm: 0x11 10 -->
+<UL>DLL loaded and ordinal 1 entry point called for
+only the shell's message queue (the first PM queue in the system)<!-- lm: 0x2 0 -->
+</UL>
+<P>
+You would use one over another depending on the type of initialization that
+you require.  Most DLL's only need to be initialized once for the system
+and are thus LoadOneTime, some DLLs like PMCTLS have per process initialization
+and thus are LoadPerProcess, and then there is the very rare case of DLLs
+that need to perform some function every time a message queue is created
+and these are specified as Load.  Note: that anything other than LoadOneTime
+is a significant performance hit on the system.  Note: also that in addition
+to your INITIALIZATION/TERMINATION function specified in the DEF file for
+your DLL (which is a new feature in 2.0), your ORDINAL 1 entry point in
+your DLL is also called.  Be careful with this as I have seen some pretty
+strange results if you have an ordinal 1 entry point that has nothing to
+do with initialization.  In addition, remember to never ever create a message
+queue inside of your initialization routine.  Always call WinQueryAnchorBlock
+if you need a HAB for some API.
+<P>
+As for shared resources, if you need resources on multiple processes then
+they need to be created on multiple processes as they won't be valid on
+any process other than the one you loaded.  I believe that this is the reason
+PMCTLS is LoadPerProcess.  You have a few options here, 1) you can store
+your resources in shared memory, and 2) for icons you can call WinSetPoinerOwner
+to make your icons shared across the entire system. 
+
+<P><HR>
+
+<A HREF="092_L1_MiscellaneousProgram.html">[Back: Miscellaneous Programming]</A> <BR>
+<A HREF="094_L2_HowdoIstartanotherse.html">[Next: How do I start another session?]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,360 @@
+<HTML>
+<HEAD>
+<TITLE>Forcing a System Dump from the Kernel Debugger</TITLE>
+</HEAD>
+<BODY>
+<H1>Forcing a System Dump from the Kernel Debugger</H1><!-- entering slot 343 -->
+<P>
+Sometimes the situation arises where neither a kernel debug session or a
+system dump alone are sufficient to analyse a problem. Typically this occurs
+with problems where evidence of the cause has been removed from the system
+before the problem occurrence becomes recognised but the problem itself
+requires lengthy analysis even when the causal conditions are intercepted.
+Examples of this are problems where:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+Storage overlays, may not be noticed until the valid owner of the storage
+traps at some later time.<!-- lm: 0x2 6 -->
+<P>
+A program terminates apparently normally, but unexpectedly.<!-- lm: 0x2 6 -->
+<P>
+A deadlock or hang occurs because a resource owner<I> forgets</I> to release
+ownership of a shared resource.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+If the problem is such the there are readily identifiable criteria that
+allow it to be intercepted closer to its cause, for example by using <A HREF="3286_L0_.html">breakpoints
+</A>under the Kernel Debugger, then being able to take a dump at such a
+point can be advantageous. 
+<P>
+The simplest technique for initiating a system dump is to enter the <A HREF="387_L3_SYSDUMPForceaSystemD.html"><B>.SYSDUMP
+command</B></A> , which is new from fix pack 29 for Warp 3.0 and base Warp
+4.0. Prior to these releases other techniques have to be employed. The simplest
+of these is to type the dump key sequence (<B>Ctrl-Alt-Numlock-Numlock</B> or
+<B>Ctrl_Alt_F10_F10</B>) from the keyboard of the system undertest while
+the debugger is in console mode. Then type the<B> G command</B> from the
+debug console. The keyboard interrupt will be serviced and the standalone
+dump procedure initiated. 
+<P>
+In an unattended situation a manually initiated dump may not be feasible.
+The following techniques discuss how to initiated the system dump in a more
+automated fashion. In some cases it may be possible to set up the command
+automation from the <A HREF="218_L3_TheKDBINIInitialisat.html">KDB.INI</A> initialisation
+file. 
+<P>
+The system dump is initiated when the kernel routine<B> RASRST</B> (RAS
+restart) is called. Normally this occurs from ring 0 when exception management
+intercepts a trap and <A HREF="3083_L2_TRAPDUMP.html">TRAPDUMP</A> is coded
+in the<B> CONFIG.SYS</B> file or when the keyboard device driver (<B>KDB.SYS</B>)
+intercepts a<B> Ctrl-Alt-Numlock-Numlock</B> or<B> Ctrl-Alt-F10-F10</B> sequence.
+From ring 3<B> RASRST</B> is called indirectly via the<B> Dos32ForceSystemDump
+</B>API since<B> RASRST</B> is not addressable from any user code selectors.
+The Kernel Debugger <A HREF="299_L3_GGo.html">G command</A> allows an address
+to be specified where execution is to continue from, which provides a means
+calling the system dump routine from the debugging console. Before using
+this technique, the following points must be understood:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+<B>RASRST</B> is not addressable from user code selectors since they have
+an upper address boundary of at most 512M.<!-- lm: 0x2 6 -->
+<P>
+<B>RASRST</B> requires to be executed using a 16-bit code selector.<!-- lm: 0x2 6 -->
+<P>
+<B>RASRST</B> requires a ring 0 stack selector to be active<!-- lm: 0x2 6 -->
+<P>
+<B>Dos32ForceSystemDump</B> requires a 32-bit code selector, such as<B> 5b</B>.
+<!-- lm: 0x2 6 -->
+<P>
+On some early versions of OS/2 2.1<B> Dos32ForceSystemDump</B> is unreliable.
+<!-- lm: 0x2 6 -->
+<P>
+The symbol<B> Dos32ForceSystemDump</B> occurs in both DOSCALL1.DLL and the
+callgate entry point in<!-- entering slot 344 --> OS2KRNL.<!-- lm: 0x2 1 -->
+</UL> 
+<P>
+From ring 0 the following command will generally be successful in initiating
+a system dump:
+<PRE>      g =rasrst
+
+</PRE>
+
+<P>
+From ring 2 or ring 3, 32-bit code the following commands will be successful
+providing<B> Dos32ForceSystemDump</B> is working correctly. The address
+of DOSCALL1:DOS32FORCESYSTEMDUMP is determined first, then a call to<B> Dos32ForceSystemDump
+</B>is made:
+<PRE>      ln dos32forcesystemdump
+      %1a027c78 doscall1:FLAT32:DOS32FORCESYSTEMDUMP
+
+      g =1a027c78
+</PRE>
+
+<P>
+For 16-bit application code the<B> CS</B> register must be to to a value
+that will address DOSCALL1.DOS32FORCESYSTEMDUMP. A suitable selector would
+be<B> 5b</B> for ring-3 code and<B> 5a</B> for ring-2. So, for 16-bit code
+this procedure becomes:
+<PRE>      ln dos32forcesystemdump
+      %1a027c78 doscall1:FLAT32:DOS32FORCESYSTEMDUMP
+      r cs 5b  (or r cs 5a)
+
+      g =1a027c78
+</PRE>
+ 
+<P>
+If<B> TRAPDUMP</B> is in effect then a dump can be forced by causing an
+immediate trap. The most effective way to achieve this is to set the current
+<B>SS</B> selector to 0 using the <A HREF="309_L3_RSetorDisplayCurrent.html">R
+command</A>. For example:
+<PRE>
+      r ss=00
+      g
+
+</PRE>
+
+<P>
+If you wish to trap an application the very next time it runs in user mode
+then use <A HREF="384_L3_RDisplayUsersRegiste.html">.R</A> to determine
+the user registers and set a <A HREF="3286_L0_.html">breakpoint</A> on<B> CS:EIP
+</B>in the context of the application's <A HREF="3320_L0_.html">thread slot
+</A>and specify that<B> SS</B> be set to zero when the breakpoint fires.
+For example: 
+<PRE>
+.p 2d
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 002d  000b 0002 000b 0001 blk 0200 7b700000 7b8c68fc 7b8acb60 1eb8 14 mrfilepm
+
+##.r 2d
+eax=00000000 ebx=00000000 ecx=0000aa37 edx=0000a9ef esi=00090bff edi=00090000
+eip=0000272d esp=0000b228 ebp=0009b230 iopl=2 -- -- -- nv up ei ng nz na pe nc
+cs=d02f ss=004f ds=a9ef es=be47 fs=150b gs=0000  cr2=1704b000  cr3=001d9000
+doscall1:CONFORM16:postDOSSEMWAIT:
+002d|d02f:0000272d c9        leave                    ;br0
+
+##bp d02f:272d,"j wo(tasknumber)==2d,'.r;r ss=0;g';g"
+##g
+
+eax=00000000 ebx=00000014 ecx=0009a9ef edx=0000a9ef esi=00090bff edi=00090006
+eip=0000272d esp=0000b230 ebp=0009b230 iopl=2 -- -- -- nv up ei ng nz na pe nc
+cs=d02f ss=004f ds=a9ef es=be47 fs=150b gs=0000  cr2=01550000  cr3=001d9000
+d02f:0000272e ca0800         retf    0008
+Symbols linked (calc)
+DelayHardError SYS3171: 4 string(s):
+ Pid 000b  Tid 0001  Slot 002d  HobMte 03be
+ C:\OS2TOOLS\MRFILEPM.EXE
+c0000005
+1a05272d
+P1=00000008  P2=6d640000  P3=XXXXXXXX  P4=XXXXXXXX
+EAX=00000000  <!-- entering slot 345 -->EBX=00000014  ECX=0009a9ef  EDX=0000a9ef
+ESI=00090bff  EDI=00090006
+DS=a9ef  DSACC=00f3  DSLIM=00000fff
+ES=be47  ESACC=00f3  ESLIM=000017f5
+FS=150b  FSACC=00f3  FSLIM=00000030
+GS=0000  GSACC=****  GSLIM=********
+CS:EIP=d02f:0000272d  CSACC=00df  CSLIM=000054a3
+SS:ESP=0000:0000b230  SSACC=****  SSLIM=********
+EBP=0009b230  FLG=00002386
+
+DOSCALL1.DLL 0005:0000272d
+</PRE>
+
+<P>
+This technique will successfully terminate an application. If<B> TRAPDUMP
+</B>is set appropriately then a system dump will be taken.
+<P>
+If<B> TRAPDUMP</B> is not correctly set for taking dumps, it may be dynamically
+modified from the debugging console. Symbol<B> DumpDevice</B> specifies
+the dump partition or drive letter (without the colon) and<B> DUMP_ON</B> is
+a flag byte that take values 0, 1 or 2 to specify whether<B> TRAPDUMP</B> is
+<B>OFF</B>,<B> ON</B> or<B> R0</B> respectively. Use the <A HREF="297_L3_EEnterDataIntoMemory.html">E
+command</A> to modify to these fields according to needs. For example, if
+we wish to set the equivalent of<B> TRAPDUMP R0,F</B> after system initialisation
+then the following command sequence would achieve this:
+<PRE>    e dump_on 2
+    e dumpdevice "F"
+</PRE>
+ 
+<P>
+When examining a dump taken by calling<B> RASRST</B>, directly or indirectly,
+using the<B> G command</B> then the registers at the time the Kernel Debugger
+was last entered can be found at label<B> _RegSA</B>. The format of this
+save area is as follows.
+<P>
+Before fix pack 29 for Warp 3.0 and base Warp 4.0:
+<PRE>ÚÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³<I>Offset</I>³<I>Register mnemonic</I>   ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+0    ³EAX                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+4    ³EBX                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+8    ³EXC                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+c    ³EDX                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+10   ³ESP                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+14   ³EBP                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+18   ³ESI                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+1c   ³EDI                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+20   ³ES                  ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+22   ³SS                  ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+24   ³DS                  ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+26   ³FS                  ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+28   ³GS                  ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+2a   ³EIP                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+2e   ³CS                  ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+30   ³reserved            ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+34   ³EFLAGS              ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+38   ³MSW                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+3c   ³GTD limit           ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+3e   ³GTD base            ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+42   ³reserved            ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+44   ³IDT limit           ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+46   ³IDT base            ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+4a   ³reserved            ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+4c   ³LDTR                ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+4e   ³TR                  ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+50   ³CR2                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+54   ³CR3                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+58   ³DR0                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+5c   ³DR1                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+60   ³DR2                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+64   ³DR3                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+68   ³<!-- entering slot 346 -->DR4                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+6c   ³DR5                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+70   ³DR6                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+74   ³DR7                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+78   ³reserved            ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+7c   ³TR6                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+80   ³TR7                 ³
+ÀÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+From fix pack 29 for Warp 3.0 and base Warp 4.0:
+<PRE>ÚÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³<I>Offset</I>³<I>Register mnemonic</I>   ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+0    ³EAX                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+4    ³EBX                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+8    ³EXC                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+c    ³EDX                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+10   ³ESP                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+14   ³EBP                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+18   ³ESI                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+1c   ³EDI                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+20   ³ES                  ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+22   ³SS                  ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+24   ³DS                  ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+26   ³FS                  ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+28   ³GS                  ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+2a   ³EIP                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+2e   ³CS                  ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+30   ³reserved            ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+34   ³EFLAGS              ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+38   ³MSW                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+3c   ³GTD limit           ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+3e   ³GTD base            ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+42   ³reserved            ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+44   ³IDT limit           ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+46   ³IDT base            ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+4a   ³reserved            ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+4c   ³LDTR                ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+4e   ³TR                  ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+50   ³CR2                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+54   ³CR3                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+58   ³CR4                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+5c   ³DR0                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+60   ³DR1                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+64   ³DR2                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+68   ³DR3                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+6c   ³DR4                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+70   ³DR5                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+74   ³DR6                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+78   ³DR7                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+7c   ³reserved            ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+80   ³TR6                 ³
+ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³+84   ³TR7                 ³
+ÀÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+
+<P><HR>
+
+<A HREF="231_L2_OptionalSystemDiagno.html">[Back: Optional System Diagnostic Facilities]</A> <BR>
+<A HREF="233_L3_VirtualMemoryManagem.html">[Next: Virtual Memory Management Lock Trace]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,186 @@
+<HTML>
+<HEAD>
+<TITLE>Connecting to the Agent</TITLE>
+</HEAD>
+<BODY>
+<H1>Connecting to the Agent</H1><!-- entering slot 81 -->
+<P>
+Before a subagent can receive or send any DPI packets from/to the SNMP DPI
+capable agent, it must "connect" to the agent and identify itself to the
+agent.
+<P>
+The following example code returns a response.  We assume that there are
+no errors in the request, but proper code should do the checking for that.
+ We do proper checking for lexicographic next object, but we do no checking
+for ULONG_MAX, or making sure that the instance ID is indeed valid (digits
+and dots).  If we get to the end of our dpiSimpleMIB, we must return an
+endOfMibView as defined by the SNMP Version 2 rules.<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->A host name or IP address in dot notation that specifies
+where the agent is running.  Often the name "loopback" or "localhost" can
+be used if the subagent runs on the same system as the agent.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A community name which is used to obtain the DPI TCP
+port from the agent.  Internally that is done by sending a regular SNMP
+GET request to the agent.  In an open environment, we probably can use the
+well know community name "public".<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The function returns a negative error code if an error occurs.  If the connection
+setup is successful, it returns a handle which represents the connection
+and which we must use on subsequent calls to send or await DPI packets.
+
+<P>
+The second step is to identify the subagent to the agent.  This is done
+by making a DPI-OPEN packet, sending it to the agent, and then awaiting
+the response from the agent.  The agent may accept or deny the OPEN request.
+ Making a DPI-OPEN packet is done by calling mkDPIopen() which expects the
+following parameters:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->A unique subagent identification (an Object Identifier).
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A description which can be the NULL string ("").<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Overall subagent timeout in seconds.  The agent uses
+this value as a timeout value for a response when it sends a request to
+the subagent.  The agent may have a maximum value for this timeout that
+will be used if you exceed it.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The maximum number of varBinds per DPI packet that
+the subagent is willing or is able to handle.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The character set we want to use.  In most cases you
+want to use the native character set.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Length of a password.  A zero means no password.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Pointer to the password or NULL if no password.  It
+depends on the agent if subagents must specify a password to open up a connection.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The function returns a pointer to a static buffer holding the DPI packet
+if successful.  If it fails, it returns a NULL pointer.
+<P>
+Once the DPI-OPEN packet has been created, you must send it to the agent.
+ You can use the DPIsend_packet_to_agent() function which expects the following
+parameters:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->The handle of a connection from DPIconnect_to_agent_TCP.
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A pointer to the DPI packet from mkDPIopen.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The length of the packet.  The snmp_dpi.h include
+file provides a macro DPI_PACKET_LEN that calculates the packet length of
+a DPI packet.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+This function returns DPI_RC_OK (value zero) if successful. Otherwise, an
+appropriate DPI_RC_xxxx error code as defined in snmp_dpi.h is returned.
+
+<P>
+Now we must wait for a response to the DPI-OPEN.  To await such a response,
+you call the DPIawait_packet_from_agent() function which expects the following
+parameters:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->The handle of a connection from DPIconnect_to_agent_TCP.
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A timeout in seconds, which is the maximum time to
+wait for response.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A pointer to a pointer, which will receive a pointer
+to a static buffer containing the awaited DPI packet.  If the system fails
+to receive a packet, a NULL pointer is stored.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A pointer to a long integer (32-bit), which will receive
+the length of the awaited packet.  If it fails, it will be set to zero.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+This function returns DPI_RC_OK (value zero) if successful. Otherwise, an
+appropriate DPI_RC_xxxx error code as defined in snmp_dpi.h is returned.
+
+<P>
+The last step is to ensure that we received a DPI-RESPONSE back from the
+agent.  If we did, then we must ensure that the agent accepted us as a valid
+subagent.  This will be shown by the error_code field in the DPI response
+packet.
+<P>
+The following example code establishes a connection and "opens" it by identifying
+<!-- entering slot 82 -->yourself to the agent.
+<PRE>#include &lt;snmp_dpi.h&gt;              /* DPI 2.0 API definitions */static int handle;                 /* handle has global scope */
+
+static void do_connect_and_open(char *hostname_p, char *community_p) {
+       unsigned char *packet_p;
+       int            rc;
+       unsigned long  length;
+       snmp_dpi_hdr  *hdr_p;
+       if (shared_mem) {           /* if shared memory wanted */
+          handle =                 /* then (SHM) connect to   */
+             DPIconnect_to_agent_SHM(1);
+                                   /* always use 1 as queueID */
+       } else {
+          handle =
+                DPIconnect_to_agent_TCP(
+                                   /* (TCP) connect to agent  */
+                   hostname_p,     /* on this host            */
+                   community_p);   /* snmp community name     */
+       } /* endif */
+       if (handle &lt; 0) exit(1);    /* If it failed, exit      */
+       packet_p = mkDPIopen(       /* Make DPI-OPEN packet    */
+                    DPI_SIMPLE_SUBAGENT,
+                                   /* Our identification      */
+                   "Simple DPI subAgent",
+                                   /* description             */
+                    10L,           /* Our overall timeout     */
+                    1L,            /* max varBinds/packet     */
+                    DPI_NATIVE_CSET,
+                                   /* native character set    */
+                    0L,            /* password length         */
+                    (unsigned char *)0);
+                                   /* ptr to password         */
+</PRE>
+
+<PRE>       if (!packet_p) exit(1);     /* If it failed, exit      */
+       rc  = DPIsend_packet_to_agent(
+                                   /* send OPEN packet        */
+                handle,            /* on this connection      */
+                packet_p,          /* this is the packet      */
+                DPI_PACKET_LEN(packet_p));
+                                   /* and this is its length  */
+       if (rc != DPI_RC_OK) exit(1);
+                                   /* If it failed, exit      */
+       rc  = DPIawait_packet_from_agent(
+                                   /* wait for response       */
+                handle,            /* on this connection      */
+                10,                /* timeout in seconds      */
+                &amp;packet_p,         /* receives ptr to packet  */
+                &amp;length);          /* receives packet length  */
+       if (rc != DPI_RC_OK) exit(1);
+                                   /* If it failed, exit      */
+       hdr_p = pDPIpacket(packet_p);
+                                   /* parse DPI packet        */
+       if (hdr_p == snmp_dpi_hdr_NULL_p)
+                                   /* If we fail to parse it  */
+          exit(1);                 /* then exit               */
+       if (hdr_p-&gt;packet_type != SNMP_DPI_RESPONSE) exit(1);
+       rc = hdr_p-&gt;data_u.
+resp_p-&gt;error_code;
+       if (rc != SNMP_ERROR_DPI_noError) exit(1); }
+/* end of do_connect_and_open() */
+</PRE>
+
+
+<P><HR>
+
+<A HREF="077_L2_OverviewofSubagentPr.html">[Back: Overview of Subagent Processing]</A> <BR>
+<A HREF="079_L2_RegisteringaSubTreew.html">[Next: Registering a Sub-Tree with the Agent]</A> 
+</BODY>
+</HTML>

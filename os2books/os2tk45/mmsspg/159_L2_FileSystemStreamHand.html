@@ -1,0 +1,377 @@
+<HTML>
+<HEAD>
+<TITLE>File System Stream Handler</TITLE>
+</HEAD>
+<BODY>
+<H1>File System Stream Handler</H1><!-- entering slot 204 -->
+<P>
+The File System Stream Handler DLL transports data to or from file system
+devices (local or remote) on behalf of a real-time application.  This handler
+is unique in that it utilizes the MMIO subsystem to interface to a very
+wide variety of devices, such as hard disk drives, diskette drives, CD-ROM
+drives, WORM drives, and so forth.  These devices can be physically installed
+in the local system hardware, or they can be accessed across a LAN on a
+server machine.
+<P>
+In a playback scenario (for example, waveform audio from a RIFF file), the
+File System Stream Handler uses MMIO to perform I/O on specified data files,
+and then performs stream processing to maintain a continuously available
+supply which is then streamed to a target stream handler; for example, the
+Waveform Audio Stream Handler.  This handler does not operate fully in a
+real-time mode, but it must support continuous data streaming.  It also
+does not support synchronization mastering, because the file system devices
+are not real-time devices.
+<P>
+<B>External Interface Description</B>
+<P>
+The description for the File System Stream Handler external interface follows:
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<!-- lm: 0x2 21 -->
+<UL><!-- lm: 0x2 1 -->
+</UL>File Name<!-- lm: 0x2 21 -->
+<UL> FSSH.DLL
+<!-- lm: 0x2 1 -->
+</UL>Handler Name<!-- lm: 0x2 21 -->
+<UL> FSSH<!-- lm: 0x2 1 -->
+</UL> Handler
+Class<!-- lm: 0x2 21 -->
+<UL> FILESYS<!-- lm: 0x2 1 -->
+</UL> PDD/DLL<!-- lm: 0x2 21 -->
+<UL> DLL
+<!-- lm: 0x2 1 -->
+</UL>Source<!-- lm: 0x2 21 -->
+<UL> This stream handler
+<I>can</I> be the source in a stream.<!-- lm: 0x2 1 -->
+</UL> Target<!-- lm: 0x2 21 -->
+<UL> This
+stream handler<I> can</I> be the target in a stream.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Device Control Blocks</B>
+<P>
+None.
+<P>
+<B>Associate Control Blocks</B>
+<P>
+This handler supports type ACBTYPE_MMIO associate control blocks.
+<PRE> /******************************************************  * FSSH - File System Stream Handler MMIO Object ACB
+  ******************************************************/
+  #define ACBTYPE_MMIO      0x0001L       /* MMIO object             */
+
+  typedef struct _acb_mmio                /* acbmmio  - MMIO ACB     */
+     {
+     ULONG   ulACBLen;                    /* Length of structure     */
+     ULONG   ulObjType;                   /* ACB_MMIO                */
+     HMMIO   hmmio;                       /* Handle of MMIO object   */
+     } ACB_MMIO;
+</PRE>
+
+<P>
+<B>Implicit (EVENT_IMPLICIT_TYPE) Events Supported</B>
+<P>
+The following implicit (EVENT_IMPLICIT_TYPE) events for the File System
+Stream Handler are supported:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->EVENT_ERROR
+<P>
+The error type will be set in the<I> ulFlag</I> field of the event control
+block.  The three types of errors that will be reported are:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->Temporary Error - TEMPORARY_ERROR 0x0000L
+<P>
+An error occurred during streaming but the stream handler, the SSM, or both
+the stream handler and the SSM were able to continue streaming.<!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 11 -->Recoverable Error - RECOVERABLE_ERROR 0x0001L
+<P>
+An error occurred that required the stream to be stopped.  The application
+can restart the stream if appropriate.<!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 11 -->NonRecoverable Error - NONRECOVERABLE_ERROR 0x0002L
+
+<P>
+A severe error occurred causing the stream handler to stop this stream.
+ The stream cannot be restarted.  The application must issue a call to SpiDestroyStream.
+<!-- lm: 0x2 6 -->
+</UL>The<I> ulStatus</I> field will contain the error
+code.  No error codes are generated and returned by this stream handler.
+
+<P>
+Also, errors from the following APIs can be returned:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->DosGetInfoBlocks<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->SMHEntryPoint SMH_NOTIFY<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->mmioRead (If source, extended error code obtained
+by mmioGetLastError)<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->mmioWrite (If target, extended error code obtained
+by mmioGetLastError)<!-- lm: 0x2 6 -->
+</UL><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>EVENT_PLAYLISTCUEPOINT
+
+<P>
+This will be generated<!-- entering slot 205 --> only when this stream handler
+is a target and it finds a cuepoint indicator in the buffer table from the
+Sync/Stream Manager.  The event will be reported after the data has been
+written to the file system using MMIO.  The<I> ulMessageParm</I> field of
+the PLAYL_EVCB will be filled in with the message supplied in the playlist
+instruction.  The<I> mmtimeStream</I> field will not be filled in.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Explicit Events Supported</B>
+<P>
+No explicit events are supported for the File System Stream Handler.
+<P>
+<B>Stream Handler Commands Supported</B>
+<P>
+The following stream handler commands (SHCs) are supported. Refer to the
+<I>OS/2 Multimedia Programming Reference</I> for a description of these
+SHC commands and the error return codes.<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->SHC_ASSOCIATE
+<P>
+<B>Note: </B> A stream requires a file to be opened and associated to the
+stream before a stream can be started.  Reassociating a new object without
+stopping the stream is not supported.<!-- lm: 0x2 6 -->
+<UL>
+<P>
+Possible return codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_STREAM (invalid<I> hstream</I> or<I> hid</I>-or
+both-passed)<!-- lm: 0x2 8 --> -<!-- lm: 0x2 11 -->
+<UL>ERROR_INVALID_OBJTYPE
+(only ACBTYPE_MMIO is supported)<!-- lm: 0x2 8 -->
+</UL>-<!-- lm: 0x2 11 -->
+<UL>ERROR_INVALID_BUFFER_SIZE (<I>ulAcbLen</I> is
+smaller than needed)<!-- lm: 0x2 8 -->
+</UL>-<!-- lm: 0x2 11 -->
+<UL>ERROR_STREAM_NOT_STOP (stream must be stopped
+to associate)<!-- lm: 0x2 6 -->
+</UL> Return codes from the following APIs
+are also returned:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->DosRequestMutexSem<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_CREATE
+
+<P>
+<B>Note: </B> If the<I> spcbkey</I> passed does not match any of the installed
+protocols, the last installed stream protocol control block with DATATYPE_GENERIC
+will be used.<!-- lm: 0x2 6 -->
+<P>
+Possible return codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_SPCBKEY<!-- lm: 0x2 8 --> -<!-- lm: 0x2 11 -->
+<UL>ERROR_ALLOC_RESOURCES
+<!-- lm: 0x2 6 -->
+</UL>Return codes from the following APIs are also returned:
+<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->DosRequestMutexSem<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->DosCreateThread<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_DESTROY
+
+<P>
+Possible return codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_STREAM (invalid<I> hstream</I> or both
+<I>hstream</I> and<I> hid</I> passed)<!-- lm: 0x2 6 -->
+</UL> Return codes
+from the following APIs are also returned:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->DosRequestMutexSem<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_START
+
+<P>
+Possible return codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_STREAM (invalid<I> hstream</I> or both
+<I>hstream</I> and<I> hid</I> passed)<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_DATA_ITEM_NOT_SPECIFIED (stream must be associated
+before it is started).<!-- lm: 0x2 6 -->
+</UL> Return codes from the following
+APIs are also returned:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->DosRequestMutexSem<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_STOP
+
+<P>
+Possible return codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_STREAM (invalid<I> hstream</I> or both
+<I>hstream</I> and<I> hid</I> passed)<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_STREAM_NOT_STARTED<!-- lm: 0x2 6 -->
+</UL> Return
+codes from the following APIs are also returned:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->DosRequestMutexSem<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->DosResumeThread<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->DosSuspendThread<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_SEEK
+
+<P>
+<B>Note: </B> If you are adding support in the system for a new nonlinear
+data type, you can write a MMIO IOProc to support the MMIOM_SEEKBYTIME message.
+ This message will be sent (mmioSendMessage) when the File System Stream
+Handler gets a seek by time (for information on the SpiSeekStream SPI_SEEKMMTIME
+parameter, refer to the<I> OS/2 Multimedia Programming Reference</I>.) and
+the SPCB indicates this is a nonlinear data type by having a 0 in the spcb.ulBytesPerUnit
+field, the spcb.mmtimePerUnit fields, or both fields.<!-- lm: 0x2 6 -->
+<P>
+Possible return codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_STREAM (invalid<I> hstream</I> or both
+<I>hstream</I> and<I> hid</I> passed)<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_NOT_SEEKABLE_BY_TIME<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_DATA_ITEM_NOT_SEEKABLE<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_DATA_ITEM_NOT_SPECIFIED<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_STREAM_NOT_STOP<!-- lm: 0x2 6 -->
+</UL>
+<P>
+Return codes from the following APIs are also returned:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->DosRequestMutexSem<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->mmioSeek (the extended error code from mmioGetLastError)
+<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->mmioSendMessage - MMIOM_SEEKBYTIME (the extended
+error code from mmioGetLastError)<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_GET_PROTOCOL
+
+<P>
+Possible return codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_SPCBKEY<!-- lm: 0x2 6 -->
+</UL> Return
+codes from the following APIs are also returned:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->DosRequestMutexSem<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_INSTALL_PROTOCOL
+
+<P>
+<B>Note: </B> This stream handler allows any data type and subtype to be
+installed.<!-- lm: 0x2 6 -->
+<P>
+Possible return codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_SPCBKEY<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_ALLOC_RESOURCES<!-- lm: 0x2 6 -->
+</UL> Return
+codes from the following APIs are also returned:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->DosRequestMutexSem<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_ENUMERATE_PROTOCOLS
+
+<P>
+Possible return codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->ERROR_INSUFF_BUFFER<!-- lm: 0x2 6 -->
+</UL> Return
+codes from the following APIs are also returned:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->DosRequestMutexSem<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_NEGOTIATE_RESULT
+
+<P>
+Possible return codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_STREAM (invalid<I> hstream</I> or both
+<I>hstream</I> and<I> hid</I> passed)<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_FUNCTION (must only be called directly
+after create)<!-- lm: 0x2 6 -->
+</UL> Return codes from the following APIs
+are also returned:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->DosRequestMutexSem<!-- lm: 0x2 6 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+
+<P>
+<B>Base Stream Protocol Control Blocks Data Types Supported</B>
+<P>
+The File System Stream Handler has only 1 base SPCB.  It is DATATYPE_GENERIC.
+ When a stream is created with a<I> SPCBKEY</I> that is not installed, this
+stream handler copies over the last installed SPCB of type DATATYPE_GENERIC
+and uses it.  The data type, subtype and<I> intkey</I> passed are used in
+place of the generic values for these fields.  The base generic SPCB has:
+
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³SPCB Field     ³DATATYPE_GENERIC Values                      ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ulBufSize      ³16KB                                         ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³<!-- entering slot 206 -->ulMinBuf       ³2                                            ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ulMaxBuf       ³5                                            ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ulSrcStart     ³1                                            ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ulTgtStart     ³1                                            ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ulBufFlag      ³SPCBBUF_NONCONTIGUOUS                        ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ulHandFlag     ³SPCBHAND_NOSYNC | SPCB_PHYS_SEEK             ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+<B>Stream Handler Limits</B>
+<P>
+Maximum number of streams (only limited by available memory).
+<P>
+
+
+<P><HR>
+
+<A HREF="158_L2_MIDIMapperStreamHand.html">[Back: MIDI Mapper Stream Handler]</A> <BR>
+<A HREF="160_L2_MemoryStreamHandler.html">[Next: Memory Stream Handler]</A> 
+</BODY>
+</HTML>

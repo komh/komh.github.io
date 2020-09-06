@@ -1,0 +1,111 @@
+<HTML>
+<HEAD>
+<TITLE>_uopen - Open Heap for Use</TITLE>
+</HEAD>
+<BODY>
+<H1>_uopen - Open Heap for Use</H1><!-- entering slot 345 -->_uopen - Open Heap for Use<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>#include &lt;umalloc.h&gt;
+int _uopen(Heap_t <I>heap</I>);
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Description
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+<LI>uopen allows the current process to use the<I> heap</I> you specify.
+If the heap is shared, you must call _uopen in each process that will allocate
+or free from the heap. See "Managing Memory" in the<I> VisualAge C++ Programming
+Guide</I> for more information about sharing heaps, and about creating and
+using heaps in general.<!-- lm: 0x2 1 -->
+</UL> Returns
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+If successful, _uopen returns 0. A nonzero return code indicates failure.
+Passing _uopen a heap that is not valid results in undefined behavior.<!-- lm: 0x2 1 -->
+</UL> Example
+Code
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+The following example creates a fixed-size heap, then uses _uopen to open
+it.  The program then performs operations on the heap, and closes and destroys
+it.
+<PRE>#define  INCL_DOSMEMMGR             /* Memory Manager values */
+#include &lt;os2.h&gt;
+#include &lt;bsememf.h&gt;                /* Get flags for memory management  */
+#include &lt;stdlib.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;umalloc.h&gt;
+
+int main(void)
+{
+   void    *initial_block;
+   APIRET  rc;
+   Heap_t  myheap;
+   char    *p;
+
+   /* Call DosAllocMem to get the initial block of memory */
+   if (0 != (rc = DosAllocMem(&amp;initial_block, 65536,
+                              PAG_WRITE | PAG_READ | PAG_COMMIT))) {
+      printf("DosAllocMem error: return code = %ld\n", rc);
+      exit(EXIT_FAILURE);
+   }
+   /* Create a fixed size heap starting with the block declared earlier */
+   if (NULL == (myheap = _ucreate(initial_block, 65536, _BLOCK_CLEAN,
+                                  _HEAP_REGULAR, NULL, NULL))) {
+      puts("_ucreate failed.");
+      exit(EXIT_FAILURE);
+   }
+   if (0 != _uopen(myheap)) {
+      puts("_uopen failed.");
+      exit(EXIT_FAILURE);
+   }
+   p = _umalloc(myheap, 100);
+   free(p);
+   if (0 != _uclose(myheap)) {
+      puts("_uclose failed");
+      exit(EXIT_FAILURE);
+   }
+   if (0 != (rc = DosFreeMem(initial_block))) {
+      printf("DosFreeMem error: return code = %ld\n", rc);
+      exit(EXIT_FAILURE);
+   }
+   return 0;
+}
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Related Information
+<P>
+<!-- lm: 0x2 10 -->
+<UL><!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 --><A HREF="300_L2__uaddmemAddMemorytoa.html"><LI>uaddmem
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="302_L2__ucloseCloseHeapfrom.html"><LI>uclose
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="303_L2__ucreateCreateaMemor.html"><LI>ucreate
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><LI>Managing Memory" in the<I> VisualAge C++ Programming
+Guide</I><!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="316_L2_unlinkDeleteFile.html">[Back: unlink - Delete File]</A> <BR>
+<A HREF="318_L2__ustatsGetInformatio.html">[Next: _ustats - Get Information about Heap]</A> 
+</BODY>
+</HTML>

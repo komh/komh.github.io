@@ -1,0 +1,87 @@
+<HTML>
+<HEAD>
+<TITLE>Application Not Responding to Messages Logic</TITLE>
+</HEAD>
+<BODY>
+<H1>Application Not Responding to Messages Logic</H1><!-- entering slot 283 -->
+<P>
+The<B> Application Not Responding to Messages</B> dialog, or<B> BadApp</B> dialog
+as it is sometimes referred to, appears after Ctrl-Esc has been hit and
+the system has not been able to display the task list. 
+<P>
+The essential logic for this processing is as follows:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Ctrl-Esc is hit and 5 second timer is started. <!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If the task list appears before the time-out then
+all is well, if not we check for who might be holding things up. <!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->We try for 5 seconds to obtain the User PM Semaphore.
+If unsuccessful then the Pid, Tid and Session Id of the owner is saved in
+the<B> QHPSTRUCT</B>. <!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If<B> pmqsyslock</B> is owned then the Pid, Tid and
+Session Id of the owner is saved in the<B> QHPSTRUCT</B>. <!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If<B> pmqfocus</B> is owned then the Pid, Tid and
+Session Id of the owner is saved in the<B> QHPSTRUCT</B>. <!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->We now enter a second wait of a further 3 seconds,
+after which, we build a second<B> QHPSTRUCT</B>. <!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If the Tid and Pid are different and we have not yet
+had an acknowledgement from the task list then we wait a further 12 seconds,
+on the assumption the processing is slow, but not hung. <!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If the Tid and Pid are the same or we have expired
+on our third time-out then we set<B> fBadAppDialog</B>  true and reset the
+cause for the hang:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->If<B> User_Sem</B> held then release<B> User_Sem
+</B><!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 11 -->if system queue locked then reset<B> pmqsyslock</B><!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 11 -->if focus owner hung, then reset<B> pmqfocus</B><!-- lm: 0x2 6 -->
+</UL> Report
+the hanging application in the<B> BadApp</B>  dialog.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+This processing is illustrated in the following two diagrams:
+<P>
+<U><I>BadApp Dialog Logic</I></U><!-- Unable to decode bitmap format --><IMG SRC="192_L5_ApplicationNotRespon_23.gif" WIDTH=717 HEIGHT=1011>
+<P>
+<U><I>Query Hung Process Logic</I></U><!-- Unable to decode bitmap format --><IMG SRC="192_L5_ApplicationNotRespon_24.gif" WIDTH=717 HEIGHT=1011>
+
+<P>
+The flags in the<B> QHPSTRUCT</B> indicate the detected reason for hanging.
+These may be a combination of: 
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³Name                ³Bit Mask³Description                             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³QHP_SYSQUEUELOCK    ³0x0001  ³System Queue Locked                     ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³QHP_SENDMSGLOCK     ³0x0002  ³Waiting for a response to WinSendMsg    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³QHP_CLIPBRDLOCK     ³0x0004  ³                                        ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³QHP_WINDOWLOCKED    ³0x0008  ³                                        ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³QHP_VISRGNLOCKED    ³0x0010  ³                                        ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³QHP_LOCKWINDOWUPDATE³0x0020  ³                                        ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³QHP_FSRSUSERHANG    ³0x4000  ³Waiting for the User_Sem                ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³QHP_INPUTPROCESSED  ³0x8000  ³                                        ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+ 
+
+<P><HR>
+
+<A HREF="191_L5_WinSetFocusLogic.html">[Back: WinSetFocus Logic]</A> <BR>
+<A HREF="193_L4_UsefulSymbolsforPMSt.html">[Next: Useful Symbols for PM Structures]</A> 
+</BODY>
+</HTML>

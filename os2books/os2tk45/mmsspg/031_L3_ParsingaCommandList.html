@@ -1,0 +1,238 @@
+<HTML>
+<HEAD>
+<TITLE>Parsing a Command List</TITLE>
+</HEAD>
+<BODY>
+<H1>Parsing a Command List</H1><!-- entering slot 34 -->
+<P>
+A command table consists of command lists, which define to the MDM parser
+how to parse certain commands. For example, illustrates a command list for
+MCI_SEEK:
+<PRE>"seek",                  MCI_SEEK, 0,           MCI_COMMAND_HEAD,
+   "notify",             MCI_NOTIFY,            MCI_FLAG,
+   "wait",               MCI_WAIT,              MCI_FLAG,
+   "to start",           MCI_TO_START,          MCI_FLAG,
+   "to end",             MCI_TO_END,            MCI_FLAG,
+   "to",                 MCI_TO,                MCI_INTEGER,
+"",                      0L,                    MCI_END_COMMAND,
+</PRE>
+
+<P>
+The SEEK command list tells the parser how to create the associated data
+structure for the<I> pParam2</I> parameter of mciSendCommand to  point to,
+when it finds "seek" in the<I> pszCommand</I> parameter of mciSendString.
+
+<P>
+Notice that each line is broken into a null-terminated string and two ULONGs.
+The ULONG following "seek" is composed of two parts; MCI_SEEK and 0. The
+command message (in this case, MCI_SEEK) is a USHORT, and therefore we need
+another USHORT as a filler. The MCI_COMMAND_HEAD Line_type tells MDM that
+the first ULONG (actually, the first USHORT) contains the<I> usMessage</I> parameter
+for mciDriverEntry.
+<P>
+If the line type of a line is MCI_FLAG, then the first ULONG for that line
+is ORed together with all the other ULONGs for MCI_FLAG lines, to form the
+<I>ulParam1</I> parameter.
+<P>
+The string parser makes two passes through the command list. The first pass
+is to determine the size of the structure to allocate for the command.  The
+second pass parses the command string, fills in the command structure, and
+creates a<I> ulParam1</I> flag.
+<P>
+Each command is composed of a number of ULONGs.  All commands have a minimum
+of one ULONG for the<I> hwndCallback</I> field.  The parser provides this
+ULONG automatically. The remaining size of the command structure is based
+on the Line_types used for the command.
+<P>
+If the line type of a line is MCI_INTEGER, then the text following string
+S, where S is the null-terminated string in the command line, in<I> pszCommand
+</I>is an integer and should be put in the corresponding ULONG in the structure
+of ULONGs that<I> pParam2</I> points to.
+<P>
+If the line type is MCI_STRING, then the text following string S in<I> pszCommand
+</I>is a string, and a pointer to this string will be put in the corresponding
+ULONG in the structure of ULONGs that<I> pParam2</I> points to.
+<P>
+Finally, if the line type is MCI_RETURN, then the first ULONG of that line
+specifies the value that is to be returned through the data structure pointed
+to by<I> pParam2</I>.
+<P>
+The<I> pParam2</I> data structure is laid out based on the command list.
+The first ULONG is always<I> hwndCallback</I>. The next one or two ULONGs
+represent MCI_RETURN:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->If MCI_RETURN is specified, and MCI_INTEGER is the
+first ULONG of that line, then the second ULONG of<I> pParam2</I> is<I> ulReturn</I>.
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If MCI_RETURN is specified and MCI_STRING is the first
+ULONG of that line, then the second ULONG of<I> pParam2</I> is<I> ulReturn</I>,
+and the third ULONG is<I> ulRetSize</I>. The<I> ulRetSize</I> specifies
+the length of the string.<!-- lm: 0x2 1 -->
+</UL>The other fields of<I> pParam2</I> are filled in based on the MCI_INTEGER
+and MCI_STRING appearing in the second ULONG of the command lines.  In addition,
+MCI_CONSTANT and MCI_END_CONSTANT form a range of possible values for one
+of the fields in the structure. This block represents a single ULONG in
+the structure. These fields are filled in, in the order they appear in the
+command list. For example, suppose the string parser parses the MCI_STATUS
+command list shown in the following example code.
+<PRE>    "status\0",            MCI_STATUS, 0,                 MCI_COMMAND_HEAD,    "\0",                  MCI_INTEGER,                   MCI_RETURN,
+    "notify\0",            MCI_NOTIFY,                    MCI_FLAG,
+    "wait\0",              MCI_WAIT,                      MCI_FLAG,
+    "\0",                  MCI_STATUS_ITEM,               MCI_CONSTANT,
+    "mode\0",              MCI_STATUS_MODE,               MCI_INTEGER,
+    "ready\0",             MCI_STATUS_READY,              MCI_INTEGER,
+    "current track\0",     MCI_STATUS_CURRENT_TRACK,      MCI_INTEGER,
+    "length\0",            MCI_STATUS_LENGTH,             MCI_INTEGER,
+    "number of tracks\0",  MCI_STATUS_NUMBER_OF_TRACKS,   MCI_INTEGER,
+    "position\0",          MCI_STATUS_POSITION,           MCI_INTEGER,
+    "position in track\0", MCI_STATUS_POSITION_IN_TRACK,  MCI_INTEGER,
+    "time format\0",       MCI_STATUS_TIME_FORMAT,        MCI_INTEGER,
+    "speed format\0",      MCI_STATUS_SPEED_FORMAT,       MCI_INTEGER,
+    "\0",                  0L,                            MCI_END_CONSTANT,
+    "track\0",             MCI_TRACK,                     MCI_INTEGER,
+    "\0",                  0L,                            MCI_END_COMMAND,
+</PRE>
+
+<P>
+The string parser produces the<I> pParam2</I> parameter shown in the following
+figure.
+<PRE>       {
+       HWND       hwndCallback;
+       ULONG      ulReturn;
+       ULONG      ulItem;
+       ULONG      ulTrack;
+       }
+</PRE>
+
+<P>
+Notice that the MCI_CONSTANT block is defined in order to fill in the<I> ulItem
+</I>field of the status structure. If the keyword field on the MCI_CONSTANT
+line is "\0" or NULL, then the parser is looking for any keyword defined
+in the block, and the first ULONG of the matching keyword is put in the
+<I>ulItem</I> field. If the keyword on the MCI_CONSTANT line is not "\0"
+then the parser looks for that keyword and ORs the first ULONG of the MCI_CONSTANT
+line with<I> ulParam1</I>.  The parser continues to look for a keyword<!-- entering slot 35 --> match
+in the constant block. For example:
+<PRE>"capability",              MCI_GETDEVCAPS, 0,                   MCI_COMMAND_HEAD,
+ "",                       MCI_PREROLL_TYPE_RETURN, 0,          MCI_RETURN_TYPE,
+    "deterministic",       MCI_PREROLL_DETERMINISTIC,           MCI_RETURN_TYPE_STRING,
+    "notified"             MCI_PREROLL_NOTIFIED,                MCI_RETURN_TYPE_STRING,
+    "none",                MCI_PREROLL_NONE,                    MCI_RETURN_TYPE_STRING,
+ "none",                   0L,                                  MCI_END_RETURN_TYPE,
+ "",                       MCI_TRUE_FALSE_RETURN, 0,            MCI_RETURN_TYPE,
+    "TRUE",                1L,                                  MCI_RETURN_TYPE_STRING,
+    "FALSE",               0L,                                  MCI_RETURN_TYPE_STRING,
+ "",                       0L,                                  MCI_END_RETURN_TYPE,
+ "",                       MCI_DEVICENAME_RETURN, 0,            MCI_RETURN_TYPE,
+    "Videotape",           MCI_DEVTYPE_VIDEOTAPE, 0,            MCI_RETURN_TYPE_STRING,
+    "Videodisc",           MCI_DEVTYPE_VIDEODISC, 0,            MCI_RETURN_TYPE_STRING,
+    "CDaudio",             MCI_DEVTYPE_CD_AUDIO,  0,            MCI_RETURN_TYPE_STRING,
+    "DAT",                 MCI_DEVTYPE_DAT,       0,            MCI_RETURN_TYPE_STRING,
+    "Audiotape",           MCI_DEVTYPE_AUDIO_TAPE,        0,    MCI_RETURN_TYPE_STRING,
+    "Other",               MCI_DEVTYPE_OTHER,             0,    MCI_RETURN_TYPE_STRING,
+    "Waveaudio",           MCI_DEVTYPE_WAVEFORM_AUDIO,    0,    MCI_RETURN_TYPE_STRING,
+    "Sequencer",           MCI_DEVTYPE_SEQUENCER,         0,    MCI_RETURN_TYPE_STRING,
+    "Ampmix",              MCI_DEVTYPE_AUDIO_AMPMIX,      0,    MCI_RETURN_TYPE_STRING,
+    "Overlay",             MCI_DEVTYPE_OVERLAY,           0,    MCI_RETURN_TYPE_STRING,
+    "Digitalvideo",        MCI_DEVTYPE_DIGITAL_VIDEO,     0,    MCI_RETURN_TYPE_STRING,
+    "Speaker",             MCI_DEVTYPE_SPEAKER,           0,    MCI_RETURN_TYPE_STRING,
+    "Headphone",           MCI_DEVTYPE_HEADPHONE,         0,    MCI_RETURN_TYPE_STRING,
+    "Microphone",          MCI_DEVTYPE_MICROPHONE,        0,    MCI_RETURN_TYPE_STRING,
+    "Monitor",             MCI_DEVTYPE_MONITOR,           0,    MCI_RETURN_TYPE_STRING,
+    "CDXA",                MCI_DEVTYPE_CDXA,              0,    MCI_RETURN_TYPE_STRING,
+ "",                       0L,                                  MCI_END_RETURN_TYPE,
+ "",                       MCI_INTEGER,                         MCI_RETURN,
+ "notify",                 MCI_NOTIFY,                          MCI_FLAG,
+ "wait",                   MCI_WAIT,                            MCI_FLAG,
+ "",                       MCI_GETDEVCAPS_ITEM,                 MCI_CONSTANT,
+    "can record",          MCI_GETDEVCAPS_CAN_RECORD,           MCI_INTEGER,
+    "can insert",          MCI_GETDEVCAPS_CAN_RECORD_INSERT,    MCI_INTEGER,
+    "has audio",           MCI_GETDEVCAPS_HAS_AUDIO,            MCI_INTEGER,
+    "has video",           MCI_GETDEVCAPS_HAS_VIDEO,            MCI_INTEGER,
+    "can eject",           MCI_GETDEVCAPS_CAN_EJECT,            MCI_INTEGER,
+    "can play",            MCI_GETDEVCAPS_CAN_PLAY,             MCI_INTEGER,
+    "can save",            MCI_GETDEVCAPS_CAN_SAVE,             MCI_INTEGER,
+    "uses files",          MCI_GETDEVCAPS_USES_FILES,           MCI_INTEGER,
+    "compound device",     MCI_GETDEVCAPS_USES_FILES,           MCI_INTEGER,
+    "can lockeject",       MCI_GETDEVCAPS_CAN_LOCKEJECT,        MCI_INTEGER,
+    "can setvolume",       MCI_GETDEVCAPS_CAN_SETVOLUME,        MCI_INTEGER,
+    "preroll type",        MCI_GETDEVCAPS_PREROLL_TYPE,         MCI_INTEGER,
+    "preroll time",        MCI_GETDEVCAPS_PREROLL_TIME,         MCI_INTEGER,
+    "device type",         MCI_GETDEVCAPS_DEVICE_TYPE,          MCI_INTEGER,
+    "can stream",          MCI_GETDEVCAPS_CAN_STREAM,           MCI_INTEGER,
+    "can process internal",MCI_GETDEVCAPS_CAN_PROCESS_INTERNAL, MCI_INTEGER,
+ "",                       0L,                                  MCI_END_CONSTANT,
+ "message",                MCI_GETDEVCAPS_MESSAGE,              MCI_CONSTANT,
+    "acquire",             MCI_ACQUIREDEVICE, 0,                MCI_INTEGER,
+    "release",             MCI_RELEASEDEVICE, 0,                MCI_INTEGER,
+    "open",                MCI_OPEN, 0,                         MCI_INTEGER,
+    "close",               MCI_CLOSE, 0,                        MCI_INTEGER,
+    "escape",              MCI_ESCAPE, 0,                       MCI_INTEGER,
+    "play",                MCI_PLAY, 0,                         MCI_INTEGER,
+    "seek",                MCI_SEEK, 0,                         MCI_INTEGER,
+    "stop",                MCI_STOP, 0,                         MCI_INTEGER,
+    "pause",               MCI_PAUSE, 0,                        MCI_INTEGER,
+    "info",                MCI_INFO, 0,                         MCI_INTEGER,
+    "capability",          MCI_GETDEVCAPS, 0,                   MCI_INTEGER,
+    "status",              MCI_STATUS, 0,                       MCI_INTEGER,
+    "spin",                MCI_SPIN, 0,                         MCI_INTEGER,
+    "set",                 MCI_SET, 0,                          MCI_INTEGER,
+    "step",                MCI_STEP, 0,                         MCI_INTEGER,
+    "record",              MCI_RECORD, 0,                       MCI_INTEGER,
+    "sysinfo",             MCI_SYSINFO, 0,                      MCI_INTEGER,
+    "save",                MCI_SAVE, 0,                         MCI_INTEGER,
+    "cue",                 MCI_CUE, 0,                          MCI_INTEGER,
+    "update",              MCI_UPDATE, 0,                       MCI_INTEGER,
+    "setcuepoint",         MCI_SET_CUEPOINT, 0,                 MCI_INTEGER,
+    "setpositionadvise",   MCI_SET_POSITION_ADVISE, 0,          MCI_INTEGER,
+    "setsyncoffset",       MCI_SET_SYNC_OFFSET, 0,              MCI_INTEGER,
+    "load",                MCI_LOAD, 0,                         MCI_INTEGER,
+    "masteraudio",         MCI_MASTERAUDIO, 0,                  MCI_INTEGER,
+    "gettoc",              MCI_GETTOC, 0,                       MCI_INTEGER,
+    "connector",           MCI_CONNECTOR, 0,                    MCI_INTEGER,
+    "resume",              MCI_RESUME, 0,                       MCI_INTEGER,
+ "",                       0L,                                  MCI_END_CONSTANT,
+"",                        0L,                                  MCI_END_COMMAND,
+</PRE>
+
+<P>
+The<I> pParam2</I> parameter would look like:
+<PRE>       {
+       ULONG      hwndCallback;
+       ULONG      ulReturn;
+       ULONG      ulltem;
+       ULONG      ulMessage;
+       }
+</PRE>
+
+<P>
+Notice the second constant block with the keyword "message".  The parser
+would be looking for something like "message open".  This constant block
+would OR the MCI_GETDEVCAPS_MESSAGE with the<I> ulParam1</I> parameter and
+put the value MCI_OPEN in the<I> ulMessage</I> field.
+<P>
+The multimedia string parser also supports one default INTEGER and STRING
+value.  The constants MCI_DEFAULT_INTEGER and MCI_DEFAULT_STRING are used
+by the string parser to locate unknown keywords.  For example, if a command
+needed a file name as its only parameter, then the following line could
+be used in the command table.
+<PRE>   "\0",            MCI_FILENAME,                 MCI_DEFAULT_STRING,
+</PRE>
+
+<P>
+This item takes up a ULONG in the structure, just as in MCI_STRING.
+<P>
+Support for device-specific command tables is<!-- entering slot 36 --> provided
+by the multimedia installation application. When a device is installed,
+one of the parameters to the install process is the command table (resource
+DLL).  The required and device-type command tables are provided by the system.
+
+
+<P><HR>
+
+<A HREF="030_L4_LineTypes.html">[Back: Line Types]</A> <BR>
+<A HREF="032_L3_ErrorTables.html">[Next: Error Tables]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,179 @@
+<HTML>
+<HEAD>
+<TITLE>Waiting for a Muxwait Semaphore</TITLE>
+</HEAD>
+<BODY>
+<H1>Waiting for a Muxwait Semaphore</H1><!-- entering slot 175 -->
+<P>
+A thread can wait on a muxwait semaphore by using<A><!-- external link: 1D 0C C4 FC --> DosWaitMuxWaitSem</A>.
+
+<P>
+Any thread in the process that created a muxwait semaphore can wait for
+the semaphore to clear by calling<A><!-- external link: 1D 0C C4 FC --> DosWaitMuxWaitSem</A>.
+Threads in other processes can also call<A><!-- external link: 1D 0C C4 FC --> DosWaitMuxWaitSem</A>,
+but they must first gain access to the semaphore by calling<A><!-- external link: 1D A2 C3 FC --> DosOpenMuxWaitSem</A>.
+
+<P>
+The following code fragment waits for a muxwait semaphore to clear. Assume
+that the handle of the semaphore has been placed into<I> hmux</I> already.
+<I>ulTimeout</I> is the number of milliseconds that the calling thread will
+wait for the muxwait semaphore to clear. If the specified muxwait semaphore
+is not cleared during this time interval, the request times out.
+<PRE>    #define INCL_DOSSEMAPHORES   /* Semaphore values */
+    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+
+    HMUX     hmux;      /* Muxwait semaphore handle              */
+    ULONG    ulTimeout; /* Number of milliseconds to wait        */
+    ULONG    ulUser;    /* User field for the semaphore that was */
+                        /* posted or released (returned)         */
+    APIRET   ulrc;      /* Return code                           */
+
+    ulTimeout = 60000;  /* Wait for a maximum of 1 minute        */
+
+    ulrc = DosWaitMuxWaitSem(hmux,
+                             ulTimeout,
+                             &amp;ulUser);
+
+    if (ulrc == ERROR_TIMEOUT) {
+        printf("DosWaitMuxWaitSem call timed out");
+        return;
+    }
+
+    if (ulrc == ERROR_INTERRUPT) {
+        printf("DosWaitMuxWaitSem call was interrupted");
+        return;
+    }
+
+    if (ulrc != 0) {
+        printf("DosWaitMuxWaitSem error: return code = %ld",
+               ulrc);
+        return;
+    }
+
+</PRE>
+
+<P>
+On successful return, the<I> ulUser</I> variable contains the user identifier
+of the semaphore that caused the wait to terminate. If the caller had to
+wait for all the semaphores within the muxwait semaphore to clear, then
+the value corresponds to the last semaphore within the muxwait semaphore
+to clear. If the caller had to wait for any semaphore with the muxwait semaphore
+to clear, then the value corresponds to that semaphore.
+<P>
+An application can use the DCMW_WAIT_ANY flag in<A><!-- external link: 1D 70 C3 4F --> DosCreateMuxWaitSem
+</A>to block a thread until any one of the event or mutex semaphores included
+in the muxwait semaphore is posted or released. If the muxwait semaphore
+refers to mutex semaphores, the thread only gains ownership of the one mutex
+semaphore that was released.
+<P>
+An application can use the DCMW_WAIT_ALL flag in<A><!-- external link: 1D 70 C3 4F --> DosCreateMuxWaitSem
+</A>to block a thread until all of the event or mutex semaphores included
+in the muxwait semaphore are posted or released. If the muxwait semaphore
+refers to mutex semaphores, the thread does not gain ownership of any of
+the mutex semaphores until they are all released. When all are released,
+the thread becomes owner of all the mutex semaphores included in the muxwait
+semaphore. If the muxwait semaphore refers to event semaphores, the thread
+will not run until all of the event semaphores are in the posted state at
+the same time. This is because event semaphores in a muxwait list are<I> level-triggered</I>,
+unlike individual event semaphores, which are edge-triggered.
+<P>
+For example, suppose that a thread is waiting for five event semaphores
+in a muxwait list to be posted. The first semaphore is posted and then reset.
+Next, the remaining semaphores are all posted, and they remain in the posted
+state. The thread that is waiting for the muxwait semaphore will not run
+until the first semaphore is posted again.
+<P>
+If an application specifies the DCMW_WAIT_ANY flag when the semaphore is
+created,<A><!-- external link: 1D 0C C4 52 --> DosWaitMuxWaitSem</A> returns
+the programmer-defined identifier of the semaphore that is subsequently
+posted or released. If an application specifies the DCMW_WAIT_ALL flag,
+<A><!-- external link: 1D 0C C4 52 -->DosWaitMuxWaitSem</A> returns the
+programmer-defined identifier of the last semaphore that was posted or released.
+
+<P>
+The<I> ulTimeout</I> parameter places a limit on the amount of time a thread
+blocks on a<A><!-- external link: 1D 0C C4 52 --> DosWaitMuxWaitSem</A> request.
+If the time limit is reached before the semaphore has cleared, ERROR_TIMEOUT
+is returned. If SEM_IMMEDIATE_RETURN is specified as the time limit,<A><!-- external link: 1D 0C C4 52 --> DosWaitMuxWaitSem
+</A>returns without blocking the thread. The thread can then go on to perform
+other operations and call<A><!-- external link: 1D 0C C4 52 --> DosWaitMuxWaitSem
+</A>again later to wait for the event or mutex semaphores in the muxwait
+list to be posted or released. If a time limit of SEM_INDEFINITE_WAIT is
+specified, the thread waits (is blocked) indefinitely. If the thread is
+unblocked by an external event while it is waiting for the muxwait semaphore
+(as when a "no wait" I/O request has just been completed),<A><!-- external link: 1D 0C C4 52 --> DosWaitMuxWaitSem
+</A>returns ERROR_INTERRUPT.
+<P>
+When a thread is waiting for any one of the semaphores in a muxwait list
+to be posted or released, the semaphores are checked in the order in which
+they are defined in the list.
+<P>
+<B>Waiting for Multiple Event Semaphores</B>
+<BR>
+The following information pertains only to muxwait semaphores that<!-- entering slot 176 --> consist
+of multiple<I> event</I> semaphores:
+<P>
+Unlike individual event semaphores, which are edge-triggered, event semaphores
+in a muxwait list are<I> level-triggered</I>. This means that if a thread
+is waiting for all of the event semaphores in the muxwait list, it will
+not run until all of the event semaphores are in the posted state at the
+same time.
+<P>
+For example, a thread is waiting for five event semaphores in a muxwait
+list to be posted. The first semaphore is posted and then reset. Next, the
+remaining semaphores are all posted, and they remain in the posted state.
+The thread that is waiting for the muxwait semaphore will not run until
+the first semaphore is posted again.
+<P>
+<B>Waiting for Multiple Mutex Semaphores</B>
+<BR>
+The following information pertains only to muxwait semaphores that consist
+of multiple<I> mutex</I> semaphores:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->If a thread is waiting for all of the mutex semaphores
+in a muxwait list to be released, it does not receive ownership of any of
+the semaphores until all of the semaphores have been released.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If a thread is waiting for any one of the mutex semaphores
+in a muxwait list, then the thread gains ownership only of the first mutex
+semaphore that is released. The ownership of all other mutex semaphores
+in the muxwait list remains unchanged.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If two threads have the same priority, then a thread
+that is waiting for a mutex semaphore in a muxwait list takes precedence
+over a thread that has requested ownership of only the individual semaphore,
+provided all other mutex semaphores in the muxwait list have been released.
+For example, a mutex semaphore that is part of a muxwait semaphore is released.
+One thread has requested ownership of that single mutex semaphore, and another
+thread with the same priority is waiting for the muxwait semaphore that
+contains the same mutex semaphore. If all of the other mutex semaphores
+in the muxwait list are<I> unowned</I> and ready to be given to the muxwait
+semaphore, then the thread that is waiting for the muxwait semaphore will
+run first.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If the owners of any of the mutex semaphores in the
+muxwait semaphore list have ended without releasing them, ERROR_SEM_OWNER_DIED
+is returned. The thread must then call<A><!-- external link: 1D CB C3 20 --> DosQueryMuxWaitSem
+</A>to obtain the records of all the semaphores in the muxwait list. Next,
+the thread must call<A><!-- external link: 1D CA C3 1F --> DosQueryMutexSem
+</A>for each mutex semaphore in the muxwait-semaphore list so that it can
+determine which semaphores are in the<I> Owner Died</I> state.
+<P>
+Each mutex semaphore that returns ERROR_SEM_OWNER_DIED from the query should
+be closed by calling<A><!-- external link: 1D 67 C3 FC --> DosCloseMutexSem</A>.
+Also, because semaphore handles can be reused, the mutex semaphores that
+are closed should be deleted from the muxwait-semaphore list by calling
+<A><!-- external link: 1D 78 C3 FC -->DosDeleteMuxWaitSem</A>.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If any of the mutex semaphores in the muxwait list
+are owned by the calling thread, ERROR_MUTEX_OWNED is returned.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="164_L3_ClosingaMuxwaitSemap.html">[Back: Closing a Muxwait Semaphore]</A> <BR>
+<A HREF="166_L3_AddingaSemaphoretoaM.html">[Next: Adding a Semaphore to a Muxwait List]</A> 
+</BODY>
+</HTML>

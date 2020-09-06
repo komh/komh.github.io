@@ -1,0 +1,133 @@
+<HTML>
+<HEAD>
+<TITLE>Kernel Support</TITLE>
+</HEAD>
+<BODY>
+<H1>Kernel Support</H1><!-- entering slot 307 -->
+<P>
+As well as providing support for DPMI service requests issued by applications,
+the operating system must also provide support for the internal control
+functions of the DPMI host.  This support is provided by various components
+of the operating system kernel.
+<P>
+<B>8086 Emulation</B>
+<P>
+The 8086 Emulation component of MVDM emulates the 8086 hardware environment,
+and therefore provides a number of services which are used by DPMI.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><I>DPMI task entry, termination, mode tracking, control
+</I>
+<P>
+When the application calls the protect mode entry to switch to protected
+mode, 8086 Emulation sets up tables for reflection of interrupts and exceptions.
+ If the DPMI API Layer fails to complete the creation call, 8086 Emulation
+cleans up and returns the error to the application.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><I>VDH service support</I>
+<P>
+All support for VDH services to the DPMI API Layer is provided through 8086
+Emulation.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><I>Get/set support for protected mode handler interrupt
+and exception handlers</I>.
+<P>
+Protected mode applications get and set vectors as in DOS.  8086 Emulation
+maintains tables of protected mode interrupt handlers and exception handlers.
+<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><I>Interrupt and exception reflection to protected
+mode</I>
+<P>
+8086 Emulation virtualizes interrupts for VDMs.  The reflection of "real
+mode" interrupts to protected mode for DPMI applications is therefore performed
+with the aid of 8086 Emulation.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><I>Protected mode interrupt flag virtualization</I>
+<P>
+8086 Emulation virtualizes the IF flag while in protected mode.  In V86
+mode, IOPL is usually 3 and applications directly change IF without trapping.
+ IF flag virtualization is not done while in V86 mode because IOPL must
+be 3 to cut down on overhead.  In protected mode, IOPL cannot be 3; otherwise
+no port protection is possible.  Therefore, the IF flag is virtualized.
+ This prevents VDMs from blocking real interrupts when running in protected
+mode.
+<P>
+To determine if interrupts are allowed in a VDM that has a DPMI application
+running, the real IF bit in the CRF is checked.  If interrupts are disabled
+here, then they are disabled.  Otherwise, the virtual IF flag indicates
+whether interrupts are disabled.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><I>HW interrupt support for the Virtual Programmable
+Interrupt Controller</I>
+<P>
+8086 Emulation exports a VDH service to accept notification from the VPIC
+when it starts and stops hardware interrupt reflection.  8086 Emulation
+also tracks which hardware interrupts are hooked.  The VPIC allocates and
+initializes the buffer at creation time in each VDM.
+<P>
+Any VDD can use this structure to determine if a particular IRQ is hooked.
+ The timer VDD, for example, can use this to avoid delivering timer ticks
+when the timer tick interrupts are not hooked in either protected mode or
+in V86 mode.
+<P>
+When software interrupts are hooked, 8086 Emulation refers to this structure
+to determine if the interrupt is a hardware interrupt.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><I>Services to read/write user space with exception
+handling</I><!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><I>Kernel and VDH service changes for exception handling
+when accessing user address space</I>.
+<P>
+Services called when the client is in protected mode, and which manipulate
+the protected mode client address space, must be written to handle protected
+mode user space access exceptions.  Services that cannot be called when
+the client is in protected mode must specify this in their headers.
+<P>
+When a service can fault in protected mode, it must return a failure indication
+to the DPMI client.  The client then cleans up and exits protected mode
+so that the exception can be reflected to the VDM (in V86 mode). This error
+also indicates whether a protected mode exception handler will be called.
+<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+<B>Debug Watchpoint Management</B>
+<P>
+Coordinates watchpoint use with OS/2 protected mode and kernel debugger.
+
+<P>
+<B>Memory Management</B>
+<P>
+Among the kernel services provided by the Virtual Memory Manager are:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Allocate VDM LDT<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Free VDM LDT<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Allocate contiguous set of LDT descriptors<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Free descriptor<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Query maximum private linear address and ranges of
+physical memory<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Query maximum linear<!-- entering slot 308 --> region
+and swap space available<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Other memory management services generally used by
+the kernel, such as services to allocate, free, and set sparse allocations,
+are also used.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+Once descriptors are allocated they are changed directly by the DPMI API
+layer. Applications set descriptors only through requests to the DPMI API
+layer, which prevents settings that compromise protection.
+
+<P><HR>
+
+<A HREF="266_L3_DPMIServices.html">[Back: DPMI Services]</A> <BR>
+<A HREF="268_L3_Ring0Exceptions.html">[Next: Ring 0 Exceptions]</A> 
+</BODY>
+</HTML>

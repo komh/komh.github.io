@@ -1,0 +1,89 @@
+<HTML>
+<HEAD>
+<TITLE>Associating a CODEC with a File</TITLE>
+</HEAD>
+<BODY>
+<H1>Associating a CODEC with a File</H1><!-- entering slot 158 -->
+<P>
+The following example illustrates how to associate a CODEC procedure with
+a file (track).
+<PRE>LONG ioAssociateCodec ( PMMIOINFO pmmioinfo,
+                        PINSTANCE pinstance,
+                        PCODECASSOC pcodecassoc )
+
+{
+   LONG              rc = MMIO_SUCCESS; /* Return code of IOProc's call.*/
+   PCCB              pccb;
+   ULONG             hCodec;  /* Possibly returned from ioLoadCodecDLL */
+
+   /* Check for NULL pointers */
+   if (!pcodecassoc-&gt;pCodecOpen || !pcodecassoc-&gt;pCODECIniFileInfo) {
+      return (MMIOERR_INVALID_PARAMETER);
+      }
+
+   /* Force the correct values into the CODECINIFILEINFO structure */
+   pcodecassoc-&gt;pCODECIniFileInfo-&gt;ulStructLen = sizeof(CODECINIFILEINFO);
+   pcodecassoc-&gt;pCODECIniFileInfo-&gt;fcc = pmmioinfo-&gt;fccIOProc;
+   pcodecassoc-&gt;pCODECIniFileInfo-&gt;ulCapsFlags |= CODEC_COMPRESS;
+
+   /* Find the codec to load */
+   if (rc = ioDetermineCodec(pinstance, 0, pcodecassoc-&gt;pCODECIniFileInfo))
+      {
+      return(rc); /* return error */
+      }
+
+   else { /* load and open the compression CODEC */
+
+      /***********************************************/
+      /* Check for previously installed CODECs.      */
+      /* De-install any loaded.  Load new one.       */
+      /* Allows only 1 CODEC to be loaded at a time. */
+      /***********************************************/
+      if (pinstance-&gt;pccbList) {
+         pccb = pinstance-&gt;pccbList;
+         pinstance-&gt;pccbList = pccb-&gt;pccbNext;   /* unlink from list */
+         ioCloseCodec(pccb);
+         }
+
+      /* Load the CODEC DLL */
+      if (pccb = ioLoadCodecDLL(pinstance,
+                                pcodecassoc-&gt;pCODECIniFileInfo,
+                                &amp;hCodec)) {
+
+         /* Save the CODEC open information in the ccb */
+         ((PCODECOPEN)pcodecassoc-&gt;pCodecOpen)-&gt;ulFlags |= CODEC_COMPRESS;
+         /* Force open of compressor */
+
+         if (!(rc = ioInitCodecopen(pccb,(PCODECOPEN)pcodecassoc-&gt;
+            pCodecOpen))) {
+
+            /* Open the CODEC */
+            if (!(rc = pccb-&gt;pmmioproc(&amp;hCodec,
+                                       MMIOM_CODEC_OPEN,
+                                       (LONG)&amp;pccb-&gt;codecopen,
+                                       0L)))  {
+               pccb-&gt;hCodec = hCodec;       /* save handle to CODEC */
+               }
+            }
+
+         /* handle error conditions */
+         if (rc) {
+            pinstance-&gt;pccbList = pccb-&gt;pccbNext;   /* unlink from list */
+            ioCloseCodec(pccb);
+            }
+         }
+      else {
+         rc = MMIO_ERROR;
+         }
+      }
+   return(rc);
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="123_L3_Compression.html">[Back: Compression]</A> <BR>
+<A HREF="125_L4_AllocatingMemoryforC.html">[Next: Allocating Memory for Compression]</A> 
+</BODY>
+</HTML>

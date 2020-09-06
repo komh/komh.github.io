@@ -1,0 +1,78 @@
+<HTML>
+<HEAD>
+<TITLE>Using the Command Message Interface</TITLE>
+</HEAD>
+<BODY>
+<H1>Using the Command Message Interface</H1><!-- entering slot 26 -->
+<P>
+To use the command message interface to communicate with a device, an application
+calls mciSendCommand and passes the command message MCI_OPEN. If the request
+is successful, a device handle for access to the device context is returned
+in the<I> usDeviceID</I> field of the MCI_OPEN_PARMS data structure. This
+handle is retained for use in subsequent message commands.
+<P>
+An alias can be specified with the MCI_OPEN_ALIAS flag in the command message
+MCI_OPEN.  Commands can then be issued to the device context by means of
+the string interface.
+<P>
+The following code fragment shows the opening of devices in the Duet Player
+I sample program.  The<I> hwndCallback</I> field contains the application's
+main window procedure so that the MM_MCIPASSDEVICE messages are sent to
+it when the duet player gains or passes control of the device.  The device
+ID and type fields of the structure are not needed because the audio file
+name is specified as the element field of the structure.  This causes the
+Media Device Manager (MDM) to open the appropriate device based on the file
+name extension.  Once the MCI_OPEN_PARMS structure is initialized, an MCI_OPEN
+command is specified with the mciSendCommand function for each separate
+part of the duet.
+<PRE> /*
+  * Open one part of the duet. The first step is to initialize an
+  * MCI_OPEN_PARMS data structure with the appropriate information,
+  * then issue the MCI_OPEN command with the mciSendCommand function.
+  * We will be using an open with only the element name specified.
+  * This will cause the default connection, as specified in the
+  * MMPM.INI file, for the data type.
+  */
+mopDuetPart.hwndCallback   = (ULONG)  hwnd; /* For MM_MCIPASSDEVICE */
+mopDuetPart.usDeviceID     = (USHORT) NULL; /* this is returned    */
+mopDuetPart.pszDeviceType  = (PSZ)    NULL; /* using default conn. */
+mopDuetPart.pszElementName = (PSZ)   aDuet[sDuet].achPart1;
+
+
+     ulError = mciSendCommand( (USHORT) 0,
+                               MCI_OPEN,
+                               MCI_WAIT | MCI_OPEN_ELEMENT |
+                               MCI_OPEN_SHAREABLE | MCI_READONLY,
+                               (PVOID) &amp;mopDuetPart,
+                               UP_OPEN);
+
+
+     if (!ulError)  /* if we opened part 1 */
+     {
+        usDuetPart1ID = mopDuetPart.usDeviceID;
+
+        /*
+         * Now, open the other part
+         */
+        mopDuetPart.pszElementName    = (PSZ)   aDuet[sDuet]achPart2;
+
+        ulError = mciSendCommand( (USHORT) 0,
+                                  MCI_OPEN,
+                                  MCI_WAIT | MCI_OPEN_ELEMENT |
+                                  MCI_OPEN_SHAREABLE | MCI_READONLY,
+                                  (PVOID) &amp;mopDuetPart,
+                                  UP_OPEN);
+
+        if (!ulError)  /* if we opened part 2 */
+        {
+           usDuetPart2ID = mopDuetPart.usDeviceID;
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="021_L3_DeviceAlias.html">[Back: Device Alias]</A> <BR>
+<A HREF="023_L2_MemoryPlaylists.html">[Next: Memory Playlists]</A> 
+</BODY>
+</HTML>

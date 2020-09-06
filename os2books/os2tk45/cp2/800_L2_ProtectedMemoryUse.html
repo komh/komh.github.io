@@ -1,0 +1,152 @@
+<HTML>
+<HEAD>
+<TITLE>Protected Memory Use</TITLE>
+</HEAD>
+<BODY>
+<H1>Protected Memory Use</H1><!-- entering slot 816 -->
+<P>
+OS/2 provides shared library support in the form of 32-bit DLLs.  All 32-bit
+dynamic links or APIs are called using near CALL or RET instructions, so
+the cost of making dynamic-link calls should be significantly less than
+the cost of making the comparable calls in the 16-bit version of OS/2, where
+a far CALL is required.  The DLLs execute in the context of the caller.
+
+<P>
+All 32-bit DLLs are mapped into the appropriate shared memory region of
+the requesting processes at load time and execute at ring 3 without IOPL.
+ This model's protection characteristics correspond closest to the ring
+3 dynamic-linking model in the 16-bit version of OS/2. The following figure
+shows how 32-bit DLLs are implemented in the linear memory model of OS/2.
+
+<PRE>  4GÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+    ³ System Area  ³
+512MÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+    ³              ³
+    ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+    ³  32 Bit DLL  ³
+    ÃÄÄÄÄÄÄÄÄÂÄÄÄÄÄ´
+    ³       ³     ³
+    ³     ³  ³     ³
+    ³ Call³  ³Ret  ³
+    ³Near ³  ³Near ³
+    ³     ³  ³     ³
+    ³     ³  ³     ³
+    ³     ³       ³
+    ÃÄÄÄÄÄÁÄÄÄÄÄÄÄÄ´
+    ³  32 Bit EXE  ³
+    ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+    ³              ³
+   0ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+A 32-Bit DLL
+<P>
+
+<P>
+However, since 32-bit EXE programs can address the entire address space
+with a 32-bit offset, it is easier for a 32-bit application programmer to
+potentially cast a bad pointer to data in the shared region than in the
+16-bit segmented addressing scheme.  Since many subsystems have semaphores
+and other shared data structures in the shared region, the potential for
+an inadvertently errant application to affect another process sharing a
+subsystem becomes an issue in the flat environment.  Therefore, OS/2 provides
+a mechanism for DLLs to protect their critical shared global data regions
+from 32-bit EXEs.  This mechanism prevents a thread in one process from
+potentially affecting other processes using the same resources (subsystems),
+or potentially taking down the entire workstation if the compromised subsystem
+is critical (such as PM).
+<P>
+
+<P>
+OS/2 enables existing 16-bit DLLs and new 32-bit DLLs to get their shared
+global data allocated into a single protected region that is not accessible
+by 32-bit EXEs, thereby achieving a level of protection.  There is no provision
+for protecting DLLs from each other or from threads executing 16-bit EXE
+modules.  The MEMMAN CONFIG.SYS line supports a "PROTECT/NOPROTECT" option,
+as follows, for enabling or disabling memory protection:
+<PRE>MEMMAN=SWAP,PROTECT
+</PRE>
+
+<P>
+If neither PROTECT nor NOPROTECT is specified, the default is protection
+enabled (PROTECT).
+<P>
+When protection is enabled, the memory manager reserves a 64M region of
+the linear address space below the 512MB line; this is called the<I> protected
+region</I>.  Protected objects are allocated within the protected region.
+ The following types of memory are considered protected:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+DLL Global Data<!-- lm: 0x2 26 -->
+<UL> Global data that is part of the
+DLL image when loaded.  This is only global shared data, not<!-- entering slot 817 --> instance
+data.  Although DLL code is shared, it is not allocated in the protected
+region since it is read-only.<!-- lm: 0x2 1 -->
+</UL> DLL Run-Time Shared
+Data<!-- lm: 0x2 26 -->
+<UL> Global data that is allocated at runtime by
+a thread executing in DLL code that is a protected API.  This includes 16-
+and 32-bit, named and unnamed, shared memory, and shared memory allocated
+with DosAllocSeg with the share flag set.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The DS value that is used for the user address space (FlatDS) no longer
+references a descriptor with a 512MB limit.  Instead the system exports
+another DS value for the user address space called the ProtDS that does
+have the 512MB limit-the FlatDS limit is reduced by the size of the protected
+region.  When a 32-bit EXE is executing, it runs with the FlatDS and is
+unable to access protected objects created by 16-bit, 32-bit, or 16- and
+32-bit DLLs.  If the thread calls a 16-bit DLL API entry point, the DLL
+will have addressability to the protected region through the LDT.  If the
+thread calls a 32-bit DLL entry point that is protected, the 32-bit DLL
+entry point contains code to switch to the ProtDS so that the protected
+region is accessible-the 32-bit DLL switches back to the FlatDS before completing
+service. A switch on the C compiler is used to generate the code sequence
+as shown in the following figure.
+<PRE>DLLAPI  proc    push    ds
+    push    es
+    mov     dx, seg FLAT:DGROUP
+    mov     ds, dx
+    mov     es, dx
+
+    .....
+
+    pop     es
+    pop     ds
+    ret
+DLLAPI  endp
+</PRE>
+
+<P>
+Although SS is not loaded with the ProtDS, a subsystem that switches stacks
+to a protected stack must write some assembler code to change ESP-thus the
+subsystem also should set up SS to be the ProtDS when performing the stack
+switch.
+<P>
+When protection is not enabled, FlatDS=ProtDS and the code still works the
+same.
+<P>
+<B>Note: </B> The system currently is not sensitive to whether parameters
+are being validated relative to the FlatDS or the ProtDS when ring 0 kernel
+APIs are called.  Also the 3216 thunks do not probe 32-bit parameters before
+converting them and passing them to a 16-bit DLL.
+<P>
+The grouping of protected allocations can be enabled or disabled on a per
+DLL basis.  For 32-bit DLLs, the Linker uses the PROTECT parameter in the
+DEF file to provide protection information in the DLL's module flags to
+the loader.  All 16-bit modules requiring protection must be specified with
+the new PROTECT16 CONFIG.SYS parameter.
+<PRE>PROTECT16=DLLNAME1,DLLNAME2,...,DLLNAMEX
+</PRE>
+
+<P>
+Notice that the DLL suffix is not required.  Only DLL files can get the
+protection.
+
+<P><HR>
+
+<A HREF="799_L3_LinkingatRuntime.html">[Back: Linking at Runtime]</A> <BR>
+<A HREF="801_L2_DLLSideEffects.html">[Next: DLL Side Effects]</A> 
+</BODY>
+</HTML>

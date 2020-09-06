@@ -1,0 +1,154 @@
+<HTML>
+<HEAD>
+<TITLE>Using the Debugging Function</TITLE>
+</HEAD>
+<BODY>
+<H1>Using the Debugging Function</H1><!-- entering slot 677 -->
+<P>
+<A><!-- external link: 1D 75 C3 54 -->DosDebug</A>  provides a set of commands
+that permit one process to control another process for debugging.
+<P>
+In the following code fragment, the calling process uses<A><!-- external link: 1D 75 C3 54 --> DosDebug
+</A> to modify a word in a controlled process. All the necessary steps have
+already been taken so that the calling process controls the second process-the
+process identifier of the controlled process has been placed into<I> PID</I>,
+the address of the word to be modified in the controlled process has been
+placed into<I> Addr</I>, and the value to be substituted in the controlled
+process has been placed into<I> Value</I>.
+<P>
+(Due to the size of the<I> debug_buffer</I> data structure, the code fragment
+has been divided into two figures. If you were actually entering this into
+a program, the information would be together as if it were all one figure.)
+
+<P>
+<B>Note: </B> In the example code fragments that follow, error checking
+was left out to conserve space. Applications should always check the return
+code that the functions return. Control Program functions return an APIRET
+value. A return code of 0 indicates success. If a non-zero value is returned,
+an error occurred.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<PRE>    #define INCL_DOSPROCESS   /* Process and thread values */
+    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+
+    struct debug_buffer {
+        ULONG   Pid;        /* Debuggee Process ID       */
+        ULONG   Tid;        /* Debuggee Thread ID        */
+        LONG    Cmd;        /* Command or Notification   */
+        LONG    Value;      /* Generic Data Value        */
+        ULONG   Addr;       /* Debuggee Address          */
+        ULONG   Buffer;     /* Debugger Buffer Address   */
+        ULONG   Len;        /* Length of Range           */
+        ULONG   Index;      /* Generic Identifier Index  */
+        ULONG   MTE;        /* Module Table Entry Handle */
+        ULONG   EAX;        /* Register Set              */
+        ULONG   ECX;
+        ULONG   EDX;
+        ULONG   EBX;
+        ULONG   ESP;
+        ULONG   EBP;
+        ULONG   ESI;
+        ULONG   EDI;
+        ULONG   EFlags;
+        ULONG   EIP;
+        ULONG   CSLim;      /* Byte Granular Limits      */
+        ULONG   CSBase;     /* Byte Granular Base        */
+        UCHAR   CSAcc;      /* Access Bytes              */
+        UCHAR   CSAtr;      /* Attribute Bytes           */
+        USHORT  CS;
+        ULONG   DSLim;
+        ULONG   DSBase;
+        UCHAR   DSAcc;
+        UCHAR   DSAtr;
+        USHORT  DS;
+        ULONG   ESLim;
+        ULONG   ESBase;
+        UCHAR   ESAcc;
+        UCHAR   ESAtr;
+        USHORT  ES;
+        ULONG   FSLim;
+        ULONG   FSBase;
+        UCHAR   FSAcc;
+        UCHAR   FSAtr;
+        USHORT  FS;
+        ULONG   GSLim;
+        ULONG   GSBase;
+        UCHAR   GSAcc;
+        UCHAR   GSAtr;
+        USHORT  GS;
+        ULONG   SSLim;
+        ULONG   SSBase;
+        UCHAR   SSAcc;
+        UCHAR   SSAtr;
+        USHORT  SS;
+    };
+</PRE>
+
+<PRE>    struct  debug_buffer  DbgBuf;      /* Debug buffer                         */
+    ULONG   ulPID;                     /* Process ID of the controlled process */
+    ULONG   ulAddr;                    /* Address in the controlled process    */
+    LONG    lValue;                    /* Value to be substituted in the       */
+                                       /* controlled process                   */
+    APIRET  ulrc;                      /* Return code                          */
+
+    DbgBuf.Cmd = DBG_C_WriteMem;       /* Indicate that a Write Word           */
+                                       /* command is requested                 */
+
+    DbgBuf.Pid = ulPID;                /* Place PID of controlled process      */
+                                       /* into the debug buffer                */
+
+    DbgBuf.Addr = ulAddr;              /* Place the word address (within the   */
+                                       /* controlled process) into the debug   */
+                                       /* buffer                               */
+
+    DbgBuf.Value = lValue;             /* Place the value to be updated into   */
+                                       /* the specified word of the controlled */
+                                       /* process                              */
+
+    ulrc = DosDebug(&amp;DbgBuf);
+
+    if (ulrc != 0) {
+       printf("DosDebug error: return code = %ld",
+              ulrc);
+       return;
+    }
+
+    /* Be sure to check DbgBuf.Cmd for the notification returned <!-- entering slot 678 -->by DosDebug */
+
+</PRE>
+
+<P>
+The<I> Cmd</I> field in the debug buffer is used for two purposes. On input,
+the<I> Cmd</I> field is used to pass the commands that direct<A><!-- external link: 1D 75 C3 FC --> DosDebug</A>'s
+activities. On output, the<I> Cmd</I> field is used by<A><!-- external link: 1D 75 C3 26 --> DosDebug
+</A>to return a notification indicating the events and activities that occurred
+during the call.
+<P>
+If<A><!-- external link: 1D 75 C3 26 --> DosDebug</A> returns no error,
+a notification resides in the<I> Cmd</I> field of the debug buffer. The
+data returned with the notification varies, depending on the command passed
+in the<I> Cmd</I> field of the debug buffer data structure when<A><!-- external link: 1D 75 C3 26 --> DosDebug
+</A>was called.
+<P>
+Not all fields in the debug buffer have to be defined on every<A><!-- external link: 1D 75 C3 26 --> DosDebug
+</A> command. The same field can have a different meaning in different<A><!-- external link: 1D 75 C3 26 --> DosDebug
+</A>commands.
+<P>
+Some notifications (such as DBG_N_ModuleLoad and DBG_N_NewProc) might require
+multiple returns to the debugger. These additional, pending notifications
+will be returned before the process being debugged is permitted to execute
+any more user code, and will be returned on the Go, Single Step, or Stop
+commands.
+<P>
+Additional notifications can be pending at any time, so a debugger must
+be ready to handle any notification any time a Go, Single Step, or Stop
+command is called.
+
+<P><HR>
+
+<A HREF="667_L2_AboutDebugging.html">[Back: About Debugging]</A> <BR>
+<A HREF="669_L2_DebuggingonOS2WarpPo.html">[Next: Debugging on OS/2 Warp (PowerPC Edition)]</A> 
+</BODY>
+</HTML>

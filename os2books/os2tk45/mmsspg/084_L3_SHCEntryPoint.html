@@ -1,0 +1,124 @@
+<HTML>
+<HEAD>
+<TITLE>SHCEntryPoint</TITLE>
+</HEAD>
+<BODY>
+<H1>SHCEntryPoint</H1><!-- entering slot 106 -->
+<P>
+As illustrated in the following example, a device driver stream handler
+implements function through two additional entry points:  SHCEntryPoint
+and SHDEntryPoint.
+<P>
+Device driver stream handlers receive commands from the Sync/Stream Manager
+to initialize and perform streaming functions. These stream handler commands
+(SHCs) are accessible through a single entry point, SHCEntryPoint. The main
+routine is an IDC interface with the Sync/Stream Manager Device Driver.
+The SSM calls the device driver stream handler by issuing stream programming
+interface (SPI) functions such as SpiCreateStream, SpiStartStream, and SpiStopStream.
+
+<P>
+The following example illustrates the code implementation of the SHCEntryPoint.
+
+<PRE>RC  DDCMDEntryPoint(PDDCMDCOMMON pCommon); /* PDD entry point from SH */
+RC  SHDEntryPoint(PSHD_COMMON pCommon);    /* SH entry point from PDD */
+RC  SHCEntryPoint(PSHC_COMMON pCommon);    /* SH entry point from SSM */
+RC  SMHEntryPoint(PSHC_COMMON pCommon);    /* SSM entry point from SH */
+
+ULONG   (*ShcFuncs[])(PVOID pCommon) = {   /* SHC function jump table */
+                SHCAssociate,                   /* 0 */
+                SHCClose,                       /* 1 */
+                SHCCreate,                      /* 2 */
+                SHCDestroy,                     /* 3 */
+                SHCStart,                       /* 4 */
+                SHCStop,                        /* 5 */
+                SHCSeek,                        /* 6 */
+                SHCEnableEvent,                 /* 7 */
+                SHCDisableEvent,                /* 8 */
+                SHCEnableSync,                  /* 9 */
+                SHCDisableSync,                 /* 10 */
+                SHCGetTime,                     /* 11 */
+                SHCGetProtocol,                 /* 12 */
+                SHCInstallProtocol,             /* 13 */
+                SHCEnumerateProtocols,          /* 14 */
+                SHCNegotiateResult              /* 15 */
+                };
+USHORT  MaxShcFuncs = sizeof(ShcFuncs)/sizeof(USHORT);
+
+/**********************************************************************/
+
+RC      SHCEntryPoint(pCommon)
+PSHC_COMMON     pCommon;
+{
+      if (pCommon-&gt;ulFunction &gt; (ULONG)MaxShcFuncs)
+              return(ERROR_INVALID_FUNCTION);
+                                          /* Check for valid function */
+
+return(ShcFuncs[pCommon-&gt;ulFunction](pCommon));
+}                                         /* Call SHC message         */
+
+/**********************************************************************/
+
+RC SHCStart(PPARM_START pStart)
+{
+   PSTREAM         pSTREAM;             /* Ptr to current stream */
+   DDCMDREADWRITE  DDCMDReadWrite;
+   DDCMDCONTROL    DDCMDControl;
+   ulRC            rc;                  /* Return code           */
+
+
+   if (rc = GetStreamEntry(&amp;pSTREAM, pStart-&gt;hstream))
+                return(rc);
+
+   EnterCritSec;                           /* Disable interrupts */
+
+
+   switch (pSTREAM-&gt;ulStateFlg) {
+     case STREAM_RUNNING:
+         /*********************************************************/
+         /* Get a full buffer for playback                        */
+         /*********************************************************/
+         ParmNotify.ulFunction = SMH_NOTIFY;
+         ParmNotify.hid = pSTREAM-&gt;hid;
+         ParmNotify.hstream = pSTREAM-&gt;hStream;
+         ParmNotify.ulGetNumEntries = 1;
+         ParmNotify.ulRetNumEntries = 0;
+         ParmNotify.pGetBufTab = &amp;(pSTREAM-&gt;BufTab.aBufTab[usBufTabIndex]);
+         ParmNotify.pRetBufTab = NULL;
+         ParmNotify.ulFlags = BUF_GETFULL;
+         SMHEntryPoint(&amp;ParmNotify);
+
+         /**********************************************************/
+         /* Send full buffer to device (PDD)                       */
+         /**********************************************************/
+
+         DDCMDReadWrite.hStream = (*ppSTREAM)-&gt;hStream;
+         DDCMDReadWrite.ulFunction = DDCMD_WRITE;
+         DDCMDReadWrite.pBuffer = pCurrentBufTab-&gt;pBuffer;
+         DDCMDReadWrite.ulBufferSize = pCurrentBufTab-&gt;ulLength;
+         rc = (*pSTREAM-&gt;pDDCMDEntryPoint)(&amp;DDCMDReadWrite);
+
+         /*********************************************************/
+         /* Start the device                                      */
+         /*********************************************************/
+
+         DDCMDControl.ulFunction = DDCMD_CONTROL;
+         DDCMDControl.hStream = pSTREAM-&gt;hStream;
+         DDCMDControl.pParm = NULL;
+         DDCMDControl.ulParmSize = NULL;
+         DDCMDControl.ulCmd = DDCMD_START;
+         rc = (*pSTREAM-&gt;pDDCMDEntryPoint)(&amp;DDCMDControl);
+         break;
+
+    }
+    ExitCritSec;
+        return(rc);
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="083_L3_DDCMDEntryPoint.html">[Back: DDCMDEntryPoint]</A> <BR>
+<A HREF="085_L3_SHDEntryPoint.html">[Next: SHDEntryPoint]</A> 
+</BODY>
+</HTML>

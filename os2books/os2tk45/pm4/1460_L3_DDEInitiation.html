@@ -1,0 +1,86 @@
+<HTML>
+<HEAD>
+<TITLE>DDE Initiation</TITLE>
+</HEAD>
+<BODY>
+<H1>DDE Initiation</H1><!-- entering slot 1489 -->
+<P>
+A client application initiates a DDE conversation by calling WinDdeInitiate,
+specifying the server application-name string and the topic-name string.
+WinDdeInitiate fills a DDEINIT data structure with the specified strings,
+then sends a WM_DDE_INITIATE message to all frame windows that have HWND_DESKTOP
+as their parent. The message contains the handle of the client application
+and a pointer to the DDEINIT data structure. The following figure illustrates
+the DDEINIT data structure:
+<PRE>     typedef struct _DDEINIT
+     {
+       ULONG   cb;
+       PSZ     pszAppName;
+       PSZ     pszTopic;
+       USHORT  usConvContext;
+      } DDEINIT;
+
+</PRE>
+
+<P>
+Because the message is sent rather than posted, WinDdeInitiate requires
+a response from all recipients of the message before it returns control
+to the client application.
+<P>
+Any potential server must contain a<I> server window</I>, a top-level frame
+window that has been subclassed to receive and process WM_DDE_INITIATE messages.
+When a server window receives WM_DDE_INITIATE, it examines the application-name
+and topic-name strings in the DDEINIT data structure. If the application-name
+string matches and the server supports the requested topic, the server acknowledges
+the client's request.
+<P>
+Either the application-name or topic-name string can be zero-length. If
+the application-name string is zero-length, all servers check the topic-name
+string. Each server that supports the topic sends a separate acknowledgment
+to the client. If the topic-name string is zero-length, the server sends
+an acknowledgment for each supported topic. Using zero-length strings, a
+client can obtain the names of all the active servers in the system or the
+names of all the topics a server supports.
+<P>
+The following pseudocode shows how servers respond to WM_DDE_INITIATE messages:
+
+<PRE>    If (specific app requested and server is instance of app) or
+       (specific app not requested)
+    {
+
+         If (specific topic requested)
+              If (server can support topic)
+
+                   acknowledge the requested topic
+
+         else
+              acknowledge each supported topic
+    }
+
+</PRE>
+
+<P>
+A server acknowledges its support of a specific topic by calling WinDdeRespond,
+specifying the handle of its server window, its application name, and the
+name of the supported topic. WinDdeRespond fills a DDEINIT data structure
+with the specified strings, then sends a WM_DDE_INITIATEACK message to the
+client. The message contains the handle of the server window and a pointer
+to the DDEINIT data structure.  The client examines the topic-name string
+in the DDEINIT data structure and decides whether to begin a transaction
+on the topic.
+<P>
+If two applications agree on some unspecified protocol and can exchange
+window handles by some means, they can use DDE messages on those window
+handles without going through an initiate sequence.
+<P>
+An application does not need to fill in a DDEINIT data structure; WinDdeInitiate
+and WinDdeRespond automatically fill the data structure. However, applications
+must extract the application name and topic name from the DDEINIT data structure
+when receiving a WM_DDE_INITIATE or WM_DDE_INITIATEACK message.
+
+<P><HR>
+
+<A HREF="1459_L3_TheSystemTopic.html">[Back: The System Topic]</A> <BR>
+<A HREF="1461_L3_SharedMemoryObject.html">[Next: Shared-Memory Object]</A> 
+</BODY>
+</HTML>

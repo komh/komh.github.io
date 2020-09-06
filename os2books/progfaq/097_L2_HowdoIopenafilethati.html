@@ -1,0 +1,95 @@
+<HTML>
+<HEAD>
+<TITLE>How do I open a file that is already in use?</TITLE>
+</HEAD>
+<BODY>
+<H1>How do I open a file that is already in use?</H1><!-- entering slot 115 -->
+<P>
+Use DosOpen with OPEN_SHARE_DENYNONE.
+<PRE>/* this will copy an open program */
+
+#define INCL_NOPM
+#define INCL_DOS
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+void usage(void)
+{
+    printf("USAGE: CopyOpen &lt;source file&gt; &lt;dest file&gt;\n\n");
+    printf("       This program,  unlike the normal copy and xcopy commands,\n");
+    printf("       will copy an open file.\n");
+    printf("NOTE:  Wildcards are not supported\n");
+}
+
+int cdecl main(int argc, char **argv)
+{
+    HFILE hf, hfOut;
+    USHORT usAction, rc, bytesRead, bytesWriten ;
+    static BYTE buf[4096];
+    long total=0l;
+    int error = FALSE;
+
+    if(argc!=3){
+        usage();
+        return 1;
+    }
+    rc = DosOpen(strupr(argv[1]),
+        &amp;hf,
+        &amp;usAction,
+        0L,
+        FILE_NORMAL,
+        FILE_OPEN,
+        OPEN_ACCESS_READONLY | OPEN_SHARE_DENYNONE,
+        0L);
+    if(rc){
+        printf("SYS%04u: Could not open %s for read.\n", rc, argv[1]);
+        return 3;
+    }
+    rc = DosOpen(strupr(argv[2]),
+        &amp;hfOut,
+        &amp;usAction,
+        0L,
+        FILE_NORMAL,
+        FILE_CREATE | FILE_TRUNCATE,
+        OPEN_ACCESS_WRITEONLY | OPEN_SHARE_DENYREADWRITE,
+        0L);
+    if(rc){
+        printf("SYS%04u: Could not open %s for write.\n", rc, argv[2]);
+        return 3;
+    }
+    else{
+        do{
+            rc = DosRead(hf, buf, sizeof(buf), &amp;bytesRead);
+            if(!rc){
+               rc = DosWrite(hfOut, buf, bytesRead, &amp;bytesWriten);
+               if(!rc) total += bytesWriten;
+            }
+        }while(!rc &amp;&amp;
+               sizeof(buf) == bytesRead &amp;&amp;
+               bytesRead == bytesWriten);
+        if(rc){
+            printf("SYS%04u: while copying.\n", rc);
+            error = TRUE;
+        }
+        if(bytesRead != bytesWriten){
+            printf("Disk full?\n");
+            error = TRUE;
+        }
+        DosClose(hf);
+        if(!error)
+            printf("%lu bytes copied.\n", total);
+    }
+    return( error? 3 : 0);
+}
+</PRE>
+
+<P>
+Credit:  Peter Fitzsimmons 
+
+<P><HR>
+
+<A HREF="096_L2_WhyshouldIuse_begint.html">[Back: Why should I use _beginthread instead of DosCreateThread?]</A> <BR>
+<A HREF="098_L2_CanweuseVioinv20Wher.html">[Next: Can we use Vio in v2.0? Where are the docs for it?]</A> 
+</BODY>
+</HTML>

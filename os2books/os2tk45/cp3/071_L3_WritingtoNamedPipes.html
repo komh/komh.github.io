@@ -1,0 +1,72 @@
+<HTML>
+<HEAD>
+<TITLE>Writing to Named Pipes</TITLE>
+</HEAD>
+<BODY>
+<H1>Writing to Named Pipes</H1><!-- entering slot 75 -->
+<P>
+Both the server and the client processes write to a pipe by calling<A><!-- external link: 1D 0F C4 FC --> DosWrite</A>.
+The server writes to the handle that was returned to it by<A><!-- external link: 1D 71 C3 FC --> DosCreateNPipe</A>,
+and the client writes to the handle that was returned to it by<A><!-- external link: 1D 9F C3 FC --> DosOpen</A>.
+
+<P>
+Either bytes or messages can be written, depending on whether the pipe was
+created as a byte pipe or as a message pipe.
+<P>
+Named pipes created with the NP_ACCESS_OUTBOUND access mode cannot use the
+<A><!-- external link: 1D 0F C4 3A -->DosWrite</A> function. If the named
+pipe's client uses the<A><!-- external link: 1D 0F C4 3A --> DosWrite</A> function,
+the function returns error code 5 (ERROR_ACCESS_DENIED).
+<P>
+An attempt to write to a pipe whose other end has been closed returns ERROR_BROKEN_PIPE
+or, if the other end was closed without without reading all pending data,
+ERROR_DISCARDED.
+<P>
+When a process writes to a message pipe, the buffer-length parameter for
+<A><!-- external link: 1D 0F C4 3A -->DosWrite</A> holds the size of the
+message that the process is writing. Because<A><!-- external link: 1D 0F C4 3A --> DosWrite
+</A>automatically encodes message lengths in the pipe, applications do not
+have to encode this information in the data buffers.
+<P>
+The action taken by<A><!-- external link: 1D 0F C4 3A --> DosWrite</A> depends
+on the blocking mode of the pipe, which is not necessarily the same for
+the server and client ends of the pipe. For the server process, the blocking
+mode of the pipe is specified when the pipe is created. For a client process,
+the blocking mode is automatically set to blocking when the pipe is opened.
+The blocking mode can also be reset by calling<A><!-- external link: 1D F0 C3 FC --> DosSetNPHState</A>.
+
+<P>
+If the end of the message pipe that is being written to is in blocking mode,
+<A><!-- external link: 1D 0F C4 3A -->DosWrite</A> does not return until
+all of the requested bytes have been written. (It might have to wait for
+the first part of the message to be read before it can write the rest of
+the message.)
+<P>
+If the message pipe is in nonblocking mode,<A><!-- external link: 1D 0F C4 3A --> DosWrite
+</A>takes the following action:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->If the message is larger than the pipe buffer,<A><!-- external link: 1D 0F C4 3A --> DosWrite
+</A>blocks until the entire message has been written. (Again, it might have
+to wait for the first part of the message to be read before it can write
+the rest of the message.)<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If the message is smaller than the pipe buffer, but
+there is currently not enough room in the buffer,<A><!-- external link: 1D 0F C4 3A --> DosWrite
+</A>returns with a value of 0 in the Bytes-Written parameter.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+If a byte pipe is in nonblocking mode, and if there is more data to be written
+than will fit in the pipe buffer, then<A><!-- external link: 1D 0F C4 3A --> DosWrite
+</A>writes as many bytes as will fit in the buffer and returns the number
+of bytes that were actually written.
+<P>
+If a process tries to write to a pipe whose other end is closed, ERROR_BROKEN_PIPE
+is returned.
+
+<P><HR>
+
+<A HREF="070_L3_ReadingfromNamedPipe.html">[Back: Reading from Named Pipes]</A> <BR>
+<A HREF="072_L3_SynchronizingNamedPi.html">[Next: Synchronizing Named Pipe Dialogs]</A> 
+</BODY>
+</HTML>

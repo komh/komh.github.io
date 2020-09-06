@@ -1,0 +1,97 @@
+<HTML>
+<HEAD>
+<TITLE>Allocating/Deallocating Memory</TITLE>
+</HEAD>
+<BODY>
+<H1>Allocating/Deallocating Memory</H1><!-- entering slot 220 -->
+<P>
+Application requests to allocate, reallocate, or deallocate Extended Memory
+Blocks are translated into corresponding call to the memory manager.  A
+free handle table entry, indicated by a start address of zero, is selected
+and updated to contain the start address and size of the memory object.
+The total XMS memory size for the system and for each VDM is checked at
+this point to ensure that these limits are not exceeded.
+<P>
+Reallocation requests are serviced by passing the request to a VDH service
+and recording the new size and start address.  When an application reallocates
+to zero, VXMS requests the memory manager to deallocate the memory object,
+and changes the handle table entry so it has zero pages with a sentinel
+non-zero address to indicate the handle is still in use. Objects of size
+zero are allowed in VXMS, but not in OS/2, so VXMS will deallocate but retain
+its own data for the handle.  When a non-zero reallocation is performed
+on an object of size zero, a new object is transparently allocated by the
+memory manager.
+<P>
+All allocations (and reallocations) are rounded up to the nearest integral
+page multiple.  Since there is no facility for telling the applications
+how much memory was actually reserved, the extra memory is wasted.
+<P>
+<B>High Memory Area</B>
+<P>
+There is only one HMA per VDM, so a single pointer suffices to manage the
+state of the HMA. If the pointer is zero, then the HMA is not in use.  Otherwise,
+the pointer contains the linear address of the block of memory being used
+to simulate the HMA. Whether the HMA region is mapped to this block of memory
+is determined by the state of the simulated A20 line; see section <A HREF="193_L3_HighMemoryAreaHMA.html">High
+Memory Area (HMA)</A>.
+<P>
+When a request for the HMA is made, the pointer is tested against zero.
+ If the pointer is non-zero, then the HMA is in use, and the request fails.
+Otherwise, the pointer is set to a newly allocated 64KB block of memory,
+and the HMA region is mapped to this block if the A20 address line is active.
+
+<P>
+When the HMA is released, the block of memory is freed, and the pointer
+is reset to 0.  The HMA is then mapped to a black hole if the A20 address
+line is active.  Once an HMA is freed, all information previously stored
+therein becomes invalid.
+<P>
+<B>Upper Memory Blocks</B>
+<P>
+For UMB allocation, a linked list of reserved address ranges is maintained.
+ This list contains information about the start address of each reserved
+range, the base address of the physical memory block allocated and mapped
+into address range, and the length of the block. If the base address is
+zero, then the address range is not in use and is instead mapped to a black
+hole.
+<P>
+Allocations are made by searching through the list to find an address range
+for which the base address is zero and which is large enough to satisfy
+the request.  If the address range exceeds the required size, it is split
+into two parts and a new object is allocated to hold the unused portion.
+
+<P>
+Deallocations are made by searching the list to find a structure whose starting
+address matches the one being deallocated.  The physical memory into which
+the address range was mapped is freed, and the address range is instead
+remapped to a black hole.  Finally, the newly freed object has its base
+address set to zero to signify that it is not in use.  It is then coalesced
+with any adjacent free blocks.
+<P>
+<B>Extended Memory Blocks</B>
+<P>
+Each VDM has a fixed table of up to 255 EMB handles, the exact number of
+which is under user control.  Each entry of the table describes a single
+Extended Memory Block.
+<P>
+Each entry contains a field which records the number of active locks on
+the Extended Memory Block.  Locking a handle prevents the corresponding
+Extended Memory Block form being reallocated or freed, and also prevents
+the base address from changing.  As part of its<!-- entering slot 221 --> function,
+the<I> lock</I> subfunction returns the 32-bit base address.
+<P>
+If an allocation is of size zero, no physical memory allocation is requested,
+but a sentinel non-zero address and zero size are recorded in the handle
+entry.  The lock count for the newly created Extended Memory Block is reset
+to zero.
+<P>
+When a deallocation request is made for an Extended Memory Block with zero
+lock count, the address in the handle is changed to zero, and the memory
+manager is called to free the memory.
+
+<P><HR>
+
+<A HREF="195_L3_ExtendedMemoryBlocks.html">[Back: Extended Memory Blocks (EMBs)]</A> <BR>
+<A HREF="197_L2_ProblemswithExtended.html">[Next: Problems with Extended Memory]</A> 
+</BODY>
+</HTML>

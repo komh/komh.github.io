@@ -1,0 +1,218 @@
+<HTML>
+<HEAD>
+<TITLE>bind()</TITLE>
+</HEAD>
+<BODY>
+<H1>bind()</H1><!-- entering slot 195 -->
+<P>
+The bind() socket call binds a local name to the socket. Rbind() binds a
+SOCKS local name to the socket. See <A HREF="089_L2_SocketSecureSupport.html">Socket
+Secure Support</A> for information about SOCKS.
+<P>
+<B>Syntax</B>
+<PRE>#include &lt;types.h&gt;
+#include &lt;sys\socket.h&gt;
+int bind(<I>s</I>, <I>name</I>, <I>namelen</I>)
+int <I>s</I>;
+struct sockaddr *<I>name</I>;
+int <I>namelen</I>;
+</PRE>
+
+<P>
+<B>Parameters</B><!-- lm: 0x2 0 -->
+<P>
+<I>s</I><!-- lm: 0x11 2 -->
+<UL> Socket descriptor returned by a previous
+call to socket().<!-- lm: 0x2 0 -->
+</UL><I> name</I><!-- lm: 0x11 2 -->
+<UL> Pointer
+to a sockaddr structure containing the name that is to be bound to<I> s</I>.
+<!-- lm: 0x2 0 -->
+</UL><I>namelen</I><!-- lm: 0x11 2 -->
+<UL> Size in bytes
+of the sockaddr structure pointed to by<I> name</I>.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>Description</B>
+<P>
+The bind() call binds a unique local name to the socket with descriptor <I>s</I>.
+ After calling socket(), a descriptor does not have a name associated with
+it.  However, it does belong to a particular addressing family as specified
+when socket() is called.  The exact format of a name depends on the addressing
+family.  The bind() procedure also allows servers to specify from which
+network interfaces they wish to receive UDP packets and TCP connection requests.
+
+<P>
+If<I> s</I> was created in the AF_INET domain, the format of the name buffer
+is expected to be<I> sockaddr_in</I> as defined in the header file &lt;NETINET\IN.H&gt;:
+
+<PRE>struct in_addr{
+        u_long s_addr;
+};
+struct sockaddr_in
+{
+        u_char  <I>sin_len</I>;
+        u_char  <I>sin_family</I>;
+        u_short <I>sin_port</I>;
+        struct  in_addr <I>sin_addr</I>;
+        char    <I>sin_zero</I>[8];
+};
+</PRE>
+
+<P>
+The<I> sin_len</I> field is ignored. The<I> sin_family</I> field must be
+set to AF_INET.  The<I> sin_port</I> field is set to the port that the application
+must bind to.  It must be specified in network byte order.  If<I> sin_port
+</I>is set to 0, the caller leaves it to the system to assign an available
+port.  The application can call getsockname() to discover the port number
+assigned.  The<I> sin_addr</I> field is set to the internet address and
+must be specified in network byte order.  On hosts with more than one network
+interface (called multihomed hosts), a caller can select the interface that
+the host will bind to.
+<P>
+Subsequently, only UDP packets or TCP connection requests which match the
+bound name from this interface are routed to the socket.  If<I> sin_addr
+</I>is set to the constant INADDR_ANY, as defined in &lt;NETINET\IN.H&gt;,
+the caller is requesting that the socket be bound to all network interfaces
+on the host.  After this, UDP packets or TCP connections which match the
+bound name from all interfaces are routed to the socket.  This becomes important
+when a server offers a service to multiple networks.  By leaving the address
+unspecified, the server can accept all UDP packets or TCP connection requests
+made for its port, regardless of the network interface on which the requests
+arrived.  The<I> sin_zero</I> field is not used and must be set to all zeros.
+
+<P>
+In the NetBIOS (AF_NET) domain, set all 16 characters in<I> snb_name</I> in
+the sockaddr_nb structure to binary zeros (null). The system will generate
+a name for the socket.
+<P>
+<B>Return Values</B>
+<P>
+The value 0 indicates success; the value -1 indicates an error. You can
+get the specific error code by calling sock_errno() or psock_errno().<!-- lm: 0x2 0 -->
+<P>
+<B>Error Code</B><!-- lm: 0x2 24 -->
+<UL><B>Description</B><!-- lm: 0x2 0 -->
+</UL>SOCEADDRINUSE<!-- lm: 0x12 24 -->
+<UL>Theaddressisalreadyinuse
+. SeetheSO _ REUSEADDRoptiondescribedunder<A HREF="186_L2_getsockopt.html">getsockopt
+( )</A>andtheSO _ REUSEADDRoptiondescribedunder<A HREF="202_L2_setsockopt.html">setsockopt
+( )</A> .<!-- lm: 0x2 0 -->
+</UL>SOCEADDRNOTAVAIL<!-- lm: 0x12 24 -->
+<UL>Theaddressspecifiedisnotvalidonthishost
+. Forexample ,theinternetaddressdoesnotspecifyavalidnetworkinterface .<!-- lm: 0x2 0 -->
+</UL>SOCEAFNOSUPPORT<!-- lm: 0x12 24 -->
+<UL>Theaddressfamilyisnotsupported
+.<!-- lm: 0x2 0 -->
+</UL>SOCENOTSOCK<!-- lm: 0x12 24 -->
+<UL>The<I>s</I>parameterisnotavalidsocketdescriptor
+.<!-- lm: 0x2 0 -->
+</UL>SOCEFAULT<!-- lm: 0x12 24 -->
+<UL>Using<I>name</I>and<I>namelen</I>wouldresultinanattempttocopytheaddress<!-- entering slot 196 -->intoanon
+- writableportionofthecaller ' saddressspace .<!-- lm: 0x2 0 -->
+</UL>SOCEINVAL<!-- lm: 0x12 24 -->
+<UL>Thesocketisalreadyboundtoanaddress
+,or<I>namelen</I>isnottheexpectedlength .<!-- lm: 0x2 0 -->
+</UL>SOCENOBUFS<!-- lm: 0x12 24 -->
+<UL>Nobufferspaceisavailable
+.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>Examples</B>
+<P>
+Note the following about the bind() call examples:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 5 -->For the internet examples, put the internet address
+and port in network-byte order. To put the port into network-byte order,
+use the htons() utility routine to convert a short integer from host-byte
+order to network-byte order.<!-- lm: 0x2 2 -->
+<P>
+<LI><!-- lm: 0x2 5 -->For the internet examples, set the<I> address</I> field
+using the inet_addr() utility routine, which takes a character string representing
+the dotted-decimal address of an interface and returns the binary internet
+address representation in network-byte order.<!-- lm: 0x2 2 -->
+<P>
+<LI><!-- lm: 0x2 5 -->Zero the structure before using it to ensure that
+the name requested does not set any reserved fields.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+See <A HREF="183_L2_connect.html">connect()</A> for examples of how a client
+might connect to servers.
+<PRE>int rc;int s;
+struct sockaddr_in myname;
+int bind(int s, struct sockaddr *name, int namelen); /* extracted from sys/socket.h */
+/* Bind to a specific interface in the <B>internet</B> domain */
+/* clear the structure */
+memset(&amp;myname, 0, sizeof(myname));
+myname.sin_len = sizeof(myname);
+myname.sin_family = AF_INET;
+myname.sin_addr = inet_addr("129.5.24.1"); /* specific interface */
+myname.sin_port = htons(1024);
+...
+rc = bind(s, (struct sockaddr *) &amp;myname, sizeof(myname));
+
+/* Bind to <B>all internet network interfaces</B> on the system */
+/* clear the structure */
+memset(&amp;myname, 0, sizeof(myname));
+myname.sin_len = sizeof(myname);
+myname.sin_family = AF_INET;
+myname.sin_addr.s_addr = INADDR_ANY; /* all interfaces */
+myname.sin_port = htons(1024);
+...
+rc = bind(s, (struct sockaddr *) &amp;myname, sizeof(myname));
+
+/* Bind to a specific interface in the <B>internet</B> domain.
+<B>Let the system choose a port</B>                        */
+/* clear the structure */
+memset(&amp;myname, 0, sizeof(myname));
+myname.sin_len = sizeof(myname);
+myname.sin_family = AF_INET;
+myname.sin_addr = inet_addr("129.5.24.1"); /* specific interface */
+myname.sin_port = 0;
+...
+rc = bind(s, (struct sockaddr *) &amp;myname, sizeof(myname));
+
+/* Bind to a unique <B>NetBIOS</B> name on adapter 0 */
+struct sockaddr_nb nbname;
+memset(&amp;nbname, 0, sizeof(nbname));
+nbname.sin_len = sizeof(nbname);
+nbname.snb_family = AF_NB;
+nbname.snb_type = NB_UNIQUE;
+nbname.snb_adapter = 0;
+strcpy(nbname.snb_name, "NBSERVER"); /* Note that a NetBIOS name is
+                                        16 bytes long.  In this example,
+                                        the last 8 bytes are filled
+                                        with zeros.                    */
+
+...
+rc = bind(s, (struct sockaddr *) &amp;nbname, sizeof(nbname));
+</PRE>
+
+<P>
+<B>Related Calls</B><!-- lm: 0x2 5 -->
+<UL>
+<P>
+<A HREF="183_L2_connect.html">connect()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="234_L2_gethostbyname.html">gethostbyname()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="185_L2_getsockname.html">getsockname()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="251_L2_htons.html">htons()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="252_L2_inet_addr.html">inet_addr()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="188_L2_listen.html">listen()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="205_L2_sock_errno.html">sock_errno()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="206_L2_socket.html">socket()</A><!-- lm: 0x2 0 -->
+</UL>
+
+<P><HR>
+
+<A HREF="181_L2_addsockettolist.html">[Back: addsockettolist()]</A> <BR>
+<A HREF="183_L2_connect.html">[Next: connect()]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,78 @@
+<HTML>
+<HEAD>
+<TITLE>Drawing Text</TITLE>
+</HEAD>
+<BODY>
+<H1>Drawing Text</H1><!-- entering slot 1154 -->
+<P>
+The following figure shows how to select a Helvetica outline font, set the
+size of the character box, change the foreground color to red, set the character
+angle, and move the cursor to a specified location. Then,<A><!-- external link: 1D 65 C3 51 --> GpiCharString
+</A>is used to write a string of characters with the specified size, color,
+angle, and location.
+<PRE>#define INCL_GPIPRIMITIVES
+#define INCL_GPILCIDS
+#include &lt;os2.h&gt;
+void fncFONT09(void){
+
+    POINTL ptl = { 100, 50 };
+    GRADIENTL grad = { 4, 1 };
+    SIZEF sizfx;
+    FATTRS fat;
+    CHARBUNDLE cbnd;
+    FONTMETRICS afm[80];
+    HPS hps;
+    HDC hdc;
+    LONG cHelvFonts, i;
+    LONG cFonts = 0;
+    LONG lcid = 1;
+    LONG devRes[2];               /* Horizontal, vertical font resolutions */
+
+    cHelvFonts = GpiQueryFonts(hps, QF_PUBLIC, "Helv",
+        &amp;cFonts, sizeof(FONTMETRICS), NULL);
+
+    GpiQueryFonts(hps, QF_PUBLIC, "Helv", &amp;cHelvFonts,
+        sizeof(FONTMETRICS), afm);
+                                  /* Find an outline Helvetica font.       */
+
+    for (i = 0; (!(afm[i].fsDefn &amp; FM_DEFN_OUTLINE)) &amp;&amp;
+               i &lt; cHelvFonts; i++)    ;
+
+    fat.usRecordLength = sizeof(FATTRS);
+    fat.fsSelection = 0;
+    fat.lMatch = afm[i].lMatch;
+    StringCopy(fat.szFacename, afm[i].szFacename);
+    fat.idRegistry = 0;
+    fat.usCodePage = 0;
+    fat.lMaxBaselineExt = 0;
+    fat.lAveCharWidth = 0;
+    fat.fsType = 0;
+    fat.fsFontUse = FATTR_FONTUSE_OUTLINE;
+
+    GpiCreateLogFont(hps, (PSTR8) NULL, lcid, &amp;fat);
+    GpiSetCharSet(hps, lcid);
+
+    DevQueryCaps(hdc, CAPS_HORIZONTAL_FONT_RES, 2L, devRes);
+    sizfx.cx = MAKEFIXED((afm[i].sNominalPointSize * devRes[0])/ 720, 0);
+    sizfx.cy = MAKEFIXED((afm[i].sNominalPointSize * devRes[1])/ 720, 0);
+    GpiSetCharBox(hps, &amp;sizfx);
+
+    cbnd.lColor = CLR_RED;
+    GpiSetAttrs(hps, PRIM_CHAR, CBB_COLOR, NULLHANDLE, &amp;cbnd);
+    GpiSetCharAngle(hps, &amp;grad);
+    GpiMove(hps, &amp;ptl);
+    GpiCharString(hps, 11, "Vector Text");
+} /* fncFONT09 */
+
+</PRE>
+
+<P>
+Certain parameters in the above example are explained in<A><!-- external link: 1D F8 C5 FC --> Fonts</A>.
+
+
+<P><HR>
+
+<A HREF="1132_L2_UsingCharacterString.html">[Back: Using Character String Primitives]</A> <BR>
+<A HREF="1134_L3_FormattingText.html">[Next: Formatting Text]</A> 
+</BODY>
+</HTML>

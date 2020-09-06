@@ -1,0 +1,131 @@
+<HTML>
+<HEAD>
+<TITLE>Load-Time Dynamic Linking</TITLE>
+</HEAD>
+<BODY>
+<H1>Load-Time Dynamic Linking</H1><!-- entering slot 800 -->
+<P>
+Load-time dynamic linking is similar to static linking in that an application
+can call a routine that is not found in the application's source file.  In
+load-time dynamic linking, however, an application is linked with a library
+file that contains a record that describes where the routine can be found
+instead of with a file that contains the code for the routine.  The resulting
+application executable file contains this record and not a copy of the routine's
+code. The following figure illustrates the process of building a load-time
+dynamically linked application.
+<P>
+In the example in the following figure, the LIB file contains a record that
+describes where the code for a set of functions can be found.  In this case,
+the code for the function Your_Routine can be found in the file, or module,
+Your_Routines.DLL under the entry point name Your_Routine.  (The entry point
+name does not have to match the function name.)  The function code also
+can be referenced by its ordinal value.
+<PRE>   My_Application.OBJ
+  ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+  ³ EXTERNAL               ³
+  ³     Your_Routine       ³
+  ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+  ³ .                      ³                  My_Application.EXE
+  ³ .                      ³                 ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+  ³ CALL ???; Your_Routine ÃÄÄ¿              ³ .                ³
+  ³                        ³  ³  ÚÄÄÄÄÄÄ¿    ³ .                ³
+  ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ  ÃÄ³ LINK ÃÄÄÄ³ CALL ???         ³
+                              ³  ÀÄÄÄÄÄÄÙ    ³ .                ÃÄ¿
+   Your_Library.LIB           ³              ³                  ³  ³
+  ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿  ³              ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´  ³
+  ³                        ³  ³              ³ Reference to     ³  ³
+  ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´  ³              ³                  ³  ³
+  ³ function name:         ³  ³              ³ Your_Routine.1   ³  ³
+  ³       Your_Routine     ³  ³              ³ Your_Routine.    ÃÄÄÙ
+  ³                        ³  ³              ³     Your_Routine ³
+  ³ module name:           ³  ³              ³                  ³
+  ³       Your_Routines    ÃÄÄÙ              ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+  ³                        ³
+  ³ entry point            ³
+  ³       ordinal value: 1 ³
+  ³       entry point name ³
+  ³           Your_Routine ³
+  ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+  ³                        ³
+  ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+Dynamic Linking
+<P>
+
+<P>
+When the application is loaded, the system resolves the dynamic-link references,
+as shown in the following figure.
+<PRE>My_Application.EXE               Your_Routine.DLL
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿              ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³  .              ³              ³   Entry Table   ³
+³  .              ³              ³       1    ÄÄÄÄÄÅÄÄ¿
+³  .              ³              ³.................³  ³
+³ Call ???        ³Ä¿           ³                 ³  ³
+³  .              ³  ³           ³                 ³  ³
+³                 ³  ³   yyy:    ³  Your_Routine:  ³ÄÙ
+³                 ³  ³           ³                 ³
+³.................³  ³           ³                 ³
+³Reference to     ³  ³           ³                 ³
+³                 ³  ³           ³                 ³
+³Your_Routine.1   ÃÄÄÙ           ÀÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÙ
+³Your_Routine.    ³                       ³
+³     Your Routine³                       ³
+ÀÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÙ                       ³
+        ³                                 ³
+        ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+                          ³
+                       ÚÄÄÁÄÄ¿
+                       ³LOAD ³
+                       ÀÄÄÂÄÄÙ
+                          ³
+        ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+        ³                                 ³
+My_Application code              Other code
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿              ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³   Call yyy  ÄÄÄÄÅÄÄÄÄÄ yyy:   ³  Your_Routine   ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ              ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+Resolving Dynamic Link References
+<P>
+
+<P>
+If a program contains dynamically linked references, the system must process
+the information in the references.  If the DLL already is in memory, the
+system adds information to the executable code so that the code can use
+the DLL functions.  If the required DLLs are not already in memory, OS/2
+searches the path specified by the LIBPATH environment variable. If the
+system cannot find the DLLs, it stops loading the application and reports
+the error. If the system finds the DLLs, it loads them.  When DLLs are loaded
+into memory, OS/2 notifies the application where the DLL functions can be
+found.
+<P>
+When a DLL is loaded into memory is determined by how the DLL was built.
+A DLL is built like an application, using a module-definition (.DEF) file.
+The CODE statement in a DEF file describes the attributes of application
+or DLL code. The<I> load</I> option for the CODE statement determines when
+application or DLL code is loaded:
+<P>
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+PRELOAD<!-- lm: 0x2 21 -->
+<UL> Code is loaded as soon as a process accesses
+the DLL.  This leads to increased performance (in terms of accessing the
+DLL functions) while decreasing available memory.  This option might be
+preferable if only one program is running.<!-- lm: 0x2 1 -->
+</UL> LOADONCALL
+<!-- lm: 0x2 21 -->
+<UL>Code is loaded when needed.  This is the recommended
+choice and the default.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="785_L2_StaticVersusDynamicL.html">[Back: Static Versus Dynamic Linking]</A> <BR>
+<A HREF="787_L3_RunTimeDynamicLinkin.html">[Next: Run-Time Dynamic Linking]</A> 
+</BODY>
+</HTML>

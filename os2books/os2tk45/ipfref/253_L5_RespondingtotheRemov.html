@@ -1,0 +1,130 @@
+<HTML>
+<HEAD>
+<TITLE>Responding to the Removal of Another Object in the Chain</TITLE>
+</HEAD>
+<BODY>
+<H1>Responding to the Removal of Another Object in the Chain</H1><!-- entering slot 266 -->
+<P>
+If a communication object that was added to the chain before your communication
+object removes itself from the chain, your communication object must respond
+to keep the chain intact.
+<P>
+This involves several steps:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Your communication object must process the HM_UPDATE_OBJCOM_WINDOW_CHAIN
+help manager message. This message provides your communication object with:
+<!-- lm: 0x2 7 -->
+<UL>
+<P>
+ a.<!-- lm: 0x2 11 -->
+<UL>The handle of the communication object that is
+removing itself from the chain.<!-- lm: 0x2 7 -->
+</UL>  b.<!-- lm: 0x2 11 -->
+<UL>The
+window handle for the object to serve as a replacement in the chain.<!-- lm: 0x2 6 -->
+</UL> Your
+communication object does not need to respond unless the first parameter,
+the handle of the communication object removing itself, is identical to
+the handle returned to your communication object when it initially sent
+a HM_SET_OBJCOM_WINDOW message to add itself to the chain (see <A HREF="252_L5_AddingYourCommunicat.html">Adding
+Your Communication Object to the Communication Chain</A>). Your communication
+object should have stored this handle.<!-- lm: 0x2 2 -->
+</UL>  2.<!-- lm: 0x2 6 -->
+<UL>If
+the second parameter returned by HM_UPDATE_OBJCOM_WINDOW_CHAIN does not
+match the handle previously returned by HM_SET_OBJCOM_WINDOW, your communication
+object is not affected by the modification to the chain and does not need
+to respond other than to pass on the message to the next communication object
+in the chain.
+<P>
+However, if these handles are identical, your communication object has a
+new "neighbor" in the chain, and should begin passing all HM_ help manager
+messages to the object identified by the handle returned as the first parameter
+of HM_UPDATE_OBJCOM_WINDOW_CHAIN.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following code fragment illustrates this process.
+<PRE>#define INCL_WIN#define INCL_WINHELP
+#include &lt;os2.h&gt;
+
+#define HM_MSG_MAX (HM_MSG_BASE+0x0024)
+
+USHORT   IPFClassRegistered = 0;         /* IPF class registered flag        */
+
+/* Window procedure */
+MRESULT EXPENTRY IPFWinProc (HWND hwnd, USHORT msg, MPARAM mp1, MPARAM mp2);
+
+
+MRESULT EXPENTRY IPFWinProc (HWND hwnd, USHORT msg, MPARAM mp1, MPARAM mp2)
+/* The window procedure will handle deleting ourselves from the chain
+   as well as forwarding all standard IPF message on the the next window in
+   the chain */
+{
+   HWND hwndPrevious, hwndLatest;
+
+   /* Get previous comm obj */
+   hwndPrevious = (HWND) WinQueryWindowULong (hwnd, QWL_USER);
+   /* Handle the messages you want here, but do not return unless you
+      now the message will not need to be handled by another comm obj.
+      Let the the message be forwarded on to the next comm obj.  The
+      only exception to this is if you change the cover page size.  You
+      need to return TRUE to prevent the coverpage from being resized. */
+   switch (msg)
+   {
+      case HM_UPDATE_OBJCOM_WINDOW_CHAIN:
+         /* If another window is being inserted, replace previous with it */
+         if (hwndPrevious == (HWND)mp1) {
+            hwndPrevious = (HWND)mp2;
+            if (!WinSetWindowULong (hwnd, QWL_USER, (ULONG) hwndPrevious)) {
+               /* Put up error message */
+               WinMessageBox (HWND_DESKTOP,
+                              HWND_DESKTOP,
+                              (PCH)"Can not save handle into reserved memory",
+                              (PCH)"IPF Sample Error Message",
+                              1,
+                              MB_OK | MB_APPLMODAL |
+                              MB_MOVEABLE | MB_ICONASTERISK);
+               break;
+            }
+
+         } else {
+            /* Otherwise simply forward the message on */
+            if (hwndPrevious != 0L) {
+               WinSendMsg (hwndPrevious, HM_UPDATE_BJCOM_WINDOW_CHAIN,
+                           (MPARAM) mp1, (MPARAM) mp2);
+            }
+         }
+         return (MPARAM) NULL;
+         break;
+      case WM_CLOSE:
+         WinDestroyWindow (WinQueryWindow (hwnd, QW_PARENT));
+         return (MPARAM) NULL;
+         break;
+      case WM_DESTROY:
+         /* Take ourselves out of the chain */
+         hwndLatest = (HWND)WinSendMsg (hwnd, HM_QUERY,
+                                        MPFROM2SHORT (0, HMQW_OBJCOM_WINDOW),
+                                        (MPARAM)NULL);
+         WinSendMsg (hwndLatest, HM_UPDATE_OBJCOM_WINDOW_CHAIN,
+                     (MPARAM) WinQueryWindow (hwnd, QW_PARENT),
+                     (MPARAM) hwndPrevious );
+         return (MPARAM) NULL;
+         break;
+   }
+   if ((msg &gt; HM_MSG_BASE) &amp;&amp; (msg &lt;= HM_MSG_MAX)) {
+      return WinSendMsg( hwndPrevious, msg, mp1, mp2);
+   } else {
+      return <!-- entering slot 267 -->WinDefWindowProc (hwnd, msg, mp1, mp2);
+   } /* endif */
+}
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="252_L5_AddingYourCommunicat.html">[Back: Adding Your Communication Object to the Communication Chain]</A> <BR>
+<A HREF="254_L5_RemovingYourCommunic.html">[Next: Removing Your Communication Object from the Chain]</A> 
+</BODY>
+</HTML>

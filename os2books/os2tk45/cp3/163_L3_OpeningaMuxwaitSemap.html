@@ -1,0 +1,90 @@
+<HTML>
+<HEAD>
+<TITLE>Opening a Muxwait Semaphore</TITLE>
+</HEAD>
+<BODY>
+<H1>Opening a Muxwait Semaphore</H1><!-- entering slot 173 -->
+<P>
+Processes other than the semaphore-creating process must use<A><!-- external link: 1D A2 C3 4E --> DosOpenMuxWaitSem
+</A>to gain access to the muxwait semaphore before they can use the semaphore
+in any other muxwait semaphore function. All of the threads that belong
+to the process that creates the muxwait semaphore have immediate access
+to the semaphore.
+<P>
+The following code fragment opens a system muxwait semaphore.
+<PRE>    #define INCL_DOSSEMAPHORES   /* Semaphore values */
+    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+    #include &lt;string.h&gt;
+
+    UCHAR   ucName[40];  /* Semaphore name           */
+    HMUX    hmux;        /* Muxwait semaphore handle */
+    APIRET  ulrc;        /* Return code              */
+
+    strcpy(ucName,
+           "\\SEM32\\MUXWAIT1");  /* Name of the system muxwait semaphore */
+
+    ulrc = DosOpenMuxWaitSem(ucName,
+                             &amp;hmux);
+
+    if (ulrc != 0) {
+        printf("DosOpenMuxWaitSem error: return code = %ld",
+               ulrc);
+        return;
+    }
+
+</PRE>
+
+<P>
+On successful return,<I> hmux</I> contains the handle of the system muxwait
+semaphore.
+<P>
+Opening a muxwait semaphore does not open the semaphores in its muxwait
+list. A process must open each of the semaphores included in a muxwait semaphore
+before it opens the muxwait semaphore. Otherwise,<A><!-- external link: 1D A2 C3 4E --> DosOpenMuxWaitSem
+</A>returns the ERROR_INVALID_HANDLE error value to the calling function.
+
+<P>
+Access to semaphores is on a per-process basis. Therefore, a semaphore that
+has been opened by one thread in a process is open to all other threads
+in that process as well.
+<P>
+Note that<A><!-- external link: 1D A2 C3 4E --> DosOpenMuxWaitSem</A> merely
+provides access to a muxwait semaphore. In order to wait for a muxwait semaphore
+to clear, a thread must call<A><!-- external link: 1D 0C C4 FC --> DosWaitMuxWaitSem</A>.
+
+<P>
+When a process no longer requires access to a muxwait semaphore, it closes
+the semaphore by calling<A><!-- external link: 1D 68 C3 FC --> DosCloseMuxWaitSem</A>.
+However, if a process ends without closing an open semaphore, the semaphore
+is closed by OS/2.
+<P>
+Each call to<A><!-- external link: 1D A2 C3 4E --> DosOpenMuxWaitSem</A> increments
+the usage count of the semaphore. This count is initialized to 1 when the
+semaphore is created and is decremented by each call to<A><!-- external link: 1D 68 C3 FC --> DosCloseMuxWaitSem</A>.
+When the usage count reaches 0, the semaphore is deleted by OS/2.
+<P>
+Calls to<A><!-- external link: 1D A2 C3 4E --> DosOpenMuxWaitSem</A> and
+<A><!-- external link: 1D 68 C3 4C -->DosCloseMuxWaitSem</A> can be nested,
+but the usage count for a semaphore cannot exceed 65535. If an attempt is
+made to exceed this number, ERROR_TOO_MANY_OPENS is returned.
+<P>
+Even if the owner of a mutex semaphore in a muxwait-semaphore list has ended
+without releasing the semaphore, the muxwait semaphore is still opened.
+Subsequent calls to the muxwait semaphore will return ERROR_SEM_OWNER_DIED.
+But because the process has opened the semaphore, it can then call<A><!-- external link: 1D CB C3 50 --> DosQueryMuxWaitSem
+</A>to identify all the mutex semaphores in the muxwait list. Next, the
+process can call<A><!-- external link: 1D CA C3 4F --> DosQueryMutexSem
+</A>for each mutex semaphore in the list to find out which ones are in the
+<I>Owner Died</I> state. Each mutex semaphore that returns ERROR_SEM_OWNER_DIED
+from the query should be closed by calling<A><!-- external link: 1D 67 C3 FC --> DosCloseMutexSem</A>.
+Also, because semaphore handles can be reused, the mutex semaphores that
+are closed should be deleted from the muxwait-semaphore list by calling
+<A><!-- external link: 1D 78 C3 FC -->DosDeleteMuxWaitSem</A>.
+
+<P><HR>
+
+<A HREF="162_L3_CreatingaMuxwaitSema.html">[Back: Creating a Muxwait Semaphore]</A> <BR>
+<A HREF="164_L3_ClosingaMuxwaitSemap.html">[Next: Closing a Muxwait Semaphore]</A> 
+</BODY>
+</HTML>

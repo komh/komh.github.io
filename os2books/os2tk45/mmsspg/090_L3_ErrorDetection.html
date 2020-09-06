@@ -1,0 +1,46 @@
+<HTML>
+<HEAD>
+<TITLE>Error Detection</TITLE>
+</HEAD>
+<BODY>
+<H1>Error Detection</H1><!-- entering slot 112 -->
+<P>
+Stream handlers can detect errors and report them back to the Sync/Stream
+Manager to be passed back to the media driver. Once a physical device driver
+detects an error, the PDD must report the error to the stream handler through
+the SHDEntryPoint. In turn, the stream handler takes the appropriate action.
+If the error is a hard error, the stream handler must stop the device and
+report an event to the Sync/Stream Manager. The stream handler indicates
+that a hard error took place by referencing the error code number. For normal
+events, such as underruns and overruns, the target stream handler will attempt
+to get another buffer and then pause its device. The target stream handler
+will be restarted when more data is available to be output. This condition
+results in a break in the output data stream.  Interleaved data format can
+cause underruns to occur when the end of the data is reached, but end of
+file has not been reached.
+<P>
+The code sample in the following example illustrates the code implementation
+of a stream handler detecting an error.
+<PRE>RptEvent.ulFunction = SMH_REPORTEVENT;
+RptEvent.hid = pSTREAM-&gt;hid;
+RptEvent.hevent = 0;                         /* must be 0 */
+RptEvent.pevcbEvent = (PEVCB)&amp;evcb;
+
+evcb.ulType = EVENT_IMPLICIT_TYPE;              /* SPI event */
+evcb.ulSubType = EVENT_ERROR;                   /* event type */
+evcb.ulFlags = 0;
+evcb.ulStatus = EVENT_ERROR;                    /* error code */
+evcb.hstream = pSTREAM-&gt;hStream;
+/***********************************/
+/* call SSM to report event arrival*/
+/***********************************/
+VideoSH.pSMHEntryPoint(&amp;Ramp.ptEvent);              /* report it! */
+</PRE>
+
+
+<P><HR>
+
+<A HREF="089_L3_Cuepoints.html">[Back: Cuepoints]</A> <BR>
+<A HREF="091_L3_Synchronization.html">[Next: Synchronization]</A> 
+</BODY>
+</HTML>

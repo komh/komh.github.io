@@ -1,0 +1,71 @@
+<HTML>
+<HEAD>
+<TITLE>Drag Initiation From a Container Window</TITLE>
+</HEAD>
+<BODY>
+<H1>Drag Initiation From a Container Window</H1><!-- entering slot 71 -->
+<PRE>PCONTRECORD  pCRec;
+PCNRDRAGINIT pcnrInit;
+PDRAGINFO    pDInfo;
+DRAGITEM     DItem;
+DRAGIMAGE    DImage;
+
+APIRET       rc;
+  :
+  :
+case WM_CONTROL:
+     switch (SHORT2FROMMP(mp1))
+            {
+            case CN_INITDRAG:
+                 pcnrInit =                     /* Get container data    */
+                    (PCNRDRAGINIT)mp2;
+                 pCRec = (PCONTRECORD)pcnrInit-&gt;pRecord;
+
+                 if (pCRec == NULL)             /* If no item selected   */
+                    return(0);                  /* Return                */
+
+                 pDInfo = DrgAllocDraginfo(1);  /* Allocate DRAGINFO     */
+
+                 DItem.hwndItem = hWnd;         /* Initialize DRAGITEM   */
+                 DItem.ulItemID = (ULONG)pCRec;
+                 DItem.hstrType =
+                    DrgAddStrHandle("DRT_CUSTOMER");
+                 DItem.hstrRMF =
+                    DrgAddStrHandle("(DRM_SHAREMEM,DRM_PRINT)x(DRF_TEXT)");
+                 DItem.fsControl = 0;
+                 DItem.fsSupportedOps = DO_COPYABLE | DO_MOVEABLE;
+
+                 rc = DrgSetDragItem(pDInfo,    /* Set item in DRAGINFO  */
+                         &amp;DItem,                /* Pointer to DRAGITEM   */
+                         sizeof(DItem),         /* Size of DRAGITEM      */
+                         0);                    /* Index of DRAGITEM     */
+
+                 DImage.cb = sizeof(DRAGIMAGE); /* Initialize DRAGIMAGE  */
+                 DImage.cptl = 0;               /* Not a polygon         */
+                 DImage.hImage = hPostIcon;     /* Icon handle for drag  */
+                 DImage.fl = DRG_ICON;          /* Dragging an icon      */
+                 DImage.cxOffset = 0;           /* No hotspot            */
+                 DImage.cyOffset = 0;
+
+                 hDrop = DrgDrag(hWnd,          /* Initiate drag         */
+                            pDInfo,             /* DRAGINFO structure    */
+                            (PDRAGIMAGE)&amp;DImage, /* DRAGIMAGE structure  */
+                            1,                  /* Only one DRAGIMAGE    */
+                            VK_ENDDRAG,         /* End of drag indicator */
+                            NULL);              /* Reserved              */
+
+                 DrgFreeDragInfo(pDInfo);       /* Free DRAGINFO struct  */
+                 break;
+</PRE>
+
+<P>
+Another window class would perform these operations in response to a WM_BEGINDRAG
+message, rather than a WM_CONTROL message with the CN_INITDRAG indicator.
+
+
+<P><HR>
+
+<A HREF="068_L2_ReferencinganObjectU.html">[Back: Referencing an Object Using OBJECTID]</A> <BR>
+<A HREF="070_L2_ReceivingaDM_PRINTOB.html">[Next: Receiving a DM_PRINTOBJECT Message]</A> 
+</BODY>
+</HTML>

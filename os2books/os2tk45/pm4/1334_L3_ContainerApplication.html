@@ -1,0 +1,447 @@
+<HTML>
+<HEAD>
+<TITLE>Container Application Sample Code</TITLE>
+</HEAD>
+<BODY>
+<H1>Container Application Sample Code</H1><!-- entering slot 1356 -->
+<P>
+The container application includes the following files:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Contain.C<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Contain.RC<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Contain.H<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Contain.LNK<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Phones.H<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following sample illustrates the container application code:
+<PRE>================CONTAIN.C
+================
+
+#define  INCL_WIN
+#define  INCL_GPI
+
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+#include "contain.h"
+#include "phones.h"
+
+/***********************************************************************/
+/*  Program Overview:                                                  */
+/*                                                                     */
+/*  This program creates a frame window as a parent, then creates      */
+/*  a container window as a child.  The frame window sizes the         */
+/*  container to fill its client area.                                 */
+/*                                                                     */
+/*  After the windows are created successfully, the container          */
+/*  window is populated.  First, the container is sent a message to    */
+/*  allocate memory for each of the records which will be inserted.    */
+/*  After the memory is allocated, we set the values for each record.  */
+/*  (This sample program reads data from a static array - you could    */
+/*  also load values from a file.) Then, the container is sent a       */
+/*  message to insert the records (which makes them visible).          */
+/*                                                                     */
+/*  This container is read-only, which means the end user cannot       */
+/*  change the title text.  It supports single selection.              */
+/*                                                                     */
+/*  In the message loop, we must check for WM_CONTROL messages,        */
+/*  which are generated from the container control.  This sample       */
+/*  processes CN_ENTER messages, when an item in the container is      */
+/*  selected (either with the mouse or the keyboard), and              */
+/*  CN_CONTEXTMENU messages, when a context menu is requested.  The    */
+/*  context menu allows the user to change the display mode of the     */
+/*  container.  Our container supports Icon, Text, and Name views.     */
+/*                                                                     */
+/*  When a CN_ENTER message is received, we loop through the array     */
+/*  of names until we find a match.  On a match, we pop up a message   */
+/*  box which contains the nickname, name, and number of the person    */
+/*  selected.                                                          */
+/*                                                                     */
+/***********************************************************************/
+
+#pragma linkage (main,optlink)
+INT main(VOID);
+VOID LoadDatabase(HWND);
+
+/***********************************************************************/
+/*  Main() - program entry point.                                      */
+/***********************************************************************/
+MRESULT EXPENTRY LocalWndProc(HWND, ULONG, MPARAM, MPARAM);
+
+HAB     hab;
+HWND    hPopupMenu;
+HWND    hFrameWnd, hCnrWnd;
+PFNWP   SysWndProc;
+
+INT main (VOID)
+{
+   HMQ         hmq;
+   FRAMECDATA  fcd;
+   QMSG        qmsg;
+
+   if (!(hab = WinInitialize(0)))
+     return FALSE;
+
+   if (!(hmq = WinCreateMsgQueue(hab, 0)))
+     return FALSE;
+
+/***********************************************************************/
+/*  Set up the frame control data for the frame window.                */
+/***********************************************************************/
+   fcd.cb = sizeof(FRAMECDATA);
+   fcd.flCreateFlags = FCF_TITLEBAR |
+                       FCF_SYSMENU |
+                       FCF_SIZEBORDER |
+                       FCF_SHELLPOSITION |
+                       FCF_MINMAX |
+                       FCF_TASKLIST;
+   fcd.hmodResources = NULLHANDLE;
+   fcd.idResources = 0;
+
+/***********************************************************************/
+/*  Create the frame to hold the container control.                    */
+/***********************************************************************/
+   hFrameWnd = WinCreateWindow(HWND_DESKTOP,
+                               WC_FRAME,
+                               "Phone Book",
+                               0, 0, 0, 0, 0,
+                               NULLHANDLE,
+                               HWND_TOP,
+                               0,
+                               &amp;fcd,
+                               NULL);
+
+/***********************************************************************/
+/*  Verify that the frame was created; otherwise, stop.                */
+/***********************************************************************/
+   if (!hFrameWnd)
+     return FALSE;
+
+/***********************************************************************/
+/*  Set an icon for the frame window.                                  */
+/***********************************************************************/
+   <!-- entering slot 1357 -->WinSendMsg(hFrameWnd,
+              WM_SETICON,
+              (MPARAM)WinQuerySysPointer(HWND_DESKTOP,
+                                         SPTR_FOLDER,
+                                         FALSE),
+               NULL);
+
+/***********************************************************************/
+/*  Create the container.                                              */
+/***********************************************************************/
+   hCnrWnd = WinCreateWindow(hFrameWnd,
+                             WC_CONTAINER,
+                             NULL,
+                             CCS_AUTOPOSITION |
+                             CCS_READONLY |
+                             CCS_SINGLESEL,
+                             0, 0, 0, 0,
+                             hFrameWnd,
+                             HWND_BOTTOM,
+                             FID_CLIENT,
+                             NULL,
+                             NULL);
+
+/***********************************************************************/
+/*  If we got it, fill it up.                                          */
+/***********************************************************************/
+   if (hCnrWnd)
+     LoadDatabase(hCnrWnd);
+
+/***********************************************************************/
+/*  We must intercept the frame window's messages                      */
+/*  (to capture any input from the container control).                 */
+/*  We save the return value (the current WndProc),                    */
+/*  so we can pass it all the other                                    */
+/*  messages the frame gets.                                           */
+/***********************************************************************/
+   SysWndProc = WinSubclassWindow(hFrameWnd, (PFNWP)LocalWndProc);
+
+/***********************************************************************/
+/*  Load the popup menu from the resources                             */
+/*  and show the frame window.                                         */
+/***********************************************************************/
+   hPopupMenu = WinLoadMenu(HWND_OBJECT, NULLHANDLE, IDM_DISPLAY);
+
+   WinShowWindow(hFrameWnd, TRUE);
+
+/***********************************************************************/
+/*  Standard PM message loop - get it, dispatch it.                    */
+/***********************************************************************/
+   while (WinGetMsg(hab, &amp;qmsg, NULLHANDLE, 0, 0))
+   {
+      WinDispatchMsg(hab, &amp;qmsg);
+   }
+
+/***********************************************************************/
+/*  Clean up on the way out.                                           */
+/***********************************************************************/
+   WinDestroyMsgQueue(hmq);
+   WinTerminate(hab);
+
+   return TRUE;
+}
+
+/***********************************************************************/
+/*  LocalWndProc() - window procedure for the frame window.            */
+/*  Called by PM whenever a message is sent to the frame.              */
+/***********************************************************************/
+MRESULT EXPENTRY LocalWndProc(HWND hwnd,ULONG msg,MPARAM mp1,MPARAM mp2)
+{
+   char                szBuffer[80];
+   CNRINFO             cnrInfo;
+   PNOTIFYRECORDENTER  Selected;
+   POINTL              pt;
+   int                 x;
+
+   switch(msg)
+   {
+      case WM_CONTROL:
+      switch (SHORT2FROMMP(mp1))
+      {
+
+/***********************************************************************/
+/*  Context menu - usually right mouse button clicked                  */
+/*  on window. Popup a menu to allow the user to                       */
+/*  select a new view of the container.                                */
+/***********************************************************************/
+         case CN_CONTEXTMENU:
+            WinQueryPointerPos(HWND_DESKTOP, &amp;pt);
+            WinPopupMenu(HWND_DESKTOP,
+                         hwnd,
+                         hPopupMenu,
+                         (SHORT)pt.x,
+                         (SHORT)pt.y,
+                         IDM_ICON,
+                         PU_NONE |
+                         PU_MOUSEBUTTON1 |
+                         PU_KEYBOARD |
+                         PU_SELECTITEM);
+            break;
+
+         case CN_ENTER:
+
+/***********************************************************************/
+/*  User selected an item - we take the icon text                      */
+/*  and spin through the array of Friends, looking for                 */
+/*  a match - on match, print out the phone number                     */
+/***********************************************************************/
+         Selected = (PNOTIFYRECORDENTER)mp2;
+         for (x = 0; x &lt; MAXFRIENDS; x++)
+         {
+            if (!strcmpi(Friends[x].NickName,
+              Selected-&gt;pRecord-&gt;pszIcon))
+            {
+
+               sprintf(szBuffer,
+                       "'%s' (%s) %s",
+                       Friends[x].NickName,
+                       Friends[x].FullName,
+                       Friends[x].Phone);
+                       WinMessageBox(HWND_DESKTOP,
+                                     HWND_DESKTOP,
+                                     szBuffer,
+                                     "Phone",
+                                     0,
+                                     MB_OK);
+            }
+         }
+         break;
+      }
+      break;
+
+      case WM_COMMAND:
+         switch (SHORT1FROMMP(mp1))
+         {
+            case IDM_ICON:
+               cnrInfo.flWindowAttr = CV_ICON;
+               break;
+            case IDM_NAME:
+               cnrInfo.flWindowAttr = CV_NAME;
+               break;
+            case IDM_TEXT:
+               cnrInfo.flWindowAttr = CV_TEXT;
+               break;
+            default:
+               return (*SysWndProc)(hwnd, msg, mp1, mp2);
+               break;
+         }
+
+         WinSendMsg(hCnrWnd,
+                    CM_SETCNRINFO,
+                    &amp;cnrInfo,
+                    MPFROMLONG(CMA_FLWINDOWATTR));
+         break;
+
+/***********************************************************************/
+/*  Send the message to the usual WC_FRAME WndProc.                    */
+/***********************************************************************/
+         default:
+            return (*SysWndProc)(hwnd, msg, mp1, mp2);
+            break;
+   }
+   return (*SysWndProc)(hwnd, msg, mp1, mp2);
+}
+
+/***********************************************************************/
+/*  LoadDatabase() - utility function                                  */
+/*  called after the WC_CONTAINER window is created successfully,      */
+/*  allocates and populates container records, and then inserts        */
+/*  the records into the container window.                             */
+/***********************************************************************/
+VOID LoadDatabase (HWND hWnd)
+{
+   HWND            hIcon;
+   PRECORDCORE     Address, <!-- entering slot 1358 -->FirstRec;
+   RECORDINSERT    recsIn;
+   ULONG           x;
+
+/***********************************************************************/
+/*  The Icon view for each of the records in the                       */
+/*  container will use the standard File icon,                         */
+/*  so we grab the handle now for reference later.                     */
+/***********************************************************************/
+   hIcon = WinQuerySysPointer(HWND_DESKTOP, SPTR_FILE, FALSE);
+
+/***********************************************************************/
+/*  Allocate MAXFRIENDS records all at once -                          */
+/*  CM_ALLOCRECORD returns them in a linked list.                      */
+/***********************************************************************/
+   Address = (PRECORDCORE)WinSendMsg(hWnd,
+                                     CM_ALLOCRECORD,
+                                     0,
+                                     MPFROMLONG(MAXFRIENDS));
+
+/**********************************************************************/
+/*  We will need the first record's address to                        */
+/*  insert them into the container.                                   */
+/**********************************************************************/
+   FirstRec = Address;
+
+/**********************************************************************/
+/*  Loop through the address book, loading as we go.                  */
+/*  Because the CM_ALLOCRECORD returns a linked list,                 */
+/*  the address of the next record is retrieved                       */
+/*  from each record as we go (preccNextRecord).                      */
+/**********************************************************************/
+   for (x = 0; x &lt; MAXFRIENDS; x++)
+   {
+      Address-&gt;cb       = sizeof(RECORDCORE); /* Standard records     */
+      Address-&gt;hptrIcon = hIcon;              /* File icon            */
+      Address-&gt;pszIcon  = Friends[x].NickName;
+      Address-&gt;pszName  = Friends[x].FullName;
+      Address-&gt;pszText  = Friends[x].FullName;
+      Address = Address-&gt;preccNextRecord;     /* Next record in list  */
+   }
+
+/**********************************************************************/
+/*  Set up the insert record structure to place                       */
+/*  the records in the container.                                     */
+/**********************************************************************/
+   recsIn.cb = sizeof(RECORDINSERT);
+
+   /* Put the records in after any others */
+   recsIn.pRecordOrder = (PRECORDCORE)CMA_END;
+
+   /* All the records are top level (not children of other records) */
+   recsIn.pRecordParent = NULL;
+
+   /* The icons are top level */
+   recsIn.zOrder = (USHORT)CMA_TOP;
+
+   /* Redraw the container */
+   recsIn.fInvalidateRecord = TRUE;
+
+   /* Set the number of records to insert */
+   recsIn.cRecordsInsert = MAXFRIENDS;
+
+/**********************************************************************/
+/*  Insert the records into the container.                            */
+/**********************************************************************/
+   WinSendMsg(hWnd,
+              CM_INSERTRECORD,
+              (PRECORDCORE)FirstRec,
+              &amp;recsIn);
+}
+
+================
+CONTAIN.RC
+================
+#include &lt;os2.h&gt;
+#include "contain.h"
+
+MENU            IDM_DISPLAY
+BEGIN
+    MENUITEM    "Icon",     IDM_ICON
+    MENUITEM    "Text",     IDM_TEXT
+    MENUITEM    "Name",     IDM_NAME
+END
+
+================
+CONTAIN.H
+================
+#define DLG_ADDRBOOK     100
+#define CNR_ADDRBOOK     101
+#define PB_ADD           102
+#define PB_DIAL          103
+#define PHONEBOOK        256
+#define IDM_DISPLAY      400
+#define IDM_ICON         401
+#define IDM_NAME         402
+#define IDM_TEXT         403
+
+================
+CONTAIN.LNK
+================
+contain.obj
+contain.exe
+contain.map
+contain.def
+
+================
+PHONES.H
+================
+#define MAXFRIENDS  9
+
+/***********************************************************************/
+/*  This is a simple phone book database.                              */
+/***********************************************************************/
+typedef struct _Phones
+{
+   PSZ NickName;
+   PSZ FullName;
+   PSZ Phone;
+}PhoneBook;
+
+/***********************************************************************/
+/*  Normal programs would read this data from a file.                  */
+/***********************************************************************/
+PhoneBook Friends[MAXFRIENDS] =
+{
+   "Giles",      "Kevin Giles",        "214-555-1212",
+   "Bubba",      "Hank Smith",         "713-555-1212",
+   "Fred",       "Fred Bicycle",       "817-555-1212",
+   "Jack",       "Jack Anjill",        "919-555-1212",
+   "John",       "John Richards",      "214-555-1212",
+   "Toni",       "Toni Henderson",     "919-555-1212",
+   "Babe",       "George Herman Ruth", "212-555-1212",
+   "Kevin",      "Kevin Kortrel",      "817-555-1212",
+   "Honest Abe", "Abraham Lincoln",    "none"
+};
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1333_L2_SampleCodeforContain.html">[Back: Sample Code for Container Controls]</A> <BR>
+<A HREF="1335_L1_ControlWindows.html">[Next: Control Windows]</A> 
+</BODY>
+</HTML>

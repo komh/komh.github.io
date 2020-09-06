@@ -1,0 +1,113 @@
+<HTML>
+<HEAD>
+<TITLE>Reading from a Queue</TITLE>
+</HEAD>
+<BODY>
+<H1>Reading from a Queue</H1><!-- entering slot 141 -->
+<P>
+The queue owner (server process) and its threads can read an element from
+the queue by using<A><!-- external link: 1D D8 C3 FC --> DosReadQueue</A>.
+The owner can read the first element in the queue by specifying 0 as the
+element number. Alternatively, the owner can read a particular element in
+the queue by specifying an element code returned from<A><!-- external link: 1D A6 C3 FC --> DosPeekQueue</A>.
+This function is not available to client processes.
+<P>
+<A><!-- external link: 1D D8 C3 55 -->DosReadQueue</A> can either remove
+queue elements in the order that was specified when the queue was created
+(FIFO, LIFO, or priority), or it can use an element identifier from<A><!-- external link: 1D A6 C3 52 --> DosPeekQueue
+</A>as input to remove a previously examined element.
+<P>
+The following code fragment reads an element from the queue. Assume that
+the caller has placed the handle of the queue into<I> QueueHandle</I> already
+and that the identifier of the process that owns the queue has been placed
+into<I> OwningPID</I> already.
+<PRE>    #define INCL_DOSQUEUES   /* Queue values */
+    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+
+    HQUEUE        hqQueueHandle;   /* Queue handle                 */
+    REQUESTDATA   rqRequest;       /* Request-identification data  */
+    ULONG         ulDataLength;    /* Length of element received   */
+    PULONG        pulDataAddress;  /* Address of element received  */
+    ULONG         ulElementCode;   /* Request a particular element */
+    BOOL32        bNoWait;         /* No wait if queue is empty    */
+    BYTE          bElemPriority;   /* Priority of element received */
+    HEV           hevSemHandle;    /* Semaphore handle             */
+    PID           pidOwningPID;    /* PID of queue owner           */
+    APIRET        ulrc;            /* Return code                  */
+
+    rqRequest.pid = pidOwningPID;     /* Set request data block to indicate  */
+                                      /* queue owner                         */
+
+    ulElementCode = 0;                /* Indicate that the read should start */
+                                      /* at the front of the queue           */
+
+    bNoWait = 0;                      /* Indicate that the read should wait  */
+                                      /* if the queue is currently empty     */
+
+    hevSemHandle = 0;                 /* Unused since this is a call that    */
+                                      /* waits synchronously                 */
+
+    ulrc = DosReadQueue(hqQueueHandle,
+                        &amp;rqRequest,
+                        &amp;ulDataLength,
+                        (PVOID *) &amp;pulDataAddress,
+                        ulElementCode,
+                        bNoWait,
+                        &amp;bElemPriority,
+                        hevSemHandle);
+
+    if (ulrc != 0) {
+        printf("DosReadQueue error: return code = %ld",
+               ulrc);
+        return;
+    }
+
+</PRE>
+
+<P>
+On successful return,<I> DataLength</I> contains the size of the element
+on the queue that is pointed to by the pointer within<I> DataAddress</I>,
+<I>ElemPriority</I> has been updated to contain the priority of the queue
+element pointed to by<I> DataAddress</I>, and<I> Request.ulData</I> contains
+any special data that the<A><!-- external link: 1D 10 C4 57 --> DosWriteQueue
+</A>caller placed into the queue.
+<P>
+If the queue is empty and<I> NoWait</I> is set to DCWW_WAIT (0), the calling
+thread waits until an element is placed in the queue. If the queue is empty
+and<I> NoWait</I> is set to DCWW_NOWAIT (1),<A><!-- external link: 1D D8 C3 55 --> DosReadQueue
+</A>returns immediately with ERROR_QUE_EMPTY.
+<P>
+If<I> NoWait</I> is set to DCWW_NOWAIT, an event semaphore must be provided
+so that the calling thread can determine when an element has been placed
+in the queue. The semaphore is created by calling<A><!-- external link: 1D 6E C3 FC --> DosCreateEventSem</A>,
+and its handle is supplied as a<A><!-- external link: 1D D8 C3 55 --> DosReadQueue
+</A>parameter. The first time an event semaphore handle is supplied in a
+<A><!-- external link: 1D D8 C3 55 -->DosReadQueue</A> or<A><!-- external link: 1D A6 C3 52 --> DosPeekQueue
+</A>request for which DCWW_NOWAIT has been specified for a particular queue,
+the handle is saved by the system. The same handle must be supplied in all
+subsequent<A><!-- external link: 1D D8 C3 55 --> DosReadQueue</A> and<A><!-- external link: 1D A6 C3 52 --> DosPeekQueue
+</A>requests that are called for that queue; if a different handle is supplied,
+ERROR_INVALID_PARAMETER is returned.
+<P>
+When a client process adds an element to the queue, the system automatically
+opens the semaphore (if necessary) and posts it. The server can either call
+<A><!-- external link: 1D BF C3 53 -->DosQueryEventSem</A> periodically
+to determine whether the semaphore has been posted, or it can call DosWaitEventSem.
+DosWaitEventSem causes the calling thread to block until the semaphore is
+posted.
+<P>
+After the event semaphore has been posted, the calling thread must call
+<A><!-- external link: 1D D8 C3 55 -->DosReadQueue</A> again to remove the
+newly added queue element.
+<P>
+If QUE_CONVERT_ADDRESS is specified in the call to<A><!-- external link: 1D 73 C3 FC --> DosCreateQueue</A>,
+OS/2 will automatically convert 16-<!-- entering slot 142 -->bitaddressesto32
+- bitaddresses .
+
+<P><HR>
+
+<A HREF="134_L3_WritingtoaQueue.html">[Back: Writing to a Queue]</A> <BR>
+<A HREF="136_L3_PeekingataQueue.html">[Next: Peeking at a Queue]</A> 
+</BODY>
+</HTML>

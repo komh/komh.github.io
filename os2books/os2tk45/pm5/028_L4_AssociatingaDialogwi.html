@@ -1,0 +1,97 @@
+<HTML>
+<HEAD>
+<TITLE>Associating a Dialog with a Notebook Page</TITLE>
+</HEAD>
+<BODY>
+<H1>Associating a Dialog with a Notebook Page</H1><!-- entering slot 28 -->
+<BR>
+To understand the notebook implemented as a dialog, a Properties Notebook
+is used. The various objects whose properties can be changed or updated
+are displayed as major tabs. Included are sections that represent a folder,
+printer, and display (major tabs). The printer object is currently selected.
+Within the printer object, the user can choose to "View" or "Update" (minor
+tabs) the printer settings. The topmost page is a printer dialog from which
+the user can update the printer name, type, and device information.
+<P>
+The following sample code shows how the printer dialog is created and associated
+with a notebook page. The example ends by showing the dialog procedure for
+the associated dialog.
+<PRE>#define INCL_DOSRESOURCES
+
+APIRET       dlgret;
+HWND         hwndPage, hwndNotebook;
+PDLGTEMPLATE pDlgt;
+SEL          sel = NULL;
+
+/**********************************************************************/
+/* Allocate memory.                                                   */
+/**********************************************************************/
+DosAllocMem((PPVOID)&amp;pDlgt,
+            sizeof(DLGTEMPLATE),
+            PAG_COMMIT |
+            PAG_READ   |
+            PAG_WRITE);
+
+/**********************************************************************/
+/* Retrieve the dialog resource.                                      */
+/**********************************************************************/
+dlgret = DosGetResource((HMODULE)0,       /* Resource                 */
+                                          /* (Obtain from executable) */
+                        RT_DIALOG,        /* Resource type            */
+                        ID_DLG_PRINTDRV,  /* Resource ID              */
+                        (PPVOID)&amp;pDlgt);  /* Dialog template address  */
+
+/**********************************************************************/
+/* Create a dialog.                                                   */
+/**********************************************************************/
+hwndPage = WinCreateDlg(HWND_DESKTOP,     /* Parent window handle     */
+                        hwndBook,         /* Owner window handle      */
+                        fnwpPrint,        /* Dialog procedure         */
+                                          /* address                  */
+                        pDlgt,            /* Dialog data structure    */
+                                          /* address                  */
+                        NULL);            /* Application data         */
+
+DosFreeMem(pDlgt);                        /* Free memory              */
+
+/**********************************************************************/
+/* Associate dialog with the inserted notebook page.                  */
+/**********************************************************************/
+WinSendMsg(hwndBook,
+           BKM_SETPAGEWINDOWHWND,
+           MPFROMLONG(ulPageId),
+           MPFROMHWND(hwndPage));
+
+/**********************************************************************/
+/* Dialog procedure.                                                  */
+/**********************************************************************/
+MRESULT EXPENTRY fnwpPrint(HWND hwndDlg,ULONG msg,MPARAM mp1,MPARAM mp2)
+{
+  switch (msg)
+  {
+    case WM_INITDLG:
+
+      /****************************************************************/
+      /* Place dialog initialization code here.                       */
+      /****************************************************************/
+      break;
+
+    case WM_COMMAND:
+      return ((MRESULT) FALSE);
+      break;
+
+    default:
+      return WinDefDlgProc (hwndDlg,msg,mp1,mp2);
+  }
+  return WinDefDlgProc (hwndDlg,msg,mp1,mp2);
+}
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="027_L4_AssociatingaWindowwi.html">[Back: Associating a Window with a Notebook Page]</A> <BR>
+<A HREF="029_L3_DeletingNotebookPage.html">[Next: Deleting Notebook Pages]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,174 @@
+<HTML>
+<HEAD>
+<TITLE>User Account Information Level 1</TITLE>
+</HEAD>
+<BODY>
+<H1>User Account Information Level 1</H1><!-- entering slot 543 -->
+<PRE>struct user_info_1 {
+  unsigned char                usri1_name[UNLEN+1];
+  unsigned char                usri1_pad_1;
+  unsigned char                usri1_password[ENCRYPTED_PWLEN];
+  long                         usri1_password_age;
+  unsigned short               usri1_priv;
+  unsigned char LSFAR * LSPTR  usri1_home_dir;
+  unsigned char LSFAR * LSPTR  usri1_comment;
+  unsigned short               usri1_flags;
+  unsigned char LSFAR * LSPTR  usri1_script_path;
+};
+</PRE>
+
+<P>
+where:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->The first field in this data structure is identical
+to that in the previous level.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><I>usri1_pad_1</I> word-aligns the data structure
+component.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><I>usri1_password</I> is the password of<I> usri1_name</I>.
+The NetUserEnum and NetUserGetInfo APIs return a string of spaces to maintain
+password security. The string can be NULL.  It can contain as many as PWLEN
+bytes, defined in NETCONS.H.  The password should be uppercase.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><I>usri1_password_age</I> indicates the number of
+seconds that have passed since<I> usri1_password</I> last changed.  NetUserAdd
+and NetUserSetInfo calls ignore this element.
+<P>
+To allow room for the encrypted version of the password to be transmitted
+over the network, the<I> usri1_password</I> field is longer than PWLEN bytes.
+ When setting a user's password, check its length against PWLEN, not against
+ENCRYPTED_PWLEN.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><I>usri1_priv</I> is one of three values indicating
+the level of privilege assigned<I> usri1_name</I>. The ACCESS.H header file
+defines these values as follows: ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+<BR>
+³ SYMBOLIC CONSTANT  ³ VALUE ³ PRIVILEGE                    ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ USER_PRIV_GUEST   ³ 0   ³ Guest (not supported in DSS)           ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ USER_PRIV_USER   ³ 1   ³ User                       ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ USER_PRIV_ADMIN   ³ 2   ³ Administrator                  ³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><I>usri1_home_dir</I> points to an ASCIIZ string specifying
+the path to the user's home directory. (If this field or the string to which
+it points is null, no home directory is assigned for that user.)  The home
+directory string must take one of the following forms:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->A form that defines the drive of the user that will
+be assigned to the home directory.  It can have as many as PATHLEN bytes.
+
+<PRE><I>x:\machineID\y$\pathname</I>
+</PRE>
+where:<!-- lm: 0x2 13 -->
+<UL>
+<P>
+--<!-- lm: 0x2 16 -->
+<UL><I>x</I> is the drive letter to be assigned.<!-- lm: 0x2 13 -->
+</UL>--<!-- lm: 0x2 16 -->
+<UL><I>machineID</I> is the name of the server
+that holds the home directory.<!-- lm: 0x2 13 -->
+</UL>--<!-- lm: 0x2 16 -->
+<UL><I>y</I> is the drive letter on the server
+where the home directory exists.<!-- lm: 0x2 13 -->
+</UL>--<!-- lm: 0x2 16 -->
+<UL><I>pathname</I> is the remaining path to
+the directory.<!-- lm: 0x2 11 --><!-- lm: 0x2 8 -->
+</UL> -<!-- lm: 0x2 11 -->
+<UL>A
+form that defines a first-available drive specification for the name directory:
+
+<PRE><I>\\machineID\y$\pathname</I></PRE>
+where<I> machineID</I>,<I> y</I>, and<I> pathname</I> are defined as in
+the preceding form.<!-- lm: 0x2 6 -->
+</UL> To define a home directory at
+the root of a server's drive, omit \<I>pathname</I> from either of the forms
+previously described.
+<P>
+<B>Note: </B> You also must create an access control profile to give users
+access to the home directory. See <A HREF="050_L1_AccessPermissionCate.html">Access
+Permission Category</A> for those APIs.<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL><I>usri1_comment
+</I>points to an optional ASCIIZ string containing an optional comment or
+remark about the user. The string can be NULL, or can have as many as MAXCOMMENTSZ
+bytes before the terminating NULL character.<!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL><I>usri1_flags
+</I>determines whether a logon script is to be run and whether the user's
+account is enabled. The ACCESS.H header file defines the following possible
+values: ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+<BR>
+³ SYMBOLIC CONSTANT      ³ BIT  ³ MEANING                 ³
+<BR>
+³               ³ MASK  ³                     ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ UF_SCRIPT          ³ 0x1  ³ Must be 1. Logon script enabled.    ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ UF_ACCOUNT_DISABLE      ³ 0x2  ³ If 1, user's account<!-- entering slot 544 --> disabled.
+    ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ UF_DELETE_PROHIBITED     ³ 0x4  ³ If 1, user's account cannot be     ³
+
+<BR>
+³               ³    ³ deleted.                ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ UF_HOMEDIR_REQUIRED     ³ 0x8  ³ If 1, home directory required.     ³
+
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ UF_PASSWD_NOTREQD      ³ 0x20  ³ If 1, password not required. (not sup-
+³
+<BR>
+³               ³    ³ ported in DSS)             ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ UF_PASSWD_CANT_CHANGE    ³ 0x40  ³ If 1, user cannot change password.
+  ³
+<BR>
+³               ³    ³ (not supported in DSS)         ³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+<!-- lm: 0x2 3 -->
+</UL><LI><!-- lm: 0x2 6 --><I>usri1_script_path</I> points
+to an ASCIIZ string indicating the path name of the user's logon script
+(CMD, EXE, BAT or PRO file). If a file extension is not used, the file is
+assumed to have a CMD or BAT extension.
+<P>
+The script path must be specified relative to the Netlogon service SCRIPTS
+path.  It can have as many as PATHLEN bytes before the terminating NULL
+character. The constant PATHLEN is defined in the NETCONS.H header file.
+A null string indicates that no logon script exists.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="415_L3_UserAccountInformati.html">[Back: User Account Information Level 0]</A> <BR>
+<A HREF="417_L3_UserAccountInformati.html">[Next: User Account Information Level 2]</A> 
+</BODY>
+</HTML>

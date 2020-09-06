@@ -1,0 +1,57 @@
+<HTML>
+<HEAD>
+<TITLE>Why doesn't printf() produce output when I expect it to?</TITLE>
+</HEAD>
+<BODY>
+<H1>Why doesn't printf() produce output when I expect it to?</H1><!-- entering slot 128 -->
+<P>
+For historical reasons, most Unix C libraries' stdio default to using line
+buffered streams, whereas most DOS and OS/2 C libraries' stdio default to
+using fully buffered streams.  ANSI C species that standard output should
+be line buffered when connected to an interactive device, but not all libraries
+are ANSI compliant.  You can control the buffering algorithm used for a
+particular stream with the setvbuf() function.
+<P>
+If you didn't understand that paragraph, read on.
+<P>
+printf() is part of the Standard I/O (stdio) library, which uses buffered
+streams for file IO.  ANSI C specifies three algorithms for deciding when
+to flush the buffer (i.e. when to print buffered data to the file):<!-- lm: 0x2 0 -->
+<P>
+o<!-- lm: 0x2 2 -->
+<UL>not buffered.  Data is flushed to the file as soon
+as possible, usually immediately after being received.<!-- lm: 0x2 0 -->
+</UL>o<!-- lm: 0x2 2 -->
+<UL>line buffered.  Data is flushed to the file
+when a newline is received (and the newline is also flushed).<!-- lm: 0x2 0 -->
+</UL>o<!-- lm: 0x2 2 -->
+<UL>fully buffered.  Data is flushed to the file
+when the buffer is full.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+Buffered data is always flushed when the stream is closed or when fflush()
+is called.  Since standard output is flushed when main() exits, all data
+printed with printf() will appear at that time, if it has not already.  However,
+ANSI C does not require that a stream be flushed when scanf() is called
+on it.  Therefore, if you print to a fully buffered stream and then request
+input on it, it is likely that the input will be read before the printed
+data appears.
+<P>
+You can control the buffering algorithm used for a particular stream with
+the setvbuf() function.  For example, the statement setvbuf(stdout, NULL,
+_IOLBF, BUFSIZ) sets standard output to be line-buffered, which is what
+most Unix programmers expect.  Any decent C reference will cover all of
+this material.
+<P>
+[Colin Jensen...]
+<P>
+After reading one too many bug reports about this phenomena, the gcc/2 maintainer
+changed its stdout to not-buffered whenever stdout is interactive.  When
+stdout is sent to a pipe or file, stdout is still fully-buffered. 
+
+<P><HR>
+
+<A HREF="107_L2_HowdoIdisableCtrlAlt.html">[Back: How do I disable <Ctrl><Alt><Del>?]</A> <BR>
+<A HREF="109_L2_HowdoIwriteanOS2devi.html">[Next: How do I write an OS/2 device driver?]</A> 
+</BODY>
+</HTML>

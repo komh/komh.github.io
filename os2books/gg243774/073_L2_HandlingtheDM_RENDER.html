@@ -1,0 +1,55 @@
+<HTML>
+<HEAD>
+<TITLE>Handling the DM_RENDER Message</TITLE>
+</HEAD>
+<BODY>
+<H1>Handling the DM_RENDER Message</H1><!-- entering slot 75 -->
+<PRE>PDRAGITEM     pDItem;                           /* DRAGITEM pointer      */
+PDRAGINFO     pDInfo;                           /* DRAGINFO pointer      */
+PDRAGTRANSFER pDXfer;                           /* DRAGTRANSFER pointer  */
+PCONTRECORD   pCRec;                            /* Container record ptr  */
+PCUSTOMER     pCust,                            /* Customer record ptrs  */
+              pXferData;
+CHAR          xfermem[100];                     /* Memory name buffer    */
+
+HWND          hContainer;                       /* Container handle      */
+  :
+  :
+case DM_RENDER:
+     pDXfer = (PDRAGTRANSFER)mp1;               /* Get DRAGTRANSFER ptr  */
+     pDItem = pDxfer-&gt;pditem;                   /* Get DRAGITEM ptr      */
+     pCRec = pditem-&gt;ulItemID;                  /* Get container rec ptr */
+     pCust = pCRec-&gt;cust;                       /* Get customer rec ptr  */
+
+     DrgQueryStrName(pDXfer-&gt;hstrRenderToName,  /* Get mem object name   */
+                     100,                       /* Size of buffer        */
+                     xfermem);                  /* Buffer                */
+
+     DosGetNamedSharedMem((PPVOID)&amp;pXferData,   /* Get shared mem object */
+                          xfermem,              /* Name of mem object    */
+                          PAG_WRITE |           /* Allow write access    */
+                          PAG_READ);            /* Allow read access     */
+     memcpy(pCust,                              /* Copy customer record  */
+            pXferData,                          /* to shared mem object  */
+            sizeof(CUSTOMER));                  /* No. of bytes to copy  */
+
+     DosFreeMem((PVOID)pCust);                  /* Free shared mem obj   */
+
+     if (pDXfer-&gt;usOperation == DO_MOVE)        /* If move operation     */
+        {
+        hContainer = WinWindowFromID(hWnd,      /* Get container window  */
+                        CONTAINER);             /* handle                */
+        RemoveCustomer(hContainer,              /* Remove record from    */
+                       pCRec);                  /* container             */
+        }
+     return((MRESULT)TRUE);                     /* Return TRUE           */
+     break;
+</PRE>
+
+
+<P><HR>
+
+<A HREF="072_L2_HandlingtheDM_DROPMe.html">[Back: Handling the DM_DROP Message]</A> <BR>
+<A HREF="074_L2_MenuBarResourceDefin.html">[Next: Menu Bar Resource Definition]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,100 @@
+<HTML>
+<HEAD>
+<TITLE>Conversions from REXX Objects to C/SOM Method Argument Types</TITLE>
+</HEAD>
+<BODY>
+<H1>Conversions from REXX Objects to C/SOM Method Argument Types</H1><!-- entering slot 151 -->
+<P>
+When a SOM method is called, a conversion needs to take place from the REXX
+object to a native SOM type. The method is dispatched using somApply, so
+some additional conversions occur because the arguments must be passed in
+a widened form as ANSI defines for va_lists. In general this causes no problems;
+however in some cases, such as with float or double parameters, a loss of
+precision may occur because of converting between a double (widened form)
+and a float. Also because of some rounding conditions, the conversion from
+the REXX object to a double or float may cause loss of precision.
+<P>
+Keep in mind that the default REXX NUMERIC DIGITS setting is 9 (See the
+<I>Object REXX Reference</I> for details on NUMERIC). This can cause unexpected
+results if you call a SOM method and pass it a value greater than 999999999
+or less than -999999999. You may want to change the NUMERIC DIGITS setting,
+for example:
+<PRE>NUMERIC DIGITS 10
+</PRE>
+
+<P>
+if you are using large long or ulong values.
+<P>
+The limits on the various supported SOM types follow:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³TYPE             ³MINIMUM                  ³MAXIMUM                  ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³boolean          ³0 (false)                ³1 (true)                 ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³char<A HREF="375_L0_.html">(*)</A>          ³'80'x (-128)             ³'7f'x  (127)             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³double           ³2.2250738585072014e-308  ³1.7976931348623158e+308  ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³float<A HREF="374_L0_.html">(**)</A>        ³1.175494351e-38          ³3.402823466e+38          ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³long             ³-2147483648              ³2147483647               ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³octet<A HREF="375_L0_.html">(*)</A>         ³'00'x   (0)              ³'ff'x (255)              ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³short            ³-32768                   ³32767                    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³unsigned long    ³0                        ³4294967295               ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³unsigned short   ³0                        ³65535                    ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+<B>Note: </B> The use of types char and octet is not always obvious. Because
+these are treated as "8-bit quantity," the parameter from REXX should be
+a single character. However, not all characters are exactly representable,
+so you may need to use the D2C and X2C built-in functions to achieve the
+desired results (see the<I> Object REXX Reference</I> for details about
+these functions).
+<P>
+For example, to pass the hexadecimal value 'FF'x to a SOM method as type
+char you would code:
+<PRE>x2c('FF'x)
+</PRE>
+
+<P>
+Or, if you know the decimal value of the code, you can use it (for example,
+the decimal equivalent of 'FF'x is -1):
+<PRE>d2c(-1,1)
+</PRE>
+
+<P>
+To convert a returned value back to the decimal equivalent, use the C2D
+function (see the<I> Object REXX Reference</I> for details). For type char,
+remember to process the value as a signed number (specify 1 as the second
+argument of the C2D function).
+<P>
+For example, if a returned value is 'FF'x, then:
+<PRE>c2d(returned_value,1)   /* Returns -2 for type char    */
+c2d(returned_value)     /* Returns +254 for type octet */
+</PRE>
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+REXX supports the following parameter or return types: void, short, ushort,
+long, ulong, float, double, boolean, char, string, octet, objref, pointer,
+struct, and somId, array, and<!-- entering slot 152 --> sequence. The support
+for the struct type is passthru only. That is, you cannot directly change
+the individual elements of a structure, but you can receive it as a return
+and then pass it back out as a method parameter. Array and sequence parameters
+must be REXX array objects or be capable of returning an array with the
+MAKEARRAY method.
+<P>
+
+
+<P><HR>
+
+<A HREF="142_L2_SendingMessagestoSOM.html">[Back: Sending Messages to SOM Objects]</A> <BR>
+<A HREF="144_L2_MethodsRequiringINOU.html">[Next: Methods Requiring INOUT and OUT Arguments]</A> 
+</BODY>
+</HTML>

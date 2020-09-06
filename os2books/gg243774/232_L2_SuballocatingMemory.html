@@ -1,0 +1,91 @@
+<HTML>
+<HEAD>
+<TITLE>Suballocating Memory</TITLE>
+</HEAD>
+<BODY>
+<H1>Suballocating Memory</H1><!-- entering slot 249 -->
+<P>
+Under OS/2 Version 2.0, the granular unit of memory is the page. This means
+that the minimum possible memory allocation for a single<B> DosAllocMem()
+</B>function call is 4KB.  For example, if an application requests the allocation
+of 10 bytes of storage, the operating system will allocate a full 4KB page;
+the remaining storage in this page will be wasted.
+<P>
+It is therefore recommended that for dynamic allocation of small memory
+objects for uses such as instance data, each window procedure should use
+a single<B> DosAllocMem()</B> function call to allocate a storage pool,
+and subdivide this storage as required using the<B> DosSubAlloc()</B> function,
+as shown in <A HREF="022_L2_SuballocatingMemory.html">Figure "Suballocating
+Memory"</A>.
+<P>
+Storage must be suballocated in multiples of 8 bytes.  Any requested suballocation
+which is not a multiple of 8 bytes will have its size rounded<I> up</I> to
+a multiple of 8 bytes.
+<P>
+Storage to be suballocated must first be allocated using the<B> DosAllocMem()
+</B>function, and initialized for suballocation using the<B> DosSubSet()
+</B>function.  Note that control information for the suballocation uses
+64 bytes of the storage pool; this must be taken into account when determining
+the size requirements for the pool.
+<P>
+In <A HREF="022_L2_SuballocatingMemory.html">Figure "Suballocating Memory"</A>,
+the storage in the pool is committed during allocation, since the example
+assumes that the total storage requirement is known in advance. In situations
+where the exact size of the storage required is not known, the storage may
+be allocated but not committed, and the suballocation procedure will then
+progressively commit storage as required.  This is indicated by specifying
+the DOS_SPARSE_OBJ flag in the<B> DosSubSet()</B> function call.
+<P>
+Memory that has been suballocated using the<B> DosSubAlloc()</B> function
+may be freed using the<B> DosSubFree()</B> function.  The storage is then
+available for future suballocation.  Note, however, that the suballocation
+procedure does not reorganize suballocated memory objects within a pool.
+ Thus freeing objects within the pool may result in memory fragmentation.
+
+<P>
+A storage pool initialized for suballocation using the<B> DosSubSet()</B> function
+should be removed using the<B> DosSubUnset()</B> function before the memory
+in the pool is freed.  This function call releases the operating system
+resources used by the suballocation procedure.
+<P>
+When using the C Set/2 compiler, the<B> malloc()</B> function may be used
+to allocate memory.  This function has many of the advantages of the<B> DosSubAlloc()
+</B>function, but avoids the need for the application to explicitly allocate,
+set and suballocate memory.  The<B> malloc()</B> function also provides
+greater independence for application code from the platform upon which it
+executes, allowing the application to be more easily migrated to platforms
+other than OS/2 Version 2.0.
+<P>
+The<B> malloc()</B> function works as follows:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->The first call to<B> malloc()</B> from a particular
+application (process) causes<B> malloc()</B> to request a memory object
+from the operating system. The<B> malloc()</B> service routine adds 16 bytes
+to the size specified in the function call, and rounds the result upward
+to the next even power of 2.  This amount of memory is then requested from
+the operating system using a<B> DosAllocMem()</B> call.  The operating system
+will then allocate memory, rounding the service routine's request size upward
+to the nearest multiple of 4KB.  The<B> malloc()</B> function then fulfills
+the application's request, with some wastage due to the page-granular allocation.
+<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->For subsequent calls to<B> malloc()</B>, the<B> malloc()
+</B>service routine first checks whether it has sufficient memory remaining
+from a previous request; if so, it allocates that memory and returns control
+to the application.  If not, the service routine requests additional memory
+from the operating system using the<B> DosAllocMem()</B> function.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+Note that the<B> free()</B> function, used to free memory which has been
+allocated using<B> malloc()</B>, does not return the memory to the operating
+system; rather, that memory is held by<B> malloc()</B> for future use.  In
+order to return memory to the operating system, the application must issue
+a<B> heapmin()</B> function call.
+
+<P><HR>
+
+<A HREF="231_L3_DynamicallyCommittin.html">[Back: Dynamically Committing Storage]</A> <BR>
+<A HREF="233_L2_ExceptionHandling.html">[Next: Exception Handling]</A> 
+</BODY>
+</HTML>

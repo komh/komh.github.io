@@ -1,0 +1,103 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Create a directory(-tree)</TITLE>
+</HEAD>
+<BODY>
+<H1>Create a directory(-tree)</H1><!-- entering slot 482 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* function: Create a directory(tree)                                 */
+/*                                                                    */
+/* call:     CreateDirectory dirToCreate                              */
+/*                                                                    */
+/* where:    dirToCreate - directory to create                        */
+/*                                                                    */
+/* example:  call dirToCreate C:\TEST1\TEST2\TEST3\TEST4              */
+/*           will create the directories                              */
+/*             C:\TEST1                                               */
+/*             C:\TEST1\TEST2                                         */
+/*             C:\TEST1\TEST2\TEST3                                   */
+/*           and                                                      */
+/*             C:\TEST1\TEST2\TEST3\TEST4                             */
+/*                                                                    */
+/* returns:  0 - okay                                                 */
+/*           else OS Error                                            */
+/*                                                                    */
+CreateDirectory: PROCEDURE
+  parse arg dirToCreate
+
+                        /* file or device for messages                */
+  prog.__LogAll = "2&gt;NUL 1&gt;NUL"
+
+                        /* init the return code                       */
+  thisRC = -1
+                        /* check if the drive is ready                */
+  SIGNAL ON NOTREADY Name CreateDirectoryError
+  call stream fileSpec( "drive", dirToCreate ) || "\*"
+
+  thisRC = 0
+                        /* save the current directories               */
+  curDir = directory()
+  curDir1 = directory( fileSpec( "drive", dirToCreate ) )
+
+  newDir = translate( dirToCreate, "\", "/" )
+
+  i = pos( ":", dirToCreate )
+  if i &lt;&gt; 0 then
+  do
+    parse var dirToCreate lwForTheDir ":" dirToCreate
+    if directory( lwForTheDir || ":\" ) = "" then
+      thisRC = 1
+  end /* if i &lt;&gt; 0 then */
+
+  if thisRC = 0 then
+  do
+    if right( dirToCreate, 1 ) &lt;&gt; "\" then
+      dirToCreate = dirToCreate || "\"
+
+    do until dirToCreate = "" | thisRC &lt;&gt; 0
+      parse var dirToCreate newSubDir "\" dirToCreate
+      dirToCreate = strip( dirToCreate )
+
+      if newSubDir = '' then                                 /* v3.20 */
+        iterate                                              /* v3.20 */
+
+      if directory( newSubDir ) = "" then
+      do
+        '@md "' || newSubDir || '"' prog.__LogAll            /* v3.00 */
+        if rc = 2 | rc = 1 then
+        do
+          if stream( newSubDir , "c", "QUERY EXISTS" ) &lt;&gt; "" then
+            thisRC = rc
+        end /* if rc = 2 | rc = 1 */
+        else
+          thisRC = rc
+
+        if thisRC = 0 then
+          call directory newSubDir
+      end /* if directory( newSubDir ) = "" then */
+    end /* do until dirToCreate = "" | thisRC &lt;&gt; 0 */
+  end /* if thisRC = 0 then */
+
+                        /* restore the current directories            */
+  call directory curDir1
+  call directory curDir
+
+CreateDirectoryError:
+
+RETURN thisRC
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="463_L3_Workondirectorytrees.html">[Back: Work on directory trees]</A> <BR>
+<A HREF="465_L3_Deleteadirectorytree.html">[Next: Delete a directory(-tree)]</A> 
+</BODY>
+</HTML>

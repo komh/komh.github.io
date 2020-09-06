@@ -1,0 +1,95 @@
+<HTML>
+<HEAD>
+<TITLE>Writing Cache Buffers</TITLE>
+</HEAD>
+<BODY>
+<H1>Writing Cache Buffers</H1><!-- entering slot 982 -->
+<P>
+<A><!-- external link: 1D DC C3 56 -->DosResetBuffer</A> is used to write
+to disk (flush) the file system's cache buffers for a specific file handle.
+When called with a value of hex FFFF for the file handle,<A><!-- external link: 1D DC C3 56 --> DosResetBuffer
+</A>writes all files belonging to the requesting process to disk (this usage
+should be administered with care, so the user is not burdened with insertion
+and removal of a large number of removable media volumes).
+<P>
+When<A><!-- external link: 1D DC C3 56 --> DosResetBuffer</A> is called
+for single file handle, the directory entry for the file is updated as if
+the file had been closed. However, the file remains open.
+<P>
+<A><!-- external link: 1D DC C3 56 -->DosResetBuffer</A> can also be called
+with the name of a named pipe. The process that calls<A><!-- external link: 1D DC C3 56 --> DosResetBuffer
+</A>is blocked at one end of the pipe until all data it has written has
+been successfully read by the process at the other end of the pipe. This
+enables communicating processes to synchronize their dialogs.
+<P>
+The following code fragment opens a file, writes some data to the file's
+buffer, then writes the file's system buffer to the disk.
+<PRE>#define INCL_DOSFILEMGR          /* File Manager values */
+#define INCL_DOSERRORS           /* DOS Error values    */
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;               /* Needed for printf   */
+#include &lt;string.h&gt;              /* Needed for strcpy   */
+
+int main( USHORT argc, PCHAR argv[] ) {
+
+   HFILE  hfFileHandle   = 0L;       /* Handle for file being manipulated     */
+   ULONG  ulAction       = 0;        /* Action taken (returned by DosOpen)    */
+   ULONG  ulWrote        = 0;        /* Number of bytes written by DosWrite   */
+   APIRET ulrc           = NO_ERROR;            /* Return code                */
+   UCHAR  uchFileName[20]  = "MYDATA.DAT",      /* Name of file               */
+          uchFileData[100] = " ";               /* Data to write to file      */
+
+   /* Open the file MYDATA.DAT.  If the file already exists, replace it.
+      If the file doesn't exist, create it.                           */
+
+   ulrc = DosOpen(uchFileName,                    /* Path and file name         */
+                  &amp;hfFileHandle,                  /* File handle                */
+                  &amp;ulAction,                      /* Action taken (returned)    */
+                  100L,                           /* File primary allocation    */
+                  FILE_ARCHIVED |
+                  FILE_NORMAL,                    /* File attributes            */
+                  OPEN_ACTION_CREATE_IF_NEW |
+                  OPEN_ACTION_REPLACE_IF_EXISTS,  /* Open function type         */
+                  OPEN_SHARE_DENYREADWRITE |
+                  OPEN_ACCESS_READWRITE,          /* Open mode of the file      */
+                  0L);                            /* No extended attributes     */
+
+   if (ulrc != NO_ERROR) {
+      printf("DosOpen error: return code = %u\n", ulrc);
+      return 1;
+   }
+
+
+   strcpy (uchFileData,
+           "Data....");     /* This data will be written to file */
+
+   ulrc = DosWrite (hfFileHandle,               /* File handle                  */
+                    (PVOID) uchFileData,        /* String to be written         */
+                    sizeof (uchFileData),       /* Size of string to be written */
+                    &amp;ulWrote);                  /* Bytes written (returned)     */
+
+   if (ulrc != NO_ERROR) {
+      printf("DosWrite error: return code = %u\n", ulrc);
+      DosClose(hfFileHandle);         /* close the file */
+      return 1;
+   }
+
+   ulrc = DosResetBuffer(hfFileHandle);
+
+   if (ulrc != NO_ERROR) {
+      printf("DosResetBuffer error: return code = %u\n", ulrc);
+      DosClose(hfFileHandle);         /* close the file */
+      return 1;
+   }
+   DosClose(hfFileHandle);            /* close the file */
+   return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="957_L3_PreparingFileSystems.html">[Back: Preparing File Systems for System Shutdown]</A> <BR>
+<A HREF="959_L1_GenericIOCtlCommands.html">[Next: Generic IOCtl Commands]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,120 @@
+<HTML>
+<HEAD>
+<TITLE>Creating a Dialog Procedure</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating a Dialog Procedure</H1><!-- entering slot 1395 -->
+<P>
+In contrast to window procedures, which receive WM_CREATE messages, dialog
+procedures receive WM_INITDLG messages, which are sent after a dialog window
+is created, but before it is displayed.  WM_INITDLG can do the same type
+of initialization tasks that WM_CREATE handles, but is not the first message
+that is received.
+<P>
+For example, if a dialog window contains a list box, use WM_INITDLG to fill
+the list box with items.  Also use this procedure to enable or disable buttons
+in a dialog window, depending on your application.
+<P>
+You also can call the WinSetDlgItemText or WinSetDlgItemShort functions
+during dialog initialization, to set up text items that reflect the current
+conditions in your application.
+<P>
+Another typical task for the WM_INITDLG message handler is centering a dialog
+window on the screen or within its owner window.  The following code fragment
+illustrates how to center a dialog window on the screen using WM_INITDLG:
+
+<P>
+
+<PRE>    RECTL rclScreen,rclDialog;
+    LONG  sWidth,sHeight,sBLCx,sBLCy;
+
+    case WM_INITDLG:
+        /* Center the dialog window and get the screen rectangle.   */
+        WinQueryWindowRect(HWND_DESKTOP, &amp;rclScreen);
+
+        /* Get the dialog-window rectangle.                         */
+        WinQueryWindowRect(hwnd, &amp;rclDialog);
+
+        /* Get the dialog-window width.                             */
+        sWidth = (LONG) (rclDialog.xRight - rclDialog.xLeft);
+
+        /* Get the dialog-window height.                            */
+        sHeight = (LONG) (rclDialog.yTop - rclDialog.yBottom);
+
+        /* Set the horizontal coordinate of the lower-left corner.  */
+        sBLCx = ((LONG) rclScreen.xRight - sWidth) / 2;
+
+        /* Set vertical coordinate of the lower-left corner.        */
+        sBLCy = ((LONG) rclScreen.yTop - sHeight) / 2;
+
+        /* Move, size, and show the window.                         */
+        WinSetWindowPos(hwnd,
+            HWND_TOP,
+            sBLCx, sBLCy,
+            0, 0,          /* Ignores size arguments                */
+            SWP_MOVE);
+
+        return 0;
+</PRE>
+
+<P>
+The dialog procedure receives notification messages from each control-window
+item in a dialog window whenever a user clicks an item or enters text in
+an entry field.  Most dialog procedures wait for the user to select one
+or more dialog-window buttons to signal being finished with the dialog window.
+ When the dialog procedure receives one of these messages, it calls the
+WinDismissDlg function, as shown in the following code fragment.  The second
+argument to WinDismissDlg is the value returned by the WinDlgBox or WinProcessDlg
+functions.  Generally, these functions return the identifier of the button
+that was pressed.
+<P>
+
+<PRE>    MRESULT EXPENTRY SampDialogProc(HWND hwnd,
+                                    ULONG ulMessage,
+                                    MPARAM mp1,
+                                    MPARAM mp2)
+    {
+        switch (ulMessage) {
+            case WM_COMMAND:
+                switch (SHORT1FROMMP(mp1)) {
+                    case DID_OK:
+
+                       /*
+                        * Final dialog-item queries,
+                        * dismiss the dialog.
+                        */
+
+                       WinDismissDlg(hwnd, DID_OK);
+                       return 0;
+                }
+                break;
+        }
+        return (WinDefDlgProc(hwnd, ulMessage, mp1, mp2));
+    }
+
+</PRE>
+
+<P>
+Other dialog-window items send notification messages specific to the type
+of control window. Your dialog procedure should respond to notification
+messages from any relevant or important dialog items, and pass the messages
+that your dialog procedure does not handle to the WinDefDlgProc function
+for default processing.  The default dialog procedure is used similarly
+to the default frame-window procedure.
+<P>
+The WM_COMMAND message from the<B> OK</B> button indicates that the user
+has selected the<B> OK</B> button and is finished with the dialog window.
+ If the dialog window has other controls, such as entry fields or check
+boxes, have your dialog procedure query the contents or state of each control
+upon<!-- entering slot 1396 --> receipt of a message from the<B> OK</B> button.
+ Before dismissing a dialog window, have your dialog procedure collect input
+from each dialog-window control before closing the dialog window.
+<P>
+
+
+<P><HR>
+
+<A HREF="1369_L4_AddingaMenuinaDialog.html">[Back: Adding a Menu in a Dialog Window]</A> <BR>
+<A HREF="1371_L4_ManipulatingDialogIt.html">[Next: Manipulating Dialog Items]</A> 
+</BODY>
+</HTML>

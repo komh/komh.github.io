@@ -1,0 +1,59 @@
+<HTML>
+<HEAD>
+<TITLE>Processing requests</TITLE>
+</HEAD>
+<BODY>
+<H1>Processing requests</H1><!-- entering slot 279 -->
+<P>
+The<B> SOMOA</B> is the object in the DSOM run-time environment that receives
+client requests and transforms them into method calls on local server objects.
+In order for<B> SOMOA</B> to listen for a request, the server program must
+invoke one of two methods on<B> SOMD_SOMOAObject.</B> If the server program
+wishes to turn control over to<B> SOMD_SOMOAObject</B> completely (that
+is, effectively have<B> SOMD_SOMOAObject</B> go into an infinite request-processing
+loop), then it invokes the<B> execute_request_loop</B> method on<B> SOMD_SOMOAObject
+</B>as follows:
+<PRE>rc = _execute_request_loop(SOMD_SOMOAObject, &amp;ev, SOMD_WAIT);
+</PRE>
+
+<P>
+<B>Note: </B> This is the way the DSOM provided "generic" server program
+interacts with<B> SOMD_SOMOAObject.</B><!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+The<B> execute_request_loop</B> method takes an input parameter of type
+<B>Flags.</B> The value of this parameter should be either SOMD_WAIT or
+SOMD_NO_WAIT. If SOMD_WAIT is passed as argument,<B> execute_request_loop
+</B>will return only when an error occurs. If SOMD_NO_WAIT is passed, it
+will return when there are no more outstanding messages to be processed.
+SOMD_NO_WAIT is usually used when the server is being used with the event
+manager. See "Peer vs. client-server processes" in section 6.9, "Advanced
+Topics," for more details.
+<P>
+If the server wishes to incorporate additional processing between request
+executions, it can invoke the<B> execute_next_request</B> method to receive
+and execute requests one at a time:
+<PRE>for(;;) {
+   rc = _execute_next_request(SOMD_SOMOAObject, &amp;ev, SOMD_NO_WAIT);
+   /* perform app-specific code between messages here, e.g., */
+      if (!rc) numMessagesProcessed++;
+}
+</PRE>
+
+<P>
+Just like<B> execute_request_loop, execute_next_request</B> has a<B> Flags
+</B>argument that can take one of two values: SOMD_WAIT or SOMD_NO_WAIT.
+If<B> execute_next_request</B> is invoked with the SOMD_NO_WAIT flag and
+no message is available, the method returns immediately with a return code
+of SOMDERROR_NoMessages. If a request is present, it will execute it. Thus,
+it is possible to "poll" for incoming requests using the SOMD_NO_WAIT flag.
+
+
+<P><HR>
+
+<A HREF="241_L4_Wheninitializationfa.html">[Back: When initialization fails]</A> <BR>
+<A HREF="243_L3_Exitingaserverprogra.html">[Next: Exiting a server program]</A> 
+</BODY>
+</HTML>

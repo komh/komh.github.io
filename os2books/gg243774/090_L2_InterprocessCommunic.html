@@ -1,0 +1,65 @@
+<HTML>
+<HEAD>
+<TITLE>Interprocess Communication Using Shared Memory (Part 1)</TITLE>
+</HEAD>
+<BODY>
+<H1>Interprocess Communication Using Shared Memory (Part 1)</H1><!-- entering slot 92 -->
+<PRE>REQUEST *Request;                               /* Request structure     */
+REPLY   *Reply;                                 /* Reply structure ptr   */
+  :
+CASE WMP_SENDREQUEST:
+     rc = DosAllocShrMem(&amp;Request,              /* Allocate memory obj   */
+                         NULL,                  /* Anonymous memory obj  */
+                         sizeof(REQUEST),       /* Size of memory obj    */
+                         OBJ_GIVEABLE,          /* Object is giveable    */
+                         PAG_WRITE |            /* Allow write access    */
+                         PAG_READ  |            /* Allow read access     */
+                         PAG_COMMIT);           /* Commit storage now    */
+     rc = DosGiveSharedMem(Request,             /* Give access to object */
+                           pidServer,           /* Process to get access */
+                           PAG_WRITE |          /* Write access allowed  */
+                           PAG_READ);           /* Read access allowed   */
+
+     rc = DosAllocShrMem(&amp;Reply,                /* Allocate memory obj   */
+                         NULL,                  /* Anonymous memory obj  */
+                         sizeof(REPLY),         /* Size of memory obj    */
+                         OBJ_GIVEABLE,          /* Object is giveable    */
+                         PAG_WRITE |            /* Allow write access    */
+                         PAG_READ  |            /* Allow read access     */
+                         PAG_COMMIT);           /* Commit storage now    */
+     rc = DosGiveSharedMem(Reply,               /* Give access to object */
+                           pidServer,           /* Process to get access */
+                           PAG_WRITE |          /* Write access allowed  */
+                           PAG_READ);           /* Read access allowed   */
+
+     Request-&gt;hRequester = hWnd;                /* Set requester handle  */
+
+     &lt;Initialize other Request structure fields&gt;
+
+     WinPostMsg(hServer,                        /* Post msg to server    */
+                WMP_DOREQUEST,                  /* DO_REQUEST message    */
+                (MPARAM)Request,                /* Ptr to request object */
+                (MPARAM)Reply);                 /* Ptr to reply object   */
+
+     DosFreeMem(Request);                       /* Release request obj   */
+     break;
+       :
+case WMP_REQUESTCOMPLETE:
+     Reply=(PVOID)mp1;
+
+     &lt;Copy contents of Reply to private memory&gt;
+
+     DosFreeMem(Reply);                         /* Release reply object  */
+     break;
+</PRE>
+
+<P>
+This example shows a "requester" window procedure issuing requests and receiving
+replies by way of Presentation Manager messages.
+
+<P><HR>
+
+<A HREF="089_L2_TerminatingaProcess.html">[Back: Terminating a Process]</A> <BR>
+<A HREF="091_L2_InterprocessCommunic.html">[Next: Interprocess Communication Using Shared Memory (Part 2)]</A> 
+</BODY>
+</HTML>

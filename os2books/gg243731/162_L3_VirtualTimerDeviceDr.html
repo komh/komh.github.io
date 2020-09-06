@@ -1,0 +1,95 @@
+<HTML>
+<HEAD>
+<TITLE>Virtual Timer Device Driver</TITLE>
+</HEAD>
+<BODY>
+<H1>Virtual Timer Device Driver</H1><!-- entering slot 173 -->
+<P>
+The virtual timer device driver VTIMER.SYS provides virtualization of timers
+used by DOS applications running in VDMs.  Three timer ports are supported
+in order to allow reprogramming of interrupt frequency and speaker tone
+frequency.  VTIMER also distributes timer ticks to VDMs and maintains a
+count of timer ticks.
+<P>
+All accesses to the timer are simulated by VTIMER.  Therefore, unlike most
+other virtual device drivers, VTIMER has no communication with the physical
+timer.  VTIMER derives its timer tick directly from the system clock.
+<P>
+VTIMER keeps a per-VDM cumulative timer count in the VDM's data area. When
+a periodic timer interrupt occurs, VTIMER receives control.  It adds the
+periodic interval count value to the cumulative timer count of the VDM and
+compares it with the  VDM's programmed count.  If the cumulative timer count
+exceeds the VDM's programmed count, an interrupt is simulated to the VDM
+and the programmed count is subtracted from the cumulative timer count.
+
+<P>
+<B>Timer 0</B>
+<P>
+This timer is normally used to provide periodic interrupts to DOS applications.
+ A periodic system timer with an interval close to 18.2 milliseconds is
+set up so that VTIMER can accumulate virtual ticks and simulate tick interrupts
+if necessary.
+<P>
+If a VDM attempts to program an interrupt period less than 18.2 milliseconds,
+the periodic timer interval will be changed to four times the normal frequency
+of 18.2 Hz, regardless of the VDM's programmed value.  A<I> HighRate</I> reference
+count is also kept to record the number of VDMs using a higher interrupt
+rate.  As long as there is at least one VDM using a higher interrupt rate,
+the periodic rate is maintained at approximately four times 18.2 Hz.  Otherwise,
+the timer frequency is reset to 18.2 Hz.
+<P>
+Accesses to timer count registers from within a VDM are trapped by VTIMER.
+ Read accesses to the count registers should be preceded by a counter latch
+command written to the control word register, in which case a random value
+derived from the system time is latched and stored in the virtual latch
+registers.  Its purpose is to provide the applications with a sense of elapsed
+time, although the count value itself is meaningless. Read access to the
+count register is simulated by reading the virtual latch value.  Write accesses
+to the count registers are stored in the virtual count registers.
+<P>
+<B>Timer 1</B>
+<P>
+Timer 1 is used in the PC AT [Although the IBM PC AT is based on the Intel
+80286 processor and therefore is not supported by OS/2 Version 2.0, many
+PC AT machines exist which have been fitted with processor upgrades from
+various manufacturers, which may enable them to run OS/2 Version 2.0.  Information
+on the PC AT architecture is therefore included herein for completeness.
+] as the memory refresh request timer.  Since the correct operation of this
+timer is vital to the system, no known software reprograms it for uses other
+than reading it as the random number generator speed.  Therefore, VTIMER
+does not support any access except counter read to this timer by DOS applications.
+ Any accesses other than counter reads are trapped and ignored.
+<P>
+<B>Timer 2</B>
+<P>
+Timer 2 is the speaker tone generator.  It is accessed by DOS applications
+directly, via programming interfaces or DevHlp services, or by the<B> VDHBeep()
+</B>function. Serialization of the speaker usage can be achieved by using
+a semaphore in the kernel.
+<P>
+When a DOS application accesses the speaker, it typically programs timer
+2 for the<!-- entering slot 174 --> appropriate frequency and then enables
+the speaker by programming the speaker enable bits in system control port
+B.  These programming operations are trapped by VTIMER and the frequency
+value is stored for the VDM.  When Control Port B is programmed to enable
+the speaker, the kernel beep service is called to generate the beep. This
+call may be blocked due to the fact that another process is beeping and
+thus owns the speaker semaphore.  After the semaphore is obtained, the stored
+frequency value is programmed into timer 2 and the speaker is enabled. The
+semaphore is released when the DOS application disables the speaker by programming
+the System Control Port B.
+<P>
+There is one exception to the speaker serialization, and this occurs during
+interrupt time.  For example, when a process is generating a speaker tone,
+the keyboard buffer may be full and the keyboard interrupt handler needs
+to generate a warning beep immediately.  Therefore, the kernel also provides
+an interrupt time beep service which can pre-empt any ongoing beeps and
+use the speaker to generate its own beep regardless of which process currently
+owns the speaker semaphore.
+
+<P><HR>
+
+<A HREF="161_L3_VirtualProgrammableI.html">[Back: Virtual Programmable Interrupt Controller]</A> <BR>
+<A HREF="163_L3_VirtualCOMDeviceDriv.html">[Next: Virtual COM Device Driver]</A> 
+</BODY>
+</HTML>

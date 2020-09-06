@@ -1,0 +1,93 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>PrfQueryProfileData - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>PrfQueryProfileData - Example Code</H1><!-- entering slot 1001 -->
+<P>
+This example calls PrfQueryProfileData to search a specific profile for
+the value of key "BINARY_DATA" within the application "MYAPPL.EXE" and return
+the value if found.
+<PRE>/* Write and read binary data to a profile.  Some return code */
+/* checking omitted for brevity.                              */
+
+#define  INCL_WINSHELLDATA
+#define  INCL_WINERRORS
+#define  INCL_DOSERRORS
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+#define BUFSIZE  7
+
+INT main(VOID) {
+
+    HAB     hab          = NULLHANDLE;         /* Window handle   */
+    HINI    hini         = NULLHANDLE;         /* INI file handle */
+    PSZ     pszFileName  = "PROFILE.INI";      /* Name of profile */
+    BOOL    rc           = FALSE;              /* Return code     */
+    PSZ     pszAppName   = "MYAPPL.EXE";       /* Application name */
+    PSZ     pszKeyName   = "BINARY_DATA";      /* Data key name    */
+    APIRET  ret          = NO_ERROR;           /* API return code  */
+    PBYTE   pData        = NULL;               /* Pointer to data buffer */
+    ULONG   ulDataSize   = 0;                  /* Size of data to read   */
+    INT     idx          = 0;                  /* Loop index             */
+
+    hab = WinInitialize( 0 );
+    hini = PrfOpenProfile( hab, pszFileName );   /* Open INI file */
+
+      /* Allocate Memory for binary data to be written and read */
+
+    ret = DosAllocMem( (PPVOID)&amp;pData, sizeof(BYTE)*80,
+                       (ULONG)PAG_COMMIT | PAG_READ | PAG_WRITE );
+
+        /* Initialize binary data and then write it to profile */
+
+    for(idx = 0; idx &lt; BUFSIZE; idx++) {
+        pData[idx] = idx+65;
+    }
+
+    rc = PrfWriteProfileData( hini, pszAppName, pszKeyName,
+                             (PVOID)pData, (ULONG)BUFSIZE );
+
+    if(rc == FALSE) {
+        printf("PrfWriteProfileData error code: %X\n", WinGetLastError(hab));
+        return 1;
+    }
+
+       /* Put junk in buffer so we can see if read is successful */
+
+    for(idx = 0; idx &lt; BUFSIZE; idx++) {
+        pData[idx] = idx;
+    }
+
+        /* Retrieve size of data and then get data */
+
+    rc = PrfQueryProfileSize( hini, pszAppName, pszKeyName, &amp;ulDataSize );
+    rc = PrfQueryProfileData( hini, pszAppName, pszKeyName,
+                             (PVOID)pData, &amp;ulDataSize);
+
+    if(rc==FALSE) {
+        printf("PrfQueryProfileData error code: %X\n", WinGetLastError(hab));
+        return 1;
+    }
+
+    printf("Profile Data Read:");
+    for(idx=0; idx &lt; ulDataSize; idx++)
+        printf("%c", pData[idx]);
+    printf("\n");
+
+    PrfCloseProfile(hini);     /* Close profile  */
+    DosFreeMem(pData);         /* Free memory    */
+    return NO_ERROR;           /* Phone home &lt;g&gt; */
+
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="989_L2H_PrfQueryProfileDataR.html">[Back: PrfQueryProfileData - Related Functions]</A> <BR>
+<A HREF="991_L2H_PrfQueryProfileDataT.html">[Next: PrfQueryProfileData - Topics]</A> 
+</BODY>
+</HTML>

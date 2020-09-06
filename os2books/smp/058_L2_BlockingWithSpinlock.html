@@ -1,0 +1,108 @@
+<HTML>
+<HEAD>
+<TITLE>Blocking With Spinlocks Locked</TITLE>
+</HEAD>
+<BODY>
+<H1>Blocking With Spinlocks Locked</H1><!-- entering slot 59 -->
+<P>
+Another cause of deadlock is blocking with locked spinlocks. Consider the
+following two sections of code. Section 1 is a task time operation that
+needs an interrupt to complete. Section 2 is the interrupt code that will
+execute and unblock section 1.
+<PRE>
+      Code section 1                  Code section 2
+      (Task time)                     (Interrupt time)
+
+      Lock spinlock1                  interrupt received
+      start I/O                       lock spinlock1
+      block (ProcBlock)               unblock (ProcRun)
+                                      release spinlock1
+      return from block
+      some processing
+         (may include a re-block)
+      release spinlock1
+
+</PRE>
+
+<P>
+In the above example code section 1 locks spinlock1 and then blocks (with
+the spinlock still locked). Code section 2 will then execute when the I/O
+completes. The interrupt code first tries to lock spinlock1. Because spinlock1
+is already locked, the interrupt code will spin waiting for the lock. The
+lock will never become available, however, because the only way for the
+spinlock to be unlocked is for section 1 to be unblocked. But the interrupt
+code, which is responsible for the unblock, can't continue until it acquires
+the spinlock. The result is deadlock.
+<P>
+Now the first attempt to solve this problem may be to recode section 1 with
+the following:
+<PRE>
+     Lock spinlock1
+     start I/O
+     release spinlock1
+     block (ProcBlock)
+
+     return from block
+     lock spinlock1
+     some processing
+     release spinlock1
+
+</PRE>
+
+<P>
+The above code sequence appears to correct the problem. It does not, however,
+and can also result in a deadlock. The reason is that there exists a window
+between where the code releases the spinlock and the thread is blocked in
+which an interrupt can occur. Remember that disabling interrupts no longer
+prevents interrupts from happening. If an interrupt fires in this window,
+the interrupt handler (section 2 above) will run. It will acquire the spinlock
+and attempt to unblock the thread. The thread, however, has not actually
+blocked yet. When the thread finally does block, the wakeup event has already
+occurred. The result once again is deadlock.
+<P>
+To solve this particular problem, DevHelp_Block has been modified to release
+ALL spinlocks that are owned on the current processor. The device driver
+should call DevHelp_Block with spinlocks locked. The kernel will first put
+the thread of execution in the blocked state. Then, before dispatching the
+next thread, it will release all locked spinlocks for the current processor.
+Because the thread is in the blocked state, it is valid for another processor
+to execute interrupt code that will do the DevHelp_Run. The result is no
+deadlock. The code sequences from above should be re-coded to the following
+to avoid the deadlock:
+<PRE>
+      Code section 1                  Code section 2
+
+      Lock spinlock1                  interrupt received
+      start I/O                       lock spinlock1
+      While(block required)           unblock (ProcRun)
+         Block                        release spinlock1
+         return from block
+         Lock spinlock1
+      EndWhile
+      some processing
+      release spinlock1
+
+</PRE>
+
+<P>
+The above example has been expanded to include the steps required to insure
+that when the thread is woken up, that the blocking condition is satisfied
+before execution continues. This code sequence is analogous to that listed
+in the description for DevHlp_Block in the Device Helper Services chapter
+of the Physical Device Driver Reference. It has been modified to use spinlocks
+instead of disabling interrupts (which will not work).
+<P>
+Once again this list is not exhaustive, but is a representation of the majority
+of cases that can cause deadlock. By avoiding these situations the chances
+of deadlock are reduced considerably. In addition, there are certain system
+level checks performed to help insure that deadlock is avoided. If the system
+detects a situation that could cause deadlock, such as attempting to block
+while owing a spinlock, it will panic the system and print an<!-- entering slot 60 --> internal
+processing error message.
+
+<P><HR>
+
+<A HREF="057_L2_SpinlocksTakenOutofO.html">[Back: Spinlocks Taken Out of Order]</A> <BR>
+<A HREF="059_L2_Blocking.html">[Next: Blocking]</A> 
+</BODY>
+</HTML>

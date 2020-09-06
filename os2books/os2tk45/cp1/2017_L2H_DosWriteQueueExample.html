@@ -1,0 +1,91 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosWriteQueue - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosWriteQueue - Example Code</H1><!-- entering slot 2037 -->
+<P>
+This example writes to a queue named "SPECIAL.QUE" and reads from it. It
+also creates, opens, and closes the queue used.
+<PRE>#define INCL_DOSQUEUES   /* DOS Queue values */
+#define INCL_DOSPROCESS  /* DOS thread and process values */
+#define INCL_DOSERRORS   /* DOS error values */
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+int main(VOID) {
+
+   PSZ         szQueueName  = "\\QUEUES\\SPECIAL.QUE";
+   HQUEUE      hqSpecialQue = NULLHANDLE; /* Queue handle                   */
+   PSZ         DataBuffer   = "";         /* Data buffer for queue data     */
+   REQUESTDATA Request      = {0};        /* Reques */
+   PID         pidOwner     = 0;
+   ULONG       ulDataLen    = 0;          /* Length of data returned        */
+   BYTE        ElemPrty     = 0;          /* Priority of element (returned) */
+   APIRET      rc           = NO_ERROR;   /* Return code                    */
+
+   rc = DosCreateQueue(&amp;hqSpecialQue,    /* Queue handle                    */
+             QUE_FIFO |                  /* First-In First-Out order        */
+             QUE_CONVERT_ADDRESS,        /* Convert 16-bit addresses to 32  */
+             szQueueName);               /* Name of the queue to create     */
+   if (rc!= NO_ERROR) {
+      printf ("DosCreateQueue error: return code = %u\n", rc);
+      return 1;
+   }
+
+   rc = DosOpenQueue (&amp;pidOwner,         /* PID of queue owner              */
+                      &amp;hqSpecialQue,     /* Handle for created queue        */
+                      szQueueName);      /* Name of the queue to open       */
+   if (rc!= NO_ERROR) {
+      printf ("DosOpenQueue error: return code = %u\n", rc);
+      return 1;
+   }
+
+   DataBuffer = "To be, or not to be.  That is the question...";
+   rc = DosWriteQueue (hqSpecialQue,        /* Queue to write to           */
+                       12345L,              /* Request data                */
+                       strlen(DataBuffer),  /* Length of data to write     */
+                       DataBuffer,          /* Pointer to data             */
+                       0L);              /* Priority (not applicable here) */
+   if (rc!= NO_ERROR) {
+      printf ("DosWriteQueue error: return code = %u\n", rc);
+      return 1;
+   }
+
+   DataBuffer = "";                  /* Clear the DataBuffer */
+   Request.pid = pidOwner;           /* process ID for the DosReadQueue */
+   rc = DosReadQueue (hqSpecialQue,          /* Queue to read from          */
+                      &amp;Request,              /* Request data from write     */
+                      &amp;ulDataLen,            /* Length of data returned     */
+                      (PVOID) &amp;DataBuffer,   /* The data                    */
+                      0L,                    /* Remove first element        */
+                      DCWW_WAIT,             /* Wait for available data     */
+                      &amp;ElemPrty,             /* Priority of data (returned) */
+                      0L);             /* Semaphore to use when not waiting */
+
+   if (rc!= NO_ERROR) {
+      printf ("DosReadQueue error: return code = %u\n", rc);
+      return 1;
+   } else {
+      printf ("DosReadQueue returns: '%s'\n", DataBuffer);
+      printf ("      (Request data = %u)\n", Request.ulData);
+   }
+
+   rc = DosCloseQueue(hqSpecialQue);         /* Close the queue */
+   if (rc!= NO_ERROR) {
+      printf ("DosCloseQueue error: return code = %u\n", rc);
+      return 1;
+   }
+
+   return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="2016_L2H_DosWriteQueueRelated.html">[Back: DosWriteQueue - Related Functions]</A> <BR>
+<A HREF="2018_L2H_DosWriteQueueTopics.html">[Next: DosWriteQueue - Topics]</A> 
+</BODY>
+</HTML>

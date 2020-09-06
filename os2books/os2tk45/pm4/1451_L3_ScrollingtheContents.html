@@ -1,0 +1,76 @@
+<HTML>
+<HEAD>
+<TITLE>Scrolling the Contents of a Window</TITLE>
+</HEAD>
+<BODY>
+<H1>Scrolling the Contents of a Window</H1><!-- entering slot 1479 -->
+<P>
+An application typically responds to a click in a scroll bar by scrolling
+the contents of the window.  This operation has three parts. First, the
+application changes its internal data-representation state to show what
+portion of the image must now be in the window.  Next, the application moves
+the current image in the window.  Finally, the application draws in the
+area that has been uncovered by the scrolling operation.
+<P>
+For example, a simple text editor might display a small portion of several
+pages of text in a window.  When the user clicks the Down arrow of the vertical
+scroll bar, the application moves all the text up one line and displays
+the next line at the bottom of the window.
+<P>
+This clicking also causes a message to be sent to the client window of the
+frame window that owns the scroll bar.  The application responds to this
+message by changing its internal data-representation state to show which
+line of text is topmost in the window, scrolling the text in the window
+up one line, and drawing the new line at the bottom of the window.  There
+normally is no need to completely redraw the entire window, because the
+scrolled portion of the image remains valid.
+<P>
+You can use the WinScrollWindow function to scroll the contents of your
+application windows.  WinScrollWindow scrolls a specified rectangular area
+of the window by a specified x and y offset (in window coordinates).  If
+you set the SW_INVALIDATERGN flag for this function, the areas you uncover
+by scrolling are added to the window's update region automatically, causing
+a WM_PAINT message for the areas to be sent to the window.
+<P>
+For example, as used in the simple text editor described previously, the
+following call scrolls the text up one line (assuming that the<I> iVScrollInc
+</I>parameter specifies the height of the current font) and adds the uncovered
+area at the bottom of the window to the update region.
+<P>
+
+<PRE>    HWND hwnd;
+    LONG iVScrollInc;
+
+    /* Scroll, adding a new area to the update region.          */
+
+    WinScrollWindow(hwnd,  /* Window handle                     */
+        0,                 /* x displacement                    */
+        -(iVScrollInc),    /* y displacement                    */
+        (PRECTL) NULL,     /* Scroll rectangle is entire window */
+        (PRECTL) NULL,     /* Clip rectangle is entire window   */
+        (HRGN) NULL,       /* Update region                     */
+        (PRECTL) NULL,     /* Update rectangle                  */
+        SW_INVALIDATERGN); /* Scroll-window flag                */
+
+</PRE>
+
+<P>
+When the uncovered area is added to the window's update region, a WM_PAINT
+message is sent to the window.  Upon receiving the message, the window draws
+the line of text at the bottom of the window.  If the window has the WS_SYNCPAINT
+style, the WM_PAINT message is sent to the window before WinScrollWindow
+returns.
+<P>
+To optimize scrolling speed for repeated scrolling operations, you can omit
+the SW_INVALIDATERGN flag from the call to WinScrollWindow, which prevents
+the function from adding the invalid region (uncovered by the scroll) to
+the window's update region.  If you omit the SW_INVALIDATERGN flag, you
+must pass a region or rectangle to WinScrollWindow.  The rectangle or region
+will contain the area that must be updated after scrolling.
+
+<P><HR>
+
+<A HREF="1450_L4_FillingaRectangle.html">[Back: Filling a Rectangle]</A> <BR>
+<A HREF="1452_L3_DrawingaBitMap.html">[Next: Drawing a Bit Map]</A> 
+</BODY>
+</HTML>

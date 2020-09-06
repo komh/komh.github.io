@@ -1,0 +1,55 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>WinQuerySwitchList - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>WinQuerySwitchList - Example Code</H1><!-- entering slot 2244 -->
+<P>
+This example determines the number of items in the Task List, allocates
+memory for the required buffer, and then calls WinQuerySwitchList again
+to fill the buffer with the information about each item in the Task List.
+
+<PRE>#define INCL_DOSMEMMGR
+#define INCL_DOSERRORS
+#define INCL_WINSWITCHLIST  /* Or INCL_WIN, INCL_PM */
+#include &lt;OS2.H&gt;
+
+#define MEMPOOL  40000   /* Size of local memory pool area */
+
+HAB      hab        = NULLHANDLE;
+HWND     hwndFrame  = NULLHANDLE;
+ULONG    cbItems    = 0,            /* Number of items in list */
+         ulBufSize  = 0;            /* Size of buffer for information */
+PVOID    pvBase     = NULL;         /* Pointer to local memory pool */
+PSWBLOCK pswblk     = NULL;         /* Pointer to information returned */
+APIRET   rc         = NO_ERROR;     /* Return code from Dos APIs */
+
+     /* Allocate a large block of memory (uncommitted) and make
+        it available for suballocation.  This allows the system
+        to commit memory only when it is actually needed.       */
+
+rc = DosAllocMem( &amp;pvBase, MEMPOOL, PAG_READ | PAG_WRITE );
+rc = DosSubSetMem( pvBase, DOSSUB_INIT | DOSSUB_SPARSE_OBJ, MEMPOOL );
+
+     /* Determine the number of items in the list and calculate
+        the size of the buffer needed.                          */
+
+cbItems = WinQuerySwitchList(hab, NULL, 0);
+ulBufSize = (cbItems * sizeof(SWENTRY)) + sizeof(HSWITCH);
+
+     /* Allocate the buffer from our memory pool */
+
+rc = DosSubAllocMem( pvBase, (PVOID) &amp;pswblk, ulBufSize);
+
+   /* Call WinQuerySwitchList again to fill our buffer with information */
+
+cbItems = WinQuerySwitchList(hab, pswblk, ulBufSize);
+</PRE>
+
+
+<P><HR>
+
+<A HREF="2241_L2H_WinQuerySwitchListRe.html">[Back: WinQuerySwitchList - Related Functions]</A> <BR>
+<A HREF="2243_L2H_WinQuerySwitchListTo.html">[Next: WinQuerySwitchList - Topics]</A> 
+</BODY>
+</HTML>

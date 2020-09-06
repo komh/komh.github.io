@@ -1,0 +1,182 @@
+<HTML>
+<HEAD>
+<TITLE>Bitmap File Format</TITLE>
+</HEAD>
+<BODY>
+<H1>Bitmap File Format</H1><!-- entering slot 495 -->
+<P>
+The operating system uses the same file format for bitmaps, icons, and pointers
+in resource files. In the following description, "bitmap" refers to bitmaps,
+icons, and pointers unless otherwise specified.
+<P>
+Two formats are supported. In the first, a single-size version of the bitmap
+is defined. This is used whatever the target device.
+<P>
+The second format allows multiple versions of the bitmap to be defined,
+including one or more device-independent versions, and a number of device-dependent
+versions, each intended for use with a particular device.
+<P>
+In the case of icons and pointers, when more than one version of the bitmap
+exists, the preferred version is one that matches the device size of the
+icon or pointer; otherwise, the device-independent version is used to scale
+a bitmap to the required size.
+<P>
+The operating system provides pointers that match the requirements of the
+display device in use, typically pointers are 32x32 pels, one bit per plane.
+
+<P>
+Icons provided with the operating system are designed to match the requirements
+of the most common display devices.  The following versions of each icon
+are included in each file:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+32x32 4 bpp (16 color)<!-- lm: 0x2 6 -->
+<BR>
+40x40 4 bpp (16 color)<!-- lm: 0x2 6 -->
+<BR>
+32x32 1 bpp (black and white)<!-- lm: 0x2 6 -->
+<BR>
+20x20 1 bpp (black and white)<!-- lm: 0x2 6 -->
+<BR>
+16x16 1 bpp (black and white)<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The 32x32 versions are designed for VGA displays and for device-independent
+use.
+<P>
+The 40x40 version is for 8514/A and XGA displays.
+<P>
+The 20x20 and 16x16 are half-size icons designed for use as mini-icons.
+
+<P>
+For general bitmaps, which may be of arbitrary size, the preferred version
+is one matching the requested bitmap size; otherwise one matching the display
+size is selected. If neither is available, the device-independent version
+is used from which to scale a bitmap.
+<P>
+For both formats, the definition consists of two sections. The first section
+contains general information about the type, dimensions, and other attributes
+of the resource. The second section contains data describing the pels that
+make up the bitmap(s), and is in the format specified in <A HREF="485_L3_BitmapData.html">Bitmap
+Data</A>.
+<P>
+In the multiple-version format, the first section contains an array of<A><!-- external link: 1D BC C7 35 --> BITMAPARRAYFILEHEADER
+</A>or<A><!-- external link: 1D BD C7 36 --> BITMAPARRAYFILEHEADER2</A> structures.
+
+<P>
+The device-independent version must be the first<A><!-- external link: 1D BC C7 35 --> BITMAPARRAYFILEHEADER
+</A>or<A><!-- external link: 1D BD C7 36 --> BITMAPARRAYFILEHEADER2</A> defined.
+
+<P>
+In the single-size format, the<A><!-- external link: 1D BC C7 35 --> BITMAPARRAYFILEHEADER
+</A>or<A><!-- external link: 1D BD C7 36 --> BITMAPARRAYFILEHEADER2</A> structure
+is not present. The definition consists of one or two<A><!-- external link: 1D BE C7 37 --> BITMAPFILEHEADER
+</A>or<A><!-- external link: 1D BF C7 38 --> BITMAPFILEHEADER2</A> structures.
+
+<P>
+For icons and pointers, the<I> cy</I> field in<I> bmp</I> is actually twice
+the pel height of the image that appears on the screen.  This is because
+these types actually contain two full bitmap pel definitions. The first
+bitmap definition is the XOR mask, which contains invert information (0
+= no invert, 1 = invert) for the pointer or icon. The second is the AND
+mask, which determines whether the pointer or the screen is shown (0 = black/white,
+1 = screen/inverse screen).
+<P>
+For color icons or pointers, there are two bitmaps involved: one that is
+black and white and consists of an AND and an XOR mask, and one that is
+color that defines the color content.
+<P>
+The<I> cy</I> field in the<A><!-- external link: 1D C3 C7 3A --> BITMAPINFOHEADER2
+</A>structure for the color bitmap must be the real height, that is, half
+the value specified for the black and white bitmap. The<I> cx</I> must be
+the same.
+<P>
+The following table shows how these two bitmaps are used for a color icon
+or pointer:
+<PRE>   XOR     AND     COLOR
+    1       1        x       Invert screen
+    0       0        x       Use color x
+    0       1        x       Transparency
+    1       0        x       Use color x
+
+</PRE>
+
+<P>
+For color icons or pointers, two<A><!-- external link: 1D BE C7 37 --> BITMAPFILEHEADER
+</A>or<A><!-- external link: 1D BF C7 38 --> BITMAPFILEHEADER2</A> structures
+are therefore required:
+<PRE>
+BITMAPFILEHEADER2    with usType BFT_COLORICON or BFT_COLORPOINTER
+   BITMAPINFOHEADER2 (part of BITMAPFILEHEADER2)
+   Color table
+BITMAPFILEHEADER2    with same usType
+   BITMAPINFOHEADER2 (part of BITMAPFILEHEADER2)
+   Color table
+**
+bits for one bitmap
+**
+**
+bits for other bitmap
+**
+
+</PRE>
+The<I> usType</I> for the first<A><!-- external link: 1D BF C7 38 --> BITMAPFILEHEADER2
+</A>is either BFT_COLORICON or BFT_COLORPOINTER. This means that a second
+<A><!-- external link: 1D BF C7 38 -->BITMAPFILEHEADER2</A> is present as
+part of the definition of a color icon or pointer. The first The first<A><!-- external link: 1D BF C7 38 --> BITMAPFILEHEADER2
+</A>structure contains the information for the black and white AND and XOR
+masks, while the second<A><!-- external link: 1D BF C7 38 --> BITMAPFILEHEADER2
+</A>structure contains the information for the color part of the pointer
+or icon.
+<P>
+<A><!-- external link: 1D BE C7 37 -->BITMAPFILEHEADER</A> and<A><!-- external link: 1D C2 C7 39 --> BITMAPINFOHEADER
+</A>can occur in place of<A><!-- external link: 1D BF C7 38 --> BITMAPFILEHEADER2
+</A>and<A><!-- external link: 1D C3 C7 3A --> BITMAPINFOHEADER2</A> in this
+example.
+<P>
+For the multiple version format, the file is as follows:
+<PRE>
+BITMAPARRAYFILEHEADER2   for device-independent version
+   BITMAPFILEHEADER2     (part of BITMAPARRAYFILEHEADER2)
+      BITMAPINFOHEADER2  (part of BITMAPFILEHEADER2)
+      Color table
+
+   BITMAPFILEHEADER2     )
+      BITMAPINFOHEADER2  )  only if this is a color icon or pointer
+      Color table        )
+
+BITMAPARRAYFILEHEADER2   for first device-dependent version
+   BITMAPFILEHEADER2     (part of BITMAPARRAYFILEHEADER2)
+      BITMAPINFOHEADER2  (part of BITMAPFILEHEADER2)
+      Color table
+
+   BITMAPFILEHEADER2     )
+      BITMAPINFOHEADER2  )  only if this is a color icon or pointer
+      Color table        )
+
+Further BITMAPARRAYFILEHEADER2 groups occur here as required
+for additional device-dependent versions
+
+**
+bits for one bitmap
+**
+**
+bits for next bitmap
+**
+
+And so on for as many bitmaps as necessary.
+</PRE>
+
+<P>
+As before,<A><!-- external link: 1D BC C7 FC --> BITMAPARRAYFILEHEADER</A>,
+<A><!-- external link: 1D BE C7 FC -->BITMAPFILEHEADER</A>, and<A><!-- external link: 1D C2 C7 FC --> BITMAPINFOHEADER</A>,
+can occur in place of<A><!-- external link: 1D BD C7 FC --> BITMAPARRAYFILEHEADER2</A>,
+<A><!-- external link: 1D BF C7 FC -->BITMAPFILEHEADER2</A>, and<A><!-- external link: 1D C3 C7 3A --> BITMAPINFOHEADER2
+</A>
+
+<P><HR>
+
+<A HREF="487_L3_BitmapExample.html">[Back: Bitmap Example]</A> <BR>
+<A HREF="489_L2_CodePages.html">[Next: Code Pages]</A> 
+</BODY>
+</HTML>

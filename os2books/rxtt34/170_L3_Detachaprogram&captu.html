@@ -1,0 +1,166 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Detach a program & capture the PID</TITLE>
+</HEAD>
+<BODY>
+<H1>Detach a program & capture the PID</H1><!-- entering slot 172 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+Use the following routine to DETACH</A> a program and capture the PID of
+the detached program.
+<PRE> 
+/*                                                                    */
+/* sample routine to detach a program and return the process          */
+/* identification number (PID)                                        */
+/*                                                                    */
+
+                    /* get the parameter                              */
+  parse arg progName progParameter
+
+                    /* detach the program                             */
+  thisRC = DetachProgram( progName, progParameter )
+
+                    /* and process the return code                    */
+  if word( thisRC,1 ) = "ERROR:" then
+    say "DetachProgram returned the error message: " thisRC
+  else
+    say "The process identification number of the",
+        "detached process is &lt;" || thisRC || "&gt;."
+exit
+
+
+/* ------------------------------------------------------------------ */
+/* function: detach a program and return the process identification   */
+/*           number                                                   */
+/*                                                                    */
+/* call:     DetachProgram programName {, programParameters}          */
+/*                                                                    */
+/* where:    programName - name of the program                        */
+/*          programParameters - parameter for the program             */
+/*                                                                    */
+/* returns:  ERROR n: error n occured                                 */
+/*             where n is                                             */
+/*              -255 : unknown error occured                          */
+/*                -1 : parameter missing                              */
+/*                -2 : program to detach not found                    */
+/*           else the process identification number                   */
+/*                                                                    */
+/* Note:     This routine uses static names for the temporary files   */
+/*           and thus cannot run in separate programs at the same     */
+/*           time (see below for a solution of this limitation)!      */
+/*                                                                    */
+/*           This routine assumes that the PID is always the last     */
+/*           word in the output of the detach command.                */
+/*                                                                    */
+/*                                                                    */
+DetachProgram: PROCEDURE
+  parse arg ProgramName , ProgramParameter
+
+  programName = strip( programName )
+
+                        /* set the necessary ADDRESS environment      */
+                        /* Note that the previous ADDRESS environment */
+                        /* is automatically restored after this       */
+                        /* routine ends.                              */
+  ADDRESS "CMD"
+
+                        /* init the return code                       */
+  thisRC = "ERROR: -255"
+  if programName &lt;&gt; "" then
+  do
+    if stream( programName, "c", "QUERY EXISTS" ) &lt;&gt; "" then
+    do
+
+                    /* get the path for the temporary files           */
+      tempPath = value( "TEMP",, "OS2ENVIRONMENT" )
+      if tempPath = "" then
+        tempPath = value( "TEMP",, "OS2ENVIRONMENT" )
+      if tempPath = "" then
+        tempPath = directory()
+
+      if right( tempPath, 1 ) &lt;&gt; "\" then
+        tempPath = tempPath || "\"
+
+                    /* Note:                                          */
+                    /* Change the algorithm to get the names for the  */
+                    /* logfile and the temporary copy of the logfile  */
+                    /* if you want to run this routine in more than   */
+                    /* one program at the same time!!!                */
+                    /* (e.g. use the routine <A HREF="468_L3_Getanameforatemporar.html">GetTempFile</A> from RXT&amp;T)  */
+
+                    /* create the name for the STDERR logfile         */
+                    /* of the detached program                        */
+      STDErrLogFile = tempPath || "$$out$$.ERR"
+
+                    /* create the name for the temporary copy of the  */
+                    /* logfile                                        */
+      TempLogFile =   tempPath || "$$out$$.TMP"
+
+                    /* detach the program redirecting STDOUT to NUL   */
+                    /* and STDERR into the logfile                    */
+                    /*                                                */
+                    /* The use of another copy of the CMD.EXE is      */
+                    /* necessary to handle batch files and REXX       */
+                    /* programs correctly                             */
+                    /*                                                */
+      "@detach cmd /c " ProgramName ,
+                       ProgramParameter ,
+                     "2&gt;" || STDErrLogFile ,
+                     "1&gt;" || "NUL"
+
+                    /* because we can't read the logfile in REXX at   */
+                    /* this time (it is still opened), we use the     */
+                    /* TYPE command to copy the current contents      */
+                    /* of the logfile into another file               */
+                    /*                                                */
+                    /* Note that you cannot redirect the output of    */
+                    /* the TYPE command into RXQUEUE.                 */
+                    /* You cannot use the COPY command to copy the    */
+                    /* file because it is still in use by the         */
+                    /* detached program.                              */
+                    /*                                                */
+      "@type " STDErrLogFile "&gt;" || TempLogFile
+
+                    /* and now we read the first line of the          */
+                    /* temporary copy of logfile to get the PID       */
+      call stream tempLogfile, "c", "OPEN READ"
+
+      if lines( tempLogFile ) &gt;= 1 then
+      do
+        curLine = lineIn( tempLogFile )
+
+                    /* we assume the last word of the output message  */
+                    /* from DETACH is the PID                         */
+        thisRC = Word( curLine, words( curLine ) )
+        if right( thisRC,1 ) = "." then
+          thisRC = dbrright( thisRC, 1 )
+
+      end /* if */
+
+                    /* last thing to do: close temporary copy of      */
+                    /* the logfile and delete it                      */
+      call stream tempLogfile, "c", "CLOSE"
+
+      "@del " tempLogFile "1&gt;NUL 2&gt;NUL"
+
+    end /* if stream( programName, "c", "QUERY EXISTS" ) &lt;&gt; "" then */
+    else
+      thisRC = "ERROR: -2"
+  end /* if programName &lt;&gt; "" then */
+  else
+    thisRC = "ERROR: -1"
+
+RETURN thisRC
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="169_L3_StartaWindowsprogram.html">[Back: Start a Windows program synchronously]</A> <BR>
+<A HREF="171_L3_CheckifaREXXprogrami.html">[Next: Check if a REXX program is already running]</A> 
+</BODY>
+</HTML>

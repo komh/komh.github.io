@@ -1,0 +1,143 @@
+<HTML>
+<HEAD>
+<TITLE>_beginthread - Create New Thread</TITLE>
+</HEAD>
+<BODY>
+<H1>_beginthread - Create New Thread</H1><!-- entering slot 69 -->_beginthread - Create New Thread<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>#include &lt;stdlib.h&gt;   /* also in &lt;process.h&gt; */
+int _beginthread(void (*<I>start_address</I>) (void *),
+                     (void *)<I>stack</I>,
+                     unsigned <I>stack_size</I>,
+                     void *<I>arglist</I>);
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Description
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+<LI>beginthread creates a new thread. It takes the following arguments:
+<!-- lm: 0x2 10 -->
+<P>
+<I>start_address</I><!-- lm: 0x12 25 -->
+<UL> This parameter is the address
+of the function that the newly created thread will execute. When the thread
+returns from that function, it is terminated automatically. You can also
+explicitly terminate the thread by calling _endthread.<!-- lm: 0x2 10 -->
+</UL><I> stack
+</I><!-- lm: 0x12 25 -->
+<UL>This parameter is ignored, but is retained
+to ease migration of C/2 programs. The C/2 compiler requires the second
+parameter to be the address of the bottom of the stack that the new thread
+will use. Because the OS/2 operating system automatically takes care of
+stack allocation, the parameter is not needed.<!-- lm: 0x2 10 -->
+</UL><I> stack_size
+</I><!-- lm: 0x12 25 -->
+<UL>The size of the stack, in bytes, that is to
+be allocated for the new thread. The stack size should be a nonzero multiple
+of 4K and a minimum of 8K. Memory is used when needed, one page at a time.
+<!-- lm: 0x2 10 -->
+</UL><I>arglist</I><!-- lm: 0x12 25 -->
+<UL> A parameter
+to be passed to the newly created thread. It is the size of a pointer, and
+is usually the address of a data item to be passed to the new thread, such
+as a char string. It provides _beginthread with a value to pass to the child
+thread. NULL can be used as a placeholder.<!-- lm: 0x2 10 -->
+</UL>
+<P>
+An alternative to this function is the OS/2 DosCreateThread function. If
+you use DosCreateThread, you must also use a #pragma handler statement for
+the thread function to ensure proper C exception handling. You should also
+call the _fpreset function at the start of the thread to preset the 387
+control status word correctly. Using DosCreateThread requires that you use
+_endthread to terminate the thread.<!-- lm: 0x2 1 -->
+</UL> Returns
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+If successful, _beginthread returns the thread ID number of the new thread.
+It returns -1 to indicate an error.<!-- lm: 0x2 1 -->
+</UL> Example Code
+
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+This example uses _beginthread to start a new thread bonjour, which prints
+Bonjour! five times and then implicitly ends itself. The program then prints
+a statement indicating the thread identifier number for bonjour.
+<PRE>#define  INCL_DOS#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+
+static int wait = 1;
+
+void bonjour(void *arg)
+{
+   int i = 0;
+
+   while (wait)              /* wait until the thread id has been printed     */
+      DosSleep(0l);
+   while (i++ &lt; 5)
+      printf("Bonjour!\n");
+}
+
+int main(void)
+{
+   int tid;
+
+   tid = _beginthread(bonjour, NULL, 8192, NULL);
+   if (-1 == tid) {
+      printf("Unable to start thread.\n");
+      return EXIT_FAILURE;
+   }
+   else {
+      printf("Thread started with thread identifier number %d.\n", tid);
+      wait = 0;
+   }
+   DosWaitThread((PTID)&amp;tid, DCWW_WAIT);  /* wait for thread bonjour to       */
+                                          /* end before ending main thread    */
+
+   return 0;
+
+   /****************************************************************************
+      The output should be similar to :
+
+       Thread started with thread identifier number 2.
+       Bonjour!
+       Bonjour!
+       Bonjour!
+       Bonjour!
+       Bonjour!
+   ****************************************************************************/
+}
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Related Information
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+<!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 --><A HREF="101_L2__endthreadTerminateC.html"><LI>endthread
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="292_L2__threadstoreAccessTh.html"><LI>threadstore
+</A><!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="068_L2__atoldConvertCharact.html">[Back: _atold - Convert Character String to Long Double]</A> <BR>
+<A HREF="070_L2_BesselFunctionsSolve.html">[Next: Bessel Functions - Solve Differential Equations]</A> 
+</BODY>
+</HTML>

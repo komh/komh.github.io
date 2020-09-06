@@ -1,0 +1,393 @@
+<HTML>
+<HEAD>
+<TITLE>Hooks Application Sample Code</TITLE>
+</HEAD>
+<BODY>
+<H1>Hooks Application Sample Code</H1><!-- entering slot 1608 -->
+<P>
+The hook application includes the following files:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Hookdemo.C<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Hookdll.C<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Hookdemo.RC<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Hookdemo.H<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Hookdemo.DEF<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Hookdemo.LNK<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Hookdll.DEF<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Hookdll.LNK<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Hookdemo.MAK<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following sample illustrates the hook application code:
+<PRE>============HOOKDEMO.C
+============
+
+#define  INCL_WIN
+#define  INCL_GPI
+
+#include &lt;os2.h&gt;
+#include "hookdemo.h"
+
+#pragma  linkage (main,optlink)
+INT      main(VOID);
+
+/***********************************************************************/
+/*  Main() - program entry point.                                      */
+/***********************************************************************/
+MRESULT EXPENTRY LocalWndProc(HWND, ULONG, MPARAM, MPARAM);
+
+HAB     hab;
+HWND    hFrameWnd;
+PFNWP   SysWndProc;
+
+INT main (VOID)
+{
+    HMQ         hmq;
+    FRAMECDATA  fcd;
+    QMSG        qmsg;
+
+    if (!(hab = WinInitialize(0)))
+      return FALSE;
+
+/***********************************************************************/
+/*  Initialize our DLL, which holds the system hook routines.          */
+/***********************************************************************/
+    InitDLL(hab);
+
+    if (!(hmq = WinCreateMsgQueue(hab, 0)))
+      return FALSE;
+
+/***********************************************************************/
+/*  Setup the frame control data for the frame window.                 */
+/***********************************************************************/
+    fcd.cb            = sizeof(FRAMECDATA);
+    fcd.flCreateFlags = FCF_TITLEBAR      |
+                        FCF_SYSMENU       |
+                        FCF_MENU          |
+                        FCF_SIZEBORDER    |
+                        FCF_SHELLPOSITION |
+                        FCF_MINMAX        |
+                        FCF_TASKLIST;
+    fcd.hmodResources = NULLHANDLE;
+    fcd.idResources   = HOOKDEMO;
+
+/***********************************************************************/
+/*  Create the frame - it will hold the container control.             */
+/***********************************************************************/
+    hFrameWnd = WinCreateWindow(HWND_DESKTOP,
+                                WC_FRAME,
+                                "HookDemo",
+                                0, 0, 0, 0, 0,
+                                NULLHANDLE,
+                                HWND_TOP,
+                                0,
+                                &amp;fcd,
+                                NULL);
+
+/***********************************************************************/
+/*  Verify that the frame was created; otherwise, stop.                */
+/***********************************************************************/
+    if (!hFrameWnd)
+      return FALSE;
+
+/***********************************************************************/
+/*  Set an icon for the frame window.                                  */
+/***********************************************************************/
+    WinSendMsg(hFrameWnd,
+               WM_SETICON,
+               (MPARAM)WinQuerySysPointer(HWND_DESKTOP,
+                                          SPTR_FOLDER,
+                                          FALSE),
+                NULL);
+
+/***********************************************************************/
+/*  We must intercept the frame window's messages.                     */
+/*  We save the return value (the current WndProc),                    */
+/*  so we can pass it all the other messages the frame gets.           */
+/***********************************************************************/
+    SysWndProc = WinSubclassWindow(hFrameWnd, (PFNWP)LocalWndProc);
+
+    WinShowWindow(hFrameWnd,TRUE);
+
+/***********************************************************************/
+/*  Standard PM message loop - get it, dispatch it.                    */
+/***********************************************************************/
+    while (WinGetMsg(hab, &amp;qmsg, NULLHANDLE, 0, 0))
+    {
+       WinDispatchMsg(hab, &amp;qmsg);
+    }
+
+/***********************************************************************/
+/*  Clean up on the way out.                                           */
+/***********************************************************************/
+    WinDestroyWindow(hFrameWnd);
+    WinDestroyMsgQueue(hmq);
+    WinTerminate(hab);
+
+    return TRUE;
+}
+
+/***********************************************************************/
+/*  LocalWndProc() - window procedure for the frame window.            */
+/*  Called by PM whenever a message is sent to the frame.              */
+/***********************************************************************/
+MRESULT EXPENTRY LocalWndProc(HWND hwnd,ULONG msg,MPARAM mp1,MPARAM mp2)
+{
+    char                szBuffer[80];
+    POINTL              pt;
+    int                 x;
+
+    switch(msg)
+    {
+
+/***********************************************************************/
+/*  Send the message to the usual WC_FRAME WndProc.                    */
+/***********************************************************************/
+        case WM_COMMAND:
+            switch (SHORT1FROMMP(mp1))
+            {
+
+/***********************************************************************/
+/*  Start the hook routine - it stops all WM_COMMAND messages.         */
+/*  (which means all these other messages will be ignored).            */
+/***********************************************************************/
+                case IDM_START:
+                    StartInputHook();
+                    break;
+
+                case IDM_STOP:
+                    StopInputHook();
+                    break;
+
+                case IDM_EXIT:
+                    WinPostMsg(hwnd, WM_CLOSE, 0, 0);
+                    break;
+
+                default:
+                    return (*SysWndProc)(hwnd, msg, mp1, mp2);
+            }
+            break;
+
+/***********************************************************************/
+/*  Send the message to the usual WC_FRAME WndProc.                    */
+/***********************************************************************/
+        default:
+            return (*SysWndProc)(hwnd, msg, mp1, mp2);
+            break;
+    }
+
+    return FALSE;
+}
+
+============
+HOOKDLL.C
+============
+#define  INCL_WIN
+#define  INCL_DOS
+#include &lt;os2.h&gt;
+
+/***********************************************************************/
+/*  Global variables.                                                  */
+/***********************************************************************/
+HAB     habDLL;
+HMODULE hMod;
+PFN     pfnInput;
+
+/***********************************************************************/
+/*  InitDLL: This function sets up the DLL and sets all variables      */
+/***********************************************************************/
+void EXPENTRY InitDLL(HAB hab)
+{
+    habDLL = hab;
+
+/***********************************************************************/
+/*  Load the DLL - actually, just get our module <!-- entering slot 1609 -->handle.               */
+/***********************************************************************/
+    DosLoadModule(NULL, 0, "HOOKDLL", &amp;hMod);
+
+/***********************************************************************/
+/*  Find the address of the input hook procedure.                      */
+/***********************************************************************/
+    DosQueryProcAddr(hMod, 0, "InputProc", &amp;pfnInput);
+}
+
+/***********************************************************************/
+/*  StartInputHook: This function starts the hook filtering.           */
+/***********************************************************************/
+void EXPENTRY StartInputHook(void)
+{
+
+/***********************************************************************/
+/*  Set a hook to our input filter routine.                            */
+/***********************************************************************/
+  WinSetHook(habDLL, NULLHANDLE, HK_INPUT, pfnInput, hMod);
+}
+
+/***********************************************************************/
+/*  StopInputHook: This function stops the hook filtering.             */
+/***********************************************************************/
+void EXPENTRY StopInputHook(void)
+{
+
+/***********************************************************************/
+/*  Drop a hook to our input filter routine.                           */
+/***********************************************************************/
+    WinReleaseHook(habDLL, NULLHANDLE, HK_INPUT, pfnInput, hMod);
+
+/***********************************************************************/
+/*  Decrement the DLL usage count.                                     */
+/***********************************************************************/
+    DosFreeModule(hMod);
+}
+
+/***********************************************************************/
+/*  InputProc: This is the input filter routine.                       */
+/*  While the hook is active, all messages come here                   */
+/*  before being dispatched.                                           */
+/***********************************************************************/
+BOOL EXPENTRY InputProc(HAB hab, PQMSG pqMsg, ULONG fs)
+{
+
+/***********************************************************************/
+/*  Check for WM_COMMAND messages.                                     */
+/***********************************************************************/
+    if (pqMsg-&gt;msg == WM_COMMAND)
+    {
+
+/***********************************************************************/
+/*  Ignore all WM_COMMAND messages (stops menu processing).            */
+/***********************************************************************/
+      return TRUE;
+    }
+
+/***********************************************************************/
+/*  Pass the message on to the next hook in line.                      */
+/***********************************************************************/
+   return FALSE;
+}
+
+============
+HOOKDEMO.RC
+============
+#include &lt;os2.h&gt;
+#include "hookdemo.h"
+
+MENU    HOOKDEMO
+BEGIN
+  SUBMENU       "Command",  IDM_CMD
+  BEGIN
+    MENUITEM    "Start",    IDM_START
+    MENUITEM    "Stop",     IDM_STOP
+    MENUITEM    "Exit",     IDM_EXIT
+  END
+END
+
+============
+HOOKDEMO.H
+============
+#define HOOKDEMO        256
+#define IDM_CMD         400
+#define IDM_START       401
+#define IDM_STOP        402
+#define IDM_EXIT        403
+
+============
+HOOKDEMO.DEF
+============
+NAME HOOKDEMO WINDOWAPI
+
+DESCRIPTION 'PM Hooks Sample'
+
+CODE  MOVEABLE
+DATA  MOVEABLE MULTIPLE
+
+STACKSIZE   24576
+HEAPSIZE    10240
+
+PROTMODE
+
+============
+HOOKDEMO.LNK
+============
+hookdemo.obj /NOI
+hookdemo.exe
+hookdemo.map
+hookdll.lib
+hookdemo.def
+
+============
+HOOKDLL.DEF
+============
+LIBRARY HOOKDLL
+
+DESCRIPTION 'PM Hooks Sample'
+
+CODE    LOADONCALL
+DATA    LOADONCALL
+
+PROTMODE
+
+EXPORTS
+  InitDLL
+  StartInputHook
+  StopInputHook
+  InputProc
+
+============
+HOOKDLL.LNK
+============
+hookdll.obj /NOI
+hookdll.dll
+hookdll.map
+hookdll.def
+
+============
+HOOKDEMO.MAK
+============
+CC      = icc /c /Ge /Gd- /Se /Re /ss /Gm+
+LINK    = link386
+HEADERS = hookdemo.h
+
+#-------------------------------------------------------------------
+#  A list of all of the object files.
+#-------------------------------------------------------------------
+ALL_OBJ1 = hookdemo.obj
+
+ALL_OBJ2 = hookdll.obj
+
+all: hookdemo.exe hookdll.dll
+
+hookdemo.res: hookdemo.rc hookdemo.h
+
+hookdemo.obj: hookdemo.c $(HEADERS)
+              icc /C /Ss /W3 hookdemo.c
+
+hookdll.obj:  hookdll.c
+              icc /C+ /Ge- /Gm+ hookdll.c
+
+hookdll.dll:  $(ALL_OBJ2) hookdll.def hookdll.lnk
+              $(LINK) @hookdll.lnk
+              implib hookdll.lib hookdll.def
+
+hookdemo.exe: $(ALL_OBJ1) hookdemo.def hookdemo.lnk hookdemo.res hook dll.lib
+              $(LINK) @hookdemo.lnk
+              rc -p -x hookdemo.res hookdemo.exe
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1573_L2_SampleCodeforHooks.html">[Back: Sample Code for Hooks]</A> <BR>
+<A HREF="1575_L1_InitializationFiles.html">[Next: Initialization Files]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,58 @@
+<HTML>
+<HEAD>
+<TITLE>The 'SOMMSingleInstance' Metaclass</TITLE>
+</HEAD>
+<BODY>
+<H1>The 'SOMMSingleInstance' Metaclass</H1><!-- entering slot 387 -->
+<P>
+Sometimes it is necessary to define a class for which only one instance
+can be created. This is easily accomplished with the<B> SOMMSingleInstance
+</B>metaclass. Suppose the class "Collie" is an instance of<B> SOMMSingleInstance.
+</B>The first call to<B> CollieNew</B> creates the one possible instance
+of "Collie"; hence, subsequent calls to<B> CollieNew</B> return the first
+(and only) instance.
+<P>
+Any class whose metaclass is<B> SOMMSingleInstance</B> gets this requisite
+behavior; nothing further needs to be done. The first instance created is
+always returned by the &lt;<I>className</I>&gt;<B>New</B> maro.
+<P>
+Alternatively, the method<B> sommGetSingleInstance</B> does the same thing
+as the &lt;<I>className</I>&gt;<B>New</B> macro. This method invoked on
+a class object (for example, "Collie") is useful because the call site explicitly
+shows that something special is occurring and that a new object is not necessarily
+being created. For this reason, one might prefer the second form of creating
+a single-instance object to the first.
+<P>
+Instances of<B> SOMMSingleInstance</B> keep a count of the number of times
+<B>somNew</B> and<B> sommGetSingleInstance</B> are invoked. Each invocation
+of<B> somFree</B> decrements this count. An invocation of<B> somFree</B> does
+not actually free the single instance until the count reaches zero.
+<P>
+<B>SOMMSingleInstance</B> overrides<B> somRenew, somRenewNoInit, somRenewNoInitNoZero,
+</B>and<B> somRenewNoZero</B> so that a proxy is created in the space indicated
+in the<B> somRenew*</B> call. This proxy redispatches all methods to the
+single instance, which is always allocated in heap storage. Note that all
+of these methods<B> (somRenew*)</B> increment the reference count; therefore,
+<B>somFree</B> should be called on these objects, too. In this case,<B> somFree
+</B>decrements the reference and frees the single instance (and, of course,
+takes no action with respect to the storage indicated in the original<B> somRenew*
+</B>call).
+<P>
+If a class is an instance of<B> SOMMSingleInstance,</B> all of its subclasse
+are also instances of<B> SOMMSingleInstance.</B> Be aware that this also
+means that each subclass is allowed to have only a single instance. (This
+may seem obvious. However, it is a common mistake to create a framework
+class that must have a single instance, while at the same time expecting
+users of the framework to subclass the single instance class. The result
+is that two single-instance objects are created: one for the framework class
+and one for the subclass. One technique that can mitigate this scenario
+is based on the use of<B> somSubstituteClass.</B> In this case, the creator
+of the subclass must substitute the subclass for the framework class - before
+the instance of the framework class is created.)
+
+<P><HR>
+
+<A HREF="337_L3_Notesandadvantagesof.html">[Back: Notes and advantages of 'before/after' usage]</A> <BR>
+<A HREF="339_L2_TheSOMMTracedMetacla.html">[Next: The 'SOMMTraced' Metaclass]</A> 
+</BODY>
+</HTML>

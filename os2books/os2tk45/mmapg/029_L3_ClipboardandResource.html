@@ -1,0 +1,144 @@
+<HTML>
+<HEAD>
+<TITLE>Clipboard and Resource Formats</TITLE>
+</HEAD>
+<BODY>
+<H1>Clipboard and Resource Formats</H1><!-- entering slot 35 -->
+<P>
+Applications can imbed multimedia data into program resources and interchange
+that data through the clipboard.
+<P>
+The following clipboard and resource format types are defined in the OS2MEDEF.H
+file:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->CF_RMID and RT_RMID represent RIFF data that has a
+RMID chunk or regular MIDI with an "MT" header.  This is a special case.
+<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->CF_RIFF and RT_RIFF represent RIFF data including
+all of the headers.<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->CF_WAVE and RT_WAVE represent RIFF data that has a
+WAVE chunk.  This is a specific form of RIFF.<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->CF_AVI and RT_AVI represent RIFF Audio/Video Interleaved
+(AVI) data.  This is a specific form of RIFF.  An entire video file is placed
+in the clipboard.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following code fragment is an example of retrieving digital audio information
+from the clipboard.  Source code for ADMCEDIT is located in the \TOOLKIT\SAMPLES\MM\ADMCT
+subdirectory.
+<PRE>{HAB            habClipboard;
+HMQ            hmq;
+
+HMMIO          hmmioMem;           /* handle to memory file   */
+
+MMIOINFO       mmioinfo;           /* info struct for memory file */
+
+ULONG          ulFormatInfo = 0;
+ULONG          rc;
+PULONG         pulDataSize;
+
+LONG           lBytesRead;
+LONG           lReturnCode;
+
+MMAUDIOHEADER  mmaudioheader;
+MMAUDIOHEADER  mmaudioheaderTemp;
+
+PSZ            pTempBuffer;
+PVOID          pNewBuffer;
+
+  habClipboard = WinInitialize( 0 );
+  if ( !habClipboard )
+     {
+     return ( MCIERR_CLIPBOARD_ERROR );
+     }
+
+  hmq = WinCreateMsgQueue( habClipboard, 0 );
+
+  if ( !hmq )
+     {
+     fCreatedMQ = FALSE;
+     }
+
+/*  habClipboard = WinQueryAnchorBlock( HWND_DESKTOP ); */
+
+  /*****************************************************************
+  * Check to see if there is a wave (CF_WAVE is the defined type) in
+  * the clipboard.
+  ******************************************************************/
+
+  rc = WinQueryClipbrdFmtInfo( habClipboard,
+                          CF_WAVE,
+                          &amp;ulFormatInfo );
+
+
+  if ( !WinOpenClipbrd( habClipboard ) )
+     {
+     WinCloseClipbrd( habClipboard );
+     return ( MCIERR_CLIPBOARD_ERROR );
+     }
+
+  pTempBuffer = ( PSZ ) WinQueryClipbrdData( habClipboard, CF_WAVE );
+
+  if ( !pTempBuffer )
+     {
+     WinCloseClipbrd( habClipboard );
+     return ( MCIERR_CLIPBOARD_ERROR );
+     }
+
+  /*****************************************************************
+  * We need to find out how much data is in the file.  Retrieve
+  * the length of the RIFF chunk.
+  ******************************************************************/
+  pulDataSize = ( PULONG ) pTempBuffer + 1;
+
+
+  memset( &amp;mmioinfo, '\0', sizeof( MMIOINFO ) );
+
+  /*****************************************************************
+  * Prepare to open a memory file--the buffer * in the clipboard
+  * contains the actual RIFF file which the WAVE IOProc already knows
+  * how to parse--use  it to retrieve the information and keep the MCD
+  * from file-format dependence.
+  ******************************************************************/
+
+  mmioinfo.fccIOProc = mmioFOURCC( 'W', 'A', 'V', 'E' ) ;
+  mmioinfo.fccChildIOProc = FOURCC_MEM;
+
+  rc = CheckMem ( (PVOID) pulDataSize,
+                    sizeof ( ULONG ),
+                    PAG_READ | PAG_WRITE );
+
+  if (rc != MCIERR_SUCCESS)
+     {
+     WinCloseClipbrd( habClipboard );
+     return (MCIERR_OUT_OF_MEMORY );
+     }
+
+
+  mmioinfo.cchBuffer = ( *pulDataSize) + 8;
+  mmioinfo.pchBuffer = pTempBuffer;
+
+
+  hmmioMem = mmioOpen( NULL,
+                       &amp;mmioinfo,
+                       MMIO_READ );
+
+  if ( !hmmioMem )
+     {
+     WinCloseClipbrd( habClipboard );
+     return ( mmioinfo.ulErrorRet );
+     }
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="028_L2_EditingOperations.html">[Back: Editing Operations]</A> <BR>
+<A HREF="030_L3_AudioMediaDriverClip.html">[Next: Audio Media Driver Clipboard Commands]</A> 
+</BODY>
+</HTML>

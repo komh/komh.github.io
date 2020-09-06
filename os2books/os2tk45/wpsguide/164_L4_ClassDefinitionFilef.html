@@ -1,0 +1,214 @@
+<HTML>
+<HEAD>
+<TITLE>Class Definition File for Stack</TITLE>
+</HEAD>
+<BODY>
+<H1>Class Definition File for Stack</H1><!-- entering slot 173 -->
+<P>
+The following sample illustrates the class interface definition file (IDL):
+
+<PRE>
+<PRE>//# CLASS: Stack
+//#
+//# CLASS HIERARCHY:
+//#
+//#    SOMObject
+//#      ÀÄÄÄWPObject
+//#            ÀÄÄÄWPAbstract
+//#                  ÀÄÄÄStack
+//#
+
+#ifndef wpstack_idl
+#define wpstack_idl
+
+#include "wpabs.idl"
+typedef somToken PSTACKENTRY;  //# Dummy typedef for instance variable
+
+interface M_Stack;
+
+interface Stack : WPAbstract
+{
+  ULONG InsertStackPage(in HWND hwndDlg);
+  //# PARAMETERS:
+  //#   HWND  hwndDlg   // In -  notebook dialog window handle
+  //#   ULONG return    // Out - 0 = error occurred, else page #
+  //#
+  //# DESC: Adds the new Settings notebook page.
+
+  BOOL Lock();
+  //# PARAMETERS:
+  //#   BOOL  return  // Out - TRUE  = successful
+  //#                          FALSE = errror
+  //#
+  //# DESC: Lock the stack using a mutex semaphore so we don't have
+  //#       to worry about multiple threads messing up the linked list.
+
+  BOOL Pop(in PVOID pBuffer, inout ULONG pcbBuffer);
+  //# PARAMETERS:
+  //#   PVOID pBuffer,      // In    - pointer to buffer for popped item
+  //#   PULONG pcbBuffer);  // InOut - size in bytes of pop buffer (in),
+  //#                       //         size actually returned (out)
+  //#   BOOL  return        // Out   - TRUE  = successful
+  //#                                  FALSE = errror
+  //# DESC: Pops an entry from the stack.
+
+  BOOL Push(in PVOID pNewItem, in ULONG cbNewItem);
+  //# PARAMETERS:
+  //#   PVOID pNewItem,   // In  - pointer to the item to push
+  //#   ULONG cbNewItem   // In  - size in bytes of item to push
+  //#   BOOL  return      // Out - TRUE  = successful
+  //#                              FALSE = errror
+  //# DESC: Pushes an entry onto the stack.
+
+  BOOL Unlock();
+  //# PARAMETERS:
+  //#   BOOL  return  // Out - TRUE  = successful
+  //#                          FALSE = errror
+  //#
+  //# DESC: Unlock the stack, releasing the mutex semaphore.
+
+  #ifdef __SOMIDL__
+  implementation
+  {
+    releaseorder: InsertStackPage, Lock, Pop, Push, Unlock;
+
+    /*
+     * Class modifiers
+     */
+    functionprefix = stk_;
+    majorversion   = 1;
+    minorversion   = 2;
+    filestem       = wpstack;
+    metaclass      = M_Stack;
+    callstyle      = oidl;
+    dllname        = "wpstack.dll";
+
+    /*
+     * Internal instance variables
+     */
+    BOOL        bInitialized;
+    PSTACKENTRY pStackTop;
+    HMTX        hmtxStack;
+
+    /*
+     * Passthru to the .IH file the following:
+     */
+    passthru C_ih =
+    "#define STK_APPLICATION        \"wpstack class\""
+    "#define STK_PERSISTENTCOUNTKEY \"object count\""
+    "#define MPNULL                 (MPFROMP( NULL ))"
+    "#define MPZERO                 (MPFROMSHORT( 0 ))"
+    "#define MRTRUE                 (MRFROMSHORT( (SHORT) TRUE ))"
+    "#define MRFALSE                (MRFROMSHORT( (SHORT) FALSE ))"
+    ""
+    "typedef struct _STACKENTRY"
+    "{"
+    "   struct _STACKENTRY *Next;"
+    "   BYTE        ReserveZeros[8];"
+    "   ULONG       cbEntry;"
+    "   BYTE        Entry[1];"
+    "} STACKENTRY, *PSTACKENTRY;"
+    "";
+
+    /*
+     * Passthru to the .H file the following:
+     */
+    passthru C_h =
+    "#define STK_AWAKECOUNT      1"
+    "#define STK_PERSISTENTCOUNT 2"
+    "";
+
+    /*
+     * Method modifiers
+     */
+    wpAddSettingsPages:              override;
+    wpFree:                          override;
+    wpInitData:                      override;
+    wpObjectReady:                   override;
+    wpRestoreState:                  override;
+    wpSaveState:                     override;
+    wpSetup:                         override;
+    wpSetupOnce:                     override;
+    wpUnInitData:                    override;
+  };
+  #Endif /* __SOMIDL__ */
+};
+
+interface M_Stack : M_WPAbstract
+{
+  ULONG clsDecObjectCount(in ULONG ulCountType);
+  //# PARAMETERS:
+  //#   ULONG ulCountType  // In  - STK_AWAKECOUNT,
+  //#                               STK_PERSISTENTCOUNT
+  //#   ULONG return       // Out - new count value
+  //#
+  //# DESC: Decrements the number of defined object instances.
+
+  ULONG clsIncObjectCount(in ULONG ulCountType);
+  //# PARAMETERS:
+  //#   ULONG ulCountType  // In  - STK_AWAKECOUNT,
+  //#                               STK_PERSISTENTCOUNT
+  //#   ULONG return       // Out - new count value
+  //#
+  //# DESC: Increments the number of defined object instances.
+
+  HMODULE clsQueryModuleHandle();
+  //# PARAMETERS: HMODULE return // Out - DLL module handle
+  //#
+  //# DESC: Gets resource module handle.
+
+  ULONG clsQueryObjectCount(in ULONG ulCountType);
+  //# PARAMETERS:
+  //#   ULONG ulCountType  // In  - STK_AWAKECOUNT,
+  //#                               STK_PERSISTENTCOUNT
+  //#   ULONG return       // Out - count of awake/persistent instances
+  //#
+  //# DESC: Returns the current number of defined object instances.
+
+  #ifdef __SOMIDL__
+  implementation
+  {
+    releaseorder: clsDecObjectCount,
+                  clsIncObjectCount,
+                  clsQueryModuleHandle,
+                  clsQueryObjectCount;
+
+    /*
+     * Class modifiers
+     */
+    functionprefix = stkM_;
+    majorversion   = 1;
+    minorversion   = 2;
+    filestem       = wpstack;
+    callstyle      = oidl;
+    dllname        = "wpstack.dll";
+
+    /*
+     * Internal instance variables
+     */
+    HMODULE  hmod;              /* Resource module handle            */
+    ULONG    ulAwakeCount;      /* No. of stack instances in memory  */
+    ULONG    ulPersistentCount; /* Total number of stack instances   */
+
+    /*
+     * Method modifiers
+     */
+    wpclsInitData:                   override;
+    wpclsQueryDefaultHelp:           override;
+    wpclsQueryDefaultView:           override;
+    wpclsQueryIconData:              override;
+  };
+  #Endif /* __SOMIDL__ */
+};
+#Endif  /* wpstack_idl */
+
+</PRE>
+</PRE>
+
+
+<P><HR>
+
+<A HREF="163_L3_SetupCleanupApplicat.html">[Back: Setup/Cleanup Application Sample Code]</A> <BR>
+<A HREF="165_L4_SourceCodeforStack.html">[Next: Source Code for Stack]</A> 
+</BODY>
+</HTML>

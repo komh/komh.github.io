@@ -1,0 +1,136 @@
+<HTML>
+<HEAD>
+<TITLE>Creating a Custom Fill Pattern from a Bit Map</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating a Custom Fill Pattern from a Bit Map</H1><!-- entering slot 1074 -->
+<P>
+The following figure is an example of how to create a custom fill pattern
+by using a hard-coded bit map. In this example, the bit map creates a pattern
+of arrows.
+<PRE>#define INCL_DOS
+#define INCL_GPI
+#define INCL_WIN
+#include &lt;os2.h&gt;
+   LONG lcidCustom;                  /* Bit map tag                           */
+   HPS  hps;
+
+   VOID CreatePattern(VOID);
+
+   VOID MyFunction(VOID){
+       CreatePattern();
+       GpiSetPatternSet(hps, lcidCustom);
+        .
+        .
+        .
+   } /* func */
+
+   VOID CreatePattern(VOID){
+        HBITMAP hbm;               /* Bit map handle                          */
+        BITMAPINFOHEADER2 bmp2;    /* Structure for bit map information       */
+        PBITMAPINFO2 pbmi2;        /* Pointer to structure for bit map data   */
+        PRGB2 prgb2;               /* Structure for color data                */
+        ULONG cbBitmapInfo, cColors;
+
+        BYTE abPattern[] = { 0xFF, 0xFF, 0xE7, 0xFF,
+                             0xE7, 0xFF, 0xC3, 0xFF,
+                             0xC3, 0xFF, 0x81, 0xFF,
+                             0x81, 0xFF, 0xE7, 0xFF,
+                             0xE7, 0xFF, 0xE7, 0xFF,
+                             0xE7, 0xFF, 0xE7, 0xFF,
+                             0xE7, 0xFF, 0xE7, 0xFF,
+                             0xE7, 0xFF, 0xFF, 0xFF
+   };
+
+
+        lcidCustom = 1;            /* Bit map tag                             */
+
+        bmp2.cbFix = (ULONG) sizeof(BITMAPINFOHEADER2);
+        bmp2.cx = 8;               /* Bit map is 8 pels wide                  */
+        bmp2.cy = 8;               /* Bit map is 8 pels high                  */
+        bmp2.cPlanes = 1;          /* One bit plane                           */
+        bmp2.cBitCount = 1;        /* One bit per pel                         */
+
+        /* Use default values for the remainder of the structure.             */
+
+        bmp2.ulCompression = 0;
+        bmp2.cbImage = 0;
+        bmp2.cxResolution = 0;
+        bmp2.cyResolution = 0;
+        bmp2.cclrUsed = 0;
+        bmp2.cclrImportant = 0;
+        bmp2.usUnits = 0;
+        bmp2.usReserved = 0;
+        bmp2.usRecording = 0;
+        bmp2.usRendering = 0;
+        bmp2.cSize1 = 0;
+        bmp2.cSize2 = 0;
+        bmp2.ulColorEncoding = 0;
+        bmp2.ulIdentifier = 0;
+
+        cColors = 1 &lt;&lt; (bmp2.cBitCount * bmp2.cPlanes);
+
+        cbBitmapInfo = sizeof(BITMAPINFO2) + (sizeof(RGB2) * cColors);
+
+        DosAllocMem((PVOID)&amp;pbmi2, cbBitmapInfo,
+                    PAG_COMMIT | PAG_READ | PAG_WRITE);
+
+        pbmi2-&gt;cbFix = bmp2.cbFix;
+        pbmi2-&gt;cx = bmp2.cx;
+        pbmi2-&gt;cy = bmp2.cy;
+        pbmi2-&gt;cPlanes = bmp2.cPlanes;
+        pbmi2-&gt;cBitCount = bmp2.cBitCount;
+
+        /* Use default values for the remainder of the structure.             */
+
+        pbmi2-&gt;ulCompression = 0;
+        pbmi2-&gt;cbImage = 0;
+        pbmi2-&gt;cxResolution = 0;
+        pbmi2-&gt;cyResolution = 0;
+        pbmi2-&gt;cclrUsed = 0;
+        pbmi2-&gt;cclrImportant = 0;
+        pbmi2-&gt;usUnits = 0;
+        pbmi2-&gt;usReserved = 0;
+        pbmi2-&gt;usRecording = 0;
+        pbmi2-&gt;usRendering = 0;
+        pbmi2-&gt;cSize1 = 0;
+        pbmi2-&gt;cSize2 = 0;
+        pbmi2-&gt;ulColorEncoding = 0;
+        pbmi2-&gt;ulIdentifier = 0;
+
+        prgb2 = (PRGB2) (pbmi2 + 1);  /* Set address to follow bmp2           */
+
+        /* Set bit map colors to black and white.                             */
+        prgb2[0].bBlue = 0;                               /* Color[0] = black */
+        prgb2[0].bGreen = 0;                              /* Color[0] = black */
+        prgb2[0].bRed = 0;                                /* Color[0] = black */
+        prgb2[0].fcOptions = 0;
+        prgb2[1].bBlue = 255;                             /* Color[1] = white */
+        prgb2[1].bGreen = 255;                            /* Color[1] = white */
+        prgb2[1].bRed = 255;                              /* Color[1] = white */
+        prgb2[1].fcOptions = 0;
+
+        /* Create a bit map and retrieve its handle.                          */
+        hbm = GpiCreateBitmap(hps,
+            &amp;bmp2,
+            CBM_INIT,
+            (PBYTE) abPattern,                            /* Array of bits    */
+            pbmi2);
+
+        /* Tag the bit map just created with a custom identifier (lcid).      */
+        GpiSetBitmapId(hps, hbm, lcidCustom);
+   } /* CreatePattern */
+
+</PRE>
+
+<P>
+Creating a Custom Fill Pattern from a Bit Map
+<P>
+
+
+<P><HR>
+
+<A HREF="1053_L3_DrawingMultipleInter.html">[Back: Drawing Multiple, Intersecting, Closed Figures]</A> <BR>
+<A HREF="1055_L3_CreatingaCustomFillP.html">[Next: Creating a Custom Fill Pattern from a Font Character]</A> 
+</BODY>
+</HTML>

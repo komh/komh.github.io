@@ -1,0 +1,91 @@
+<HTML>
+<HEAD>
+<TITLE>Socket I/O Modes</TITLE>
+</HEAD>
+<BODY>
+<H1>Socket I/O Modes</H1><!-- entering slot 51 -->
+<P>
+Sockets can be set to either blocking or nonblocking I/O mode. The FIONBIO
+ioctl operation is used to determine this mode. When the FIONBIO ioctl is
+set, the socket is marked<I> nonblocking.</I> If a read is tried and the
+desired data is not available, the socket does not wait for the data to
+become available, but returns immediately with the SOCEWOULDBLOCK error
+code.
+<P>
+When the FIONBIO ioctl is not set, the socket is in<I> blocking mode.</I> In
+this mode, if a read is tried and the desired data is not available, the
+calling process waits for the data. Similarly, when writing, if FIONBIO
+is set and the output queue is full, an attempt to write causes the process
+to return immediately with an error code of SOCEWOULDBLOCK.
+<P>
+
+<P>
+An example of using the ioctl() call to help perform asynchronous (nonblocking)
+socket operations is:
+<BR>
+An Application Using the ioctl() Call
+<BR>
+
+<PRE>int s;
+int bytes_received;
+int dontblock;
+char buf[256];
+int rc;
+...
+dontblock = 1;
+...
+rc = ioctl(s, FIONBIO, (char *) &amp;dontblock);
+...
+bytes_received = recv(s, buf, sizeof(buf), 0);
+if (bytes_received == -1)
+{
+if (sock_errno() == SOCEWOULDBLOCK)
+/* data is not present */
+else
+/* error occurred */
+}
+else
+/* bytes_ received indicates amount of data received in buf */
+</PRE>
+
+<P>
+This example causes the socket<I> s</I> to be placed in nonblocking mode.
+ When this socket is passed as a parameter to calls that would block, such
+as recv() when data is not present, it causes the call to return with an
+error code, and sets the error value to SOCEWOULDBLOCK.  Setting the mode
+of the socket to be nonblocking allows an application to continue processing
+without becoming blocked. For a more detailed description, see <A HREF="187_L2_ioctl.html">ioctl()</A>.
+
+<P>
+When performing nonblocking I/O on sockets, a program must check for the
+SOCEWOULDBLOCK error code. This occurs when an operation would normally
+block, but the socket it was performed on is marked as nonblocking. The
+following socket calls return a SOCEWOULDBLOCK error code:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 5 --><A HREF="179_L2_accept.html">accept()</A><!-- lm: 0x2 2 -->
+<BR>
+<LI><!-- lm: 0x2 5 --><A HREF="198_L2_send.html">send()</A><!-- lm: 0x2 2 -->
+<BR>
+<LI><!-- lm: 0x2 5 --><A HREF="193_L2_recv.html">recv()</A><!-- lm: 0x2 2 -->
+<BR>
+<LI><!-- lm: 0x2 5 --><A HREF="192_L2_readv.html">readv()</A><!-- lm: 0x2 2 -->
+<BR>
+<LI><!-- lm: 0x2 5 --><A HREF="223_L2_writev.html">writev()</A><!-- lm: 0x2 0 -->
+</UL>
+<P>
+Processes using these calls should be prepared to deal with the SOCEWOULDBLOCK
+error code. For a nonblocking socket, the connect() call returns an SOCEINPROGRESS
+error code if the connection cannot be completed immediately.
+<P>
+If an operation such as a send operation cannot be done completely, but
+partial writes are permissible (for example when using a stream socket),
+the data that can be sent immediately is processed, and the return value
+indicates the amount actually sent.
+
+<P><HR>
+
+<A HREF="046_L3_OutofBandData.html">[Back: Out-of-Band Data]</A> <BR>
+<A HREF="048_L2_SocketShutdown.html">[Next: Socket Shutdown]</A> 
+</BODY>
+</HTML>

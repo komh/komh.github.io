@@ -1,0 +1,136 @@
+<HTML>
+<HEAD>
+<TITLE>The mkDPIresponse() Function</TITLE>
+</HEAD>
+<BODY>
+<H1>The mkDPIresponse() Function</H1><!-- entering slot 41 -->
+<P>
+<B>Syntax</B>
+<PRE>#include &lt;snmp_dpi.h&gt;
+
+unsigned char    *mkDPIresponse( /* Make a DPI response packet*/
+  snmp_dpi_hdr     *hdr_p,       /* ptr to packet to respnd to*/
+  long int          error_code,  /* error code: SNMP_ERROR_xxx*/
+  long int          error_index, /* index to varBind in error */
+  snmp_dpi_set_packet *packet_p);/* ptr to varBinds, a chain  */
+                                 /* of dpi_set_packets        */
+</PRE>
+
+<P>
+<B>Parameters</B><!-- lm: 0x2 1 -->
+<UL>
+<P>
+hdr_p<!-- lm: 0x11 3 -->
+<UL> A pointer to the parse tree of the DPI request
+to which this DPI packet will be the response.  The function uses this parse
+tree to copy the packet_id and the DPI version and release, so that the
+DPI packet is correctly formatted as a response.<!-- lm: 0x2 1 -->
+</UL> error_code
+<!-- lm: 0x11 3 -->
+<UL>The error code.
+<P>
+See <A HREF="067_L2_DPIRESPONSEErrorCode.html">DPI RESPONSE Error Codes
+</A>for a list of valid codes.<!-- lm: 0x2 1 -->
+</UL> error_index<!-- lm: 0x11 3 -->
+<UL> Specifies
+the first varBind in error.  Counting starts at 1 for the first varBind.
+ This field should be zero if there is no error.<!-- lm: 0x2 1 -->
+</UL> packet_p
+<!-- lm: 0x11 3 -->
+<UL>A pointer to a chain of snmp_dpi_set_packet structures.
+ This partial parse tree will be freed by the mkDPIresponse() function.
+ So upon return you cannot reference it anymore.  Pass a NULL pointer if
+there are no varBinds to be returned.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Return Values</B><!-- lm: 0x2 6 -->
+<UL>
+<P>
+If successful, a pointer to a static DPI packet buffer is returned.  The
+first two bytes of the buffer in network byte order contain the length of
+the remaining packet.  The macro DPI_PACKET_LEN can be used to calculate
+the total length of the DPI packet.<!-- lm: 0x2 6 -->
+<P>
+If failure, a NULL pointer is returned.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Note: </B> The static buffer for the DPI packet is shared by other mkDPIxxxx()
+functions that create a serialized DPI packet.
+<P>
+<B>Description</B>
+<P>
+The mkDPIresponse() function is used at the subagent side to prepare a DPI
+RESPONSE packet to a GET, GETNEXT, GETBULK, SET, COMMIT or UNDO request.
+ The resulting packet can be sent to the DPI peer, which is normally a DPI
+capable SNMP agent.
+<P>
+<B>Examples</B>
+<PRE>  #include &lt;snmp_dpi.h&gt;  unsigned char       *pack_p;
+  snmp_dpi_hdr        *hdr_p;
+  snmp_dpi_set_packet *set_p;
+  long int             num;
+
+  hdr_p = pDPIpacket(pack_p);     /* parse incoming packet */
+                                  /* assume it's in pack_p */
+  if (hdr_p) {
+     /* analyze packet, assume GET, no error */
+     set_p = mkDPIset(snmp_dpi_set_packet_NULL_p,
+                      "1.3.6.1.2.3.4.5.", "1.0",
+                      SNMP_TYPE_Integer32,
+                      sizeof(num), &amp;num);
+     if (set_p) {
+        pack_p = mkDPIresponse(hdr_p,
+                      SNMP_ERROR_noError, 0L, set_p);
+        if (pack_p) {
+           /* send packet to subagent */
+        } /* endif */
+     } /* endif */
+  } /* endif */
+</PRE>
+
+<P>
+The mkDPIresponse() function is used at the agent side to prepare a DPI
+RESPONSE packet to an OPEN, REGISTER or UNREGISTER request.  In the case
+of a RESPONSE to a REGISTER request and if there is no error, the actually
+assigned priority must be passed in the<I> error_index</I> parameter.  The
+resulting packet can be sent to the DPI peer, which is normally a subagent.
+
+<P>
+<B>Examples</B>
+<PRE>  #include &lt;snmp_dpi.h&gt;
+  unsigned char       *pack_p;
+  snmp_dpi_hdr        *hdr_p;
+  long int             priority;
+
+  hdr_p = pDPIpacket(pack_p);     /* parse incoming packet */
+                                  /* assume it's in pack_p */
+  if (hdr_p) {
+     /* analyze packet, assume REGISTER and OK */
+     pack_p = mkDPIresponse(hdr_p,
+                   SNMP_ERROR_DPI_noError,
+                   priority,
+                   snmp_dpi_set_packet_NULL_p);
+     if (pack_p) {
+        /* send packet to subagent */
+     } /* endif */
+  } /* endif */
+</PRE>
+
+<P>
+<B>Related Information</B><!-- lm: 0x2 6 -->
+<UL>
+<P>
+<A HREF="043_L2_ThepDPIpacketFunctio.html">The pDPIpacket() Function</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="057_L2_Thesnmp_dpi_hdrStruc.html">The snmp_dpi_hdr Structure</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="058_L2_Thesnmp_dpi_next_pac.html">The snmp_dpi_next_packet Structure
+</A><!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="038_L2_ThemkDPIregisterFunc.html">[Back: The mkDPIregister() Function]</A> <BR>
+<A HREF="040_L2_ThemkDPIsetFunction.html">[Next: The mkDPIset() Function]</A> 
+</BODY>
+</HTML>

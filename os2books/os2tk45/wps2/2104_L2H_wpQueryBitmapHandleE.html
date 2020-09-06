@@ -1,0 +1,114 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>wpQueryBitmapHandle - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>wpQueryBitmapHandle - Example Code</H1><!-- entering slot 2104 -->
+<P>
+This example is a simplified version of the code in the<A><!-- external link: 1D 62 C3 A0 --> WPBitmap
+</A>class.  The example does build a color palette for the bitmap and does
+no scaling of the  bitmap size.  (In this code, vhab is a global variable
+that contains the handle for the HAB for the Workplace Shell and RemoveBitmapFromMem
+is a function that frees the specified Device Context, Presentation Space,
+Bitmap, and Palette.)
+<PRE>SOM_Scope BOOL32 bmp_wpQueryBitmapHandle(WPBitmap *somSelf,
+                                         HBITMAP *phBitmap,
+                                         HPAL *phPalette,
+                                         ULONG ulWidth,
+                                         ULONG ulHeight,
+                                         ULONG ulFlags,
+                                         LONG lBackgroundColor,
+                                         BOOL *pbQuitEarly)
+{
+   HDC         hdc = NULLHANDLE;
+   HPS         hps = NULLHANDLE;
+   union
+   {
+      PBITMAPFILEHEADER  pbfh;
+      PBITMAPFILEHEADER2 pbfh2;
+   } pBitmapFileHeader;
+   union
+   {
+      PBITMAPINFOHEADER  pbinfoh;
+      PBITMAPINFOHEADER2 pbinfoh2;
+      PBITMAPINFO2       pbinfo2;
+   } pBitmapInfoHeader;
+   SIZEL       sizlSource;
+
+   /* Make sure the caller specified a place to return the bitmap handle */
+   if (!phBitmap)
+   {
+      return FALSE;
+   }
+
+   /* Set the returned bitmap and palette handles to NULLHANDLE in case
+    * this method fails  */
+   *phBitmap = NULLHANDLE;
+   if (phPalette)
+   {
+      *phPalette = NULLHANDLE;
+   }
+
+   /* Read the bitmap file   */
+   if (!_wpReadImageFile(somSelf))
+   {
+      return FALSE;
+   }
+
+   /* Create a device context and presentation space for the bitmap  */
+   hdc = DevOpenDC (vhab, OD_MEMORY, "*", 0L, NULL, NULLHANDLE);
+   if (hdc == DEV_ERROR)
+   {
+      return FALSE;
+   }
+
+   /*
+    *  Create a new Presentation Space for the bitmap  */
+   sizlSource.cx = 0;
+   sizlSource.cy = 0;
+   hps = GpiCreatePS (vhab,
+                      hdc,
+                      &amp;sizlSource,
+                      PU_PELS | GPIT_NORMAL | GPIA_ASSOC);
+   if(hps == GPI_ERROR)
+   {
+      RemoveBitmapFromMem(&amp;hdc,NULL,NULL,NULL);
+      return FALSE;
+   }
+
+   /* Make sure there is no palette selected in the PS   */
+   GpiSelectPalette(hps,NULLHANDLE);
+
+   /* Create the bitmap   */
+   pBitmapFileHeader.pbfh = (PBITMAPFILEHEADER)
+                             _wpQueryBitmapData(somSelf,NULL);
+   pBitmapInfoHeader.pbinfoh = &amp;(pBitmapFileHeader.pbfh-&gt;bmp);
+   *phBitmap = GpiCreateBitmap (hps,
+                                pBitmapInfoHeader.pbinfoh2,
+                                CBM_INIT,
+                                (PBYTE)pBitmapFileHeader.pbfh +
+                                   pBitmapFileHeader.pbfh-&gt;offBits,
+                                pBitmapInfoHeader.pbinfo2);
+   if(!*phBitmap)
+   {
+      RemoveBitmapFromMem(&amp;hdc,&amp;hps,NULL,NULL);
+      return FALSE;
+   }
+
+   /*
+    *  Select the bitmap into the presentation space  */
+   GpiSetBitmap (hps, *phBitmap);
+
+   /* Clean up the resources we allocated   */
+   RemoveBitmapFromMem(&amp;hdc,&amp;hps,NULL,NULL);
+   return !!*phBitmap;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="2103_L2H_wpQueryBitmapHandleR.html">[Back: wpQueryBitmapHandle - Related Methods]</A> <BR>
+<A HREF="2105_L2H_wpQueryBitmapHandleT.html">[Next: wpQueryBitmapHandle - Topics]</A> 
+</BODY>
+</HTML>

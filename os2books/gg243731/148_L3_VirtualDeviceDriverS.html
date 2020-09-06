@@ -1,0 +1,80 @@
+<HTML>
+<HEAD>
+<TITLE>Virtual Device Driver Structure</TITLE>
+</HEAD>
+<BODY>
+<H1>Virtual Device Driver Structure</H1><!-- entering slot 156 -->
+<P>
+A virtual device driver is a 32-bit EXE file which runs in protected mode
+and supports the flat memory model.  <A HREF="029_L2_VirtualCOMandPhysica.html">Figure
+"Virtual COM and Physical COM Device Drivers"</A> shows the structure of
+a virtual device driver and the interfaces to a physical device driver.
+
+<P>
+Nearly all virtual device drivers provided in OS/2 V2.0 are written in a
+high-level language ("C"), although several have portions that were developed
+using assembler language.  Since software interrupts and hooked I/O port
+operations cause a trap to privilege level 0, time critical code for these
+operations should be written in assembler language to achieve the maximum
+possible performance.
+<P>
+A virtual device driver is a 32-bit EXE file that can contain some, all,
+or none of the following types of objects:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Initialization code<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Initialization data<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Swappable global code.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+A virtual device driver must have at least one object of the following types:
+<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Swappable global data<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Swappable instance data<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Resident global code<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Resident global data<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Resident instance data.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+A virtual device driver should contain resident objects for code and data
+which must be accessed at physical hardware interrupt time, that is, when
+a physical device driver calls the virtual device driver.  A virtual device
+driver which does not interact with a physical device driver needs no resident
+objects.  Examples of such device drivers are VEMM and VXMS.
+<P>
+A virtual device driver locates its instance data above the 1MB + 64KB line,
+but below 4MB.  The instance data is therefore outside the VDM's V86 mode
+address space.  This linear address range is the same for all VDMs; that
+is, all VDMs have the instance data for a particular virtual device driver
+at the same linear address.  The offset from the VDM's linear base address
+to the virtual device driver's instance data is returned by the OS/2 kernel
+when the device driver is initialized.
+<P>
+A virtual device driver may need to access its instance data area at physical
+hardware interrupt time.  This may be required even when the VDM is not
+currently executing in the foreground.  Since the instance data is system
+data located above the V86 addressing range, the virtual device driver may
+address the per-VDM buffer regardless of which process is currently running.
+ VDM instance data is accessed by adding the VDM's handle + instance data
+area offset + data offset within the instance data area.
+<P>
+Note that memory objects created by a virtual device driver for passing
+to a physical device driver must not exceed 64KB in size.  This limitation
+results from the fact that many physical device drivers are still written
+using the 16:16 segmented memory model, and cannot therefore support memory
+objects greater than 64KB in size.
+
+<P><HR>
+
+<A HREF="147_L3_LoadingVirtualDevice.html">[Back: Loading Virtual Device Drivers]</A> <BR>
+<A HREF="149_L3_ROMBIOSCompatibility.html">[Next: ROM BIOS Compatibility]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,74 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Using queues for IPC</TITLE>
+</HEAD>
+<BODY>
+<H1>Using queues for IPC</H1><!-- entering slot 245 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+The default queue<B> SESSION</B> is a unique queue for each OS/2 session.
+So, if you want to use a queue to communicate between two or more sessions
+you must use a private queue.
+<BR>
+Example:
+<PRE> 
+/* use a private queue for IPC                                        */
+
+                        /* name of the private queue                  */
+  privatQueue = "MYQUEUE"                                    /* v1.70 */
+
+                        /* get the name of the current active queue   */
+  oldQueue = rxQueue( "GET" )
+
+  if oldQueue &lt;&gt; privatQueue then
+  do
+                        /* try to create the private queue            */
+    newQueue = rxQueue( "CREATE", privatQueue )
+    if newQueue &lt;&gt; privatQueue then
+    do
+                        /* the queue already exist -&gt; delete the just */
+                        /* created queue!                             */
+      call rxQueue "DELETE", newQueue              /* corrected v3.00 */
+    end /* if rxQueue( "Create", ... ) */
+
+                        /* make our private queue the active queue    */
+    call rxQueue "SET", privatQueue                /* corrected v3.00 */
+  end /* if oldQueue &lt;&gt; privatQueue then */
+  else
+  do
+                    /* the private queue is already the active queue  */
+                    /* do not reset the active queue at program end   */
+    oldQueue = ""
+  end /* else */
+
+  /* ... do something */
+
+
+ProgramEnd:
+  if oldQueue &lt;&gt; "" then
+  do
+                        /* flush the private queue                    */
+    do while queued() &lt;&gt; 0
+      call lineIN "QUEUE:"
+    end /* do until queued() &lt;&gt; 0 */
+
+                        /* reset the original queue                   */
+    call rxQueue "SET", oldQueue
+
+                        /* delete the private queue                   */
+    call rxQueue "DELETE", privatQueue
+  end /* if oldQueue &lt;&gt; "" then */
+
+exit 0
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="246_L3_QUEUEnames.html">[Back: QUEUE names]</A> <BR>
+<A HREF="248_L3_ReadingfromaQueue.html">[Next: Reading from a Queue]</A> 
+</BODY>
+</HTML>

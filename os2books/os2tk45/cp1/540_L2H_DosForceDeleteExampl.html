@@ -1,0 +1,73 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosForceDelete - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosForceDelete - Example Code</H1><!-- entering slot 548 -->
+<P>
+This example creates a read-only file named "DOSFDEL.DAT", it then changes
+the file attributes. DosForceDelete is used to delete this file so it is
+not possible to restore it using UNDELETE.
+<PRE> #define INCL_DOSFILEMGR   /* File Manager values */
+ #define INCL_DOSERRORS    /* DOS error values    */
+ #include &lt;os2.h&gt;
+ #include &lt;stdio.h&gt;
+
+ int main(VOID) {
+
+ UCHAR       uchFileName[]   = "DOSFDEL.DAT";   /* File we want to delete    */
+ HFILE       fhDelFile       = 0;               /* File handle from DosOpen  */
+ FILESTATUS3 fsts3FileInfo   = {{0}};  /* Information associated with file   */
+ ULONG       ulBufferSize    = sizeof(FILESTATUS3); /* File info buffer size */
+ ULONG       ulOpenAction    = 0;                 /* Action taken by DosOpen */
+ APIRET      rc              = NO_ERROR;          /* Return code             */
+
+                 /* Create a read-only file */
+
+  rc = DosOpen(uchFileName, &amp;fhDelFile,
+               &amp;ulOpenAction, 10L, FILE_READONLY,
+               OPEN_ACTION_CREATE_IF_NEW | OPEN_ACTION_OPEN_IF_EXISTS,
+               OPEN_ACCESS_READWRITE | OPEN_SHARE_DENYNONE, 0L);
+  if (rc != NO_ERROR) {
+     printf("DosOpen error: return code = %u\n", rc);
+     return 1;       }
+
+  rc = DosQueryFileInfo(fhDelFile, FIL_STANDARD,
+                        &amp;fsts3FileInfo, ulBufferSize);  /* Get standard info */
+  if (rc != NO_ERROR) {
+      printf("DosQueryFileInfo error: return code = %u\n", rc);
+      return 1;
+  } else { printf("File %s created read-only.\n",uchFileName); }
+
+    fsts3FileInfo.attrFile  = FILE_NORMAL;
+    rc = DosSetFileInfo(fhDelFile, FIL_STANDARD,
+                        &amp;fsts3FileInfo, ulBufferSize);
+    if (rc != NO_ERROR) {
+        printf("DosSetFileInfo error: return code = %u\n", rc);
+        return 1;
+    }
+
+    rc = DosClose(fhDelFile);
+    /* should check (rc != NO_ERROR) here... */
+
+           /* Delete the file */
+
+    rc = DosForceDelete(uchFileName);
+    if (rc != NO_ERROR) {
+        printf("DosForceDelete error: return code = %u\n", rc);
+        return 1;
+    } else {
+        printf("File %s has been deleted.\n",uchFileName);
+    } /* endif */
+
+   return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="539_L2H_DosForceDeleteRelate.html">[Back: DosForceDelete - Related Functions]</A> <BR>
+<A HREF="541_L2H_DosForceDeleteTopics.html">[Next: DosForceDelete - Topics]</A> 
+</BODY>
+</HTML>

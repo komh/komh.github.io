@@ -1,0 +1,303 @@
+<HTML>
+<HEAD>
+<TITLE>LAN Server 3.0 Entry Architecture</TITLE>
+</HEAD>
+<BODY>
+<H1>LAN Server 3.0 Entry Architecture</H1><!-- entering slot 1 --><!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+The Entry server runs at application privilege level.  The Entry server
+uses OS/2 services to satisfy network file I/O requests, session setup,
+and resource sharing.  Network file I/O requests and responses are sent
+by way of server message blocks (SMBs).  The Entry server processes SMBs
+using internal network buffers.  The IBMLAN.INI file parameters that define
+the size and number of network buffers on the server are sizreqbuf and numreqbuf.
+The IBMLAN.INI file parameters that define the size and number of network
+buffers on the requester are sizworkbuf and numworkbuf.
+<P>
+An SMB received from the network is copied into the adapter receive buffers
+by the network adapter.  The NETBIOS device driver, using a global descriptor
+table (GDT) selector, copies the data from the adapter's receive buffers
+into an available server network buffer.  The NETBIOS device driver can
+acknowledge the message or piggyback the acknowledgment on a subsequent
+network message.  The PROTOCOL.INI file contains the configuration information
+for the NETBIOS device driver.
+<P>
+The SMB is passed through the redirector to the server.  The redirector
+is a requester component that directs file system request traffic among
+the server, the file system, and the network.  There are three types of
+SMB protocols that are used for transferring data between a requester and
+a server:<!-- lm: 0x2 0 -->
+<P>
+o<!-- lm: 0x2 2 -->
+<UL>Core SMB protocol header and data reside within
+one network buffer. This SMB protocol is used to transfer amounts of data
+that are less than or equal to the buffer size specified by the sizworkbuf
+parameter.<!-- lm: 0x2 0 -->
+</UL> o<!-- lm: 0x2 2 -->
+<UL>RAW SMB protocol
+header and data reside within the first network buffer. Subsequent data
+is transferred through big buffers without header information.  This flow
+continues until all requested data has been received; no additional SMB
+requests are required.  RAW SMB protocol is used if the amount of data to
+transfer exceeds the network buffer size and if big buffers are available.
+<!-- lm: 0x2 0 -->
+</UL>o<!-- lm: 0x2 2 -->
+<UL>Multiplexed SMB protocol
+header and data reside within the first network buffer.  Subsequent data
+is sent in network buffers without header information along with the SMB
+response protocol header.  This flow continues until all requested data
+has been received; no additional SMB requests are required.  Multiplexed
+SMB protocol is used if the amount of data to transfer exceeds the requester
+buffer size and if either RAW SMB protocol is not supported or big buffers
+are not available.  The numbigbuf parameter in the IBMLAN.INI file on the
+server specifies the number of big buffers.  Both RAW and Multiplexed protocols
+are used to transfer large amounts of data very quickly.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+LAN Server-Entry is designed to optimize the movement of file I/O from the
+server to the requester, and it supports both the file allocation table
+(FAT) file system and the high performance file system (HPFS).  Both the
+FAT file system and the HPFS have cache that is used to improve performance
+by keeping frequently used data in memory.  A cache is a high-speed storage
+buffer that contains frequently accessed instructions and data.  Due to
+a 2MB cache size limit, the HPFS has a threshold of 2KB to characters (bytes)
+flushed by large file transfers.
+<P>
+The following table shows performance and functional comparisons between
+the FAT file system and the HPFS.
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³ Comparison between the FAT File System and the HPFS                    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³     Characteristic    ³    OS/2 2.0 FAT File   ³          HPFS         ³
+³                       ³         System         ³                       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ Maximum file-name     ³ 11 (8.3 format)        ³ 255 characters        ³
+³ length                ³ characters (bytes)     ³ (bytes)               ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ File attributes       ³ Bit flags plus up to   ³ Bit flags plus up to  ³
+³                       ³ 64KB, text or binary   ³ 64KB, text or binary  ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ Maximum path length   ³ 64 characters (bytes)  ³ 260 characters        ³
+³                       ³                        ³ (bytes)               ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ Average wasted space  ³ <!-- entering slot 2 -->1/2 cluster (1KB)      ³ 1/2 sector (256       ³
+³ per file              ³                        ³ bytes)                ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ Allocation            ³ Centralized in FAT     ³ Located near each     ³
+³ information for files ³ file system on home    ³ file in its FNODE     ³
+³                       ³ track                  ³                       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ Free disk-space       ³ Centralized in FAT     ³ Located near free     ³
+³ information           ³ file system on home    ³ space in bit maps     ³
+³                       ³ track                  ³                       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ Directory structure   ³ Unsorted linear list,  ³ Sorted B-tree         ³
+³                       ³ must be searched       ³                       ³
+³                       ³ exhaustively           ³                       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ Directory location    ³ Root directory on home ³ Located near seek     ³
+³                       ³ track, others          ³ center of volume      ³
+³                       ³ scattered              ³                       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ Read-ahead            ³ Optional               ³ Cache reads in 8KB    ³
+³                       ³                        ³ blocks (Entry         ³
+³                       ³                        ³ package);             ³
+³                       ³                        ³ sensitive to data     ³
+³                       ³                        ³ type                  ³
+³                       ³                        ³ (Advanced package)    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ Cache replacement     ³ Simple least recently  ³ Modified LRU (Entry   ³
+³ strategy              ³ used (LRU) algorithm   ³ package);             ³
+³                       ³                        ³ sensitive to data     ³
+³                       ³                        ³ type                  ³
+³                       ³                        ³ (Advanced package)    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ Write-behind (lazy    ³ Optional, can be       ³ Optional, can be      ³
+³ write)                ³ handled on a per-file  ³ handled on a per-file ³
+³                       ³ basis                  ³ basis                 ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ Caching program       ³ DISKCACHE              ³ CACHE.EXE (Entry);    ³
+³                       ³ (in CONFIG.SYS file)   ³ CACHE386.EXE          ³
+³                       ³                        ³ (Advanced);           ³
+³                       ³                        ³ (values specified for ³
+³                       ³                        ³ the IFS and RUN       ³
+³                       ³                        ³ statements in the     ³
+³                       ³                        ³ CONFIG.SYS file)      ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ Maximum cache size    ³ 14MB                   ³ 2MB (Entry package);  ³
+³                       ³                        ³ physical memory       ³
+³                       ³                        ³ available             ³
+³                       ³                        ³ (Advanced package)    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ Cache threshold       ³ Variable, up to 64KB   ³ Variable, up to 64KB  ³
+³                       ³ (3.5KB default)        ³ (Entry package);      ³
+³                       ³                        ³ sensitive to data     ³
+³                       ³                        ³ type                  ³
+³                       ³                        ³ (Advanced package)    ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+The LAN Server-Entry design is optimized to handle three typical file accesses:
+<!-- lm: 0x2 0 -->
+<P>
+o<!-- lm: 0x2 2 -->
+<UL>Random file access is characterized by a request
+for a small amount of data that may reside anywhere in the file.  Core SMB
+protocol is typically used by the requester in this case.  The data is cached
+in the file system to minimize disk seeks.<!-- lm: 0x2 0 -->
+</UL> o<!-- lm: 0x2 2 -->
+<UL>Sequential
+file access is characterized by successive requests for data that is contiguous
+in the file.  Core SMB protocol is used by the requester in this case, as
+long as the requested amount of data is less than or equal to the requester's
+network buffer size (sizworkbuf).<!-- lm: 0x2 0 -->
+</UL> o<!-- lm: 0x2 2 -->
+<UL>Large
+file transfer is characterized by a request for an amount of data that is
+greater than the size of the requester's network buffer (sizworkbuf). Multiplexed
+or RAW SMB protocol is used by the requester in this case.  In anticipation
+of the next request, the Entry server performs read-ahead independently
+of the file system using one of its big buffers if the RAW SMB protocol
+is used.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+For the Entry server, I/O requests to the file system are made using OS/2
+APIs.  Once the API call finishes, the server returns the SMB to the requester
+as an SMB response.
+<P>
+The following figure shows the components that may influence the performance
+of OS/2 LAN Servers (Entry package) and OS/2 LAN Requesters. This figure
+also provides a reference for discussing individual performance-related
+elements.
+<P>
+System Architecture of the OS/2 Entry Server and OS/2 LAN Requester
+<P>
+
+<PRE>                                             ³
+&lt;ÄÄÄÄÄÄÄÄÄÄÄÄÄServerÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ&gt;³&lt;ÄÄÄÄÄÄÄRequesterÄÄÄÄÄÄÄÄÄ&gt;
+                          ÚÄÄÄÄÄÄÄÄÄÄÄÄÄ¿    ³     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                          ³    <!-- entering slot 3 -->Local    ³    ³     ³    Local    ³
+                          ³ application ³    ³     ³ application ³
+                          ÀÄÄÄÄÄÄÄÄÄÄÂÄÄÙ    ³     ÀÄÄÄÄÄÄÂÄÄÄÄÄÄÙ
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿           ³       ³            ³
+³ LAN Server 3.0 - Entry ÃÄÄÄÄÄ¿     ³       ³            ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄ´     ³     ³       ³            ³
+³ Request    ³     Big   ³   ÚÄÁÄÄÄÄÄÁÄÄ¿    ³     ÚÄÄÄÄÄÄÁÄÄÄÄÄÄ¿
+³ buffers    ³   buffers ³   ³ OS/2 API ³    ³     ³   OS/2 API  ³
+ÀÄÄÄÂÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÙ   ÀÄÄÄÂÄÄÄÄÄÄÙ    ³     ÀÄÄÄÄÄÄÂÄÄÄÄÄÄÙ
+    ³                            ³           ³            ³ Application
+    ³                            ³           ³            ³ privilege
+ÄÄÄÄ³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ³ÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄ³ÄÄÄÄÄÄÄÄÄÄÄÄÄ
+    ³                            ³           ³            ³ System
+    ³                            ³           ³            ³ privilege
+    ³      ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄ¿         ³     ÚÄÄÄÄÄÄÁÄÄÄÄÄÄ¿
+    ³      ³      OS/2 kernel      ³         ³     ³ OS/2 kernel ³
+    ³      ÃÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄ´         ³     ÃÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+    ³    ÚÄ´   IFS    ³     FAT    ³         ³     ³     IFS     ³
+    ³    ³ ÀÄÄÄÄÄÄÂÄÄÄÁÄÄÄÄÄÄÄÄÄÄÂÄÙ         ³     ÀÄÄÄÄÄÄÂÄÄÄÄÄÄÙ
+ÚÄÄÄÁÄÄÄÄÁÄÄ¿     ³              ³           ³    ÚÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄ¿
+³ Redirector³     ³              ³           ³    ³   Redirector    ³
+ÀÄÄÄÄÄÂÄÄÄÄÄÙ  ÚÄÄÁÄÄÄ¿          ³           ³    ³                 ³
+      ³        ³ File ³          ³           ³    ÃÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄ´
+      ³        ³systemÃÄÄÄ¿      ³           ³    ³  Work   ³ Work  ³
+      ³        ³systemÃÄÄÄ¿      ³           ³    ³  Work   ³ Work  ³
+      ³        ³driver³   ³      ³           ³    ³ buffers ³ cache ³
+      ³        ÃÄÄÄÄÄÄ´   ³      ³           ³    ÀÄÄÄÂÄÄÄÄÄÁÄÄÄÂÄÄÄÙ
+      ³        ³      ³   ³      ³           ³        ÀÄÄÄÂÄÄÄÄÄÙ
+      ³        ³ HPFS ³   ³      ³           ³            ³
+      ³        ³ cache³   ³      ³           ³            ³
+      ³        ÀÄÄÄÄÄÄÙ   ³      ³           ³            ³
+ÚÄÄÄÄÄÁÄÄ¿            ÚÄÄÄÁÄÄÄÄÄÄÁ¿          ³         ÚÄÄÁÄÄÄÄÄ¿
+³NETBIOS ³            ³Disk driver³          ³         ³NETBIOS ³
+³protocol³            ÃÄÄÄÄÄÄÄÄÄÄÄ´          ³         ³protocol³
+³ driver ³            ³ DISKCACHE ³          ³         ³ driver ³
+ÀÄÄÄÂÄÄÄÄÙ            ÀÄÄÄÄÂÄÄÄÄÄÄÙ          ³         ÀÄÄÂÄÄÄÄÄÙ
+ÚÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿      ³                 ³   ÚÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄ¿
+³  Network adapter  ³      ³                 ³   ³  Network adapter  ³
+³      driver       ³      ³                 ³   ³      driver       ³
+ÃÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄ´      ³                 ³   ÃÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄ´
+³Receive ³  Transmit³      ³                 ³   ³Receive ³  Transmit³
+³buffers ³  buffers ³      ³                 ³   ³buffers ³  buffers ³
+ÀÄÄÄÄÂÄÄÄÁÄÄÄÄÂÄÄÄÄÄÙ      ³                 ³   ÀÄÄÄÄÂÄÄÄÁÄÄÂÄÄÄÄÄÄÄÙ
+     ÀÄÄÄÂÄÄÄÄÙ            ³                 ³        ÀÄÄÄÂÄÄÙ   PS/2 Processor
+ÄÄÄÄÄÄÄÄÄ³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄ³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+  ÚÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄ¿     ÚÄÄÁÄÄÄÄÄÄÄÄÄ¿       ³   ÚÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄ¿
+  ³Network adapter³     ³Disk adapter³       ³   ³  Network adapter  ³
+  ³     card      ³     ³   card     ³       ³   ³       card        ³
+  ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ     ÀÄÄÄÄÄÄÄÄÄÄÄÄÙ       ³   ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+</PRE>
+
+<P>
+The next figure shows the components that may influence the performance
+of OS/2 LAN Servers (Entry package) and DOS LAN Requesters.  This figure
+also provides a reference for discussing individual performance-related
+elements.
+<P>
+System Architecture of the OS/2 Entry Server and DOS LAN Requester
+<P>
+
+<PRE>
+                                             ³
+&lt;ÄÄÄÄÄÄÄÄÄÄÄÄÄServerÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ&gt;³&lt;ÄÄÄÄÄÄÄRequesterÄÄÄÄÄÄÄÄÄ&gt;
+                          ÚÄÄÄÄÄÄÄÄÄÄÄÄÄ¿    ³ ÚÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄ¿
+                          ³    Local    ³    ³ ³   Local    ³Application³
+                          ³ application ³    ³ ³application ³  memory   ³
+                          ÀÄÄÄÄÄÄÄÄÄÄÂÄÄÙ    ³ ÀÄÄÄÄÄÄÄÄÄÄÂÄÁÄÄÄÄÄÄÄÄÄÄÄÙ
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿           ³       ³            ³
+³ LAN Server 3.0 - Entry ÃÄÄÄÄÄ¿     ³       ³            ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄ´     ³     ³       ³            ³
+³ Request    ³     Big   ³   ÚÄÁÄÄÄÄÄÁÄÄ¿    ³     ÚÄÄÄÄÄÄÁÄÄÄÄÄÄ¿
+³ buffers    ³   buffers ³   ³ OS/2 API ³    ³     ³   DOS API   ³
+ÀÄÄÄÂÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÙ   ÀÄÄÄÂÄÄÄÄÄÄÙ    ³     ÀÄÄÄÄÄÄÂÄÄÄÄÄÄÙ
+    ³                            ³           ³            ³
+    ³ Application privilege      ³           ³            ³
+ÄÄÄÄ³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ³ÄÄÄÄÄÄÄÄÄÄÄ´            ³
+    ³ System privilege           ³           ³            ³
+    ³                            ³           ³            ³
+    ³      ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄ¿         ³            ³
+    ³      ³      OS/2 kernel      ³         ³         Interrupt 2F
+    ³      ÃÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄ´         ³            ³
+    ³    ÚÄ´   IFS    ³     FAT    ³         ³            ³
+    ³    ³ ÀÄÄÄÄÄÄÂÄÄÄÁÄÄÄÄÄÄÄÄÄÄÂÄÙ         ³            ³
+ÚÄÄÄÁÄÄÄÄÁÄÄ¿     ³              ³           ³    ÚÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄ¿
+³ Redirector³     ³              ³           ³    ³   Redirector    ³
+ÀÄÄÄÄÄÂÄÄÄÄÄÙ  ÚÄÄÁÄÄÄ¿          ³           ³    ³                 ³
+      ³        ³ File ³          ³           ³    ÃÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄ´
+      ³        ³systemÃÄÄÄ¿      ³           ³    ³ Network ³  Big  ³
+      ³        ³driver³   ³      ³           ³    ³ buffers ³buffers³
+      ³        ÃÄÄÄÄÄÄ´   ³      ³           ³    ÀÄÄÄÂÄÄÄÄÄÁÄÄÄÂÄÄÄÙ
+      ³        ³      ³   ³      ³           ³        ÀÄÄÄÂÄÄÄÄÄÙ
+      ³        ³ HPFS ³   ³      ³           ³            ³
+      ³        ³ cache³   ³      ³           ³         Interrupt 5C
+      ³        ÀÄÄÄÄÄÄÙ   ³      ³           ³            ³
+ÚÄÄÄÄÄÁÄÄ¿            ÚÄÄÄÁÄÄÄÄÄÄÁ¿          ³       ÚÄÄÄÄÁÄÄÄÄÄÄ¿
+³NETBIOS ³            ³Disk driver³          ³       ³LAN Support³
+³protocol³            ÃÄÄÄÄÄÄÄÄÄÄÄ´          ³       ³  Program  ³
+³ driver ³            ³ DISKCACHE ³          ³       ³   driver  ³
+ÀÄÄÄÂÄÄÄÄÙ            ÀÄÄÄÄÂÄÄÄÄÄÄÙ          ³       ÀÄÄÄÄÂÄÄÄÄÄÄÙ
+ÚÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿      ³                 ³   ÚÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄ¿
+³  Network adapter  ³      ³                 ³   ³  Network adapter  ³
+³      driver       ³      ³                 ³   ³      driver       ³
+ÃÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄ´      ³                 ³   ÃÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄ´
+³Receive ³  Transmit³      ³                 ³   ³Receive ³  Transmit³
+³buffers ³  buffers ³      ³                 ³   ³buffers ³  buffers ³
+ÀÄÄÄÄÂÄÄÄÁÄÄÄÄÂÄÄÄÄÄÙ      ³                 ³   ÀÄÄÄÄÂÄÄÄÁÄÄÂÄÄÄÄÄÄÄÙ
+     ÀÄÄÄÂÄÄÄÄÙ            ³                 ³        ÀÄÄÄÂÄÄÙ   PS/2 Processor
+ÄÄÄÄÄÄÄÄÄ³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄ³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+  ÚÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄ¿     ÚÄÄÁÄÄÄÄÄÄÄÄÄ¿       ³   ÚÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄ¿
+  ³Network adapter³     ³Disk adapter³       ³   ³  Network adapter  ³
+  ³     card      ³     ³   card     ³       ³   ³       card        ³
+  ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ     ÀÄÄÄÄÄÄÄÄÄÄÄÄÙ       ³   ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="000_L1_Preface.html">[Back: Preface]</A> <BR>
+<A HREF="002_L1_LANServer30AdvancedA.html">[Next: LAN Server 3.0 Advanced Architecture]</A> 
+</BODY>
+</HTML>

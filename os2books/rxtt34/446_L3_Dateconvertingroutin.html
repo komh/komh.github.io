@@ -1,0 +1,128 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Date converting routine - 2 -</TITLE>
+</HEAD>
+<BODY>
+<H1>Date converting routine - 2 -</H1><!-- entering slot 463 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* sample routine to convert a date in the format dd/mm/yy into the   */
+/* base date format                                                   */
+/*                                                                    */
+/* Description from the author:                                       */
+/*   routine to convert a date passed in YY/MM/DD format (assumes the */
+/*   date is 19YY/MM/DD ) to Base date format which is based upon an  */
+/*   imaginary calendar date of 1/1/0001 it then assumes there is a   */
+/*   leap year every 4 years and every 400 years but not if the year  */
+/*   is divisble by 100                                               */
+/*                                                                    */
+/* Note: I do NOT know the author of this code.                       */
+/*       I found this code on an IBM BBS.                             */
+/*                                                                    */
+
+  do forever
+    say ""
+    say "Test the routine CalcBaseDate against the REXX function date"
+    say "  Note that the REXX function date only handles dates AFTER"
+    say "  the 01.01.1980!"
+    say "Enter a date to convert (dd.mm.yy, RETURN to end):"
+    testDate = strip( lineIn() )
+
+    if testDate = "" then
+      leave
+
+    say "  result of CalcBaseDate( """ || testDate || """) is: " || ,
+         CalcBaseDate( testDate )
+
+                        /* save the current date                      */
+    oldDate = date( "E" )
+
+                        /* set the current date to the testdate to    */
+                        /* test the routine CalcBaseDate against the  */
+                        /* REXX function date( B )                    */
+    "@date " testDate
+    say "  result of the REXX function date( ""B"" ) is: " || ,
+         date( "B" )
+
+                        /* restore the current date                   */
+    "@date " oldDate
+  end /* do forever */
+exit 0
+
+/* ------------------------------------------------------------------ */
+/* function: Convert a date in the format dd.mm.yy into the base date */
+/*           format                                                   */
+/*                                                                    */
+/* usage:    CalcBaseDate dateToConvert                               */
+/*                                                                    */
+/* where:    dateToConvert - date to convert in the format dd.mm.yy   */
+/*                                                                    */
+/* returns:  the date in base date format                             */
+/*                                                                    */
+CalcBaseDate: PROCEDURE
+
+                        /* initialize routine                         */
+  NonLeap.   = 31
+  NonLeap.0  = 12
+  NonLeap.2  = 28
+  NonLeap.4  = 30
+  NonLeap.6  = 30
+  NonLeap.9  = 30
+  NonLeap.11 = 30
+
+                /* grab parameter and store it in cyear cmonth cdate  */
+  parse arg cdate "." cmonth "." cyear .
+
+                /* grab year and convert it to YYYY                   */
+                /* simulate the behaviour of the REXX function date() */
+  if length( cyear ) &lt;= 2 then
+    if cyear &lt; 80 then
+      fullyear = "20" || cyear
+    else
+      fullyear = "19" || cyear
+  else
+    fullyear = cyear
+
+  numyears = fullyear -1
+  basedays = numyears * 365
+  QuadCentury = numyears % 400
+  Century = numyears % 100
+  LeapYears = numyears % 4
+  basedays = basedays + (((LeapYears - Century) + QuadCentury) - 1)
+
+  do i = 1 to (cmonth -1)
+    if i &lt;&gt; "2" then
+      basedays = basedays + NonLeap.i
+    else /* find if it's a leap year or not */
+      if (fullyear // 4) &gt; 0 then
+        basedays=basedays + 28
+      else
+        if ((fullyear // 100) = 0) &amp; ((fullyear // 400) &gt; 0) then
+        do
+                        /* century not divisble by 400                */
+          basedays = basedays + 28
+        end /* if */
+        else
+        do
+                        /* quad century or regular leap year          */
+          basedays = basedays + 29
+        end /* else */
+  end /* do */
+
+  basedays = basedays + cdate
+return basedays
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="445_L3_Dateconvertingroutin.html">[Back: Date converting routine - 1 -]</A> <BR>
+<A HREF="447_L3_ConvertvaluesfromtoI.html">[Next: Convert values from/to INTEL format]</A> 
+</BODY>
+</HTML>

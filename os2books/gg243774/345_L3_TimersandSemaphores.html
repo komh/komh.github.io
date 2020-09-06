@@ -1,0 +1,70 @@
+<HTML>
+<HEAD>
+<TITLE>Timers and Semaphores</TITLE>
+</HEAD>
+<BODY>
+<H1>Timers and Semaphores</H1><!-- entering slot 380 -->
+<P>
+Another method of achieving synchronization between threads or  processes
+involves the use of an event semaphore and the Presentation Manager timer
+ facility. The timer facility may be used from within a window procedure
+to create and start a timer that periodically sends messages of class WM_TIMER
+to the window, at intervals specified by the window procedure when the timer
+is created.
+<P>
+In this case, the WM_TIMER message is used by the window procedure in the
+primary thread or process, to periodically check the state of an event semaphore
+that indicates whether the secondary thread or process has completed its
+processing.  The secondary thread or process sets the event semaphore upon
+commencing its processing, and releases (posts) it upon completion.  The
+primary thread or process queries the state of the semaphore to determine
+when the secondary thread or process has completed its processing.
+<P>
+Note that when using this technique for synchronization between  processes
+(rather than between threads within the same process), the  event semaphore
+must be created as a shared semaphore, either by giving  it a name or by
+specifying the DC_SEM_SHARED flag when invoking the <B> DosCreateEventSem()
+</B>function.
+<P>
+An example of a secondary thread using this technique is shown in <A HREF="100_L2_SynchronizationUsing.html">Figure
+"Synchronization Using an Event Semaphore (Part 1)"</A>.
+<P>
+Note that the event semaphore is created as a shared semaphore and named.
+ A named semaphore is recommended since, if the secondary thread routine
+is placed in a  dynamic link library for subsequent use by other applications,
+or the  secondary thread executes in a separate process, the name of the
+ semaphore may be included in the documentation for that library,  enabling
+calling window procedures to access the semaphore using the <B> DosOpenEventSem()
+</B>function (see <A HREF="101_L2_SynchronizationUsing.html">Figure "Synchronization
+Using an Event Semaphore (Part 2)"</A>).  Using this technique promotes
+code reusability.
+<P>
+<A HREF="101_L2_SynchronizationUsing.html">Figure "Synchronization Using
+an Event Semaphore (Part 2)"</A> shows a window procedure using the <B> WinStartTimer()
+</B>function to start a timer, immediately after dispatching a secondary
+thread such  as the one shown in <A HREF="100_L2_SynchronizationUsing.html">Figure
+"Synchronization Using an Event Semaphore (Part 1)"</A>.  This timer in
+this example  will cause a WM_TIMER message to be passed to the window every
+0.5  seconds (500 milliseconds).
+<P>
+Since the primary thread or process must remain responsive to the  end user
+and thus cannot wait indefinitely for the semaphore to be  released, the
+Presentation Manager timer facility is used to generate periodic WM_TIMER
+messages to the invoking window procedure in the primary thread or process.
+ Upon receipt of each WM_TIMER message, the window procedure checks the
+state of the semaphore, timing out immediately if  the semaphore has not
+yet been released by the secondary thread or  process.  This technique is
+illustrated in <A HREF="101_L2_SynchronizationUsing.html">Figure "Synchronization
+Using an Event Semaphore (Part 2)"</A>.
+<P>
+Note once again the use of a named shared semaphore, in order to  reduce
+the level of interdependence between the primary and secondary threads/processes,
+thus facilitating the inclusion of the secondary routine into a dynamic
+link library for subsequent use by other applications.
+
+<P><HR>
+
+<A HREF="344_L3_PresentationManagerM.html">[Back: Presentation Manager Messages]</A> <BR>
+<A HREF="346_L3_DosWaitThreadFunctio.html">[Next: DosWaitThread() Function]</A> 
+</BODY>
+</HTML>

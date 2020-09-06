@@ -1,0 +1,125 @@
+<HTML>
+<HEAD>
+<TITLE>Example</TITLE>
+</HEAD>
+<BODY>
+<H1>Example</H1><!-- entering slot 83 -->
+<P>
+Let us define an IDL interface for a "MyObject" object, which declares a
+"BAD_FLAG" exception, which can be raised by the "checkFlag"method, in a
+file called "myobject.idl":
+<PRE>   interface MyObject {<B>
+     exception </B>BAD_FLAG { long ErrCode;   char Reason[80]; }
+
+     void checkFlag(in unsigned long flag) <B>raises</B>(BAD_FLAG);
+   };
+</PRE>
+
+<P>
+The SOM IDL compiler will map the exception to the following C language
+constructs, in myobject.h:
+<PRE>   typedef struct BAD_FLAG {
+      long ErrCode;
+      char Reason[80];
+   } BAD_FLAG;
+
+   #define ex_BAD_FLAG "MyObject::BAD_FLAG"
+</PRE>
+
+<P>
+A client program that invokes the "checkFlag" method might contain the following
+error handling code.  (Note: The error checking code below lies in the user-written
+procedure, "ErrorCheck," so the code need not be replicated through the
+program.)
+<PRE>   #include "som.h"
+   #include "myobject.h"
+   boolean ErrorCheck(Environment *ev);   /* prototype */
+
+   <B>main()</B>
+   {
+       unsigned long flag;
+       Environment ev;
+       MyObject myobj;
+       char     *exId;
+       BAD_FLAG *badFlag;
+       StExcep  *stExValue;
+
+       myobj = MyObjectNew();
+       flag  = 0x01L;
+       <B>SOM_InitEnvironment</B>(&amp;ev);
+
+        /* invoke the checkFlag method, passing the Environment param */
+       _checkFlag(myobj, &amp;ev, flag);
+
+       /* check for exception */
+       if (ErrorCheck(&amp;ev))
+       {
+          /* ... */
+          <B>somExceptionFree</B>(&amp;ev);   /* free the exception memory */
+       }
+
+       /* ... */
+   }
+
+   /* error checking procedure */
+   boolean <B>ErrorCheck</B>(Environment *ev)
+   {
+     switch (ev._major)
+     {
+     case SYSTEM_EXCEPTION:
+       /* get system exception id and value */
+       exId      =  <B>somExceptionId</B>(ev);
+       stExValue =  <B>somExceptionValue</B>(ev);
+       /* ... */
+       return( TRUE);
+
+     case USER_EXCEPTION:
+       /* get user-defined exception id and value */
+       exId =  <B>somExceptionId</B>(ev);
+       if (strcmp(exId, ex_BAD_FLAG) == 0)
+       {
+          badFlag = (BAD_FLAG *)  <B>somExceptionValue</B>(ev);
+          /* ... */
+       }
+       /* ... */
+       return( TRUE);
+
+     case NO_EXCEPTION:
+       return( FALSE);
+     }
+   }
+</PRE>
+
+<P>
+The implementation of the "checkFlag" method might contain the following
+error-handling code:
+<PRE>   #include "som.h"
+   #include "myobject.h"
+
+   void  <B>checkFlag</B>(MyObject somSelf, Environment *ev,
+                   unsigned long flag)
+   {
+      BAD_FLAG *badFlag;
+      /* ... */
+
+      if ( /* flag is invalid */ )
+      {
+         badFlag = (BAD_FLAG *) SOMMalloc(sizeof(BAD_FLAG));
+         badFlag-&gt;ErrCode = /* bad flag code */;
+         strcpy(badFlag-&gt;Reason, "bad flag was passed");
+         <B>somSetException</B>(ev, USER_EXCEPTION,
+                         ex_BAD_FLAG, (void *)badFlag);
+
+         return;
+      }
+      /* ... */
+   }
+</PRE>
+
+
+<P><HR>
+
+<A HREF="065_L4_Gettinganexceptionva.html">[Back: Getting an exception value]</A> <BR>
+<A HREF="067_L3_Memorymanagement.html">[Next: Memory management]</A> 
+</BODY>
+</HTML>

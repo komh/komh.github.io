@@ -1,0 +1,81 @@
+<HTMLHIDDEN>
+<HEAD>
+<TITLE>DosTimerStop</TITLE>
+</HEAD>
+<BODY>
+<H1>DosTimerStop</H1><!-- entering slot 387 -->
+<PRE>#define INCL_DOSDATETIME
+
+USHORT  rc = DosTimerStop(Handle);
+
+HTIMER           Handle;        /* Handle of the timer */
+
+USHORT           rc;            /* return code */
+</PRE>
+
+<P>
+<B>Example</B>
+<P>
+The following example sets an asynchronous one-shot timer for one second.
+It then sets an asynchronous recurring timer with a one-second interval,
+reporting each time an interval elapses.  Finally, it stops the recurring
+timer.
+<PRE>#define INCL_DOSDATETIME
+#define INCL_DOSSEMAPHORES
+
+#include &lt;os2.h&gt;
+
+#define SEM_NAME        "\\SEM\\timer.sem"  /* Semaphore name */
+#define TIME_INTERVAL   1000L               /* Timer interval
+                                                   (in milliseconds) */
+
+main()
+{
+  HSEM      SemHandle;
+  HTIMER    TimerHandle;
+  USHORT    i;
+  USHORT    rc;
+
+  /* Create system semaphore to be used by timers */
+  DosCreateSem(CSEM_PUBLIC,        /* Ownership - nonexclusive */
+               &amp;SemHandle,         /* Semaphore handle (returned) */
+               SEM_NAME);          /* Semaphore name */
+
+  /* Set the semaphore, then start a one-shot timer */
+  if(!DosSemSet(SemHandle))        /* Semaphore handle */
+    printf("Semaphore set.\n");
+  if(!(rc=DosTimerAsync(TIME_INTERVAL,    /* Timer interval */
+                        SemHandle,        /* Semaphore handle */
+                        &amp;TimerHandle)))   /* Timer handle (returned) */
+    printf("One shot timer for %f seconds started.\n", TIME_INTERVAL/1000.0);
+
+  /* Report when timer expires (other work may be done here) */
+  if(!DosSemWait(SemHandle,               /* Semaphore handle */
+                 SEM_INDEFINITE_WAIT))    /* Timeout period -
+                                                    indefinite */
+    printf("Time interval has elapsed.\n");
+
+  /* Start a recurring timer */
+  if(!(rc=DosTimerStart(TIME_INTERVAL,    /* Timer interval */
+                        SemHandle,        /* Semaphore handle */
+                        &amp;TimerHandle)))   /* Timer handle (returned) */
+    printf("Recurring timer with %f second interval started.\n",
+           TIME_INTERVAL/1000.0);
+  /*  */
+  for(i=1; i&lt;4; i++)
+    if(!DosSemSetWait(SemHandle,             /* Semaphore handle */
+                      SEM_INDEFINITE_WAIT))  /* Timeout period -
+                                                       indefinite */
+      printf("Recurring timer cleared semaphore %d times.\n", i);
+  if(!(rc=DosTimerStop(TimerHandle)))        /* Timer handle */
+    printf("Recurring timer has been stopped.\n");
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="343_L2H_DosTimerStart.html">[Back: DosTimerStart]</A> <BR>
+<A HREF="345_L2H_DosTransactNmPipe.html">[Next: DosTransactNmPipe]</A> 
+</BODY>
+</HTML>

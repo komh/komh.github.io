@@ -1,0 +1,417 @@
+<HTML>
+<HEAD>
+<TITLE>DevHlp_GetDosVar</TITLE>
+</HEAD>
+<BODY>
+<H1>DevHlp_GetDosVar</H1><!-- entering slot 15 -->
+<P>
+DevHlp_GetDosVar returns the address of a kernel variable.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Calling Sequence in Assembler<!-- lm: 0x11 11 -->
+<UL>
+<PRE>MOV   AL, index                ; Index wanted.
+MOV   CX, VarMember            ; Only used by index 14 and 16.
+MOV   DL, DevHlp GetDOSVar
+
+CALL   Device Help 
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+Results in Assembler<!-- lm: 0x11 11 -->
+<UL>
+<P>
+ C  Clear if successful. AX BX points to the index.
+<P>
+ C  Set if error.<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+Calling Sequence in C<!-- lm: 0x11 11 -->
+<UL>
+<PRE>#include  "dhcalls.h"
+</PRE>
+<!-- lm: 0x2 11 -->
+<P>
+USHORT APIENTRY DevHelp_GetDOSVar<!-- lm: 0x2 26 -->
+<UL> ( USHORT VarNumber,
+USHORT VarMember, PPVOID KernelVar )<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+VarNumber (USHORT)<!-- lm: 0x11 11 -->
+<UL> The index into the list of read
+only variables 
+<PRE>DHGETDOSV_SYSINFOSEG                                       1DHGETDOSV_LOCINFOSEG                                       2
+DHGETDOSV_VECTORSDF                                        4
+DHGETDOSV_VECTORREBOOT                                     5
+DHGETDOSV_VECTORMSATS                                      6
+DHGETDOSV_YIELDFLAG                                        7
+DHGETDOSV_TCYIELDFLAG                                      8
+DHGETDOSV_DOSCODEPAGE                                      11
+DHGETDOSV_INTERRUPTLEV                                     13
+DHGETDOSV_DEVICECLASSTABLE                                 14
+DHGETDOSV_DMQSSELECTOR                                     15
+DHGETDOSV_APMINFO                                          16
+DHGETDOSV_APM11INFO                                        17
+DHGETDOSV_CPUMODE                                          18
+DHGETDOSV_CPUMODE                                          19
+DHGETDOSV_TOTALCPUS                                        20
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>VarMember (USHORT)<!-- lm: 0x11 11 -->
+<UL> Applicable
+only to VarNumber 14 or 16.
+<P>
+For VarNumber = 14
+<PRE>VarMember=1                     (Disk) has a maximum of 32
+                                entries in the DCT.
+VarMember=2                     Mouse) has a maximum of 3
+                                entries in the DCT.
+</PRE>
+
+<P>
+For VarNumber = 16
+<PRE>VarMember=0                     Query presence of APM BIOS.
+VarMember=1                     Query presence of APM BIOS and
+                                establish connection.
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>KernelVar (PPVOID)<!-- lm: 0x11 11 -->
+<UL> Pointer
+to the address of requested variable to be returned.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Results in C</B>
+<PRE>Success Indicator               Clear if successful; returns                                address of the requested
+                                variable in KernelVar.
+Possible errors                 None.
+</PRE>
+
+<P>
+<B>Remarks</B>
+<P>
+The following table contains the list of<I> read-only</I> variables 
+<PRE>Index      Variable Description
+  1        GlobalInfoSeg WORD.  Valid at task time and interrupt
+           time, but not at INIT time.  See below.
+  2        LocalInfoSeg DWORD.  Selector/segment address of local
+           information segment for the current Local Descriptor
+           Table (LDT).  Valid only at task time.  See below.
+  3        Reserved.
+  4        VectorSDF DWORD.  Pointer to the stand-alone dump
+           facility. Valid at task time and interrupt time.
+  5        VectorReboot DWORD.  Pointer to restart the operating
+           system. Valid at task time and interrupt time.
+  6        Reserved.
+  7        YieldFlag BYTE.  Indicator for performing yields.
+           Valid only at task time.
+  8        TCYieldFlag BYTE.  Indicator for performing
+           time-critical yields. Valid only at task time.
+  9        Reserved.
+ 10        Reserved.
+ 11        DOS session Code Page Tag pointer  DWORD.
+           Segment offset of the DOS session s current code page
+           tag.  Valid only at task time.
+ 12        Reserved.
+ 13        Interrupt Level
+ 14        DeviceClass Table (See DH_RegisterDeviceClass)
+ 15        DMQS Selector   Point to XGA adapter.  DMQS
+           information offset is assumed to start at zero.
+ 16        APMInfo APMStruc. Advanced Power Management BIOS
+           Information
+17         APMInfo  APMStruc version 1.1. Advanced Power
+           Management BIOS Information
+18         SMP_Active  DWORD Information on the operating system
+           (OS) support for more than 1 CPU. Returns 1 if the OS
+           has SMP support and 0 if the OS has uniprocessor
+           support.
+19         PSDInfo.psd_flags  DWORD PSD status area where several
+           pieces of useful information about the PSD can be
+           obtained. After obtaining the variable address, the
+           caller must test the bit for the desired <!-- entering slot 16 -->aspect of the
+           PSD. The PSD flags definition is as follows 
+           PSD_INITIALIZED (0x80000000) PSD has been initialized
+           PSD_INSTALLED (0x40000000) PSD has been installed
+           PSD_ADV_INT_MODE (0x20000000) PSD is in advaanced
+           interrupt mode PSD_KERNEL_PIC (0x10000000) Let the
+           kernel interrupt manager EOI
+20         cProcessors  DWORD Information for the Multi-Processor
+           environment. Indicates the number of processors
+           currently running in the MP environment. A value of 1
+           is returned in Uni-Processor environment.
+</PRE>
+<!-- lm: 0x2 1 -->
+<P>
+GlobalInfoSeg (PSEL)<!-- lm: 0x2 23 -->
+<UL> Address of the global information
+segment structure, as defined below <!-- lm: 0x2 23 -->
+<P>
+Time (ULONG)<!-- lm: 0x2 54 -->
+<UL> Time in seconds since 1/1/1970.<!-- lm: 0x2 23 -->
+</UL> Millisecs
+(ULONG)<!-- lm: 0x2 54 -->
+<UL> Time in milliseconds.<!-- lm: 0x2 23 -->
+</UL> Hours
+(UCHAR)<!-- lm: 0x2 54 -->
+<UL> Current hour.<!-- lm: 0x2 23 -->
+</UL> Minute
+(UCHAR)<!-- lm: 0x2 54 -->
+<UL> Current minute.<!-- lm: 0x2 23 -->
+</UL> Seconds
+(UCHAR)<!-- lm: 0x2 54 -->
+<UL> Current second.<!-- lm: 0x2 23 -->
+</UL> HundredSec
+(UCHAR)<!-- lm: 0x2 54 -->
+<UL> Current hundreth of a second.<!-- lm: 0x2 23 -->
+</UL> TimeZone
+(USHORT)<!-- lm: 0x2 54 -->
+<UL> Minutes from UTC.  If FFFFH, TimeZone is
+undefined.<!-- lm: 0x2 23 -->
+</UL> Interval (USHORT)<!-- lm: 0x2 54 -->
+<UL> Timer
+interval in tenths of milliseconds.<!-- lm: 0x2 23 -->
+</UL> Day (UCHAR)
+<!-- lm: 0x2 54 -->
+<UL>Day.<!-- lm: 0x2 23 -->
+</UL> Month (UCHAR)<!-- lm: 0x2 54 -->
+<UL> Month.
+<!-- lm: 0x2 23 -->
+</UL>Year (USHORT)<!-- lm: 0x2 54 -->
+<UL> Year.<!-- lm: 0x2 23 -->
+</UL> Weekday
+(UCHAR)<!-- lm: 0x2 54 -->
+<UL> Day of the week <!-- lm: 0x2 54 -->
+<P>
+<LI><!-- lm: 0x2 62 -->Sunday<!-- lm: 0x2 54 -->
+<BR>
+<LI><!-- lm: 0x2 62 -->Monday<!-- lm: 0x2 54 -->
+<BR>
+<LI><!-- lm: 0x2 62 -->Tuesday<!-- lm: 0x2 54 -->
+<BR>
+<LI><!-- lm: 0x2 62 -->Wednesday<!-- lm: 0x2 54 -->
+<BR>
+<LI><!-- lm: 0x2 62 -->Thursday<!-- lm: 0x2 54 -->
+<BR>
+<LI><!-- lm: 0x2 62 -->Friday<!-- lm: 0x2 54 -->
+<BR>
+<LI><!-- lm: 0x2 62 -->Saturday<!-- lm: 0x2 54 --><!-- lm: 0x2 23 -->
+</UL> MajorVersion
+(UCHAR)<!-- lm: 0x2 54 -->
+<UL> Major version number.<!-- lm: 0x2 23 -->
+</UL> MinorVersion
+(UCHAR)<!-- lm: 0x2 54 -->
+<UL> Minor version number.<!-- lm: 0x2 23 -->
+</UL> Revision
+(UCHAR)<!-- lm: 0x2 54 -->
+<UL> Revision letter.<!-- lm: 0x2 23 -->
+</UL> CurrentSession
+(UCHAR)<!-- lm: 0x2 54 -->
+<UL> Current foreground full-screen session.
+<!-- lm: 0x2 23 -->
+</UL>MaxNumSessions (UCHAR)<!-- lm: 0x2 54 -->
+<UL> Maximum
+number of full-screen sessions.<!-- lm: 0x2 23 -->
+</UL> HugeShift (UCHAR)
+<!-- lm: 0x2 54 -->
+<UL>Shift count for huge segments.<!-- lm: 0x2 23 -->
+</UL> ProtModeInd
+(UCHAR)<!-- lm: 0x2 54 -->
+<UL> Protect-mode-only indicator <!-- lm: 0x2 54 -->
+<P>
+<LI><!-- lm: 0x2 62 -->DOS and OS/2 sessions.<!-- lm: 0x2 54 -->
+<BR>
+<LI><!-- lm: 0x2 62 -->OS/2 session only.<!-- lm: 0x2 54 --><!-- lm: 0x2 23 -->
+</UL> LastProcess
+(USHORT)<!-- lm: 0x2 54 -->
+<UL> Process ID of the current foreground process.
+<!-- lm: 0x2 23 -->
+</UL>DynVarFlag (UCHAR)<!-- lm: 0x2 54 -->
+<UL> Dynamic
+variation flag <!-- lm: 0x2 54 -->
+<P>
+<LI><!-- lm: 0x2 62 -->Absolute.<!-- lm: 0x2 54 -->
+<BR>
+<LI><!-- lm: 0x2 62 -->Enabled.<!-- lm: 0x2 54 --><!-- lm: 0x2 23 -->
+</UL> MaxWait
+(UCHAR)<!-- lm: 0x2 54 -->
+<UL> Maximum wait in seconds.<!-- lm: 0x2 23 -->
+</UL> MinTimeSlice
+(USHORT)<!-- lm: 0x2 54 -->
+<UL> Minimum time slice in milliseconds.<!-- lm: 0x2 23 -->
+</UL> MaxTimeSlice
+(USHORT)<!-- lm: 0x2 54 -->
+<UL> Maximum time slice in milliseconds.<!-- lm: 0x2 23 -->
+</UL> BootDrive
+(USHORT)<!-- lm: 0x2 54 -->
+<UL> Drive from which the system startup occurred
+ <!-- lm: 0x2 54 -->
+<P>
+<LI><!-- lm: 0x2 62 -->Drive A<!-- lm: 0x2 54 -->
+<BR>
+<LI><!-- lm: 0x2 62 -->Drive B<!-- lm: 0x2 54 -->
+<BR>
+n<!-- lm: 0x2 62 -->
+<UL> Drive<I> n</I>.<!-- lm: 0x2 54 --><!-- lm: 0x2 23 -->
+</UL> TraceFlags
+(UCHAR)<!-- lm: 0x2 54 -->
+<UL> Thirty-two system trace major code flags.
+ Each bit corresponds to a trace major code 00H-FFH.  The most significant
+bit (left-most) of the first byte corresponds to major code 00H.  Values
+are <!-- lm: 0x2 54 -->
+<P>
+<LI><!-- lm: 0x2 62 -->Trace disabled.<!-- lm: 0x2 54 -->
+<BR>
+<LI><!-- lm: 0x2 62 -->Trace enabled.<!-- lm: 0x2 54 --><!-- lm: 0x2 23 -->
+</UL> MaxTextSessions
+(UCHAR)<!-- lm: 0x2 54 -->
+<UL> Maximum number of VIO windowable sessions.
+<!-- lm: 0x2 23 -->
+</UL>MaxPMSessions (UCHAR)<!-- lm: 0x2 54 -->
+<UL> Maximum
+number of Presentation Manager sessions.<!-- lm: 0x2 23 --><!-- lm: 0x2 1 -->
+</UL> LocalInfoSeg
+(PSEL)<!-- lm: 0x2 23 -->
+<UL> Address of the selector for the local information
+segment structure, as defined below <!-- lm: 0x2 23 -->
+<P>
+ProcessID (PID)<!-- lm: 0x2 55 -->
+<UL> Current Process ID.<!-- lm: 0x2 23 -->
+</UL> ParentProcessID
+(PID)<!-- lm: 0x2 55 -->
+<UL> Parent Process ID.<!-- lm: 0x2 23 -->
+</UL> ThreadPrty
+(USHORT)<!-- lm: 0x2 55 -->
+<UL> Priority of current thread.<!-- lm: 0x2 23 -->
+</UL> ThreadID
+(TID)<!-- lm: 0x2 55 -->
+<UL> Current Thread ID.<!-- lm: 0x2 23 -->
+</UL> SessionID
+(USHORT)<!-- lm: 0x2 55 -->
+<UL> Current Session ID.<!-- lm: 0x2 23 -->
+</UL> ProcStatus
+(UCHAR)<!-- lm: 0x2 55 -->
+<UL> Process status.<!-- lm: 0x2 23 -->
+</UL> Unused
+(UCHAR)<!-- lm: 0x2 55 -->
+<UL> Unused.<!-- lm: 0x2 23 -->
+</UL> ForegroundProcess
+(BOOL)<!-- lm: 0x2 55 -->
+<UL> Current process is in foreground (has keyboard
+focus) <!-- lm: 0x2 55 -->
+<P>
+ <LI><!-- lm: 0x2 64 -->Implies YES<!-- lm: 0x2 55 -->
+<BR>
+<LI><!-- lm: 0x2 64 -->Implies NO.<!-- lm: 0x2 55 --><!-- lm: 0x2 23 -->
+</UL> TypeProcess
+(UCHAR)<!-- lm: 0x2 55 -->
+<UL> Type of process <!-- lm: 0x2 55 -->
+<P>
+<LI><!-- lm: 0x2 63 -->Full screen protect-mode session.<!-- lm: 0x2 55 -->
+<BR>
+<LI><!-- lm: 0x2 63 -->Requires real mode.<!-- lm: 0x2 55 -->
+<BR>
+<LI><!-- lm: 0x2 63 -->VIO windowable protect-mode session.<!-- lm: 0x2 55 -->
+<BR>
+<LI><!-- lm: 0x2 63 -->Presentation Manager protect-mode session.<!-- lm: 0x2 55 -->
+<BR>
+<LI><!-- lm: 0x2 63 -->Detached protect-mode process.<!-- lm: 0x2 55 --><!-- lm: 0x2 23 -->
+</UL> Unused
+(UCHAR)<!-- lm: 0x2 55 -->
+<UL> Unused.<!-- lm: 0x2 23 -->
+</UL> EnvironmentSel
+(SEL)<!-- lm: 0x2 55 -->
+<UL> Environment selector.<!-- lm: 0x2 23 -->
+</UL> CmdLineOff
+(USHORT)<!-- lm: 0x2 55 -->
+<UL> Command line offset in the segment addressed
+by EnvironmentSel.<!-- lm: 0x2 23 -->
+</UL> DataSegLen (USHORT)<!-- lm: 0x2 55 -->
+<UL> Length
+of the data segment in bytes.<!-- lm: 0x2 23 -->
+</UL><!-- entering slot 17 --> StackSize
+(USHORT)<!-- lm: 0x2 55 -->
+<UL> Stack size in bytes.<!-- lm: 0x2 23 -->
+</UL> HeapSize
+(USHORT)<!-- lm: 0x2 55 -->
+<UL> Heap size in bytes.<!-- lm: 0x2 23 -->
+</UL> HModule
+(UHMODULE)<!-- lm: 0x2 55 -->
+<UL> Module handle.<!-- lm: 0x2 23 -->
+</UL> DSSel
+(SEL)<!-- lm: 0x2 55 -->
+<UL> Data segment selector.<!-- lm: 0x2 23 --><!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+APMInfo<!-- lm: 0x2 23 -->
+<UL> Advanced Power Management BIOS Information,
+as defined below <!-- lm: 0x2 23 -->
+<P>
+APM CodeSeg (WORD)<!-- lm: 0x2 54 -->
+<UL> APM 16-bit code segment (real-mode
+segment base address). From APM BIOS, INT 15h AX=5302H.<!-- lm: 0x2 23 -->
+</UL>APMDataSeg(
+WORD )<!-- lm: 0x2 54 -->
+<UL>APM16 - bitdatasegment( real - modesegmentbaseaddress
+) .FromAPMBIOS ,INT15hAX = 5302H .
+<BR>
+<!-- lm: 0x2 23 -->
+</UL>APM Offset  (WORD)<!-- lm: 0x2 54 -->
+<UL> Offset
+to entry point. From APM BIOS, INT 15h AX=5302H.
+<BR>
+<!-- lm: 0x2 23 -->
+</UL>APM Flags  (WORD)<!-- lm: 0x2 54 -->
+<UL> APM capability
+flags. From APM BIOS, INT 15h AX=5300H.
+<BR>
+<!-- lm: 0x2 23 -->
+</UL>APM Level  (WORD)<!-- lm: 0x2 54 -->
+<UL> APM revision
+level. From APM BIOS, INT 15h AX=5300H.
+<BR>
+<!-- lm: 0x2 23 -->
+</UL>APM CPUIdle (6 bytes (DF))<!-- lm: 0x2 54 -->
+<UL> APM
+Services Entry Point for CPU Idle and Busy Functions.<!-- lm: 0x2 23 -->
+</UL>
+<P>
+<B>Note: </B> APM CodeSeg and APM DataSeg are segment addresses, not selectors.
+It is the responsibility of the device driver to convert the segment address
+to a valid protect-mode selector.<!-- lm: 0x2 23 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+The first time GetDOSVar is called at device-driver initialization with
+index (AL) = 10H and CX = 1, the system sets the values for APM CodeSeg,
+APM DataSeg, APM Offset, APM Flags, and APM Level. On return, AX BX points
+to the APMInfo structure.
+<P>
+If GetDOSVar is called at device-driver initialization with index (AL) =
+10h and CX = 0, the system sets the values for APM Flags and APM Level.
+On return, AX BX points to the APMInfo structure. Other fields in the APMInfo
+structure might have been set by a previous call to GetDOSVar with index
+= 10h and CX = 1.
+<P>
+If GetDOSVar is called after device-driver initialization with index (AL)
+= 10H, no information in the APMInfo structure is modified. On return, AX
+BX points to the APMInfo structure.
+<P>
+APM CPUIdle contains the address of the CPU Idle and Busy processing routines
+from the Power Management Services device driver. This variable is initially
+empty (NULL) until Power Management Services loads and places the addresses
+for the CPU Idle and Busy routines into the variable area. The variable
+address must be the 16 16 Selector Offset. The Offset is 0-extended to 32
+bits, and the value must be represented in 16 32 format. The APM CPUIdle
+function utilizes the AX register as the<I> control selection</I> flag for
+BUSY (AX=00001H) and IDLE (AX=0000H) requests.
+<P>
+These variables are maintained by the kernel for the benefit of physical
+device drivers.  Notice that the address returned is the address of the
+indicated variable; the variable can contain a vector to some facility,
+or it can contain a structure.
+
+<P><HR>
+
+<A HREF="012_L2_DevHlp_FreeCtxHook.html">[Back: DevHlp_FreeCtxHook]</A> <BR>
+<A HREF="014_L2_DevHlp_KillProc.html">[Next: DevHlp_KillProc]</A> 
+</BODY>
+</HTML>

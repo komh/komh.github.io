@@ -1,0 +1,129 @@
+<HTML>
+<HEAD>
+<TITLE>DBG_C_Connect</TITLE>
+</HEAD>
+<BODY>
+<H1>DBG_C_Connect</H1><!-- entering slot 712 -->
+<P>
+<B>Debug Command 21 - Connect To Debuggee Command</B>
+<P>
+<B>Parameters</B><!-- lm: 0x2 1 -->
+<UL>
+<P>
+Addr<!-- lm: 0x2 8 -->
+<UL>= Possible values are shown in the list below:
+<!-- lm: 0x2 8 -->
+<P>
+0x00000000<!-- lm: 0x2 25 -->
+<UL>The default action is to sever the connection
+between the debugger and the program being debugged if a system resource
+is being held.<!-- lm: 0x2 8 -->
+</UL> 0x00000001<!-- lm: 0x2 25 -->
+<UL>The
+Sever action is not wanted between the debugger and the program being debugged.
+<!-- lm: 0x2 8 --><!-- lm: 0x2 1 -->
+</UL>Pid<!-- lm: 0x2 8 -->
+<UL>= Process
+ID of debuggee<!-- lm: 0x2 1 -->
+</UL> Tid<!-- lm: 0x2 8 -->
+<UL>= Reserved,
+must be zero<!-- lm: 0x2 1 -->
+</UL> Cmd<!-- lm: 0x2 8 -->
+<UL>= DBG_C_Connect
+<!-- lm: 0x2 1 -->
+</UL>Value<!-- lm: 0x2 8 -->
+<UL>= Debugging Level Number
+
+<P>
+The only permitted debugging level number is shown in the following list:
+<!-- lm: 0x2 8 -->
+<P>
+<LI><!-- lm: 0x2 17 --><LI>DBG_L_386<!-- lm: 0x2 8 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+This must be the first<A><!-- external link: 1D 75 C3 42 --> DosDebug</A> command.
+No other<A><!-- external link: 1D 75 C3 42 --> DosDebug</A> command will
+be accepted until the debugging connection has been established.
+<P>
+<B>Returns</B>
+<P>
+This command establishes a debugging connection. It must be the initial
+command, since it verifies the buffer format for the rest of the connection.
+
+<P>
+Because<A><!-- external link: 1D 75 C3 42 --> DosDebug</A> usually cannot
+be ported to new machines without changing the format of the buffer, this
+command is needed to establish that the debugger is capable of handling
+the desired buffer format.
+<P>
+If the requested debugging level is not supported, an error is returned,
+and the connection is not made. This gives the debugger a chance to try
+again, or to automatically start a different debugger process that uses
+a different buffer format.
+<P>
+For this command, only the machine-independent portion of the buffer is
+examined. This portion includes the Pid, Tid, Cmd, and Value fields. This
+makes it possible to port the<A><!-- external link: 1D 75 C3 42 --> DosDebug
+</A>buffer from one machine to another, without returning an error to the
+debugger on the initial<A><!-- external link: 1D 75 C3 42 --> DosDebug</A> command.
+
+<P>
+The only<A><!-- external link: 1D 75 C3 42 --> DosDebug</A> notifications
+that are returned by this command are <A HREF="711_L3_DBG_N_Success.html">DBG_N_Success
+</A>and <A HREF="712_L3_DBG_N_Error.html">DBG_N_Error</A>.
+<P>
+<B>Restrictions</B>
+<P>
+If the connection to the debuggee is not established within a reasonable
+amount of time, it is assumed that the connection will never be established,
+and the debuggee process is terminated automatically.
+<P>
+The current format level may or may not be supported in future versions.
+This is due to the machine dependence of the<A><!-- external link: 1D 75 C3 42 --> DosDebug
+</A>function.
+<P>
+<B>Remarks</B>
+<P>
+If<I> Addr</I> is set to 0, the connection between the debugger and the
+program being debugged is not severed. If any debuggee threads, other than
+the thread that encountered the debug event, are holding system semaphores,
+they will be allowed to run until they release the semaphores. They will
+then be stopped and the notification will be delivered.
+<P>
+If the thread encountering the debug event is holding a system semaphore
+the debugger/debuggee connection is severed by terminating the debuggee,
+and returning a <A HREF="712_L3_DBG_N_Error.html">DBG_N_Error</A> notification
+to the debugger with the value field set to 0, and the register set filled
+in. No further DosDebug commands will be accepted by the debuggee, nor will
+it generate any other notifications.
+<P>
+If a <A HREF="689_L3_DBG_C_Stop.html">DBG_C_Stop</A> is issued, and a thread
+owning a system semaphore is about to generate a <A HREF="718_L3_DBG_N_AsyncStop.html">DBG_N_AsyncStop
+</A>notification, it will be allowed to continue execution until it releases
+the semaphore. It will then be stopped, and the notification delivered.
+This is the only exception to the severing of the debugger/debuggee rule.
+
+<P>
+If<I> Addr</I> is set to 0, the connection between the debugger the program
+being debugged is severed if a system resource is being held,. in which
+case<A><!-- external link: 1D 75 C3 42 --> DosDebug</A> returns:<!-- lm: 0x2 1 -->
+<P>
+Tid<!-- lm: 0x2 8 -->
+<UL>= Thread owning semaphore<!-- lm: 0x2 1 -->
+</UL>Cmd<!-- lm: 0x2 8 -->
+<UL>= <A HREF="712_L3_DBG_N_Error.html">DBG_N_Error
+</A><!-- lm: 0x2 1 -->
+</UL>Value<!-- lm: 0x2 8 -->
+<UL>= ERROR_EXCL_SEM_ALREADY_OWNED<!-- lm: 0x2 1 -->
+</UL>
+<P>
+If the debugger needs to present some information to the user or use the
+thread holding the system resource, the debugger must terminate the program
+being debugged. Any other action might result in a system halt.
+
+<P><HR>
+
+<A HREF="698_L3_DBG_C_UnMapAlias.html">[Back: DBG_C_UnMapAlias]</A> <BR>
+<A HREF="700_L3_DBG_C_ReadMemBuf.html">[Next: DBG_C_ReadMemBuf]</A> 
+</BODY>
+</HTML>

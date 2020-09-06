@@ -1,0 +1,118 @@
+<HTML>
+<HEAD>
+<TITLE>Migrating Your SNMP DPI Subagent to Version 2.0</TITLE>
+</HEAD>
+<BODY>
+<H1>Migrating Your SNMP DPI Subagent to Version 2.0</H1><!-- entering slot 78 -->
+<P>
+The information presented in this section must be taken as guidelines and
+not exact procedures.  Your specific implementation will vary from the guidelines
+presented.
+<P>
+When you want to change your DPI 1.x based subagent code to the DPI Version
+2.0 level use these guidelines for the required actions and the recommended
+actions.
+<P>
+<B>Required Actions</B><!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Add a mkDPIopen() call and send the created packet
+to the agent. This opens your "DPI connection" with the agent.  Wait for
+the response and ensure that the open is accepted.  You need to pass a subagent
+ID (Object Identifier) which must be a unique ASN.1 OID.
+<P>
+See <A HREF="037_L2_ThemkDPIopenFunction.html">The mkDPIopen() Function
+</A>for more information.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Change your mkDPIregister() calls and pass the parameters
+according to the new function prototype.  You must also expect a RESPONSE
+to the REGISTER request.
+<P>
+See <A HREF="038_L2_ThemkDPIregisterFunc.html">The mkDPIregister() Function
+</A>for more information.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Change mkDPIset() and/or mkDPIlist() calls to the
+new mkDPIset() call.  Basically all mkDPIset() calls are now of the DPI
+1.1 mkDPIlist() form.
+<P>
+See <A HREF="040_L2_ThemkDPIsetFunction.html">The mkDPIset() Function</A> for
+more information.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Change mkDPItrap() and mkDPItrape() calls to the new
+mkDPItrap() call.  Basically all mkDPItrap() calls are now of the DPI 1.1
+mkDPItrape() form.
+<P>
+See <A HREF="041_L2_ThemkDPItrapFunction.html">The mkDPItrap() Function
+</A>for more information.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Add code to recognize DPI RESPONSE packets, which
+should be expected as a result of OPEN, REGISTER, UNREGISTER requests.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Add code to expect and handle the DPI UNREGISTER packet
+from the agent.  It may send such packets if an error occurs or if a higher
+priority subagent registers the same sub-tree as you have registered.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Add code to unregister your sub-tree(s) and close
+the "DPI connection" when you want to terminate the subagent.
+<P>
+See <A HREF="042_L2_ThemkDPIunregisterFu.html">The mkDPIunregister() Function
+</A>and <A HREF="036_L2_ThemkDPIcloseFunctio.html">The mkDPIclose() Function
+</A>for more information.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Change your code to use the new SNMP Version 2 error
+codes as defined in the snmp_dpi.h include file.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Change your code that handles a GET request.  It should
+return a varBind with SNMP_TYPE_noSuchObject value or SNMP_TYPE_noSuchInstance
+value instead of an error SNMP_ERROR_noSuchName if the object or the instance
+do not exist.  This is not considered an error any more. Therefore, you
+should return an SNMP_ERROR_noError with an error index of zero.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Change your code that handles a GETNEXT request.  It
+should return a varBind with SNMP_TYPE_endOfMibView value instead of an
+error SNMP_ERROR_noSuchName if you reach the end of your MIB or sub-tree.
+This is not considered an error any more.  Therefore, you should return
+an SNMP_ERROR_noError with an error index of zero.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Change your code that handles SET requests to follow
+the two phase SET/COMMIT scheme as described in <A HREF="020_L2_SETProcessing.html">SET
+Processing</A>.
+<P>
+See the sample handling of SET/COMMIT/UNDO in <A HREF="083_L2_ProcessingaSETCOMMIT.html">Processing
+a SET/COMMIT/UNDO Request</A>.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Recommended Actions</B><!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Do not reference the object ID pointer (object_p)
+in the snmp_dpi_xxxx_packet structures anymore.  Instead start using the
+group_p and instance_p pointers.  The object_p pointer may be removed in
+a future version of the DPI API.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Check <A HREF="044_L1_TransportRelatedDPIA.html">Transport-Related
+DPI API Functions</A> to see if you want to use those functions instead
+of using your own code for those functions.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Consider using more than 1 varBind per DPI packet.
+ You can specify this on the REGISTER request.  You must then be prepared
+to handle multiple varBinds per DPI packet.  The varBinds are chained via
+the various snmp_dpi_xxxx_packet structures.
+<P>
+See <A HREF="038_L2_ThemkDPIregisterFunc.html">The mkDPIregister() Function
+</A>for more information.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Consider specifying a time out when you issue a DPI
+OPEN or DPI REGISTER.
+<P>
+See <A HREF="037_L2_ThemkDPIopenFunction.html">The mkDPIopen() Function
+</A>and <A HREF="038_L2_ThemkDPIregisterFunc.html">The mkDPIregister() Function
+</A>for more information.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="074_L1_SNMPDPIAPIVersion11C.html">[Back: SNMP DPI API Version 1.1 Considerations]</A> <BR>
+<A HREF="076_L1_ADPISubagentExample.html">[Next: A DPI Subagent Example]</A> 
+</BODY>
+</HTML>

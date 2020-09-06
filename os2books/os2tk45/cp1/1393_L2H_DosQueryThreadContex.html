@@ -1,0 +1,157 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosQueryThreadContext - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosQueryThreadContext - Example Code</H1><!-- entering slot 1411 -->
+<P>
+This example uses DosQueryThreadContext to query the context of a suspended
+thread.
+<PRE>#define INCL_DOSEXCEPTIONS
+#define INCL_DOSPROCESS
+#define INCL_DOSERRORS
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+
+VOID _System CntThreadProc( ULONG LoopMax );             /* Count Thread */
+VOID PrintContextRecord( CONTEXTRECORD *pThread );
+
+int main(VOID)
+{
+    TID        tidCntThread = 0;   /* ID returned for newly created thread */
+    PFNTHREAD  pfnCntThread = &amp;CntThreadProc; /* Address of Thread program */
+    ULONG      ulLoopMax    = 500000;     /* Parameter to thread routine   */
+    APIRET     rc           = NO_ERROR; /* Return code                  */
+
+                      /* Thread Context Record */
+    CONTEXTRECORD  Thread_cxt= {0,{0,0,0,0,0,0,0},
+                               {{0,0,0}, {0,0,0}, {0,0,0}, {0,0,0},
+                                {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}},
+                                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+    rc = DosCreateThread(&amp;tidCntThread, /* Thread ID (return by function) */
+                         pfnCntThread,   /* Address of thread program      */
+                         ulLoopMax,      /* Parameter passed to ThreadProc */
+                         CREATE_READY | /* Thread is ready when created */
+                         STACK_SPARSE, /* Do not pre_commit stack pages */
+                         8192L);         /* Stack size, rounded to page bdy*/
+    if (rc != NO_ERROR) {
+        printf("DosCreateThread error: return code = %u\n",rc);
+        return 1;
+    }
+
+    rc = DosSuspendThread (tidCntThread);
+    if (rc != NO_ERROR)
+        printf("DosSuspendThread error: return code = %u\n",rc);
+    else
+    {           /* Wait for thread to suspend */
+
+        printf("Waiting 5 seconds for thread to suspend...\n");
+        rc = DosSleep(5000);
+
+        rc = DosQueryThreadContext (tidCntThread,
+                                    CONTEXT_FULL,
+                                    &amp;Thread_cxt);
+        if (rc != NO_ERROR)
+           printf("DosQueryThreadContext error: return code = %u\n",rc);
+        else
+           PrintContextRecord( &amp;Thread_cxt );
+
+
+        rc = DosResumeThread (tidCntThread);
+        if (rc != NO_ERROR) {
+            printf("DosResumeThread error: return code = %u\n",rc);
+            return 1;
+        }
+    }
+
+    printf("Waiting for thread to complete...\n");
+
+    rc = DosWaitThread ( &amp;tidCntThread, DCWW_WAIT );
+    if (rc != NO_ERROR) {
+        printf("DosWaitThread error: return code = %u\n",rc);
+        return 1;
+    }
+
+    printf("Thread has completed!\n");
+    return NO_ERROR;
+}
+
+VOID _System CntThreadProc( ULONG LoopMax ) /* Count Thread */
+{
+    ULONG  ulCount = 0,
+           i       = 0,
+           j       = 1,
+           k       = 1,
+           l       = 0;
+    double w       = 0.0,
+           y       = 0.0,
+           z       = 0.0;
+
+    for (l=0; l &lt; 20; l++)
+    {
+      for (i=0; i &lt; LoopMax; i++)
+      {
+        w = 1.00 / 2.00;
+        y = 2.00 * 2.00;
+        z = 3.00 / 6.00;
+        j = j + i;
+        k = k * i;
+      }
+    }
+
+  return;
+}
+
+VOID PrintContextRecord( CONTEXTRECORD *pThread )
+{
+       int i = 0;
+
+       printf("\nRegisters for CONTEXT_CONTROL level:\n");
+       printf("  EBP= 0x%08x\t",pThread-&gt;ctx_RegEbp);
+       printf("EIP= 0x%08x\t",pThread-&gt;ctx_RegEip);
+       printf("CS= 0x%08x\n",pThread-&gt;ctx_SegCs);
+       printf("  EFLAGS = 0x%08x\t",pThread-&gt;ctx_EFlags);
+       printf("ESP= 0x%08x\t",pThread-&gt;ctx_RegEsp);
+       printf("SS= 0x%08x\n",pThread-&gt;ctx_SegSs);
+
+       printf("\nRegisters for CONTEXT_INTEGER level:\n");
+       printf("  EAX= 0x%08x\t",pThread-&gt;ctx_RegEax);
+       printf("EBX= 0x%08x\t",pThread-&gt;ctx_RegEbx);
+       printf("ECX= 0x%08x\n",pThread-&gt;ctx_RegEcx);
+       printf("  EDX= 0x%08x\t",pThread-&gt;ctx_RegEdx);
+       printf("ESI= 0x%08x\t",pThread-&gt;ctx_RegEsi);
+       printf("EDI= 0x%08x\n",pThread-&gt;ctx_RegEdi);
+
+       printf("\nRegisters for CONTEXT_SEGMENTS level:\n");
+       printf("  DS= 0x%08x\t",pThread-&gt;ctx_SegDs);
+       printf("ES= 0x%08x\t",pThread-&gt;ctx_SegEs);
+       printf("FS= 0x%08x\t",pThread-&gt;ctx_SegFs);
+       printf("GS= 0x%08x\n",pThread-&gt;ctx_SegGs);
+
+       printf("\nRegisters for CONTEXT_FLOATING_POINT level:\n");
+       printf("  - Coprocessor stack register (exponent,hisig:losig):\n");
+       for (i=0;i&lt;8;i++)
+       {
+          printf("    ctx_stack[%d]=0x%08x ,0x%08x :0x%08x \n",i,
+                  pThread-&gt;ctx_stack[i].signexp,
+                  pThread-&gt;ctx_stack[i].hisig,
+                  pThread-&gt;ctx_stack[i].losig);
+       }
+       printf("  - Other element\n");
+       for (i=0;i&lt;7;i++)
+       {
+          printf("    ctx_env[%d]=0x%08x \n",i ,pThread-&gt;ctx_env[i]);
+       }
+
+       return;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1392_L2H_DosQueryThreadContex.html">[Back: DosQueryThreadContext - Related Functions]</A> <BR>
+<A HREF="1394_L2H_DosQueryThreadContex.html">[Next: DosQueryThreadContext - Topics]</A> 
+</BODY>
+</HTML>

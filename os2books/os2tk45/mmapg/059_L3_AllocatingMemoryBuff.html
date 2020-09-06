@@ -1,0 +1,87 @@
+<HTML>
+<HEAD>
+<TITLE>Allocating Memory Buffers</TITLE>
+</HEAD>
+<BODY>
+<H1>Allocating Memory Buffers</H1><!-- entering slot 67 -->
+<P>
+After the mixer device is set up to use DART, the application instructs
+the device to allocate memory by sending the MCI_BUFFER message with the
+MCI_ALLOCATE_MEMORY flag set. The application uses the MCI_BUFFER_PARMS
+structure to specify the number of buffers it wants and the size to be used
+for each buffer.
+<P>
+<B>Note: </B> Because of device driver restrictions, buffers are limited
+to 64KB on Intel-based systems. No such limit exists on PowerPC systems.
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+The<I> pBufList</I> field contains a pointer to an array of MCI_MIX_BUFFER
+structures where the allocated information is to be returned.
+<PRE>typedef struct_MCI_BUFFER_PARMS {
+  HWND   hwndCallback;    /* Window for notifications */
+  ULONG  ulStructLength;  /* Length of MCI_BUFFER_PARMS */
+  ULONG  ulNumBuffers;    /* Number of buffers to allocate (IN/OUT)*/
+  ULONG  ulBufferSize;    /* Size of buffers mixer should use */
+  ULONG  ulMintoStart;    /* Unused */
+  ULONG  ulSrcStart;      /* Unused */
+  ULONG  ulTgtStart;      /* Unused */
+  PVOID  pBufList;        /* Pointer to array of buffers */
+} MCI_BUFFER_PARMS;
+
+typedef MCI_BUFFER_PARMS *PMCI_BUFFER_PARMS;
+</PRE>
+
+<P>
+The following example illustrates using MCI_BUFFER to allocate memory.
+<PRE>
+   MCI_MIX_BUFFER   MyBuffers[ MAX_BUFFERS ];
+
+    BufferParms.ulNumBuffers = 40;
+    BufferParms.ulBufferSize = 4096;
+    BufferParms.pBufList = MyBuffers;
+
+     rc = mciSendCommand( usDeviceID,
+                   MCI_BUFFER,
+                   MCI_WAIT | MCI_ALLOCATE_MEMORY,
+                   ( PVOID ) &amp;BufferParms,
+                   0 );
+
+     if ( ULONG_LOWD( rc) != MCIERR_SUCCESS )
+        {
+        printf( "Error allocating memory.  rc is : %d", rc );
+        exit ( 1 );
+        }
+
+     // MCI driver will return the number of buffers it
+     // was able to allocate
+     // it will also return the size of the information
+     // allocated with each buffer.
+
+     ulNumBuffers = BufferParms.ulNumBuffers;
+
+     for ( ulLoop = 0; ulLoop &lt; ulNumBuffers; ulLoop++ )
+        {
+        rc = mmioRead ( hmmio,
+                       MyBuffers[ ulLoop ].pBuffer,
+                       MyBuffers[ ulLoop ].ulBufferLength);
+
+        if ( !rc )
+           {
+           exit( rc );
+           }
+        MyBuffers[ ulLoop ].ulUserParm = ulLoop;
+
+        }
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="058_L3_SettingUptheMixer.html">[Back: Setting Up the Mixer]</A> <BR>
+<A HREF="060_L3_ReadingandWritingDat.html">[Next: Reading and Writing Data]</A> 
+</BODY>
+</HTML>

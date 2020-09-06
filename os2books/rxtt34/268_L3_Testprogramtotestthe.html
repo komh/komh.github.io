@@ -1,0 +1,514 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Test program to test the overheads of function calls</TITLE>
+</HEAD>
+<BODY>
+<H1>Test program to test the overheads of function calls</H1><!-- entering slot 271 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* ------------------------------------------------------------------ */
+/*                                                                    */
+/* REXX_Function_Call_Performance - measure the costs of functions    */
+/*                                  calls in OS/2 REXX                */
+/*                                                                    */
+/* Author: Arthur Pool                                                */
+/*         (see EMail Addresses)                                      */
+/*                                                                    */
+/*                                                                    */
+/* Syntax: REXX_Function_Call_Performance                             */
+/*                                                                    */
+/* `REXX_Function_Call_Performance' measures the `cost' (time) of     */
+/* calling a REXX function when the function is:                      */
+/*                                                                    */
+/*  [1] included in the primary REXX source file (this file);         */
+/*                                                                    */
+/*  [2a] MacroSpace function, pre-order, .CMD extension;              */
+/*                                                                    */
+/*  [2b] MacroSpace function, pre-order, no extension;                */
+/*                                                                    */
+/*  [2c] MacroSpace function, post-order, .CMD extension;             */
+/*                                                                    */
+/*  [2d] MacroSpace function, post-order, no extension;               */
+/*                                                                    */
+/*  [3a] a separate source file located in the CURRENT directory;     */
+/*                                                                    */
+/*  [3b] a separate source file located in a directory at the START   */
+/*       of the PATH string;                                          */
+/*                                                                    */
+/*  [3c] a separate source file located in a directory at the END     */
+/*       of the PATH string;                                          */
+/*                                                                    */
+/*  [3d] a separate source file located in a directory at the END     */
+/*       of the PATH string, without EAs.                             */
+/*                                                                    */
+/* `REXX_Function_Call_Performance' is specific to OS/2, though the   */
+/* concepts are applicable to other environments.                     */
+/*                                                                    */
+/* `REXX_Function_Call_Performance' has been tested on Warp Connect   */
+/* (Blue Box), and requires the REXXUTIL.DLL and RXU.DLL function     */
+/* packages. RXU can be obtained from the common OS/2 FTP sites       */
+/* (Hobbes, CDROM, Leo) - search for `RXU' and get the most recent    */
+/* version.                                                           */
+/*                                                                    */
+/* Note:                                                              */
+/* This is the test program for the section                           */
+/* Investigate the overheads of function calls                        */
+/*                                                                    */
+/* Last Update                                                        */
+/*   01/08/12 /bs Added some error checking for missing DLLs          */
+/*   01/08/22 /bs Added more error checking                           */
+/* ------------------------------------------------------------------ */
+                    /* check the parameter - use default if ommitted  */
+  parse arg limit;
+  select
+
+   when limit = '' then
+      limit = 255
+
+    when datatype( limit ) = 'NUM' then
+      nop
+
+    otherwise
+      limit = 255
+      trace a
+
+  end /* select */
+                    /* Initialisation - restore original environment  */
+                    /* on exit                                        */
+  call setlocal
+
+                    /* Ensure we have no undefined variables          */
+                    /* (eg, typos)                                    */
+  signal on novalue name CrashIt
+
+  tempCMDName = 'REXX_Function_Call_Performance_2.cmd'
+
+                    /* create REXX_Function_Call_Performance_2.cmd in */
+                    /* the directory with this file if it don't exist */
+  if CreateExternalRoutine( tempCMDName) &lt;&gt; 0 then           /* v3.30 */
+  do
+    say 'Error: Error creating the temporary file ' || tempCMDName || '!'
+    say ''
+    say 'Hint:  This program needs the current drive to be formated with'
+    say '       HPFS (or another filesystem supporting long filenames).'
+    say '       The current directory must be writable.'
+    say ''
+    say 'Program aborted.'
+    exit 2
+  end /* if */
+                    /* Ensure required function packages are          */
+                    /* available                                      */
+  call LoadUtil 'RexxUtil'                                   /* v3.30 */
+
+  call LoadUtil 'RXU'                                        /* v3.30 */
+
+                    /* Initialise descriptive text                    */
+  desc.1  = '[1]                             function in the source program:'
+  desc.2a = '[2a]            MacroSpace function, pre-order, .CMD extension:'
+  desc.2b = '[2b]              MacroSpace function, pre-order, no extension:'
+  desc.2c = '[2c]           MacroSpace function, post-order, .CMD extension:'
+  desc.2d = '[2d]             MacroSpace function, post-order, no extension:'
+  desc.3a = '[3a]   function in an external source file - CURRENT directory:'
+  desc.3b = '[3b]       function in an external source file - START of PATH:'
+  desc.3c = '[3c]         function in an external source file - END of PATH:'
+  desc.3d = '[3d] function in an external source file - END of PATH, no EAs:'
+
+
+/* ------------------------------------------------------------------ */
+  say ''
+  call charout , ' 'desc.1
+  t = time('R')
+
+  do i = 0 to limit
+    res = REXX_Function_Call_Performance_1(i)
+  end /* do i = 0 to limit */
+
+  say format(time('E'),7,2)
+
+/* ------------------------------------------------------------------ */
+                    /* Find if the function is already loaded - with  */
+                    /* either possible name                           */
+  parse value RxQueryMacro('REXX_Function_Call_Performance_3') with rc position
+  if rc = 0 then
+  do
+                    /* <!-- entering slot 272 -->Drop the function if it is already loaded      */
+    rc = RxDropMacro('REXX_Function_Call_Performance_3')
+  end /* if */
+
+  parse value RxQueryMacro('REXX_Function_Call_Performance_3.cmd') with rc position
+  if rc = 0 then
+  do
+                    /* Drop the function if it is already loaded      */
+    rc = RxDropMacro('REXX_Function_Call_Performance_3.cmd')
+  end /* if */
+
+                    /* Ensure that it is R/W - so that REXX can store */
+                    /* the semi-compiled form in the Extended         */
+                    /* Attributes (EAs)                               */
+  '@attrib -r -h -s' macsrc
+
+                    /* Now add the function to the beginning of the   */
+                    /* macrospace with .CMD extension                 */
+  rc = RxAddMacro('REXX_Function_Call_Performance_3.cmd', MacSrc, 'B')
+  if rc = 0 then                                             /* v3.30 */
+  do
+    call charout , ' 'desc.2a
+    t = time('R')
+    do i = 0 to limit
+      res = REXX_Function_Call_Performance_3.cmd(i)
+    end /* do */
+
+    say format(time('E'),7,2)
+
+                    /* Finally, drop it to cleanup                    */
+    rc = RxDropMacro('REXX_Function_Call_Performance_3.cmd')
+  end /* if */
+  else                                                       /* v3.30 */
+    say " -- Error loading the Macro"                        /* v3.30 */
+
+/* ------------------------------------------------------------------ */
+                    /* Now add the function to the beginning of the   */
+                    /* macrospace without extension                   */
+  rc = RxAddMacro('REXX_Function_Call_Performance_3', MacSrc, 'B')
+  if rc = 0 then                                             /* v3.30 */
+  do
+    call charout , ' 'desc.2b
+    t = time('R')
+    do i = 0 to limit
+      res = REXX_Function_Call_Performance_3(i)
+    end /* do */
+
+    say format(time('E'),7,2)
+
+                    /* Finally, drop it to cleanup                    */
+    rc = RxDropMacro('REXX_Function_Call_Performance_3')
+  end /* if */
+  else                                                       /* v3.30 */
+    say " -- Error loading the Macro"                        /* v3.30 */
+
+/* ------------------------------------------------------------------ */
+                    /* Now add the function to the end of the         */
+                    /* macrospace with .CMD extension                 */
+  rc = RxAddMacro('REXX_Function_Call_Performance_3.cmd', MacSrc, 'A')
+  if rc = 0 then                                             /* v3.30 */
+  do
+    call charout , ' 'desc.2c
+    t = time('R')
+    do i = 0 to limit
+      res = REXX_Function_Call_Performance_3.cmd(i)
+    end /* do */
+
+    say format(time('E'),7,2)
+
+                    /* Finally, drop it to cleanup                    */
+    rc = RxDropMacro('REXX_Function_Call_Performance_3.cmd')
+  end /* if */
+  else                                                       /* v3.30 */
+    say " -- Error loading the Macro"                        /* v3.30 */
+
+/* ------------------------------------------------------------------ */
+                    /* Now add the function to the end of the         */
+                    /* macrospace with no extension                   */
+  rc = RxAddMacro('REXX_Function_Call_Performance_3', MacSrc, 'A')
+  if rc = 0 then                                             /* v3.30 */
+  do
+    call charout , ' 'desc.2d
+    t = time('R')
+    do i = 0 to limit
+      res = REXX_Function_Call_Performance_3(i)
+    end /* do */
+    say format(time('E'),7,2)
+
+                    /* Finally, drop it to cleanup                    */
+    rc = RxDropMacro('REXX_Function_Call_Performance_3')
+  end /* if */
+  else                                                       /* v3.30 */
+    say " -- Error loading the Macro"                        /* v3.30 */
+
+/* ------------------------------------------------------------------ */
+                    /* Now we do the tests with the function loaded   */
+                    /* from disk. NOTE that calls after the first     */
+                    /* will often benefit from disk caching.          */
+                    /* Performance will vary depending upon the       */
+                    /* location of the function's source file in the  */
+                    /* search path, so we will do 3 tests, one with   */
+                    /* the source file located in the CURRENT         */
+                    /* directory, one with the source directory at    */
+                    /* the START of the PATH string, another with the */
+                    /* source path at the END of the PATH string.     */
+
+                    /* To prepare for this, first take a copy of the  */
+                    /* PATH string and remove all references (either  */
+                    /* explicit or implicit) to the function's source */
+                    /* file directory. This is a bit messy, as that   */
+                    /* directory (whatever it is) could appear        */
+                    /* explicitly (even multiple times) in the        */
+                    /* current PATH statement, or it may be present   */
+                    /* (de facto) if it is the current directory and  */
+                    /*  `.' appears in the PATH string. We need to be */
+                    /* careful to cope with both these possibilities! */
+
+                    /* We already found the source fileid location    */
+                    /* above - extract just the drive and directory   */
+                    /* parts of it                                    */
+  MacSrcDsk = FileSpec('D', MacSrc)
+  MacSrcDir1 = FileSpec('P', MacSrc)
+  MacSrcDir2 = substr(MacSrcDir1, 1, length(MacSrcDir1)-1)
+  MacSrcDskDir1 = MacSrcDsk || MacSrcDir1
+  MacSrcDskDir2 = MacSrcDsk || MacSrcDir2
+
+                    /* Retrieve the current PATH string               */
+  os2 = 'OS2ENVIRONMENT'
+  path = value('PATH', , os2)
+
+                    /* For simplicity, we'll ensure that the PATH     */
+                    /* does NOT have a leading ';' and DOES have a    */
+                    /* trailing ';'                                   */
+  path = strip(path, 'B', ';') || ';'
+
+                    /* These are the strings we need to remove from   */
+                    /* the PATH string                                */
+  try.1 = '.'
+  try.2 = MacSrcDskDir1
+  try.3 = MacSrcDskDir2
+  try.4 = MacSrcDir1
+  try.5 = MacSrcDir2
+
+                    /* Make a working copy of the previous PATH, with */
+                    /* a leading ';' added (recall we've already      */
+                    /* ensured that it has a trailing ';') to ensure  */
+                    /* that matches for the first and last components */
+                    /* will succeed - we will strip this additional   */
+                    /* character after we've deleted any necessary    */
+                    /* strings                                        */
+  newpath = ';'path
+
+                    /* Now strip each of these strings from the PATH  */
+  do i = 1 to 5
+    ThisOne = ';'translate(try.i)';'
+    Lth = length(ThisOne) - 1
+    ctr = 0
+    do j = 1 by 1
+      t = pos(ThisOne, translate(newpath))
+      if t = 0 then
+        <!-- entering slot 273 -->leave j
+      newpath = delstr(newpath, t, lth)
+      ctr = ctr + 1
+    end j
+    ctr.i = ctr
+  end i
+
+                    /* Strip the added leading ';'                    */
+  newpath = substr(newpath, 2)
+
+                    /* Right - now change into the source file's      */
+                    /* directory for the next test                    */
+  t = directory(MacSrcDskDir2)
+
+                    /* Set the new PATH value                         */
+  t = value('PATH', newpath, os2)
+
+                    /* Now do the test!                               */
+  call charout , ' 'desc.3a
+  t = time('R')
+  do i = 0 to limit
+    res = REXX_Function_Call_Performance_2(i)
+  end /* do */
+
+  say format(time('E'),7,2)
+
+/* ------------------------------------------------------------------ */
+                    /* Now - under OS/2, REXX looks for external      */
+                    /* functions in the CURRENT directory before      */
+                    /* looking on the PATH, we'll have to change to a */
+                    /* different (any different) directory, but we'll */
+                    /* have to make sure that there is not a copy of  */
+                    /* the external function in that directory. The   */
+                    /* simplest way to do this is probably to make a  */
+                    /* temporary directory and change into that       */
+                    /* directory                                      */
+  OriginalDir = directory()
+  tempdir = SysTempFileName('TMP?????.DIR')
+  call SysMkDir TempDir /* Must work! */
+  t = directory(TempDir)
+
+                    /* Prepend the source directory to the `cleaned'  */
+                    /* path string                                    */
+  temppath = MacSrcDskDir2 || ';' || newpath
+
+                    /* Set the new value                              */
+  t = value('PATH', temppath, os2)
+
+                    /* Now do the test!                               */
+  call charout , ' 'desc.3b
+  t = time('R')
+  do i = 0 to limit
+    res = REXX_Function_Call_Performance_2(i)
+  end /* do */
+
+  say format(time('E'),7,2)
+
+/* ------------------------------------------------------------------ */
+                    /* Now we want to have the external source file   */
+                    /* directory at the END of the PATH string.       */
+  temppath = newpath || MacSrcDskDir2 || ';'
+
+                    /* Set the new value                              */
+  t = value('PATH', temppath, os2)
+
+                    /* Now do the test!                               */
+  call charout , ' 'desc.3c
+  t = time('R')
+  do i = 0 to limit
+    res = REXX_Function_Call_Performance_2(i)
+  end /* do */
+
+  say format(time('E'),7,2)
+
+/* ------------------------------------------------------------------ */
+                    /* Can this really be the last test? Strip the    */
+                    /* EAs from the external source file, make it R/O */
+                    /* to prevent REXX storing the semi-compiled      */
+                    /* form, then test again.                         */
+
+                    /* Find a temporary fileid to store the stripped  */
+                    /* EAs                                            */
+  EAfile = SysTempFileName('TMP?????.eas')
+
+  '@attrib -r -h -s' macsrc
+  '@eautil /S' macsrc EAfile
+  '@erase' EAfile
+
+                    /* Make the file R/O                              */
+  '@attrib +r' macsrc
+
+                    /* Now repeat the previous test                   */
+
+                    /* Now do the test!                               */
+  call charout , ' 'desc.3d
+  t = time('R')
+  do i = 0 to limit
+    res = REXX_Function_Call_Performance_2(i)
+  end /* do */
+
+  say format(time('E'),7,2)
+
+/* ------------------------------------------------------------------ */
+                    /* Make the file R/W again so that EAs can be     */
+                    /* stored on next invocation                      */
+  '@attrib -r' MacSrc
+
+                    /* Finally, change back to the original directory */
+                    /* and delete the temporary directory             */
+  t = directory(OriginalDir)
+  call SysRmDir TempDir
+
+exit
+
+/* ------------------------------------------------------------------ */
+                    /* internal sub routine used for testing          */
+REXX_Function_Call_Performance_1:
+  return arg(1)**arg(1)
+
+/* ------------------------------------------------------------------ */
+/* code and routines added by Bernd Schemmer for REXX Tips &amp; Tricks   */
+
+/* ------------------------------------------------------------------ */
+                    /* error handler for NOVALUE errors               */
+CrashIt:
+  say 'Error: NOVALUE condition raised in line ' || sigl || '!'
+  say '       The undefined variable is "' || condition('D') || '".'
+exit 255
+
+/* ------------------------------------------------------------------ */
+                    /* load REXXUTIL or RXU                           */
+LoadUtil:
+  parse upper arg dllName
+
+                    /* install a local error handler            v3.30 */
+  signal on syntax name LoadUtilError
+
+  select
+
+    when dllName = 'REXXUTIL' then
+    do
+                    /* load REXXUTIL                                  */
+      call rxFuncAdd 'SysLoadFuncs', 'REXXUTIL', 'SysLoadFuncs'
+      call SysLoadFuncs
+    end /* when */
+
+    when dllName = 'RXU' then
+    do
+                    /* load RXU                                       */
+       call RxFuncAdd 'RxuInit', 'RXU', 'RxuInit'
+       call RxUInit
+    end /* when */
+
+    otherwise
+      nop
+
+  end /* select */
+return 0
+
+/* local error handler for syntax errors in the procedure LoadUtil    */
+/*                                                              v3.30 */
+loadUtilError:
+  say 'Error: Can NOT find the DLL "' || dllName || .DLL'"!'
+  say '       This DLL is necessary for this program.'
+  if dllName = 'RXU' then
+  do
+    say 'Hint:  RXU.DLL is a free extension DLL for REXX. You can find it'
+    say '       on <!-- entering slot 274 -->hobbes (hobbes.nmsu.edu) for example.'
+  end
+exit 1
+
+/* ------------------------------------------------------------------ */
+                    /* create the necessary external routine          */
+                    /*   REXX_Function_Call_Performance_2.cmd         */
+                    /* in the directory with this file if it doesn't  */
+                    /* exist                                          */
+CreateExternalRoutine: PROCEDURE expose macSrc
+  parse arg cmdName
+
+  parse source . . thisProg
+  progPath = fileSpec( 'D', thisProg ) || fileSpec( 'P', thisProg )
+  fullCmdName = progPath || cmdName
+
+  if stream( fullCmdName, 'c', 'QUERY EXIST' ) = '' then
+  do
+    call stream fullCmdName, 'c', 'OPEN WRITE'
+    call LineOut fullCmdName ,,
+      "/" || "* " || cmdName || " - investigate the overheads of function calls *" || "/"
+    call LineOut fullCmdName ,,
+      "/" || "* Arthur Pool .. pool@commerce.uq.edu.au *" || "/"
+    call LineOut fullCmdName ,,
+      "/" || "* $Id: " || cmdName || ",v 1.2 1998-08-03 15:29:04+10 pool Exp pool $ *" || "/"
+    call LineOut fullCmdName ,,
+      "  return arg(1)**arg(1)"
+    call stream fullCmdName, 'c', 'CLOSE'
+  end /* if */
+                                                             /* v3.30 */
+  if stream( fullCmdName, 'c', 'QUERY EXIST' ) &lt;&gt; '' then
+  do
+    macSrc = fullCmdName
+    return 0
+  end /* if */
+  else
+  do
+    macSrc = ''
+    return 1
+  end /* else */
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="267_L3_Investigatetheoverhe.html">[Back: Investigate the overheads of function calls]</A> <BR>
+<A HREF="269_L1_HintsforObjectREXX.html">[Next: Hints for Object REXX]</A> 
+</BODY>
+</HTML>

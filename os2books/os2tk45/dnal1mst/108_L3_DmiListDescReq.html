@@ -1,0 +1,153 @@
+<HTML>
+<HEAD>
+<TITLE>DmiListDescReq</TITLE>
+</HEAD>
+<BODY>
+<H1>DmiListDescReq</H1><!-- entering slot 112 -->
+<P>
+The following List Description commands use the DmiListDescReq command block:
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->DmiListComponentDescCmd<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->DmiListGroupDescCmd<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->DmiListAttributeDescCmd<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The format for the command block is: ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³Table33
+.DmiListDescReqCommandBlock                   ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ OFFSET     ³ SIZE      ³ TYPE      ³ VARIABLE NAME         ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 0       ³ 64       ³ STRUCT     ³ DmiMgmtCommand        ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 64       ³ 4       ³ INT      ³ iComponentId         ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 68       ³ 4       ³ INT      ³ iGroupId           ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 72       ³ 4       ³ INT      ³ iAttributeId         ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 76       ³ 4       ³ INT      ³ iOffset            ³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+<B><!-- lm: 0x2 1 -->
+<P>
+Variable Name<!-- lm: 0x2 21 -->
+<UL> Variable Description</B><!-- lm: 0x2 1 -->
+</UL> DmiMgmtCommand
+<!-- lm: 0x12 21 -->
+<UL>The command block.  The values of iCommand are:
+<!-- lm: 0x2 21 -->
+<P>
+DmiListComponentDescCmd<!-- lm: 0x2 54 -->
+<UL> 0x203<!-- lm: 0x2 21 -->
+</UL>DmiListGroupDescCmd<!-- lm: 0x2 54 -->
+<UL> 0x207<!-- lm: 0x2 21 -->
+</UL>DmiListAttributeDescCmd<!-- lm: 0x2 54 -->
+<UL> 0x20b<!-- lm: 0x2 21 --><!-- lm: 0x2 1 -->
+</UL> iComponentId
+<!-- lm: 0x12 21 -->
+<UL>The ID of the desired component.<!-- lm: 0x2 1 -->
+</UL> iGroupId
+<!-- lm: 0x12 21 -->
+<UL>The ID of the desired group within the component
+identified by iComponentId. This field is ignored when listing component
+descriptions.<!-- lm: 0x2 1 -->
+</UL> iAttributeId<!-- lm: 0x12 21 -->
+<UL> The
+ID of the desired attribute within the group. This field is only required
+for getting attribute descriptions. Otherwise, it is ignored.<!-- lm: 0x2 1 -->
+</UL> iOffset
+<!-- lm: 0x12 21 -->
+<UL>Number of characters into the description where
+the service layer should start getting the description string. Use zero
+to start at the beginning of the description.
+<P>
+On return, the service layer updates this field with the index of the last
+character written into the confirm buffer and sets iStatus accordingly.
+If iStatus indicates that there are more characters to be received, the
+application can re-issue the call to get more of the description text.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+On return from this call, the confirm buffer contains the text from the
+description associated with the entity requested. In the command block,
+iCnfCount is always set to 1.
+<P>
+Issuing DmiListDescReq displays an example of how to issue the DmiListDescReq
+command to the MI. IssuingDmiListDescReq
+<BR>
+
+<PRE>ULONG IssueLoadDescription(ULONG Comp,ULONG Group,ULONG Attr,ULONG Command)
+{
+DMI_ListDescReq_t      *ListDesc;
+ULONG RC;
+
+    ListDesc = (DMI_ListDescReq_t *)malloc(sizeof(DMI_ListDescReq_t));
+    memset((void *)ListDesc,0,sizeof(DMI_ListDescReq_t));
+    ListDesc-&gt;iAttributeId = Attr;
+    ListDesc-&gt;iGroupId = Group;
+    ListDesc-&gt;iComponentId = Comp;
+    ListDesc-&gt;iOffset = 0;      // start at the beginning of the description
+    ListDesc-&gt;DmiMgmtCommand.iLevelCheck = DMI_LEVEL_CHECK;
+    ListDesc-&gt;DmiMgmtCommand.iMgmtHandle = YOUR_MGMT_HANDLE;          // set the app handle
+    ListDesc-&gt;DmiMgmtCommand.iCmdHandle = YOUR_COMMAND_HANDLE;        // set the command counter
+    ListDesc-&gt;DmiMgmtCommand.iCnfBufLen = 4000UL;                     // set the size of the response
+    ListDesc-&gt;DmiMgmtCommand.pCnfBuf = (void *)malloc(4000UL);        // set up the response buffer
+    ListDesc-&gt;DmiMgmtCommand.iRequestCount = 1;
+    ListDesc-&gt;DmiMgmtCommand.iCmdLen = sizeof(DMI_ListDescReq_t);
+    ListDesc-&gt;DmiMgmtCommand.iCommand = Command;  // set the command:
+                                                  //      DmiListComponentDescCmd
+                                                  //      DmiListGroupDescCmd
+                                                  //      DmiListAttributeDescCmd
+    if((RC = DmiInvoke((DMI_MgmtCommand_t *)ListDesc)) != SLERR_NO_ERROR) {   // ask for the description
+        free(ListDesc-&gt;DmiMgmtCommand.pCnfBuf);
+        free(ListDesc);
+    }
+    return RC;
+}
+</PRE>
+
+<P>
+Processing the Callback from DmiListDescReq displays an example of how to
+process the callback from the the DmiListDescReq command.
+<BR>
+Processing the Callback from DmiListDescReq
+<BR>
+
+<PRE>case DmiListComponentDescCmd:   // the list component command
+case DmiListAttributeDescCmd:   // this is the description command for the attribute
+case DmiListGroupDescCmd:       // list the group description
+    if(!miCommand-&gt;iStatus){   // we've gotten a good return code back
+        Work = (DMI_STRING *)miCommand-&gt;pCnfBuf;
+        Working = malloc(Work-&gt;length + 1);
+        memcpy(Working,Work-&gt;body,Work-&gt;length);
+
+        // Do whatever your application needs to do here
+
+        free(Working);
+    }
+    break;
+</PRE>
+
+
+<P><HR>
+
+<A HREF="107_L3_DmiListAttributeCnf.html">[Back: DmiListAttributeCnf]</A> <BR>
+<A HREF="109_L3_DmiGetAttributeReq.html">[Next: DmiGetAttributeReq]</A> 
+</BODY>
+</HTML>

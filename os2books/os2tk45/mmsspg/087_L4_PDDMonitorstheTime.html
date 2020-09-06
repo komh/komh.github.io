@@ -1,0 +1,63 @@
+<HTML>
+<HEAD>
+<TITLE>PDD Monitors the Time</TITLE>
+</HEAD>
+<BODY>
+<H1>PDD Monitors the Time</H1><!-- entering slot 109 -->
+<P>
+The first and most accurate method of event detection is to retrieve the
+time from the actual physical device. Interfaces are provided through the
+use of DDCMD_STATUS, which requests the current stream time from the physical
+device driver. When an application requests an event, the stream handler
+issues a DDCMD_STATUS command to the PDD to detect the event time. (There
+are also additional DDCMD messages that allow the PDD to inform the stream
+handler of the time. Refer to the<I> OS/2 Multimedia Programming Reference
+</I>for details.) When the time arrives, the PDD calls back to the stream
+handler through the SHDEntryPoint using the SHD_REPORT_EVENT message. At
+this time, the stream handler looks through its table, and identifies which
+event has now come due. In turn, the stream handler reports the event through
+the SMHEntryPoint on the SMH_REPORTEVENT call to the Sync/Stream Manager.
+Once received, the SSM reports the event back to the application as shown
+in the following example.
+<PRE>RC  SHDReportEvent(PSHD_REPORTEVENT pRptEvent)
+{
+   PSTREAM         pSTREAM;
+   ulRC            rc;
+
+   if (rc = GetStreamEntry(&amp;pSTREAM, pRptEvent-&gt;hStream))
+           return(rc);
+
+   pSTREAM-&gt;ulStreamTime = pRptEvent-&gt;ulStreamTime;
+   /* Update stream time */
+
+   /*********************************************************/
+   /* PDD detected an event and notified the stream handler */
+   /*********************************************************/
+
+   while (pEVENT != NULL) {
+      if (pEVENT-&gt;hEvent == pRptEvent-&gt;hEvent) {
+                   RptEvent.ulFunction = SMH_REPORTEVENT;
+                   RptEvent.hid = pSTREAM-&gt;hid;
+                   RptEvent.hevent = pEVENT-&gt;hEvent;
+                   RptEvent.pevcbEvent = &amp;(pEVENT-&gt;evcb);
+                   /************************************/
+                   /* call SSM to report event arrival */
+                   /************************************/
+                   VideoSH.pSMHEntryPoint(&amp;RptEvent);     /* report it */
+                   break;   /* process only one event and break out */
+     }
+         pEVENT = pEVENT-&gt;pNext;
+
+   } /* end while */
+
+   return(NO_ERROR);
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="086_L3_EventDetection.html">[Back: Event Detection]</A> <BR>
+<A HREF="088_L4_StreamHandlerMonitor.html">[Next: Stream Handler Monitors the Time]</A> 
+</BODY>
+</HTML>

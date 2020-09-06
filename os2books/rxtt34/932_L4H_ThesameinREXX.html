@@ -1,0 +1,76 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>The same in REXX ...</TITLE>
+</HEAD>
+<BODY>
+<H1>The same in REXX ...</H1><!-- entering slot 987 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* The same in REXX ...                                               */
+
+  call RxFuncAdd 'SysFileTree', 'REXXUTIL', 'SysFileTree'
+
+  '@ECHO OFF'
+  say 'Saving the files *.* into the directory .\backup'
+
+                    /* try to create the directory                    */
+                    /* (ignore the return code)                       */
+  'md .\backup 2&gt;NUL &gt;NUL'
+
+                    /* try to change to the directory to test if it   */
+                    /* exists                                         */
+  call directory '.\backup'
+  if rc = 0 then
+  do
+                    /* directory exists, goback into the previous     */
+                    /* directory                                      */
+    call directory '..'
+
+                    /* get a list of all files (except hidden and     */
+                    /* system files)                                  */
+    call SysFileTree '*.*', 'files.', 'OF', '*--*-'
+
+                    /* process each file                              */
+    do i = 1 to files.0
+      curFile = fileSpec( 'N', files.i )
+
+                    /* copy the file                                  */
+      'copy ' curFile '.\backup\*.*' '2&gt;NUL &gt;NUL'
+      if rc = 0 then
+      do
+                    /* the copy command was successful                */
+                    /* -&gt; delete the file                             */
+        'del ' curFile '2&gt;NUL &gt;NUL'
+
+                    /* print a message depending of the result of the */
+                    /* del command                                    */
+        if rc = 0 then
+          say '-W-' curFile 'saved but not deleted.'
+        else
+          say '---' curFile 'saved and deleted.'
+      end /* if rc = 0 then */
+      else
+                    /* the copy was unsuccessful                      */
+        say '-E-' 'Error saving' curFile
+
+    end /* do i = 1 to files.0 */
+  end /* if rc = 0 then */
+  else
+                    /* the directory does not exist                   */
+    say '-E- Error accessing the directory .\backup!'
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="931_L3_Usingconditionalcomm.html">[Back: Using conditional command execution]</A> <BR>
+<A HREF="933_L3_Samplecodeforparamet.html">[Next: Sample code for parameter parsing]</A> 
+</BODY>
+</HTML>

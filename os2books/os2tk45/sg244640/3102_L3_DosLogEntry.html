@@ -1,0 +1,161 @@
+<HTML>
+<HEAD>
+<TITLE>DosLogEntry</TITLE>
+</HEAD>
+<BODY>
+<H1>DosLogEntry</H1><!-- entering slot 3338 -->
+<P>
+There are two major differences between the OS/2 2.0 version of<B> DosLogEntry
+</B>and the 1.3 version of the API:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Since the<B> DosLogRegister</B> API will only return
+a "default" Error Log record I.D. to its caller, the<B> DosLogEntry</B> caller
+must override this "default" record with the appropriately statically allocated
+record I.D. if the caller wishes to see the "correct" record I.D. in the
+Error Log record.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Since there is no explicit "Error Log record formatting
+DLL module name" field in the<B> DosLogEntry</B> log data packet, the API
+will attempt to interpret the 'Originator Name' field in the packet's header
+portion as a formatting DLL module name.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The description of the OS/2 2.0 version of the<B> DosLogEntry</B> API follows:
+ 
+<P>
+<U><I>Syntax</I></U>
+<PRE>        APIRET16 APIENTRY16 DosLogEntry((USHORT) Function,
+                                       (PVOID) LogData)
+
+<!--0xfb-->32-bit code Example using CSet/2
+</PRE>
+
+<P>
+<U><I>Parameters</I></U><!-- lm: 0x2 1 -->
+<P>
+<B>Function</B><!-- lm: 0x11 11 -->
+<UL> specifies the type of log entry:
+<!-- lm: 0x2 11 -->
+<P>
+0H<!-- lm: 0x2 28 -->
+<UL> Reserved<!-- lm: 0x2 11 -->
+</UL> 1H<!-- lm: 0x2 28 -->
+<UL> Error
+Logging<!-- lm: 0x2 11 -->
+</UL> 2H-FFFFH<!-- lm: 0x2 28 -->
+<UL> Reserved
+<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL><B>LogData</B><!-- lm: 0x11 11 -->
+<UL> is
+the address of the log data buffer that contains one or more variable length
+log packets.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<U><I>Returns</I></U>
+<P>
+Return Code.
+<P>
+<B>DosLogEntry</B> returns the following values:<!-- lm: 0x2 1 -->
+<P>
+<LI><!-- lm: 0x11 11 -->Success<!-- lm: 0x2 1 -->
+<P>
+non-zero<!-- lm: 0x11 11 -->
+<UL> Failure
+<P>
+Possible reasons for failure:<!-- lm: 0x2 11 -->
+<P>
+<!-- lm: 0x2 17 -->
+<UL>Invalid function<!-- lm: 0x2 11 -->
+</UL><!-- lm: 0x2 17 -->
+<UL> Facility
+unavailable<!-- lm: 0x2 11 -->
+</UL><!-- lm: 0x2 17 -->
+<UL> Facility suspended
+<!-- lm: 0x2 11 -->
+</UL><!-- lm: 0x2 17 -->
+<UL>Error Log buffer temporarily
+full<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<U><I>Remarks</I></U>
+<P>
+Error Log Data Buffer format description: 
+<P>
+Multiple log packets can be included within a single log data buffer.  In
+the following diagram, the size of each field is indicated in bytes: 
+<PRE>       ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿       ³# of log packets (within the buffer)         2³
+       ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+       ³length of the current log packet             2³&lt;ÄÄ¿
+       ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´   ³
+       ³Error Log record I.D.                        2³   ³
+       ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´   ³
+       ³time of logging                              4³   ³  multiple
+       ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´   ³  log packets
+       ³date of logging                              4³   ³  within a
+       ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´   ³  single log
+       ³originator name                              8³   ³  data buffer
+       ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´   ³
+       ³qualifier name                               4³   ³
+       ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´   ³
+       ³Error Log entry data                   &lt;= 1024³&lt;ÄÄÙ
+       ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+</PRE>
+
+<P>
+Where:<!-- lm: 0x2 1 -->
+<P>
+<U><I><LI><LI>of log packets'</I></U><!-- lm: 0x11 11 -->
+<UL> is the number
+of separate packets contained within the user's buffer<!-- lm: 0x2 1 -->
+</UL><B> 'length
+of the current log packet'</B><!-- lm: 0x11 11 -->
+<UL> is the number of
+bytes in the current log packet within the user's log data buffer (this
+length includes the length of all the log packet control fields and the
+size of the Error Log entry data).<!-- lm: 0x2 1 -->
+</UL><B> 'Error Log
+record I.D.'</B><!-- lm: 0x11 11 -->
+<UL>  is the record I.D.  for the current
+Error Log entry (I.D. registration will be statically registered by the
+OS/2 development organization).The caller may pass in the "default" Error
+Log record I.D.  that is returned by the<B> DosLogRegister</B> API.<!-- lm: 0x2 1 -->
+</UL><B> 'time
+of logging'</B><!-- lm: 0x11 11 -->
+<UL> is filled in by the system Error
+Logging facility )<!-- lm: 0x2 1 -->
+</UL><B> 'date of logging'</B><!-- lm: 0x11 11 -->
+<UL> is
+filled in by the system Error Logging facility<!-- lm: 0x2 1 -->
+</UL><B> 'originator
+name'</B><!-- lm: 0x11 11 -->
+<UL> is a primary name field that is provided
+by the caller<!-- lm: 0x2 1 -->
+</UL><B> 'qualifier name'</B><!-- lm: 0x11 11 -->
+<UL> is
+a secondary name field that is provided by the caller<!-- lm: 0x2 1 -->
+</UL><B> 'Error
+</B><!-- lm: 0x11 11 -->
+<UL> Log entry data' is an optional variable length
+set of data that can be supplied by the caller (the format of the data is
+under the control of the caller). <!-- lm: 0x2 1 -->
+</UL> 
+<P>
+In order to successfully resolve<B> DosLogEntry</B> function calls in your
+program, the following lines must be added to the Linker Definition (DEF)
+file:
+<PRE>
+IMPORTS
+DOSLOGENTRY=DOSCALL1.193
+
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="3101_L3_DosLogRegister.html">[Back: DosLogRegister]</A> <BR>
+<A HREF="3103_L3_DosLogRead.html">[Next: DosLogRead]</A> 
+</BODY>
+</HTML>

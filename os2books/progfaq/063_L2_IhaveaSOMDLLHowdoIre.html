@@ -1,0 +1,98 @@
+<HTML>
+<HEAD>
+<TITLE>I have a SOM DLL. How do I register it?</TITLE>
+</HEAD>
+<BODY>
+<H1>I have a SOM DLL. How do I register it?</H1><!-- entering slot 75 -->
+<P>
+Here's an example I use for registering.  It checks if the DLL is valid
+before continuing:
+<PRE>#define INCL_WPCLASS
+#define INCL_WIN
+#define INCL_DOS
+#include &lt;os2.h&gt;
+#include &lt;string.h&gt;
+#include &lt;stdio.h&gt;
+
+int main(int argc, char *argv[]) {
+   HMQ hmq;
+   HAB hab;
+   CHAR szText[256];
+   USHORT usResponse;
+   CHAR szLoadError[128];
+   HMODULE hmod;
+   APIRET rc;
+
+   if (argc != 3)
+     return 0;
+
+   hab = WinInitialize(0);
+   hmq = WinCreateMsgQueue(hab, 0);
+
+   WinDeregisterObjectClass(argv[1]);
+
+   sprintf(szText, "Register %s DLL '%s'?", argv[1], argv[2]);
+   usResponse = WinMessageBox(HWND_DESKTOP, HWND_DESKTOP, szText,
+      "Register WPS Class", 0, MB_YESNO | MB_MOVEABLE | MB_ICONQUESTION);
+
+   if (usResponse != MBID_YES)
+     return 0;
+
+   rc = DosLoadModule(szLoadError, sizeof(szLoadError), argv[2], &amp;hmod);
+
+   if (rc != 0)
+   {
+     sprintf(szText, "Return code = %u, error module = '%s'.",
+             rc, szLoadError);
+     WinMessageBox(HWND_DESKTOP, HWND_DESKTOP, szText,
+                   "DosLoadModule Failed", 0,
+                   MB_ENTER | MB_MOVEABLE | MB_ERROR);
+
+     return 0;
+  }
+
+
+  if (WinRegisterObjectClass(argv[1], argv[2]))
+  {
+    if (WinCreateObject(argv[1], argv[1], " ",
+        "&lt;WP_DESKTOP&gt;", CO_REPLACEIFEXISTS))
+      WinMessageBox(HWND_DESKTOP, HWND_DESKTOP, "Created.",argv[1],
+                    0, MB_ENTER | MB_MOVEABLE | MB_INFORMATION);
+    else
+    {
+      DosFreeModule(hmod);
+      WinMessageBox(HWND_DESKTOP, HWND_DESKTOP, "Failed.",argv[1],
+                    0,MB_ENTER | MB_MOVEABLE | MB_ERROR);
+    }
+  }
+  else
+  {
+    DosFreeModule(hmod);
+    WinMessageBox(HWND_DESKTOP, HWND_DESKTOP, "Registration failed.",
+                  argv[1], 0,MB_ENTER | MB_MOVEABLE | MB_ERROR);
+  }
+
+  return 0; }
+</PRE>
+
+<P>
+FYI, when WPS registers your DLL with SOM, SOM checks if your DLL has a
+module entry point called SOMInitModule.  If it does, it is called (most
+use SOMInitModule for registering DLLs that have more than one class). Otherwise,
+it checks for YourClassNewClass, and tries to call it (where 'YourClass'
+is the parameter you specified on the WinRegisterObjectClass). SOM generates
+'YourClassNewClass' in the .IH file; if you're still stuck, verify it is
+being called and that it doesn't fail (eg, because of version number check).
+
+<P>
+I suggest registering with a full DLL filespec, eg, C:\MYSTUFF\MYCAR.DLL.
+Saves on the length of the LIBPATH.
+<P>
+Credit:  Dan Kehn 
+
+<P><HR>
+
+<A HREF="062_L2_HowdoIuseprintfinaPM.html">[Back: How do I use printf() in a PM program?]</A> <BR>
+<A HREF="064_L2_HowdoIsaveandrestore.html">[Next: How do I save and restore my window size and position?]</A> 
+</BODY>
+</HTML>

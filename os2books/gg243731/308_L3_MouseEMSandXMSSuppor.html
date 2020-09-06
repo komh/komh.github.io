@@ -1,0 +1,117 @@
+<HTML>
+<HEAD>
+<TITLE>Mouse, EMS and XMS Support</TITLE>
+</HEAD>
+<BODY>
+<H1>Mouse, EMS and XMS Support</H1><!-- entering slot 356 -->
+<P>
+The booted DOS in a VMB session receives XMS (HIMEM), EMS, DPMI and mouse
+support services from its VDM environment (assuming the virtual DOS machine
+has default DOS settings).  DOS should<I> not</I> therefore load its own
+HIMEM, EMS or mouse drivers; indeed they may cause errors in the VDM.
+<P>
+DOS programs call these services via appropriate API register parameters
+and a designated interrupt:<!-- lm: 0x2 0 -->
+<P>
+<B>Mouse</B><!-- lm: 0x2 10 -->
+<UL> INT 33h<!-- lm: 0x2 0 -->
+</UL><B>XMS</B><!-- lm: 0x2 10 -->
+<UL> INT 2Fh (multiplex)<!-- lm: 0x2 0 -->
+</UL><B>EMS</B><!-- lm: 0x2 10 -->
+<UL> INT 67h<!-- lm: 0x2 0 -->
+</UL>
+<P>
+These interrupts are trapped by the VDM environment, routed outside the
+virtual machine and handled by the OS/2 Version 2.0 operating system itself.
+ This may present a problem for certain programs which first test for the
+presence of such services by issuing an OPEN command to the associated device
+driver, or which check that a valid interrupt handler is referenced by the
+Interrupt Vector Table. When a VMB session is started, these device driver
+names are not present, and the interrupt vectors point to null handlers.
+The application will therefore assume that the required services are not
+useable.
+<P>
+In order to avoid this problem, OS/2 Version 2.0 provides three alternative
+"stub" drivers:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->MOUSE.COM<!-- lm: 0x2 0 --> <!-- lm: 0x2 2 -->
+<UL>HIMEM.SYS
+<!-- lm: 0x2 0 -->
+</UL><!-- lm: 0x2 2 -->
+<UL>EMM386.SYS<!-- lm: 0x2 0 -->
+</UL>
+<P>
+These stub drivers are very small (and use minimal memory when loaded) but
+satisfy programs which depend on drivers with such names being present.
+They respond to OPEN commands, and also set handler addresses in the Interrupt
+Vector Table, thereby satisfying applications which check for the presence
+of the device drivers in either of these ways.
+<P>
+The user<I> must</I> load these OS/2 files rather than any similarly named
+files which may be shipped with DOS or applications, such as:<!-- lm: 0x2 0 -->
+<P>
+<B>DOS 4.0</B><!-- lm: 0x2 10 -->
+<UL> XMAEM.SYS, XMA2EMS.SYS<!-- lm: 0x2 0 -->
+</UL><B> DOS
+5.0</B><!-- lm: 0x2 10 -->
+<UL> HIMEM.SYS, EMM386.EXE, MOUSE.COM<!-- lm: 0x2 0 -->
+</UL><B> DR
+DOS</B><!-- lm: 0x2 10 -->
+<UL> HIDOS.SYS, EMM386.SYS, EMMXMA.SYS<!-- lm: 0x2 0 -->
+</UL><B> Other
+</B><!-- lm: 0x2 10 -->
+<UL>MOUSE.SYS<!-- lm: 0x2 0 -->
+</UL>
+<P>
+There are two ways to achieve this. Assuming OS/2 Version 2.0 is installed
+on drive E:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Copy the above OS/2 files from E:\OS2\MDOS to
+the DOS diskette, and edit CONFIG.SYS and AUTOEXEC.BAT accordingly to load
+these files from the A: drive.  VMDISK may then be run to create a bootable
+image if desired.
+<PRE>   device=a:himem.sys   device=a:emm386.sys
+   device=a:fsfilter.sys
+</PRE>
+
+<P>
+This method should be used if FSFILTER will be loaded into high memory using
+DOS 5.0:
+<PRE>   device=a:himem.sys
+   device=a:emm386.sys
+   devicehigh=a:fsfilter.sys</PRE>
+ <!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Edit CONFIG.SYS and AUTOEXEC.BAT to load these
+files directly from E:\OS2\MDOS. (FSFILTER.SYS must be loaded first if the
+OS/2 drive would otherwise be inaccessible to the booted DOS).
+<PRE>   device=a:fsfilter.sys
+   device=e:\os2\mdos\himem.sys
+   device=e:\os2\mdos\emm386.sys
+</PRE>
+
+<P>
+The second method has one notable advantage; if and when Corrective Service
+is applied to the OS/2 Version 2.0 system, and HIMEM, EMM386 or MOUSE are
+updated, it is not necessary to update your DOS diskettes and recreate image
+files.  FSFILTER itself will have to be updated manually (unless the OS/2
+Version 2.0 partition is directly accessible to DOS and FSFILTER is also
+loaded from here).<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+Note that EMS memory<!-- entering slot 357 --> size and frame location are
+determined by DOS Settings, and<I> not</I> by parameters on the DEVICE=
+statement for EMM386.SYS. It is recommended that EMS and XMS support<I> should
+not</I> be configured unless required by the application running in the
+VMB session, since this can impact overall system performance.
+<P>
+We now look at the three different ways to prepare the real DOS to be booted
+in the VMB.
+
+<P><HR>
+
+<A HREF="307_L3_PreparingAUTOEXECBAT.html">[Back: Preparing AUTOEXEC.BAT and CONFIG.SYS]</A> <BR>
+<A HREF="309_L3_BootingfromDiskette.html">[Next: Booting from Diskette]</A> 
+</BODY>
+</HTML>

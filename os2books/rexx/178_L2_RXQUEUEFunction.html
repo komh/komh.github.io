@@ -1,0 +1,167 @@
+<HTML>
+<HEAD>
+<TITLE>RXQUEUE Function</TITLE>
+</HEAD>
+<BODY>
+<H1>RXQUEUE Function</H1><!-- entering slot 187 -->
+<P>
+Use the RxQueue function in a REXX program to create and delete queues and
+to set and query their names. The first parameter determines the function,
+the entire function name must be specified but the case of the function
+parameter is ignored.
+<P>
+Syntax: 
+<PRE>
+ ÄÄRXQUEUE(ÄÂÄÄ"Create"ÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÂÄ)ÄÄÄÄÄ
+              ³            ÀÄ,queuename ÄÙ ³
+              ÃÄÄÄ"Delete"ÄÄ queuename ÄÄÄÄ´
+              ÃÄÄÄ"Get"ÄÄÄÄÄ newqueuename Ä´
+              ÀÄÄÄ"Set"ÄÄÄÄÄ newqueuename ÄÙ
+
+</PRE>
+
+<P>
+Parameters:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B>Create</B><!-- lm: 0x2 19 -->
+<UL> Creates a queue with the name,<I> queuename
+</I>(if specified); if no name is specified, then REXX will provide a name.
+Returns the name of the queue in either case.<!-- lm: 0x2 1 -->
+</UL><B> Delete
+</B><!-- lm: 0x2 19 -->
+<UL>Deletes the named queue; returns 0 if successful,
+a nonzero number if an error occurs; the possible return values are:<!-- lm: 0x2 19 -->
+<P>
+<B><LI></B><!-- lm: 0x2 36 -->Queue has been deleted.<!-- lm: 0x2 19 -->
+<P>
+<B><LI></B><!-- lm: 0x2 36 -->Not a valid queue name.<!-- lm: 0x2 19 -->
+<P>
+<B><LI></B><!-- lm: 0x2 36 -->Queue named does not exist.<!-- lm: 0x2 19 -->
+<P>
+<B>10</B><!-- lm: 0x2 36 -->
+<UL> Queue is busy; wait is active.<!-- lm: 0x2 19 -->
+</UL><B> 12
+</B><!-- lm: 0x2 36 -->
+<UL>A memory failure has occurred.<!-- lm: 0x2 19 -->
+</UL><B> 1000
+</B><!-- lm: 0x2 36 -->
+<UL>Initialization error; check file OS/2.INI<!-- lm: 0x2 19 --><!-- lm: 0x2 1 -->
+</UL><B> Get
+</B><!-- lm: 0x2 19 -->
+<UL>Returns the name of the queue currently in use.
+<!-- lm: 0x2 1 -->
+</UL><B>Set</B><!-- lm: 0x2 19 -->
+<UL> Sets the name
+of the current queue to<I> newqueuename</I> and returns the previous name
+of the queue.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Example</B>: Sample Queue in a REXX Procedure
+<PRE>/*                                                                */
+/*        push/pull WITHOUT multiprogramming support         */
+/*                                                                */
+push date() time()          /* push date and time            */
+do 1000                     /* lets pass some time           */
+  nop                       /* doing nothing                 */
+end                         /* end of loop                   */
+pull a b .                  /* pull them                     */
+say 'Pushed at ' a b ', Pulled at ' date()
+time() /* say now and then */
+
+/*                                                                    */
+/*              push/pull WITH multiprogramming support               */
+/*            (no error recovery, or unsupported env tests            */
+/*                                                                    */
+newq = RXQUEUE('Create')    /* create a unique queue           */
+oq = RXQUEUE('Set',newq)    /* establish new queue             */
+push date() time()          /* push date and time              */
+do 1000                     /* lets spend some time            */
+  nop                       /* doing nothing                   */
+end                         /* end of loop                     */
+pull a b .                  /* get pushed info                 */
+say 'Pushed at ' a b ', Pulled at ' date() time() /* tell user     */
+call RXQUEUE 'Delete',newq         /* destroy unique queue created  */
+call RXQUEUE 'Set',oq         /* reset to default queue (not required)*/
+</PRE>
+
+<P>
+<B>Special Considerations</B><!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->External programs that must communicate with
+a REXX procedure by means of defined data queues can use the default queue
+or the session queue, or they can receive the data queue name by some interprocess
+communication technique. This could include parameter passing, placement
+on a prearranged logical queue, or use of normal OS/2 Inter-Process Communication
+mechanisms (for example, pipes, shared memory or IPC queues).<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Named queues are available across the entire
+system; therefore, the names of queues must be unique within the system.
+ If a queue named<I> os2que</I> exists and this function is issued:
+<PRE><B>newqueue = RXQUEUE('Create', 'os2que')</B>
+</PRE>
+
+<P>
+a new queue is created and the name is chosen by REXX.  This new name is
+returned by the function.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Any external program started inherits as its
+default queue the queue in use by the parent process.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Detached Processes</B><!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Detached processes will access a<I> detached
+</I>session queue that is unique for<!-- entering slot 188 --> each detached
+process. Note, however, that this detached session queue is<I> not</I> the
+same as the session queue of the starting session.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->REXX programs that are to be run as detached
+processes cannot perform any SAY instructions or any PULL or PARSE PULL
+instructions that involve terminal I/O. However, PULL and PARSE PULL instructions
+that act on a queue are permitted in detached processes.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Multi-Programming Considerations</B>
+<P>
+This data queue mechanism differs from OS/2 standard API queueing in the
+following ways:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->The queue is NOT owned by a specific process,
+and as such any process is entitled to modify the queue at any time.  The
+operations that effect the queue are atomic, in that the resource will be
+serialized by the subsystem such that no data integrity problems can be
+encountered.
+<P>
+However, synchronization of requests such that two processes, accessing
+the same queue, get the data in the order it was placed on the queue is
+a user responsibility and will<I> not</I> be provided by the subsystem support
+code. This selector is owned by the calling application code and must be
+freed by the caller using DosFreeSeg.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->A regular OS/2 IPC queue is owned (created) by
+a specific process. When that process terminates, the queue is destroyed.
+Conversely, the queues created by the<I> RxQueue('Create', queuename</I>)
+call will exist until EXPLICITLY deleted. Termination of a program or procedure
+that created a private queue does not force the deletion of the private
+queue. Any data on the queue when the process<I> creating</I> it terminates
+will remain on the queue until either the queue is deleted (by way of the
+REXX function call<I> RxQueue('Create', queuename</I>) or until the data
+is read.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Data queues<I> must be explicitly deleted</I> by some procedure or program
+(not necessarily the creator). Deletion of a queue with remaining items,
+destroys those items. If a queue is not deleted, it will be lost and cannot
+be recovered except by randomly attempting to access each queue in the defined
+series.
+
+<P><HR>
+
+<A HREF="177_L1_QueueInterface.html">[Back: Queue Interface]</A> <BR>
+<A HREF="179_L0_.html">[Next: ]</A> 
+</BODY>
+</HTML>

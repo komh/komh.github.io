@@ -1,0 +1,158 @@
+<HTML>
+<HEAD>
+<TITLE>Specifying Mix Values</TITLE>
+</HEAD>
+<BODY>
+<H1>Specifying Mix Values</H1><!-- entering slot 1095 -->
+<P>
+When you draw a graphics primitive into a presentation space, it is affected
+by the current foreground-mix value, and possibly by the current background-mix
+value, in that presentation space. However, when you copy a bit map into
+a target presentation space, the current foreground- and background-mix
+values in the target presentation space are ignored. Instead, you specify
+a mix-mode value, also known as the<I> raster-operation</I> (ROP) value.
+This value determines:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->How the bit map is affected by any data that might
+already be in the target presentation space<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The color of each pel in the bit map<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Each pel in the bit map of the target presentation space has, potentially,
+three color settings:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->The setting of that pel in the source rectangle<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The initial setting of that pel in the target rectangle
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The setting of that pel in the current area-fill pattern
+in the target presentation space<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The (boolean) values of each of these settings can be combined using boolean
+operations to produce the final value of each pel in the target presentation
+space. For a color target, the target must be regarded as consisting of
+multiple one-bit per pel planes, with the mixing applied to each plane separately
+to produce the final color index into the physical color table. Because
+the final color index is an index into the physical palette, the results
+of any color mixing are therefore unpredictable. For example, if you ORed
+together two numeric index values, the color indexed by the result is unlikely
+to have any direct relation to the colors indexed by the two values you
+ORed together. It depends on the order of the colors in the physical table.
+
+<P>
+As input to the functions, you supply an actual mix value. The ROP mix value
+required to achieve any given result can be determined from the following
+table. The final value of each bit in every pel depends on the values of
+the corresponding bits in the pattern (P), source (S), and the original
+target value (T initial). Each row of the table shows one of the eight possible
+combinations of these values. For each combination, mark the desired final
+target value in the last column. The eight bits in this column then show
+the value of the least significant byte of the ROP value required to achieve
+this mixing function. For example, if the required mixing function is to
+copy the source to the target, then the target (final) column will be the
+same as the S column, and the ROP value will have the binary value 11001100,
+or the hexadecimal value 00CC.
+<P>
+
+<P>
+<B>Possible Settings for the Index Bits</B>
+<PRE>ÚÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³Pattern³Source ³Target (initial)³              ³Target (final)  ³
+ÃÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³0      ³0      ³0               ³              ³Index bit 0     ³
+ÃÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³0      ³0      ³1               ³              ³Index bit 1     ³
+ÃÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³0      ³1      ³0               ³              ³Index bit 2     ³
+ÃÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³0      ³1      ³1               ³              ³Index bit 3     ³
+ÃÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³1      ³0      ³0               ³              ³Index bit 4     ³
+ÃÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³1      ³0      ³1               ³              ³Index bit 5     ³
+ÃÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³1      ³1      ³0               ³              ³Index bit 6     ³
+ÃÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³1      ³1      ³1               ³              ³Index bit 7     ³
+ÀÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+If you want the pattern to have no effect on the target rectangle, the four
+low-order bits of the index must be the same as the four high-order bits.
+
+<P>
+A monochrome bit map consists only of source settings of 1s and 0s, where
+a 1 or 0 represents each pel. It also has a two-entry color table with index
+0 specifying what color a 0 pel represents and index 1 representing what
+color a 1 pel represents. In a monochrome bit map, this color table is not
+used during BitBlt operations (but is used when drawing to the bit map and
+moving the bit map between devices). The preceding table defines how any
+combination of pattern, source and target original (1 and 0) values define
+the target final (1 or 0) value. A color bit map has an index (in the case
+of four bits, 0-15) for each pel which, serves as index into the bit map
+color table (16 entries for four bits per pel) to define the color of each
+pel. Unlike monochrome bit maps, this table is used during BitBlt operations
+(instead of target image bundle attributes) to provide the color of the
+target<!-- entering slot 1096 --> output.
+<P>
+The following table represents a selection of the most commonly used mixes
+with predefined symbolic names and their effects. (There are many other
+possible mixes).
+<P>
+<B>Mix Value Names</B>
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Mix Name          ³Effect                                    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ROP_SRCCOPY       ³Source                                    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ROP_SRCPAINT      ³Source OR Target                          ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ROP_SRCAND        ³Source AND Target                         ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ROP_SRCINVERT     ³Source XOR Target                         ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ROP_SRCERASE      ³Source AND NOT (Target)                   ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ROP_NOTSRCCOPY    ³NOT (Source)                              ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ROP_NOTSRCERASE   ³NOT (Source) AND NOT (Target)             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ROP_MERGECOPY     ³Source AND Pattern                        ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ROP_MERGEPAINT    ³NOT (Source) OR Target                    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ROP_PATCOPY       ³Pattern                                   ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ROP_PATPAINT      ³NOT (Source) OR Pattern OR Target         ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ROP_PATINVERT     ³Target XOR Pattern                        ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ROP_DSTINVERT     ³NOT (Target)                              ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ROP_ZERO          ³0                                         ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ROP_ONE           ³1                                         ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ROP_GRAY          ³Gray pattern background                   ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+ROP_SRCCOPY is the most often used value. It simply copies the bit map to
+the target presentation space without performing any color mixing. Because
+most of the remaining mixes involve some degree of color mixing, they result
+in an image that is quite different from the original.
+<P>
+
+
+<P><HR>
+
+<A HREF="1074_L4_ChangingtheSizeofthe.html">[Back: Changing the Size of the Bit Map]</A> <BR>
+<A HREF="1076_L4_ConvertingbetweenMon.html">[Next: Converting between Monochrome and Color Data Bit Maps]</A> 
+</BODY>
+</HTML>

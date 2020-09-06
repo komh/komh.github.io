@@ -1,0 +1,451 @@
+<HTML>
+<HEAD>
+<TITLE>WSAAsyncSelect()</TITLE>
+</HEAD>
+<BODY>
+<H1>WSAAsyncSelect()</H1><!-- entering slot 103 -->
+<P>
+<B>Description</B>
+<P>
+Request event notification for a socket.
+<P>
+
+<PRE>#include &lt;winsock.h&gt;</PRE>
+ 
+<P>
+<B>int PASCAL FAR WSAAsyncSelect ( SOCKET</B><I> s</I><B>, HWND</B><I> hWnd</I><B>,
+unsigned int</B><I> wMsg</I><B>, long</B><I> lEvent</I><B> );</B><!-- lm: 0x2 1 -->
+<UL>
+<P>
+<I>s</I><!-- lm: 0x11 3 -->
+<UL> A descriptor identifying the socket for
+which event notification is required.<!-- lm: 0x2 1 -->
+</UL><I> hWnd</I><!-- lm: 0x11 3 -->
+<UL> A
+handle identifying the window which should receive a message when a network
+event occurs.<!-- lm: 0x2 1 -->
+</UL><I> wMsg</I><!-- lm: 0x11 3 -->
+<UL> The
+message to be received when a network event occurs.<!-- lm: 0x2 1 -->
+</UL><I> lEvent
+</I><!-- lm: 0x11 3 -->
+<UL>A bitmask which specifies a combination of network
+events in which the application is interested.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Remarks</B>
+<P>
+This function is used to request that the Windows Sockets DLL should send
+a message to the window<I> hWnd</I> whenever it detects any of the network
+events specified by the<I> lEvent</I> parameter.  The message which should
+be sent is specified by the<I> wMsg</I> parameter.  The socket for which
+notification is required is identified by<I> s</I>.  The<I> lEvent</I> parameter
+is constructed by or'ing any of the values specified in the following list.
+
+<P>
+<!-- lm: 0x2 1 -->
+<P>
+FD_READ<!-- lm: 0x11 11 -->
+<UL> Want to receive notification of readiness
+for reading <!-- lm: 0x2 1 -->
+</UL> FD_WRITE<!-- lm: 0x11 11 -->
+<UL> Want
+to receive notification of readiness for writing <!-- lm: 0x2 1 -->
+</UL> FD_OOB
+<!-- lm: 0x11 11 -->
+<UL>Want to receive notification of the arrival of
+out-of-band data <!-- lm: 0x2 1 -->
+</UL> FD_ACCEPT<!-- lm: 0x11 11 -->
+<UL> Want
+to receive notification of incoming connections <!-- lm: 0x2 1 -->
+</UL> FD_CONNECT
+<!-- lm: 0x11 11 -->
+<UL>Want to receive notification of completed connection
+ <!-- lm: 0x2 1 -->
+</UL>FD_CLOSE<!-- lm: 0x11 11 -->
+<UL> Want to receive
+notification of socket closure<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Issuing a<B> WSAAsyncSelect()</B> for a socket cancels any previous<B> WSAAsyncSelect()
+</B>for the same socket.  For example, to receive notification for both
+reading and writing, the application must call<B> WSAAsyncSelect()</B> with
+both FD_READ and FD_WRITE, as follows:
+<P>
+
+<PRE>rc = WSAAsyncSelect(s, hWnd, wMsg, FD_READ!FD_WRITE);</PRE>
+
+<P>
+It is not possible to specify different messages for different events.  The
+following code will<B> not</B> work; the second call will cancel the effects
+of the first, and only FD_WRITE events will be reported with message wMsg2:
+
+<P>
+
+<PRE>rc = WSAAsyncSelect(s, hWnd, wMsg1, FD_READ);
+rc = WSAAsyncSelect(s, hWnd, wMsg2, FD_WRITE);
+</PRE>
+
+<P>
+To cancel all notification -- i.e., to indicate that the Windows Sockets
+implementation should send no further messages related to network events
+on the socket --<I> lEvent</I> should be set to zero.
+<P>
+
+<PRE>rc = WSAAsyncSelect(s, hWnd, 0, 0);
+</PRE>
+
+<P>
+Although in this instance<B> WSAAsyncSelect()</B> immediately disables event
+message posting for the socket, it is possible that messages may be waiting
+in the application's message queue.  The application must therefore be prepared
+to receive network event messages even after cancellation.  Closing a socket
+with <A HREF="049_L3_closesocket.html">closesocket()</A> also cancels<B> WSAAsyncSelect()
+</B>message sending, but the same caveat about messages in the queue prior
+to the <A HREF="049_L3_closesocket.html">closesocket()</A> still applies.
+
+<P>
+Since an <A HREF="047_L3_accept.html">accept()</A><B>'</B>ed socket has
+the same properties as the listening socket used to accept it, any<B> WSAAsyncSelect()
+</B>events set for the listening socket apply to the accepted socket.  For
+example, if a listening socket has<B> WSAAsyncSelect()</B> events FD_ACCEPT,
+FD_READ, and FD_WRITE, then any socket accepted on that listening socket
+will also have FD_ACCEPT, FD_READ, and FD_WRITE events with the same<I> wMsg
+</I>value used for messages.  If a different<I> wMsg</I> or events are desired,
+the application should call<B> WSAAsyncSelect()</B>, passing the accepted
+socket and the desired new information.
+<P>
+íNote: There is a timing window between the <A HREF="047_L3_accept.html">accept()
+</A>call and the call to<B> WSAAsyncSelect()</B> to change the events or
+<I>wMsg</I>.  An application which desires a different<I> wMsg</I> for the
+listening and <A HREF="047_L3_accept.html">accept()</A>'ed sockets should
+ask for only FD_ACCEPT events on the listening socket, then set appropriate
+events after the <A HREF="047_L3_accept.html">accept()</A>. Since FD_ACCEPT
+is never sent for a connected socket and FD_READ, FD_WRITE, FD_OOB, and
+FD_CLOSE are never sent for listening sockets, this will not impose difficulties.ù
+
+<P>
+When one of the nominated network events occurs on the specified socket
+<I>s</I>, the application's window<I> hWnd</I> receives message<I> wMsg</I>.
+The<I> wParam</I> argument identifies the socket on which a network event
+has occurred.  The low word of<I> lParam</I> specifies the network event
+that has occurred.  The high word of<I> lParam</I> contains any error code.
+ The error code be any error as defined in<B> winsock.h</B>.
+<P>
+The error and event codes may be extracted from the<I> lParam</I> using
+the macros WSAGETSELECTERROR and WSAGETSELECTEVENT, defined in<B> winsock.h
+</B>as:
+<P>
+
+<PRE>#define WSAGETSELECTERROR(lParam)            HIWORD(lParam)
+#define WSAGETSELECTEVENT(lParam)            LOWORD(lParam)
+</PRE>
+
+<P>
+The use of these macros will maximize the portability of the source code
+for the application.
+<P>
+The possible network event codes which may be returned are as follows:
+<P>
+<!-- lm: 0x2 1 -->
+<P>
+FD_READ<!-- lm: 0x11 11 -->
+<UL><!-- entering slot 104 --> Socket<I> s</I> ready
+for reading<!-- lm: 0x2 1 -->
+</UL> FD_WRITE<!-- lm: 0x11 11 -->
+<UL> Socket
+<I>s</I> ready for writing<!-- lm: 0x2 1 -->
+</UL> FD_OOB<!-- lm: 0x11 11 -->
+<UL> Out-of-band
+data ready for reading on socket<I> s</I>.<!-- lm: 0x2 1 -->
+</UL> FD_ACCEPT
+<!-- lm: 0x11 11 -->
+<UL>Socket<I> s</I> ready for accepting a new incoming
+connection<!-- lm: 0x2 1 -->
+</UL> FD_CONNECT<!-- lm: 0x11 11 -->
+<UL> Connection
+on socket<I> s</I> completed<!-- lm: 0x2 1 -->
+</UL> FD_CLOSE<!-- lm: 0x11 11 -->
+<UL> Connection
+identified by socket<I> s</I> has been closed<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Return Value</B>
+<P>
+The return value is 0 if the application's declaration of interest in the
+network event set was successful.  Otherwise the value SOCKET_ERROR is returned,
+and a specific error number may be retrieved by calling<B> WSAGetLastError()</B>.
+
+<P>
+<B>Comments</B>
+<P>
+Although<B> WSAAsyncSelect()</B> can be called with interest in multiple
+events, the application window will receive a single message for each network
+event. As in the case of the<B> select()</B> function,<B> WSAAsyncSelect()
+</B>will frequently be used to determine when a data transfer operation
+(<B>send()</B> or<B> recv()</B>) can be issued with the expectation of immediate
+success. Nevertheless, a robust application must be prepared for the possibility
+that it may receive a message and issue a Windows Sockets API call which
+returns WSAEWOULDBLOCK immediately.  For example, the following sequence
+of events is possible:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->data arrives on socket<B> s</B>; Windows Sockets
+posts<B> WSAAsyncSelect</B> message<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->application processes some other message<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->while processing, application issues an <A HREF="058_L3_ioctlsocket.html">ioctlsocket(s,
+FIONREAD...)</A> and notices that there is data ready to be read<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->application issues a <A HREF="062_L3_recv.html">recv(s,...)
+</A>to read the data<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->application loops to process next message, eventually
+reaching the<B> WSAAsyncSelect</B> message indicating that data is ready
+to read<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->application issues <A HREF="062_L3_recv.html">recv(s,...)</A>,
+which fails with the error WSAEWOULDBLOCK.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Other sequences are possible.
+<P>
+The Windows Sockets DLL will not continually flood an application with messages
+for a particular network event.  Having successfully posted notification
+of a particular event to an application window, no further message(s) for
+that network event will be posted to the application window until the application
+makes the function call which implicitly re-enables notification of that
+network event.
+<P>
+<!-- lm: 0x2 1 -->
+<P>
+FD_READ<!-- lm: 0x11 11 -->
+<UL> <A HREF="062_L3_recv.html">recv()</A> or
+<A HREF="063_L3_recvfrom.html">recvfrom()</A><!-- lm: 0x2 1 -->
+</UL> FD_WRITE
+<!-- lm: 0x11 11 -->
+<UL><A HREF="065_L3_send.html">send()</A> or <A HREF="066_L3_sendto.html">sendto()
+</A><!-- lm: 0x2 1 -->
+</UL>FD_OOB<!-- lm: 0x11 11 -->
+<UL> <A HREF="062_L3_recv.html">recv()
+</A><!-- lm: 0x2 1 -->
+</UL>FD_ACCEPT<!-- lm: 0x11 11 -->
+<UL> <A HREF="047_L3_accept.html">accept()
+</A><!-- lm: 0x2 1 -->
+</UL>FD_CONNECT<!-- lm: 0x11 11 -->
+<UL> NONE<!-- lm: 0x2 1 -->
+</UL> FD_CLOSE
+<!-- lm: 0x11 11 -->
+<UL>NONE<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Any call to the reenabling routine, even one which fails, results in reenabling
+of message posting for the relevent event.
+<P>
+For FD_READ, FD_OOB, and FD_ACCEPT events, message posting is "level-triggerred."
+ This means that if the reenabling routine is called and the relevent event
+is still valid after the call, a<B> WSAAsyncSelect()</B> message is posted
+to the application.  This allows an application to be event-driven and not
+concern itself with the amount of data that arrives at any one time.  Consider
+the following sequence:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Windows Sockets DLL receives 100 bytes of data
+on socket<B> s</B> and posts an FD_READ message.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->The application issues<B> recv( s, buffptr, 50,
+0)</B> to read 50 bytes.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->The Windows Sockets DLL posts another FD_READ
+message since there is still data to be read.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+With these semantics, an application need not read all available data in
+response to an FD_READ message--a single <A HREF="062_L3_recv.html">recv()
+</A>in response to each FD_READ message is appropriate.  If an application
+issues multiple <A HREF="062_L3_recv.html">recv()</A> calls in response
+to a single FD_READ, it may receive multiple FD_READ messages.  Such an
+application may wish to disable FD_READ messages before starting the <A HREF="062_L3_recv.html">recv()
+</A>calls by calling<B> WSAAsyncSelect()</B> with the FD_READ event not
+set.
+<P>
+If an event is true when the application initially calls<B> WSAAsyncSelect()
+</B>or when the reenabling function is called, then a message is posted
+as appropriate.  For example, if an application calls <A HREF="059_L3_listen.html">listen()</A>,
+a connect attempt is made, then the application calls<B> WSAAsyncSelect()
+</B>specifying that it wants to receive FD_ACCEPT messages for the socket,
+the Windows Sockets implementation posts an FD_ACCEPT message immediately.
+
+<P>
+The FD_WRITE event is handled slightly differently.  An FD_WRITE message
+is posted when a socket is first connected with <A HREF="050_L3_connect.html">connect()
+</A>or accepted with <A HREF="047_L3_accept.html">accept()</A>, and then
+after a <A HREF="065_L3_send.html">send()</A> or <A HREF="066_L3_sendto.html">sendto()
+</A>fails with WSAEWOULDBLOCK and buffer space becomes available.  Therefore,
+an application can assume that<!-- entering slot 105 --> sends are possible
+starting from the first FD_WRITE message and lasting until a send returns
+WSAEWOULDBLOCK.  After such a failure the application will be notified that
+sends are again possible with an FD_WRITE message.
+<P>
+The FD_OOB event is used only when a socket is configured to receive out-of-band
+data separately.  If the socket is configured to receive out-of-band data
+in-line, the out-of-band (expedited) data is treated as normal data and
+the application should register an interest in, and will  receive, FD_READ
+events, not FD_OOB events.  An application may set or inspect the way in
+which out-of-band data is to be handled by using <A HREF="067_L3_setsockopt.html">setsockopt()
+</A>or <A HREF="053_L3_getsockopt.html">getsockopt</A> for the SO_OOBINLINE
+option.
+<P>
+The error code in an FD_CLOSE message indicates whether the socket close
+was graceful or abortive.  If the error code is 0, then the close was graceful;
+if the error code is WSAECONNRESET, then the socket's virtual socket was
+abortively disconnected.  This only applies to sockets of type SOCK_STREAM.
+
+<P>
+The FD_CLOSE message is posted when a close indication is received for the
+virtual circuit corresponding to the socket.  In TCP terms, this means that
+the FD_CLOSE is posted when the connection goes into the FIN WAIT or CLOSE
+WAIT states.  This results from the remote end performing a <A HREF="068_L3_shutdown.html">shutdown()
+</A>on the send side or a <A HREF="049_L3_closesocket.html">closesocket()</A>.
+
+<P>
+Please note your application will receive ONLY an FD_CLOSE message to indicate
+closure of a virtual circuit. It will NOT receive an FD_READ message to
+indicate this condition.
+<P>
+<B>Error Codes</B>
+<P>
+<!-- lm: 0x2 1 -->
+<P>
+WSANOTINITIALISED<!-- lm: 0x11 11 -->
+<UL> A successful <A HREF="093_L3_WSAStartup.html">WSAStartup()
+</A>must occur before using this API.<!-- lm: 0x2 1 -->
+</UL> WSAENETDOWN
+<!-- lm: 0x11 11 -->
+<UL>The Windows Sockets implementation has detected
+that the network subsystem has failed.<!-- lm: 0x2 1 -->
+</UL> WSAEINVAL
+<!-- lm: 0x11 11 -->
+<UL>Indicates that one of the specified parameters
+was invalid<!-- lm: 0x2 1 -->
+</UL> WSAEINPROGRESS<!-- lm: 0x11 11 -->
+<UL> A
+blocking Windows Sockets operation is in progress.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Additional error codes may be set when an application window receives a
+message.  This error code is extracted from the<I> lParam</I> in the reply
+message using the WSAGETSELECTERROR macro.  Possible error codes for each
+network event are:<B>Event: FD_CONNECT</B>
+<P>
+<B>Error Codes</B>
+<P>
+<!-- lm: 0x2 1 -->
+<P>
+WSAEADDRINUSE<!-- lm: 0x11 11 -->
+<UL> The specified address is already
+in use.<!-- lm: 0x2 1 -->
+</UL> WSAEADDRNOTAVAIL<!-- lm: 0x11 11 -->
+<UL> The
+specified address is not available from the local machine.<!-- lm: 0x2 1 -->
+</UL> WSAEAFNOSUPPORT
+<!-- lm: 0x11 11 -->
+<UL>Addresses in the specified family cannot be used
+with this socket.<!-- lm: 0x2 1 -->
+</UL> WSAECONNREFUSED<!-- lm: 0x11 11 -->
+<UL> The
+attempt to connect was forcefully rejected.<!-- lm: 0x2 1 -->
+</UL> WSAEDESTADDRREQ
+<!-- lm: 0x11 11 -->
+<UL>A destination address is required.<!-- lm: 0x2 1 -->
+</UL> WSAEFAULT
+<!-- lm: 0x11 11 -->
+<UL>The namelen argument is incorrect.<!-- lm: 0x2 1 -->
+</UL> WSAEINVAL
+<!-- lm: 0x11 11 -->
+<UL>The socket is already bound to an address.<!-- lm: 0x2 1 -->
+</UL> WSAEISCONN
+<!-- lm: 0x11 11 -->
+<UL>The socket is already connected.<!-- lm: 0x2 1 -->
+</UL> WSAEMFILE
+<!-- lm: 0x11 11 -->
+<UL>No more file descriptors are available.<!-- lm: 0x2 1 -->
+</UL> WSAENETUNREACH
+<!-- lm: 0x11 11 -->
+<UL>The network can't be reached from this host at
+this time.<!-- lm: 0x2 1 -->
+</UL> WSAENOBUFS<!-- lm: 0x11 11 -->
+<UL> No
+buffer space is available.  The socket cannot be connected.<!-- lm: 0x2 1 -->
+</UL> WSAENOTCONN
+<!-- lm: 0x11 11 -->
+<UL>The socket is not connected.<!-- lm: 0x2 1 -->
+</UL> WSAENOTSOCK
+<!-- lm: 0x11 11 -->
+<UL>The descriptor is a file, not a socket.<!-- lm: 0x2 1 -->
+</UL> WSAETIMEDOUT
+<!-- lm: 0x11 11 -->
+<UL>Attempt to connect timed out without establishing
+a connection<!-- lm: 0x2 1 -->
+</UL> 
+<P>
+<B>Event: FD_CLOSE</B>
+<P>
+<B>Error Codes</B>
+<P>
+<!-- lm: 0x2 1 -->
+<P>
+WSAENETDOWN<!-- lm: 0x11 11 -->
+<UL> The Windows Sockets implementation
+has detected that the network subsystem has failed.<!-- lm: 0x2 1 -->
+</UL> WSAECONNRESET
+<!-- lm: 0x11 11 -->
+<UL>The connection is reset by the remote side.<!-- lm: 0x2 1 -->
+</UL> WSAECONNABORTED
+<!-- lm: 0x11 11 -->
+<UL>The connection was aborted due to timeout or other
+failure.<!-- lm: 0x2 1 -->
+</UL> 
+<P>
+<B>Event: FD_READ</B><B> Event: FD_WRITE</B>
+<BR>
+<B>Event: FD_OOB</B>
+<BR>
+<B>Event: FD_ACCEPT</B>
+<P>
+
+<BR>
+Error Code<!-- lm: 0x2 1 -->
+<P>
+WSAENETDOWN<!-- lm: 0x11 11 -->
+<UL> The Windows Sockets implementation
+has detected that the network subsystem has failed.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Notes For Windows Sockets Suppliers</B>
+<P>
+It is the responsibility of the Windows Sockets Supplier to ensure that
+messages are<!-- entering slot 106 --> successfully posted to the application.
+ If a<B> PostMessage()</B> operation fails, the Windows Sockets implementation
+<B>must</B> re-post that message as long as the window exists.
+<P>
+Windows Sockets suppliers should use the WSAMAKESELECTREPLY macro when constructing
+the<I> lParam</I> in the message. When a socket is closed, the Windows Sockets
+Supplier should purge any messages remaining for posting to the application
+window.  However the application must be prepared to receive, and discard,
+any messages which may have been posted prior to the <A HREF="049_L3_closesocket.html">closesocket()</A>.
+
+<P>
+<B>See Also</B>
+<P>
+<A HREF="064_L3_select.html">select()</A>
+<P>
+
+
+<P><HR>
+
+<A HREF="084_L3_WSAAsyncGetServByPor.html">[Back: WSAAsyncGetServByPort()]</A> <BR>
+<A HREF="086_L3_WSACancelAsyncReques.html">[Next: WSACancelAsyncRequest()]</A> 
+</BODY>
+</HTML>

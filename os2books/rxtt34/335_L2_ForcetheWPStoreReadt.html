@@ -1,0 +1,77 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Force the WPS to reRead the Extended Attributes</TITLE>
+</HEAD>
+<BODY>
+<H1>Force the WPS to reRead the Extended Attributes</H1><!-- entering slot 347 -->
+<P>
+To force the WPS to reread the Extended Attributes (for example after changing
+the EA<B> .LONGNAME</B>) of a file you can use the following code (Source:
+Found in a public newsgroup):
+<PRE> 
+/*   */
+  CALL RxFuncAdd 'SysLoadFuncs','RexxUtil','SysLoadFuncs'
+  CALL SysLoadFuncs
+
+                    /* create a temporary file in the TEMP directory  */
+  tempDir = value( 'TEMP',, 'OS2ENVIRONMENT' )
+  tempFile = time('S')
+
+  if right( tempDir,1 ) = '\' then
+    tempFile = tempDir || tempFile
+  else
+    tempFile = tempDir || '\' || tempFile
+
+                    /* now open the folder on the WPS                 */
+  call SysSetObjectData tempDir, 'OPEN=DEFAULT;'
+
+  say 'Creating a file named "' || tempFile || '" ...'
+
+                    /* create a temporary file                        */
+  '@ECHO. This is a test file ' '&gt;'tempFile
+  say ' ... done'
+
+  say 'Press any key after the file is shown in the folder ...'
+  '@pause &gt;NUL'
+
+                    /* new value for the EA .LONGNAME                 */
+  NewLongName = 'This is a very looong Name' || '00'x
+
+                    /* create a valid EA                              */
+  typeinfo = 'FDFF'x || d2c(length(NewLongName)) || '00'x || NewLongName
+
+  say 'Now changing the EA .LONGNAME of the file to'
+  say ' "' || newLongName ||  '" ...'
+  say '(This should change the title used in the WPS!)'
+
+                   /* change the EA                                   */
+  call SysPutEA tempFile, ".LONGNAME", typeinfo
+  say ' ... done'
+  say
+  say 'Press any key to force the WPS to reRead the EAs'
+  say '(and update the title in the folder) ...'
+  '@pause &gt;NUL'
+
+                   /* force the WPS to reread the EAs                 */
+  '@attrib -a ' tempFile '2&gt;NUL 1&gt;NUL'
+  '@attrib +a ' tempFile '2&gt;NUL 1&gt;NUL'
+
+  say 'Now the WPS should show the new title for the object.'
+
+  say 'Press any key to delete the temporary file ...'
+  '@pause &gt;NUL'
+
+                    /* delete the temporary file                      */
+  '@DEL ' tempFile '2&gt;NUL 1&gt;NUL'
+exit 0
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="334_L2_ExtendedAttributeDat.html">[Back: Extended Attribute Data Types]</A> <BR>
+<A HREF="336_L2_FormatoftheRCfilesfo.html">[Next: Format of the RC files for MAKEINI]</A> 
+</BODY>
+</HTML>

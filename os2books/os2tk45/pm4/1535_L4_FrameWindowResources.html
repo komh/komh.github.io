@@ -1,0 +1,239 @@
+<HTML>
+<HEAD>
+<TITLE>Frame-Window Resources</TITLE>
+</HEAD>
+<BODY>
+<H1>Frame-Window Resources</H1><!-- entering slot 1568 -->
+<P>
+If an application specifies FCF_ACCELTABLE, FCF_ICON, FCF_MENU, FCF_STANDARD,
+FS_ACCELTABLE, FS_ICON, or FS_STANDARD when creating a frame window, the
+application must provide the resources to support the specified style.  Failure
+to do so causes the window creation to fail.  Depending on the style, a
+frame window might attempt to load one or more resources from the application's
+executable files.
+<P>
+The following table shows the frame-control flags and frame-window styles
+that require resources:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Flag                ³Style               ³Description         ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³FCF_ACCELTABLE      ³FS_ACCELTABLE       ³Requires an         ³
+³                    ³                    ³accelerator-table   ³
+³                    ³                    ³resource. The frame ³
+³                    ³                    ³window uses the     ³
+³                    ³                    ³accelerator table to³
+³                    ³                    ³translate WM_CHAR   ³
+³                    ³                    ³messages to         ³
+³                    ³                    ³WM_COMMAND, WM_HELP,³
+³                    ³                    ³or WM_SYSCOMMAND    ³
+³                    ³                    ³messages.           ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³FCF_ICON            ³FS_ICON             ³Requires an icon    ³
+³                    ³                    ³resource. The frame ³
+³                    ³                    ³window draws the    ³
+³                    ³                    ³icon when the user  ³
+³                    ³                    ³minimizes the       ³
+³                    ³                    ³window.             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³FCF_MENU            ³FS_MENU             ³Requires a          ³
+³                    ³                    ³menu-template       ³
+³                    ³                    ³resource. A frame   ³
+³                    ³                    ³window uses the menu³
+³                    ³                    ³template to create a³
+³                    ³                    ³menu containing the ³
+³                    ³                    ³commands and menus  ³
+³                    ³                    ³specified by the    ³
+³                    ³                    ³resource.           ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³FCF_STANDARD        ³FS_STANDARD         ³Requires a          ³
+³                    ³                    ³menu-template       ³
+³                    ³                    ³resource            ³
+³                    ³                    ³(FCF_STANDARD only),³
+³                    ³                    ³an accelerator-table³
+³                    ³                    ³resource, and an    ³
+³                    ³                    ³icon resource.      ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+You can use the resource compiler to add icon, menu, and accelerator-table
+resources to the application's executable file.  Each resource must have
+a resource identifier that matches the resource identifier specified in
+the FRAMECDATA structure passed to WinCreateWindow or in the<I> idResources
+</I>parameter of WinCreateStdWindow.
+<P>
+<B>Note: </B> For detailed information about icon, menu, and accelerator-table
+resources, see <A HREF="1685_L1_MousePointersandIcon.html">Mouse Pointers
+and Icons</A>, <A HREF="1602_L1_Menus.html">Menus</A>, and <A HREF="1581_L1_KeyboardAccelerators.html">Keyboard
+Accelerators</A>, respectively.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+The following sample code illustrates how to use WinCreateStdWindow to load
+and set up certain resources for a frame window.  Normally the first step
+is to set up a header file defining the the IDs of the applicable resources:
+
+<PRE>#define ID_RESOURCE 301
+
+#define IDM_OPTIONS 350
+#define IDM_SHIFT   351
+#define IDM_EXIT    352
+
+</PRE>
+Then, make a resource (.RC) file, defining each resource:
+<PRE>#include &lt;os2.h&gt;
+
+/* Icon */
+POINTER ID_RESOURCE  sampres.ico
+
+/* Accelerator table */
+ACCELTABLE ID_RESOURCE
+BEGIN
+     VK_F10,   IDM_SHIFT,   VIRTUALKEY
+     VK_F3 ,   IDM_EXIT,    VIRTUALKEY
+END
+
+/* Menu */
+MENU ID_RESOURCE
+BEGIN
+     SUBMENU "~Options", IDM_OPTIONS
+      BEGIN
+         MENUITEM "~Shift Colors\tF10", IDM_SHIFT
+         MENUITEM "~Exit\tF3",          IDM_EXIT
+      END
+END
+
+</PRE>
+
+<P>
+When using WinCreateStdWindow with more than one resource, each resource
+can have the same ID, as in the above example (ID_RESOURCE or<I> 1</I>),
+<I>but only if each resource is of a different type</I>.  Resources of the
+same type must have unique IDs. Use FCF flags to indicate what resources
+to load:
+<PRE>ULONG flFrameFlags=
+                   FCF_TITLEBAR      |  /*  Title bar              */
+                   FCF_SIZEBORDER    |  /*  Size border            */
+                   FCF_MINMAX        |  /*  Min &amp; Max buttons      */
+                   FCF_SYSMENU       |  /*  System menu            */
+                   FCF_SHELLPOSITION |  /*  System size &amp; position */
+                   FCF_TASKLIST      |  /*  Add name to task list  */
+                   FCF_ICON          |  /* Add icon                */
+                   FCF_ACCELTABLE    |  /* Add accelerator table   */
+                   FCF_MENU;            /* Add menu                */
+
+</PRE>
+
+<P>
+Use<!-- entering slot 1569 --> 0 (or NULL) in the seventh parameter of WinCreateStdWindow
+to indicate that the resource is stored in the application file, as follows:
+
+<PRE>hwndFrame = WinCreateStdWindow(
+            HWND_DESKTOP,         /* Parent is desktop window        */
+            WS_VISIBLE,           /* Make frame window visible       */
+            &amp;flFrameFlags,        /* Frame controls                  */
+            "ResSamClient",       /* Window class for client         */
+            NULL,                 /* No window title                 */
+            WS_VISIBLE,           /* Make client window visible      */
+            (HMODULE) 0,          /* Resources in application module */
+            ID_RESOURCE,          /* Resource identifier             */
+            NULL);                /* Pointer to client window handle */
+
+</PRE>
+
+<P>
+Following is the full listing of the sample program:
+<P>
+
+<PRE>#define INCL_PM
+#include &lt;os2.h&gt;
+
+MRESULT EXPENTRY ClientWndProc(HWND hwnd,ULONG msg,MPARAM mp1,MPARAM mp2);
+
+int main(int argc, char *argv, char *envp)
+{
+   HWND hwndFrame;
+   HWND hwndClient;
+   HMQ  hmq;
+   QMSG qmsg;
+   HAB  hab;
+
+   ULONG flFrameFlags=
+                      FCF_TITLEBAR      |  /*  Title bar              */
+                      FCF_SIZEBORDER    |  /*  Size Border            */
+                      FCF_MINMAX        |  /*  Min &amp; Max Buttons      */
+                      FCF_SYSMENU       |  /*  System Menu            */
+                      FCF_SHELLPOSITION |  /*  System size &amp; position */
+                      FCF_TASKLIST      |  /*  Add name to task list  */
+                      FCF_ICON          |  /* Add icon                */
+                      FCF_ACCELTABLE    |  /* Add accelerator table   */
+                      FCF_MENU;            /* Add menu                */
+
+  hab = WinInitialize(0);
+  hmq = WinCreateMsgQueue(hab, 0);
+  WinRegisterClass(
+     hab,                    /* Anchor block handle            */
+     "ResSamClient",         /* Name of class being registered */
+     (PFNWP)ClientWndProc,   /* Window procedure for class     */
+     CS_SIZEREDRAW |         /* Class style                    */
+     CS_HITTEST,             /* Class style                    */
+     0);                     /* Extra bytes to reserve         */
+
+  hwndFrame = WinCreateStdWindow(
+              HWND_DESKTOP,       /* Parent is desktop window        */
+              WS_VISIBLE,         /* Make frame window visible       */
+              &amp;flFrameFlags,      /* Frame controls                  */
+              "ResSamClient",     /* Window class for client         */
+              NULL,               /* No window title                 */
+              WS_VISIBLE,         /* Make client window visible      */
+              (HMODULE) 0,        /* Resources in application module */
+              ID_RESOURCE,        /* Resource identifier             */
+              NULL);              /* Pointer to client window handle */
+
+  while (WinGetMsg(hab, &amp;qmsg, 0, 0, 0))
+        WinDispatchMsg(hab, &amp;qmsg);
+  WinDestroyWindow(hwndFrame);
+  WinDestroyMsgQueue(hmq);
+  WinTerminate(hab);
+  return 0;
+}
+MRESULT EXPENTRY ClientWndProc(HWND hwnd,ULONG msg,MPARAM mp1,MPARAM mp2);
+
+{
+  RECTL rcl;
+  HPS   hps;
+  static LONG  lColor=CLR_RED;
+  switch (msg)
+  {
+    case WM_PAINT:
+      hps=WinBeginPaint(hwnd,(HPS) NULL, &amp;rcl);       /* Get hps          */
+          WinFillRect(hps,&amp;rcl,lColor);               /* Fill the window  */
+          WinEndPaint(hps);                           /* Free hps          */
+      return 0;
+    case WM_COMMAND:
+      switch (SHORT1FROMMP(mp1))
+      {
+        case IDM_SHIFT:                               /* Shift selected   */
+          if (lColor==CLR_RED)                        /* Change the color */
+             lColor=CLR_BLUE;
+          else lColor=CLR_RED;
+          WinInvalidateRect(hwnd,(PRECTL)NULL,0UL);   /* Paint Window     */
+          return 0;
+        case IDM_EXIT:                                /* Exit selected    */
+          WinPostMsg(hwnd,WM_CLOSE,MPVOID,MPVOID);    /* Exit program  */
+          return 0;
+      }
+  }
+   return WinDefWindowProc (hwnd, msg, mp1, mp2);
+}
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1534_L4_FrameWindowControlsa.html">[Back: Frame Window Controls and Styles]</A> <BR>
+<A HREF="1536_L3_FrameWindowClassData.html">[Next: Frame-Window Class Data]</A> 
+</BODY>
+</HTML>

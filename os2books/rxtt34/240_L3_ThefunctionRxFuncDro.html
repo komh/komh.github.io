@@ -1,0 +1,195 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>The function RxFuncDrop()</TITLE>
+</HEAD>
+<BODY>
+<H1>The function RxFuncDrop()</H1><!-- entering slot 237 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+Loading and dropping DLL functions is global for<B> all</B> REXX programs!
+Therefore you should avoid using RxFuncDrop</A> or any DLL specific unload
+routine for general REXX DLLs like REXXUTIL.
+<P>
+To make your REXX programs resident against other programs dropping DLL
+functions you can use one of three methods. Each method has its advantages
+and disadvantages. You may use the one you like best.
+<P>
+<B>Method 1.</B>
+<BR>
+Load the necessary functions with REXX names other than their normal REXX
+names. In this case you<B> should</B> unload the functions at program end.
+(see <A HREF="223_L2_LoadingmorethanoneDL.html">Loading more than one DLL
+with the same function names</A> for an example)
+<P>
+<B>Method 2.</B>
+<BR>
+Redefine the necessary functions in your program. Add code to load the DLL
+routine again if it was dropped to the new function in your program (see
+<A HREF="222_L2_Redefinitionoffuncti.html">Redefinition of functions from
+a DLL</A> and method 3 below for an example)
+<P>
+<B>Method 3.</B>
+<BR>
+Use a general wrapper function to call the functions from the DLL. Example:
+
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* sample code to check the REXXUITL wrapper                          */
+/*                                                                    */
+/* Note: start REXXTRY in another session and do a SysDropFuncs in    */
+/*       that session while running this program.                     */
+/*       To use the wrapper routine for more than one DLL you can add */
+/*       another parameter for the name of the DLL.                   */
+/*                                                                    */
+
+                    /* install a handler for CTRL-BREAK               */
+  SIGNAL ON HALT NAME ProgramEnd
+
+  do forever
+    say
+    say "Example for using the REXXUTIL wrapper"
+    say
+    say "Start another session and drop the REXXUTIL functions to"
+    say "see how it works  ..."
+    say
+    say "Press CTRL-BREAK to halt this program ..."
+    say
+    say "Now calling some REXXUTIL functions using the wrapper ..."
+    say
+    say "  Calling SysOs2Ver         -&gt; OS/2 Version is " || ,
+             REXXUTIL( "SysOS2Ver" )
+
+    say "  Calling SysTextScreenSize -&gt; TextscreenSize is " || ,
+             REXXUTIL( "SysTextScreenSize" )
+
+    say "  Calling SysFileTree       -&gt; result is " || ,
+             REXXUTIL( "SysFileTree", "*.CMD", "fileStem" )
+
+                    /* show the results of the SysFileTree function   */
+    say "    SysFileTree founds " || fileStem.0 || " files:"
+    do i = 1 to fileStem.0
+      say "      "  || i || ". entry is " || ,
+          Word( fileStem.i, words( fileStem.i ) )
+    end /* do i = 1 to fileStem.0 */
+
+    say "Result of calling the invalid function SysFoo is " || ,
+           REXXUTIL( "SysFoo" )
+
+    say "Now sleeping for 2 seconds"
+    call REXXUTIL "SysSleep", 2
+
+  end /* do forever */
+
+ProgramEnd:
+exit
+
+/* ------------------------------------------------------------------ */
+/* function: call a function from the DLL REXXUTIL. Reload the        */
+/*           REXXUTIL function if it is not loaded or dropped by      */
+/*           another process.                                         */
+/*                                                                    */
+/* call:     REXXUTIL funcName {, funcParameter} {...}                */
+/*                                                                    */
+/* where:    funcName - name of one of the REXXUTIL functions         */
+/*           funcParameter - parameters for the function (if any)     */
+/*                                                                    */
+/* returns:  SYNTAX ERROR #                                           */
+/*             if a syntax error occurred, # is the error number      */
+/*             (999 = parameter funcName missing)                     */
+/*           else the return code of the REXXUTIL function            */
+/*                                                                    */
+/*                                                                    */
+/* notes:    Do not use PROCEDURE for this routine!                   */
+/*                                                                    */
+REXXUTIL:
+                    /* get the function name                          */
+  rx.__funcName = strip( arg(1) )
+
+                    /* check the parameter                            */
+  rc = "SYNTAX ERROR 999"
+  if rx.__funcName = "" then
+    SIGNAL rx.__REXXUtilEnd
+
+                    /* install a local error handler                  */
+  SIGNAL ON SYNTAX Name rx.__ReloadREXXUtil
+
+                    /* create the statement to execute                */
+  rx.__iLine = "rx.__fRC = " rx.__funcName
+
+  rx.__iLine = rx.__iLine || "("
+
+  do i = 2 to arg()
+    if i &lt;&gt; 2 then
+      rx.__iLine = rx.__iLine || ", "
+
+    rx.__iLine = rx.__iLine || '"' || arg(i) || '"'
+  end /* do i = 2 to arg() */
+
+  rx.__iLine = rx.__iLine || ")"
+
+  rc = 0            /* if rc is not equal zero after the interpret    */
+                    /* instruction there was an error                 */
+
+                    /* call the REXXUTIL function                     */
+  interpret rx.__iLine
+
+rx.__ReloadREXXUtil:
+
+                   /* check the result                                */
+  if rc = 0 then
+  do
+                   /* execution okay                                  */
+    rc = rx.__fRC
+    SIGNAL rx.__REXXUtilEnd
+  end /* if rc = 0 then */
+
+  if rc &lt;&gt; 43 then
+  do
+                   /* rc &lt;&gt; 0 and rc &lt;&gt; 43 -&gt; an error occured        */
+                   /* (error number 43 means "function not found"     */
+                   /*  and is handled in the code below)              */
+    rc = "SYNTAX ERROR " || rc
+    SIGNAL rx.__REXXUtilEnd
+  end /* if rc &lt;&gt; 43 then */
+
+/* ------- The next statement is for debugging purpose only --------- */
+  say "  REXXUTIL: Reloading the function &lt;" || ,
+      rx.__funcName || "&gt; ..." || "07"x
+/*  ----------------------------------------------------------------- */
+
+                   /* rc = 43 -&gt; either the function is not yet       */
+                   /* loaded or dropped by another process            */
+                   /* -&gt; <!-- entering slot 238 -->reload the function                          */
+  call rxFuncAdd rx.__funcName, "REXXUTIL", rx.__funcName
+
+                    /* install another local error handler to avoid   */
+                    /* endless loops                                  */
+  SIGNAL ON SYNTAX Name rx.__REXXUtilError
+  rc = 0
+
+                   /* and try it again                                */
+  interpret rx.__iLine
+
+rx.__REXXUTILError:
+                   /* check the result                                */
+  if rc = 0 then
+    rc = rx.__fRC  /* execution okay                                  */
+  else
+    rc = "SYNTAX ERROR " || rc  /* error                              */
+
+rx.__REXXUtilEnd:
+                   /* drop local variables                            */
+  drop rx.
+RETURN rc
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="239_L3_RxFuncAdd.html">[Back: RxFuncAdd]</A> <BR>
+<A HREF="241_L3_ThefunctionRxMessage.html">[Next: The function RxMessageBox()]</A> 
+</BODY>
+</HTML>

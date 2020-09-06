@@ -1,0 +1,90 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosCreateThread - Remarks</TITLE>
+</HEAD>
+<BODY>
+<H1>DosCreateThread - Remarks</H1><!-- entering slot 298 -->
+<P>
+DosCreateThread creates an asynchronous thread of execution under the current
+process.
+<P>
+The operating system creates the first thread of a process when it starts
+the executable file. This thread is dispatched with a regular class priority.
+To start another thread of execution under the current process, the current
+thread issues DosCreateThread. The thread's initial dispatch point is the
+address specified for<I> pfn</I>. The started thread has a unique stack
+and register context and the same priority as the requesting thread.
+<P>
+The created thread can access all files and resources owned by the parent
+process. The thread shares resources with other threads of the process.
+Any thread in the process can open a file or device, and any other thread
+can issue a read or write to that handle. This is also true for pipes, queues,
+and system-managed semaphores.
+<P>
+When a thread is created, the system creates a Thread Information Block
+(TIB) to maintain per-thread information (TID, priority, and so on) in the
+user address space. See <A HREF="618_L2_DosGetInfoBlocks.html">DosGetInfoBlocks
+</A>for details on the TIB layout.
+<P>
+When a thread is created, its initial dispatch point is provided by<I> pfn</I>.
+This routine is invoked by Near Call, and when that routine returns or issues
+<A HREF="460_L2_DosExit.html">DosExit</A>, the thread ends. The format of
+the thread's stack when the thread begins executing at<I> pfn</I> is:
+<PRE>
+        StackSize   ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿ High Address
+                    ³ ThreadArg     ³
+                    ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+                    ³   EIP         ³
+      Initial ESP ÄÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+                    ³               ³
+                           .
+                           .
+                           .
+
+                    ³  &lt;Committed&gt;  ³
+                    ³  &lt;Stack&gt;      ³
+                    ³  &lt;Pages&gt;      ³
+                    ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+                    ³   Stack Guard ³
+                    ³   Page        ³
+                    ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+                    ³   Uncommitted ³
+                    ³   Stack Pages ³
+        StackBase   ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ Low Address
+</PRE>
+
+<P>
+When the system allocates the stack for the thread, a guard page is set
+up to facilitate dynamic stack growth. When a thread attempts to use stack
+in or "below" the guard page, a guard-page exception is generated. The default
+system action for this exception is to attempt to grow the stack by committing
+another page and moving the guard page. Since only a single guard page is
+committed at a time, and the page size of the 80386 processor is 4KB, a
+local stack allocation that is greater than 4KB must be handled by a stack
+probe that is performed by a compiler-generated routine.
+<P>
+The default stack commitment has one committed page, and a guard page is
+set up below the committed page. The pages beyond the guard page are uncommitted.
+If the system cannot allocate another guard page when the guard-page exception
+is not handled, a guard-page-allocation failure exception is generated.
+It is essential that applications and language runtime routines handle the
+guard-page-allocation exception. For more details on guard-page exception
+management, see <A HREF="1571_L2_DosSetExceptionHandl.html">DosSetExceptionHandler</A>.
+
+<P>
+A thread started with DosCreateThread ends upon return of this call or when
+<A HREF="460_L2_DosExit.html">DosExit</A> is issued. Any thread can temporarily
+stop the execution of other threads in its process with <A HREF="1883_L2_DosSuspendThread.html">DosSuspendThread</A>,
+<A HREF="1494_L2_DosResumeThread.html">DosResumeThread</A>, <A HREF="392_L2_DosEnterCritSec.html">DosEnterCritSec</A>,
+and <A HREF="470_L2_DosExitCritSec.html">DosExitCritSec</A>.
+<P>
+Any thread can also examine and change the priority at which it and other
+threads execute with <A HREF="618_L2_DosGetInfoBlocks.html">DosGetInfoBlocks
+</A>and <A HREF="1713_L2_DosSetPriority.html">DosSetPriority</A>.
+
+<P><HR>
+
+<A HREF="293_L2H_DosCreateThreadParam.html">[Back: DosCreateThread - Parameters]</A> <BR>
+<A HREF="295_L2H_DosCreateThreadRelat.html">[Next: DosCreateThread - Related Functions]</A> 
+</BODY>
+</HTML>

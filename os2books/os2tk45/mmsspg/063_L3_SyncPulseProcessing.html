@@ -1,0 +1,61 @@
+<HTML>
+<HEAD>
+<TITLE>Sync Pulse Processing</TITLE>
+</HEAD>
+<BODY>
+<H1>Sync Pulse Processing</H1><!-- entering slot 78 -->
+<P>
+Each stream handler (DLL or device driver) can provide sync pulse handling
+to support synchronization for any streams activated. Typically, the stream
+handler sync pulse handling logic is capable of correcting the active stream's
+progress in its real-time context, based on information received in sync
+pulse SYNC_EVCB created by the stream handler and accessed by the Sync/Stream
+Manager.
+<P>
+For example, if the slave's current local time is 45000 (15.0 seconds in
+MMTIME), and the master sync pulse time is 44500 (14.83 sec), then the slave
+stream handler's sync pulse logic should adjust the pace of data streaming
+(slow down, or repeat the last 170 milliseconds worth of data). This time-adjusting
+(resync) logic is unique to the type of data the handler is streaming.
+<P>
+Since there can be occurrences of heavy system load that make it impossible
+for DLL sync pulse logic to get control between two sync pulses (task dispatch
+latency can rise occasionally to delay even time-critical threads), the
+handler always takes the most current master time (last sync pulse posted).
+The SSM sets a sync pulse<I> overrun flag</I> if a sync pulse is not processed
+before the next sync pulse arrives. Also, the sync pulse logic and all associated
+control data objects must reside in fixed memory, so that these code and
+data pages are never paged out (at least not while the stream is active).
+
+<P>
+The sync pulse logic must be high performance by nature. Complex, time-consuming
+synchronization adjusting routines with very long path lengths will not
+be able to maintain synchronization if they are dispatched continuously.
+The sync pulse logic is a second level interrupt handler, so its performance
+must be optimized. If no adjustment of the stream is necessary, the routine
+might not need to be dispatched at all, which brings us to one final point.
+
+<P>
+The Sync/Stream Manager has sync pulse distribution logic that controls
+when it will set the slave device driver handler's sync pulse SYNCPOLLING
+bit flag (the SSM does not call the handler's IDC interface). This logic
+similarly controls when it will dispatch the DLL handler's time-critical
+thread (clear a semaphore the thread is waiting on). Typically, the DLL
+handler detects that a sync pulse has occurred by polling the SYNCPOLLING
+bit flag in its sync pulse SYNC_EVCB that it gave to the Sync/Stream Manager
+on return from an SHC_ENABLE_SYNC message. This SYNCPOLLING bit flag is
+set only when the difference between the master stream time and the slave's
+local time (both stored in the sync pulse SYNC_EVCB) exceeds a specified
+<I>resync tolerance value</I>. The Sync/Stream Manager determines this difference
+for all slaves on each sync pulse received from the master, and only notifies
+the slaves whose stream has deviated too much from the master stream time.
+Each stream handler that can receive sync pulses must provide its tolerance
+value (a minimum time difference expressed in MMTIME) in the stream's SPCB
+passed on return from the SHC_CREATE.
+
+<P><HR>
+
+<A HREF="062_L3_SyncPulseGeneration.html">[Back: Sync Pulse Generation]</A> <BR>
+<A HREF="064_L3_SyncStreamSubsystemE.html">[Next: Sync/Stream Subsystem Events]</A> 
+</BODY>
+</HTML>

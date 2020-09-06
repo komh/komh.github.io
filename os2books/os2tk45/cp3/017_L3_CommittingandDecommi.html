@@ -1,0 +1,78 @@
+<HTML>
+<HEAD>
+<TITLE>Committing and Decommitting Page Ranges</TITLE>
+</HEAD>
+<BODY>
+<H1>Committing and Decommitting Page Ranges</H1><!-- entering slot 17 -->
+<P>
+If an application allocates a sparse memory object, no physical memory location
+is committed for the object. Memory in a sparse object must be committed
+before it can be used.<A><!-- external link: 1D EF C3 4E --> DosSetMem</A> is
+used to commit or decommit a range of previously allocated pages in a private
+or shared memory object. Applications can make specific address ranges within
+a memory object valid or invalid. Commitment and decommitment always take
+place in multiples of one or more pages.
+<P>
+Applications can also use<A><!-- external link: 1D EF C3 4E --> DosSetMem
+</A>to change the access protection attributes of a range of pages within
+a memory object.
+<P>
+The following code fragment requests allocation of 2MB of uncommitted memory
+and then commits 4096 bytes of the memory:
+<PRE>    #define  INCL_DOSMEMMGR   /* Memory Manager values */
+    #include &lt;os2.h&gt;
+
+    APIRET  ulrc;
+    PBYTE   pb;
+
+    /* Allocate 16KB object */
+    ulrc = DosAllocMem((PVOID *) &amp;pb,
+                       2097152,
+                       PAG_READ |
+                       PAG_WRITE);
+
+    /* Commit 4KB           */
+    ulrc = DosSetMem(pb,
+                     4096,
+                     PAG_COMMIT |
+                     PAG_DEFAULT);
+
+</PRE>
+
+<P>
+An application can also allocate a large committed object and then decommit
+portions of it as they are no longer needed. Decommitment, like commitment,
+is done on page boundaries; an application can decommit no less than a 4096
+byte page.
+<P>
+The following code fragment allocates 16384 bytes of committed memory and
+then decommits the first 4096 bytes of the memory:
+<PRE>    #define  INCL_DOSMEMMGR   /* Memory Manager values */
+    #include &lt;os2.h&gt;
+
+    APIRET  ulrc;
+    PBYTE   pb;
+
+    ulrc = DosAllocMem((PVOID *) &amp;pb,
+                       16384,
+                       fALLOC);    /* Allocate 16 K object */
+
+    ulrc = DosSetMem(pb,
+                     4096,
+                     PAG_DECOMMIT);            /* Decommit 4KB         */
+
+</PRE>
+
+<P>
+After memory is decommitted, an attempt to access the decommitted memory
+will cause a protection violation.
+<P>
+You cannot pass an argument that crosses multiple memory objects. The function
+will return an error.
+
+<P><HR>
+
+<A HREF="016_L3_AllocatingPrivateMem.html">[Back: Allocating Private Memory]</A> <BR>
+<A HREF="018_L3_EstablishingAccessPr.html">[Next: Establishing Access Protection]</A> 
+</BODY>
+</HTML>

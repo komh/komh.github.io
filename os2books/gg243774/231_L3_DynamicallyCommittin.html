@@ -1,0 +1,126 @@
+<HTML>
+<HEAD>
+<TITLE>Dynamically Committing Storage</TITLE>
+</HEAD>
+<BODY>
+<H1>Dynamically Committing Storage</H1><!-- entering slot 247 -->
+<P>
+Under DOS and previous versions of OS/2, it is common for an application
+to allocate a small memory segment to contain a data structure.  If the
+data structure outgrows the size of the segment, the segment size may be
+progressively increased using the<B> DosReallocSeg()</B> or<B> DosReallocHuge()
+</B>functions, moving the segments within the machine's physical memory
+in order to accommodate the increased size requirements.  This is not possible
+under Version 2.0, since the paged memory implementation does not allow
+memory objects to be moved within memory once they are allocated; hence
+the<B> DosReallocSeg()</B> and<B> DosReallocHuge()</B> functions have no
+counterparts in the 32-bit environment.
+<P>
+Under OS/2 Version 2.0, an application can allocate an area of storage in
+its process address space, but may commit only a small amount of that storage
+at the time the application is initialized.  In this way, the application
+does not use a large amount of storage in a situation where it is not required,
+and thereby avoids placing unnecessary resource demands on the operating
+system.  This can result in improved overall system performance.
+<P>
+If the storage requirements for a memory object increase during execution
+(for example, the size of a spreadsheet increases), and exceed the amount
+of storage initially committed, the application may dynamically commit additional
+storage up to the maximum specified in the<B> DosAllocMem()</B> function
+call that allocated the memory object.
+<P>
+This dynamic commitment of storage is typically achieved using the<B> guard
+page technique</B>.  A page within the memory object may be specified as
+a <A HREF="581_L2_guardpage.html"><I>guard page</I></A> using the PAG_GUARD
+flag in the<B> DosAllocMem()</B> function call or in a<B> DosSetMem()</B> call
+made subsequent to the allocation.  Once this is done, any memory reference
+to that page will generate a <A HREF="582_L2_guardpageexception.html"><B>guard
+page exception</B></A>.  The guard page exception warns the application
+that the upper boundary of the committed portion of a memory object has
+been reached, and allows appropriate action to be taken in order to avoid
+a page fault exception.
+<P>
+Note that the memory protection scheme implemented by OS/2 Version 2.0  allocates
+pages to individual processes.  An exception is<I> only</I> generated when
+an application attempts to write into a page which is not allocated to the
+current process under which the application is running.  If the page is
+allocated to the current process, no exception is generated.  Use of the
+guard page technique is therefore strongly recommended in circumstances
+where the amount of data to be written into a memory object is variable,
+or where the size of the memory object or its data may grow during execution.
+
+<P>
+The recommended method of using guard pages is to initially allocate the
+memory object as a sparse object, and then commit the amount of storage
+required for the current size of the data, flagging the uppermost page of
+the memory object as a guard page.  This technique is shown in <A HREF="019_L2_UsingaGuardPageWitha.html">Figure
+"Using a Guard Page With a Memory Object"</A>.
+<P>
+The example shown in <A HREF="019_L2_UsingaGuardPageWitha.html">Figure "Using
+a Guard Page With a Memory Object"</A> allocates a memory object that is
+72KB in size as a sparse object, commits the first two pages (8KB) of the
+object and specifies the uppermost of the two pages as a guard page.  Any
+attempt by the application to write into this uppermost page will result
+in a guard page exception.
+<P>
+The guard page exception generated when an application attempts to write
+into a guard page can be trapped and processed by an application-registered
+exception handler, to commit further pages within the memory object.  A
+simple guard page exception handler is shown in <A HREF="020_L2_GuardPageExceptionHa.html">Figure
+"Guard Page Exception Handler"</A>.
+<P>
+The exception handler shown in <A HREF="020_L2_GuardPageExceptionHa.html">Figure
+"Guard Page Exception Handler"</A> handles two types of exception:  the
+guard page exception and the page fault exception.  The latter occurs when
+an application attempts to write to an uncommitted page in the memory object
+that is<I> not</I> the guard page.  This can occur when a memory object
+is accessed in a non-sequential manner.
+<P>
+The example shown above handles the guard page exception simply by committing
+the next page in the memory object, and making this page the new guard page.
+ Guard page exceptions should<I> not</I> be<!-- entering slot 248 --> allowed
+to pass through to the operating system's default guard page exception handler,
+since the default handler operates by committing the next<I> lower</I> page
+in the memory object and making this the new guard page.  This is done because
+the default handler is intended mainly to handle dynamic stack growth; stacks
+are always propagated downward.
+<P>
+The exception handler shown in <A HREF="020_L2_GuardPageExceptionHa.html">Figure
+"Guard Page Exception Handler"</A> also handles the page fault exception,
+where a write operation is attempted into a page other than the guard page,
+which has not previously been committed.  The exception handler responds
+to this exception by querying the properties of the page in question and,
+if the page has been allocated but not yet committed, proceeds to commit
+the page.
+<P>
+If the page has not been allocated (that is, it does not lie within the
+boundaries of the memory object), or if the exception is neither a guard
+page exception nor a page fault exception, the exception handler does not
+process the exception, and returns control to the operating system, which
+will invoke any other exception handlers registered for the current thread
+(see <A HREF="233_L2_ExceptionHandling.html">Exception Handling</A>).
+<P>
+A guard page exception handler is registered by the application using the
+<B>DosSetExceptionHandler()</B> function.  This function is illustrated
+in <A HREF="021_L2_RegisteringaGuardPag.html">Figure "Registering a Guard
+Page Exception Handler"</A>.
+<P>
+The<B> DosSetExceptionHandler()</B> function can also be used to register
+exception handlers for other types of system exception; see <A HREF="233_L2_ExceptionHandling.html">Exception
+Handling</A> for further information.
+<P>
+Note that OS/2 Version 2.0 provides its own exception handlers within the
+service layers for all 32-bit system functions.  These exception handlers
+allow the service routines to recover from page fault exceptions and general
+protection exceptions encountered due to bad pointers in applications' function
+calls.  The function call returns an ERROR_BAD_PARAMETER code rather than
+a Trap 00D or Trap 00E code, thereby allowing the application to recover.
+ This represents a significant enhancement over previous versions of OS/2,
+since it allows easier debugging and more flexible pointer handling.
+
+<P><HR>
+
+<A HREF="230_L3_CommittingStorageatA.html">[Back: Committing Storage at Allocation]</A> <BR>
+<A HREF="232_L2_SuballocatingMemory.html">[Next: Suballocating Memory]</A> 
+</BODY>
+</HTML>

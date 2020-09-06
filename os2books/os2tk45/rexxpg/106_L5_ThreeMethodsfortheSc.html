@@ -1,0 +1,97 @@
+<HTML>
+<HEAD>
+<TITLE>Three Methods for the Script Class</TITLE>
+</HEAD>
+<BODY>
+<H1>Three Methods for the Script Class</H1><!-- entering slot 112 -->
+<P>
+For the Script class, we provide three methods: INIT, START, and DO. REXX
+invokes an INIT method for an object whenever a NEW message is sent to the
+class. For our INIT processing, we read the file containing the script into
+an array. INIT expects the file identifier as an argument:
+<PRE>use arg fileid
+</PRE>
+
+<P>
+INIT sends a NEW message to the Stream class to get a new stream object:
+
+<PRE>file=.stream~new(fileid)
+</PRE>
+
+<P>
+The Stream class is useful for file I/O in REXX. To read the file, a MAKEARRAY
+message is sent to the stream object:
+<PRE>timeline=file~makearray('line')
+</PRE>
+
+<P>
+MAKEARRAY is a very handy method. When used on a stream object, it reads
+an entire file into an array. After reading the file, INIT sends a CLOSE
+message to the stream object to close the file.
+<P>
+INIT uses the EXPOSE instruction to make the Timeline array available to
+all other methods in the Script class.
+<P>
+Next, the START method starts the display of the lines of text. It uses
+an EXPOSE instruction to access the Timeline array. For each line in the
+script, START creates a message object. This is the tricky part of the program.
+
+<P>
+The message object provides for the deferred sending of a message:
+<PRE>msg=.message~new(self,'do','I',i)
+</PRE>
+
+<P>
+The NEW message causes REXX to run the INIT method of the Message class.
+The arguments on the NEW message are used by INIT. The first argument on
+NEW defines where the message should be sent (SELF). The second argument
+is the message to be sent (DO). The third argument indicates that the next
+(fourth) argument is an individual string (as opposed to an array). The
+fourth and final argument is the argument to be passed on the message. The
+message objects that are created contain the information necessary to send
+this message:
+<PRE>self~do(i)  /* Where "i" is an index to the array of strings */
+</PRE>
+
+<P>
+SELF is a special variable. Its value is the object that forms the processing
+context for the method. In other words, SELF represents the object on which
+the method is running. In this case, the method that is running is the START
+method. START runs on an instance of the Script class, so SELF represents
+the particular instance of the Script class for which START is running.
+
+<P>
+SELF might seem abstract, but its use becomes immediately apparent when
+you try to write your own methods. Eventually you'll need to send a message
+to the object that you are processing. But REXX doesn't pass object handles,
+so what do you send the message to? You send it to SELF.
+<P>
+After creating a message object, START creates an alarm object for the message.
+An alarm object sends any message to an object at a given time:
+<PRE>.alarm~new(timeline[i]~word(1),msg)
+</PRE>
+
+<P>
+The NEW message causes REXX to run the INIT method for the newly-created
+alarm object. INIT expects a time displacement as its first argument. We
+pass it the number of seconds into the song that the line in timeline[i]
+is sung. The second argument on INIT is the message object that is to be
+processed at that time.
+<P>
+After creating all the alarm objects, START returns to its caller. Meanwhile,
+all the alarm objects are ticking away concurrently, waiting for the correct
+moments to send the DO messages to SELF. START ends far before all the alarm
+objects are processed.
+<P>
+The DO method uses EXPOSE to get the Timeline array. DO expects a line number
+as an argument. These line numbers were put in the message objects when
+they were created. DO displays the line using a SAY instruction.
+<P>
+
+
+<P><HR>
+
+<A HREF="105_L4_HowtheClassDefinitio.html">[Back: How the Class Definition File Works]</A> <BR>
+<A HREF="107_L5_FourMethodsfortheMul.html">[Next: Four Methods for the Multimedia Class]</A> 
+</BODY>
+</HTML>

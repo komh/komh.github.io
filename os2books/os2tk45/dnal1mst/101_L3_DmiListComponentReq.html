@@ -1,0 +1,140 @@
+<HTML>
+<HEAD>
+<TITLE>DmiListComponentReq</TITLE>
+</HEAD>
+<BODY>
+<H1>DmiListComponentReq</H1><!-- entering slot 102 -->
+<P>
+The following List Component commands use the DmiListComponentReq command
+block:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->DmiListComponentCmd<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->DmiListFirstComponentCmd<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->DmiListNextComponentCmd<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The format for the command block is: ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³Table23
+.DmiListComponentReqCommandBlock                 ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ OFFSET     ³ SIZE      ³ TYPE      ³ VARIABLE NAME         ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 0       ³ 64       ³ STRUCT     ³ DmiMgmtCommand        ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 64       ³ 4       ³ INT      ³ iComponentId         ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 68       ³ 4       ³ OFFSET     ³ osClassString         ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 72       ³ 4       ³ INT      ³ iGroupKeyCount        ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 76       ³ 4       ³ OFFSET     ³ oGroupKeyList         ³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+<B><!-- lm: 0x2 1 -->
+<P>
+Variable Name<!-- lm: 0x2 21 -->
+<UL> Variable Description</B><!-- lm: 0x2 1 -->
+</UL> DmiMgmtCommand
+<!-- lm: 0x12 21 -->
+<UL>The command block.  The values of iCommand indicate
+the command:<!-- lm: 0x2 21 -->
+<P>
+DmiListComponentCmd<!-- lm: 0x2 56 -->
+<UL> 0x200<!-- lm: 0x2 21 -->
+</UL>DmiListFirstComponentCmd<!-- lm: 0x2 56 -->
+<UL> 0x201<!-- lm: 0x2 21 -->
+</UL>DmiListNextComponentCmd<!-- lm: 0x2 56 -->
+<UL> 0x202<!-- lm: 0x2 21 --><!-- lm: 0x2 1 -->
+</UL> iComponentId
+<!-- lm: 0x12 21 -->
+<UL>Component ID for the desired component. This field
+is ignored for DmiListFirstComponentCmd.  For DmiListNextComponentCmd, the
+service layer starts filling the confirm buffer beginning with the component
+ID that follows the value in this field. To start at the first component,
+set this field to zero.  On return from the command, the service layer updates
+this field with the ID of the last component in the confirm buffer. The
+management application can continue issuing DmiListNextComponentCmd commands
+until the returned iStatus field indicates that there is no more data.<!-- lm: 0x2 1 -->
+</UL> osClassString
+<!-- lm: 0x12 21 -->
+<UL>Offset to a string that acts as a filter to retrieve
+data for components that have groups with specific class strings. If a field
+of the class string is not significant, it can be omitted.
+<P>
+For example, if an application is looking for all component ID groups, it
+uses the string "DMTF|ComponentID|". Because the version string is missing,
+the service layer considers any version a match, as long as the first two
+fields match. If no filtering is desired, set this field to zero or to an
+empty class string ("||").<!-- lm: 0x2 1 -->
+</UL> iGroupKeyCount<!-- lm: 0x12 21 -->
+<UL> The
+number of elements of type DmiGroupKeyData pointed to by oGroupKeyList.
+If any keys are given, they are used with the group class for filtering,
+and the service layer returns a list of the components that have a particular
+row in a particular table. It is an error to specify keys without specifying
+a class string.<!-- lm: 0x2 1 -->
+</UL> oGroupKeyList<!-- lm: 0x12 21 -->
+<UL> Offset
+to a list of blocks of type DmiGroupKeyData.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Issuing DmiListComponentReq displays an example of how to issue the DmiListComponentReq
+command to the MI. IssuingDmiListComponentReq
+<BR>
+
+<PRE>ULONG IssueListComp(ULONG ComponentID,SHORT ListType)  // issues the list component command to the SL
+{
+DMI_ListComponentReq_t *ListComp;
+ULONG RC;
+
+    ListComp = (DMI_ListComponentReq_t *)malloc(sizeof(DMI_ListComponentReq_t));
+    memset((void *)ListComp,0,sizeof(DMI_ListComponentReq_t));
+    ListComp-&gt;DmiMgmtCommand.iLevelCheck = DMI_LEVEL_CHECK;
+    ListComp-&gt;DmiMgmtCommand.iMgmtHandle = YOUR_MGMT_HANDLE;     // set the app handle
+    ListComp-&gt;DmiMgmtCommand.iCmdHandle = YOUR_COMMAND_HANDLE;   // set the command handle
+    ListComp-&gt;DmiMgmtCommand.iCnfBufLen = 8000UL;                // set the size of the response buffer
+    ListComp-&gt;DmiMgmtCommand.pCnfBuf = (void *)malloc(8000UL);   // set up the response buffer
+    ListComp-&gt;DmiMgmtCommand.iRequestCount = 1;
+    ListComp-&gt;DmiMgmtCommand.iCmdLen = sizeof(DMI_ListComponentReq_t);
+    ListComp-&gt;iComponentId = ComponentID;
+    switch(ListType){
+        case 1:
+            ListComp-&gt;DmiMgmtCommand.iCommand = DmiListFirstComponentCmd;  // set the command
+            break;
+        case 0:
+            ListComp-&gt;DmiMgmtCommand.iCommand = DmiListNextComponentCmd;   // look for next one in list
+            break;
+        case 10:
+            ListComp-&gt;DmiMgmtCommand.iCommand = DmiListComponentCmd;
+            break;
+    }
+    if((RC = DmiInvoke((DMI_MgmtCommand_t *)ListComp)) != SLERR_<!-- entering slot 103 -->NO_ERROR){   // call the SL and register
+        free(ListComp-&gt;DmiMgmtCommand.pCnfBuf);   // free up the confirm buffer first
+        free(ListComp);                           // then free up the command block
+    }
+    return RC;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="100_L3_DmiRegisterCnf.html">[Back: DmiRegisterCnf]</A> <BR>
+<A HREF="102_L3_DmiListComponentCnf.html">[Next: DmiListComponentCnf]</A> 
+</BODY>
+</HTML>

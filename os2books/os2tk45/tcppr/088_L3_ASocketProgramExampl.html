@@ -1,0 +1,91 @@
+<HTML>
+<HEAD>
+<TITLE>A Socket Program Example</TITLE>
+</HEAD>
+<BODY>
+<H1>A Socket Program Example</H1><!-- entering slot 95 -->
+<P>
+Following is an example of a socket application using IP multicasting.
+<PRE>struct sockaddr_in *to = (struct sockaddr_in *)&amp;group;  /* group address     */
+struct sockaddr_in listen_addr;
+struct ip_mreq imr;                          /* multicast request structure  */
+struct in_addr ifaddr;                       /* multicast outgoing interface */
+short  loop = 0;                             /* don't loop back              */
+short  ttl = 16;                             /* multicast time-to-live       */
+
+       sock_init();
+
+       /* init */
+       imr.imr_multiaddr.s_addr = 0xe0010101;     /* 224.1.1.1 */
+       imr.imr_multiaddr.s_addr = htonl(imr.imr_multiaddr.s_addr);
+       imr.imr_interface.s_addr = INADDR_ANY;
+       imr.imr_interface.s_addr = htonl(imr.imr_interface.s_addr);
+       ifaddr.s_addr = INADDR_ANY;
+       ifaddr.s_addr = htonl(ifaddr.s_addr);
+
+       bzero( (char *)&amp;group, sizeof(struct sockaddr_in) );
+       to-&gt;sin_len = sizeof(to);
+       to-&gt;sin_family = AF_INET;
+       to-&gt;sin_port = 1201;                     /* some port number */
+       to-&gt;sin_port = htons(to-&gt;sin_port);
+       to-&gt;sin_addr.s_addr = imr.imr_multiaddr.s_addr;
+       listen_addr = (*to);
+
+       sock = socket(AF_INET, SOCK_DGRAM, 0);
+
+       if (sock &lt;= 0)  {
+       psock_errno("Bad socket");
+       exit(1);
+       }
+
+       /* join group */
+       if( setsockopt( sock, IPPROTO_IP, IP_ADD_MEMBERSHIP,
+       &amp;imr, sizeof(struct ip_mreq) ) == -1 )  {
+       psock_errno( "can't join group" );
+       exit(1);
+       }
+
+       /* set multicast options */
+       if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_IF,
+       &amp;ifaddr, sizeof(ifaddr)) == -1) {
+       perror ("can't set multicast source interface");
+       exit(1);
+       }
+       if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &amp;loop, 1) == -1)) {
+       psock_errno ("can't disable multicast loopback");
+       exit(1);
+       }
+       if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &amp;ttl, 1) == -1)) {
+       psock_errno ("can't set multicast ttl");
+       exit(1);
+       }
+
+       /* bind to a group address */
+       if (bind(sock, &amp;listen_addr, sizeof(struct sockaddr_in)) != 0) {
+       psock_errno("Binding multicast socket");
+       exit(1);
+       }
+
+       .
+       .
+       .
+
+       /* leave group */
+       if( setsockopt( sock, IPPROTO_IP, IP_DROP_MEMBERSHIP,
+       &amp;imr, sizeof(struct ip_mreq) ) == -1 )  {
+       psock_errno( "can't leave group" );
+       exit(1);
+       }
+       .
+       .
+       .
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="087_L3_Multicastingandthese.html">[Back: Multicasting and the setsockopt() Call]</A> <BR>
+<A HREF="089_L2_SocketSecureSupport.html">[Next: Socket Secure Support]</A> 
+</BODY>
+</HTML>

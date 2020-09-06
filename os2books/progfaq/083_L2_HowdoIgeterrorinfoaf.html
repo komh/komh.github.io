@@ -1,0 +1,50 @@
+<HTML>
+<HEAD>
+<TITLE>How do I get error info after using WinGetLastError()?</TITLE>
+</HEAD>
+<BODY>
+<H1>How do I get error info after using WinGetLastError()?</H1><!-- entering slot 99 -->
+<P>
+One should only use WinGetLastError() after a bad return value, ERRORID
+is not always zeroed after a successful call to PM API.
+<BR>
+
+<P>
+ShowError Function:
+<PRE>/*
+ * ShowError -- for debugging: outputs (via printf) the last error;
+ *    to use this, redirect the output of this program to a file and
+ *    check the results in that file.
+ *    Updated to display the error text in a MESSAGE BOX; ID_MSGBOX must be
+ *    defined.
+ */
+ void ShowError(void)
+ {
+    PERRINFO p;
+    char *cp;
+    extern HAB hab;   /* kinda kludgy, should be a parameter */
+
+    printf("ShowError: ");
+    if((p = WinGetErrorInfo(hab)) == NULL)
+       printf("NO ERROR\n");
+    else
+    {
+       printf("idError = %#X\n", p-&gt;idError);
+       cp = (char *)((ULONG)p + *(ULONG *)((ULONG)p + p-&gt;offaoffszMsg));
+       printf("\"%s\"\n", cp);
+       WinMessageBox(HWND_DESKTOP, HWND_DESKTOP, (PSZ)cp, (PSZ)"Show Error",
+                     ID_MSGBOX, MB_OK | MB_ICONEXCLAMATION);
+       WinFreeErrorInfo(p);
+    }
+ }
+</PRE>
+
+<P>
+Credit:  Justin V Frank 
+
+<P><HR>
+
+<A HREF="082_L2_HowdoIusethe16bitEPM.html">[Back: How do I use the 16-bit EPM toolkit?]</A> <BR>
+<A HREF="084_L2_Doyouhavecodetosaver.html">[Next: Do you have code to save/restore the clipboard?]</A> 
+</BODY>
+</HTML>

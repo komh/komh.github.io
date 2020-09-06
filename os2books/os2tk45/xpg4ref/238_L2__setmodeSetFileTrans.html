@@ -1,0 +1,151 @@
+<HTML>
+<HEAD>
+<TITLE>_setmode - Set File Translation Mode</TITLE>
+</HEAD>
+<BODY>
+<H1>_setmode - Set File Translation Mode</H1><!-- entering slot 258 -->_setmode - Set File Translation Mode<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>#include &lt;fcntl.h&gt;
+#include &lt;io.h&gt;
+int _setmode(int <I>handle</I>, int <I>mode</I>);
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Description
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+<LI>setmode sets the translation mode of the file given by<I> handle</I> to
+<I>mode</I>. The<I> mode</I> must be one of the values in the following
+table:  compact break=fit.<B><!-- lm: 0x2 10 -->
+<P>
+Value<!-- lm: 0x2 25 -->
+<UL> Meaning</B><!-- lm: 0x2 10 -->
+</UL> O_TEXT
+<!-- lm: 0x2 25 -->
+<UL>Sets the translated text mode.  Carriage-return
+line-feed combinations are translated into a single line feed on input.
+Line-feed characters are translated into carriage-return line-feed combinations
+on output.<!-- lm: 0x2 10 -->
+</UL> O_BINARY<!-- lm: 0x2 25 -->
+<UL> Sets
+the binary (untranslated) mode.  The above translations are suppressed.
+<!-- lm: 0x2 10 -->
+</UL>
+<P>
+Use _setmode to change the translation mode of a file handle. The translation
+mode only affects the read and write functions. _setmode does not affect
+the translation mode of streams.
+<P>
+If a file handle is acquired other than by a call to open, creat, _sopen
+or fileno, you should call _setmode for that file handle before using it
+within the read or write functions.<!-- lm: 0x2 1 -->
+</UL> Returns
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+<LI>setmode returns the previous translation mode if successful. A return
+value of -1 indicates an error, and errno is set to one of the following
+values:  compact break=fit.<B><!-- lm: 0x2 10 -->
+<P>
+Value<!-- lm: 0x2 25 -->
+<UL> Meaning</B><!-- lm: 0x2 10 -->
+</UL> EBADF
+<!-- lm: 0x2 25 -->
+<UL>The file handle is not a handle for an open file.
+<!-- lm: 0x2 10 -->
+</UL>EINVAL<!-- lm: 0x2 25 -->
+<UL> Incorrect<I> mode
+</I>(neither O_TEXT nor O_BINARY)<!-- lm: 0x2 10 -->
+</UL><!-- lm: 0x2 1 -->
+</UL>Example Code
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+This example uses open to create the file setmode.dat and writes to it.
+ The program then uses _setmode to change the translation mode of setmode.dat
+from binary to text.
+<PRE>#include &lt;stdio.h&gt;#include &lt;stdlib.h&gt;
+#include &lt;fcntl.h&gt;
+#include &lt;io.h&gt;
+#include &lt;sys\stat.h&gt;
+
+#define  FILENAME      "setmode.dat"
+
+/* routine to validate return codes                                           */
+
+void ckrc(int rc)
+{
+   if (-1 == rc) {
+      printf("Unexpected return code = -1\n");
+      remove(FILENAME);
+      exit(EXIT_FAILURE);
+   }
+}
+
+int main(void)
+{
+   int h;
+   int xfer;
+   int mode;
+   char rbuf[256];
+   char wbuf[] = "123\n456\n";
+
+   ckrc(h = open(FILENAME, O_CREAT|O_RDWR|O_TRUNC|O_TEXT, S_IREAD|S_IWRITE));
+   ckrc(write(h, wbuf, sizeof(wbuf)));     /* write the file (text)           */
+   ckrc(lseek(h, 0, SEEK_SET));         /* seek back to the start of the file */
+   ckrc(xfer = read(h, rbuf, 5));           /* read the file text             */
+   printf("Read in %d characters (4 expected)\n", xfer);
+   ckrc(mode = _setmode(h, O_BINARY));
+   if (O_TEXT == mode)
+      printf("Mode changed from binary to text\n");
+   else
+      printf("Previous mode was not text (unexpected)\n");
+   ckrc(xfer = read(h, rbuf, 5));           /* read the file (binary)         */
+   printf("Read in %d characters (5 expected)\n", xfer);
+   ckrc(close(h));
+   remove(FILENAME);
+   return 0;
+
+   /****************************************************************************
+      The output should be:
+
+      Read in 4 characters (4 expected)
+      Mode changed from binary to text
+      Read in 5 characters (5 expected)
+   ****************************************************************************/
+}
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Related Information
+<P>
+<!-- lm: 0x2 10 -->
+<UL><!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 --><A HREF="089_L2_creatCreateNewFile.html">creat</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="205_L2_openOpenFile.html">open</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="243_L2__sopenOpenSharedFile.html"><LI>sopen
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="219_L2_readReadIntoBuffer.html">read</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="352_L2_writeWritesfromBuffe.html">write
+</A><!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="237_L2_setlocaleSettheLocal.html">[Back: setlocale - Set the Locale of the Program]</A> <BR>
+<A HREF="239_L2_setvbufControlBuffer.html">[Next: setvbuf - Control Buffering]</A> 
+</BODY>
+</HTML>

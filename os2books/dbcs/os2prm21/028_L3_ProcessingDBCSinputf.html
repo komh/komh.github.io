@@ -1,0 +1,171 @@
+<HTML>
+<HEAD>
+<TITLE>Processing DBCS input from a keyboard</TITLE>
+</HEAD>
+<BODY>
+<H1>Processing DBCS input from a keyboard</H1><!-- entering slot 31 -->
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³A WM_CHAR message contains either a SBCS character or a DBCS character³
+³when the message queue code page is for DBCS.                         ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+On OS/2 PM, a<B> WM_CHAR</B> message is sent to the window when an end user
+presses a key. When a SBCS character is conveyed, CHAR1FROMMP contains its
+character code and CHAR2FROMMP contains a null character (00H). When a DBCS
+character is conveyed, CHAR1FROMMP contains the first byte of  its character
+code and CHAR2FROMMP contains the second byte of its character code.
+<BR>
+WM_CHAR
+<BR>
+
+<PRE>
+The MP2 of WM_CHAR containing a double-byte character:
+
+     ÚÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄ¿
+     ³         ³         ³ The 2nd ³ The 1st ³
+     ³         ³         ³ byte of ³ byte of ³
+     ³         ³         ³ a DBC   ³ a DBCS  ³
+     ÀÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÙ
+BIT 31                  15                   0
+
+The MP2 of WM_CHAR containing a single-byte character:
+
+     ÚÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄ¿
+     ³         ³         ³         ³         ³
+     ³         ³         ³ 00      ³ a SBC   ³
+     ³         ³         ³         ³         ³
+     ÀÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÙ
+BIT 31                  15                   0
+</PRE>
+
+<P>
+The following is the structure of a code fragment which can correctly handle
+WM_CHAR messages containing either SBCS or DBCS characters.
+<BR>
+Processing WM_CHAR message
+<BR>
+
+<PRE>   ...
+case WM_CHAR:
+    fs = SHORT1FROMMP(mp1);
+    if( (fs &amp; KC_KEYUP) == 0 ) {
+       if( (fs &amp; KC_CHAR) != 0 ) {
+         if( CHAR2FROMMP(mp2) != 0 ) {
+            /* WM_CHAR conveys a doubl-byte character */
+            ...
+         }
+         else {
+            /* WM_CHAR conveys a single-byte character */
+            ...
+         }
+       }
+       else if( (fs &amp; KC_VIRTUALKEY) != 0 ) {
+            /* Processing virtual keys */
+            ...
+       }
+    }
+    break;
+   ...
+</PRE>
+
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³The wchar_t data type is useful to handle mixed string as a normalized³
+³format.                                                               ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+<I>Normalization</I> is a method to represent both SBCS and DBCS characters
+in the same format. By this method, an application programmer does not need
+to distinguish DBCS from SBCS, because all characters are represented as
+a<I> character</I>, regardless of single-byte or double-byte.
+<P>
+The wchat_t data type is a C language data type used for normalization.
+The normalized format should be used as a process code. The conversion for
+normalization should be performed at input and output time. IBM SAA level
+2 defines several functions for wchar_t string manipulation, which are available
+on IBM C/C++ Tools.
+<P>
+The following example shows how the WM_CHAR message is treated by using
+wchar_t. See the application does not check if the input is DBCS or SBCS.
+
+<BR>
+Processing a WM_CHAR message with wchar_t(source: MISCEDIT.C)
+<BR>
+
+<PRE>   ...
+<B>#include &lt;stdlib.h&gt;</B>
+   ...
+static BOOL isChar( MPARAM mp1, MPARAM mp2 );
+static BOOL isKeyUp( MPARAM mp1 );
+static wchar_t createChar( MPARAM mp );
+   ...
+MRESULT EXPENTRY editorWinProc( HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2)
+{
+static BOOL flSpot = FALSE;     /* indicates if on-the-spot is performed */
+   ...
+   switch( msg )
+   {
+   ...
+      case WM_CHAR:
+        if( isKeyUp( mp1 ) == TRUE )  break;
+   ...
+        if( isChar( mp1, mp2 ) == TRUE )
+        {
+           if( curpos.usCharNum &lt; MAX_KEY_IN )
+           {
+            long cx;
+            wchar_t wc[2];
+
+               wc[0] = currentLine-&gt;wcChars[curpos.usCharNum]
+                     = createChar( mp2 );
+   ...
+           }
+        }
+   ...
+}
+/******************************************/
+/* isxxx:                                 */
+/*  Check routine for input key value.    */
+/******************************************/
+static BOOL isChar( MPARAM mp1, MPARAM mp2 )
+{
+   /* should check virtual key first */
+   if( (SHORT1FROMMP( mp1 ) &amp; KC_VIRTUALKEY) != 0 )
+   {
+      if( SHORT2FROMMP( mp2 ) == VK_SPACE )  return TRUE;   /* space key */
+      else  return FALSE;
+   }
+   else return( (SHORT1FROMMP( mp1 ) &amp; KC_CHAR) != 0 );
+}
+static BOOL isKeyUp( MPARAM mp1 )
+{
+   return( (SHORT1FROMMP( mp1 ) &amp; KC_KEYUP) != 0 );
+}
+/*******************************************/
+/* createChar:                             */
+/*  create a wide character from a message */
+/*  parameter specified by mp.             */
+/*******************************************/
+static wchar_t createChar( MPARAM mp )
+{
+ char temp[3];
+ wchar_t wc;
+
+   temp[0] = CHAR1FROMMP( mp );
+   temp[1] = CHAR2FROMMP( mp );
+   temp[2] = '\0';
+   <B>mbtowc( &amp;wc, temp, MB_LEN_MAX )</B>;
+   return( wc );
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="027_L3_Allowingausertoperfo.html">[Back: Allowing a user to perform on-the-spot conversion]</A> <BR>
+<A HREF="029_L2_ProcessingDBCSstring.html">[Next: Processing DBCS strings]</A> 
+</BODY>
+</HTML>

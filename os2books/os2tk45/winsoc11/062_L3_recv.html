@@ -1,0 +1,148 @@
+<HTML>
+<HEAD>
+<TITLE>recv()</TITLE>
+</HEAD>
+<BODY>
+<H1>recv()</H1><!-- entering slot 66 -->
+<P>
+<B>Description</B>
+<P>
+Receive data from a socket.
+<P>
+
+<PRE>#include &lt;winsock.h&gt;</PRE>
+ 
+<P>
+<B>int PASCAL FAR recv ( int</B><I> s</I><B>, char FAR *</B><I> buf</I><B>,
+int</B><I> len</I><B>, int</B><I> flags</I><B>);</B><!-- lm: 0x2 1 -->
+<UL>
+<P>
+<I>s</I><!-- lm: 0x11 3 -->
+<UL> A descriptor identifying a connected socket.
+<!-- lm: 0x2 1 -->
+</UL><I>buf</I><!-- lm: 0x11 3 -->
+<UL> A buffer for
+the incoming data.<!-- lm: 0x2 1 -->
+</UL><I> len</I><!-- lm: 0x11 3 -->
+<UL> The
+length of<I> buf</I>.<!-- lm: 0x2 1 -->
+</UL><I> flags</I><!-- lm: 0x11 3 -->
+<UL> Specifies
+the way in which the call is made.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Remarks</B>
+<P>
+This function is used on connected datagram or stream sockets specified
+by the<I> s</I> parameter and is used to read incoming data.
+<P>
+For sockets of type SOCK_STREAM, as much information as is currently available
+up to the size of the buffer supplied is returned.  If the socket has been
+configured for in-line reception of out-of-band data (socket option SO_OOBINLINE)
+and out-of-band data is unread, only out-of-band data will be returned.
+ The application may use the <A HREF="058_L3_ioctlsocket.html">ioctlsocket()
+</A>SIOCATMARK to determine whether any more out-of-band data remains to
+be read.
+<P>
+For datagram sockets, data is extracted from the first enqueued datagram,
+up to the size of the size of the buffer supplied.  If the datagram is larger
+than the buffer supplied, the excess data is lost, and<B> recv()</B> returns
+the error WSAEMSGSIZE.  If no incoming data is available at the socket,
+the<B> recv()</B> call waits for data to arrive unless the socket is non-blocking.
+ In this case a value of SOCKET_ERROR is returned with the error code set
+to WSAEWOULDBLOCK.  The <A HREF="064_L3_select.html">select()</A> or <A HREF="085_L3_WSAAsyncSelect.html">WSAAsyncSelect()
+</A>calls may be used to determine when more data arrives.  If the socket
+is of type SOCK_STREAM and the remote side has shut down the connection
+gracefully, a<B> recv()</B> will complete immediately with 0 bytes received.
+ If the connection has been abortively disconnected, a<B> recv()</B> will
+fail with the error WSAECONNRESET.
+<P>
+<I>Flags</I> may be used to influence the behavior of the function invocation
+beyond the options specified for the associated socket.  That is, the semantics
+of this function are determined by the socket options and the<I> flags</I> parameter.
+ The latter is constructed by or-ing any of the following values:
+<P>
+<!-- lm: 0x2 1 -->
+<P>
+MSG_PEEK<!-- lm: 0x11 11 -->
+<UL> Peek at the incoming data.  The data is
+copied into the buffer but is not removed from the input queue.<!-- lm: 0x2 1 -->
+</UL> MSG_OOB
+<!-- lm: 0x11 11 -->
+<UL>Process out-of-band data (See <A HREF="016_L3_Outofbanddata.html">Out
+of Band Data</A> for a discussion of this topic.)<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Return Value</B>
+<P>
+If no error occurs,<B> recv()</B> returns the number of bytes received.
+ If the connection has been closed, it returns 0.  Otherwise, a value of
+SOCKET_ERROR is returned, and a specific error code may be retrieved by
+calling <A HREF="089_L3_WSAGetLastError.html">WSAGetLastError()</A>.
+<P>
+<B>Error Codes</B>
+<P>
+<!-- lm: 0x2 1 -->
+<P>
+WSANOTINITIALISED<!-- lm: 0x11 11 -->
+<UL> A successful <A HREF="093_L3_WSAStartup.html">WSAStartup()
+</A>must occur before using this API.<!-- lm: 0x2 1 -->
+</UL> WSAENETDOWN
+<!-- lm: 0x11 11 -->
+<UL>The Windows Sockets implementation has detected
+that the network subsystem has failed.<!-- lm: 0x2 1 -->
+</UL> WSAENOTCONN
+<!-- lm: 0x11 11 -->
+<UL>The socket is not connected.<!-- lm: 0x2 1 -->
+</UL> WSAEINTR
+<!-- lm: 0x11 11 -->
+<UL>The (blocking) call was canceled via <A HREF="087_L3_WSACancelBlockingCal.html">WSACancelBlockingCall()
+</A><!-- lm: 0x2 1 -->
+</UL>WSAEINPROGRESS<!-- lm: 0x11 11 -->
+<UL> A blocking
+Windows Sockets operation is in progress.<!-- lm: 0x2 1 -->
+</UL> WSAENOTSOCK
+<!-- lm: 0x11 11 -->
+<UL>The descriptor is not a socket.<!-- lm: 0x2 1 -->
+</UL> WSAEOPNOTSUPP
+<!-- lm: 0x11 11 -->
+<UL>MSG_OOB was specified, but the socket is not of
+type SOCK_STREAM.<!-- lm: 0x2 1 -->
+</UL> WSAESHUTDOWN<!-- lm: 0x11 11 -->
+<UL> The
+socket has been shutdown; it is not possible to<B> recv()</B> on a socket
+after <A HREF="068_L3_shutdown.html">shutdown()</A> has been invoked with
+<I>how</I> set to 0 or 2.<!-- lm: 0x2 1 -->
+</UL> WSAEWOULDBLOCK<!-- lm: 0x11 11 -->
+<UL> The
+socket is marked as non-blocking and the receive operation would block.
+<!-- lm: 0x2 1 -->
+</UL>WSAEMSGSIZE<!-- lm: 0x11 11 -->
+<UL> The datagram
+was too large to fit into the specified buffer and was truncated.<!-- lm: 0x2 1 -->
+</UL> WSAEINVAL
+<!-- lm: 0x11 11 -->
+<UL>The socket has not been bound with<B> bind().</B><!-- lm: 0x2 1 -->
+</UL> WSAECONNABORTED
+<!-- lm: 0x11 11 -->
+<UL>The virtual circuit was<!-- entering slot 67 --> aborted
+due to timeout or other failure.<!-- lm: 0x2 1 -->
+</UL> WSAECONNRESET<!-- lm: 0x11 11 -->
+<UL> The
+virtual circuit was reset by the remote side.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>See Also</B>
+<P>
+<A HREF="063_L3_recvfrom.html">recvfrom()</A><B>,</B> <A HREF="065_L3_send.html">send()</A><B>,
+</B><A HREF="064_L3_select.html">select()</A><B>,</B> <A HREF="085_L3_WSAAsyncSelect.html">WSAAsyncSelect()</A><B>,
+</B><A HREF="069_L3_socket.html">socket()</A>
+<P>
+
+
+<P><HR>
+
+<A HREF="061_L3_ntohs.html">[Back: ntohs()]</A> <BR>
+<A HREF="063_L3_recvfrom.html">[Next: recvfrom()]</A> 
+</BODY>
+</HTML>

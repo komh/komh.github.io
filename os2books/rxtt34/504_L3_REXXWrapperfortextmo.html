@@ -1,0 +1,421 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>REXX Wrapper for textmode programs</TITLE>
+</HEAD>
+<BODY>
+<H1>REXX Wrapper for textmode programs</H1><!-- entering slot 521 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+You can use REXX also to create a "Wrapper" for other (textmode) programs
+to filter the input and output for/from that program:
+<PRE> 
+/*                                                                    */
+/* REXX "wrapper" program to call another program, queue the input    */
+/* for that program and filter the output of the program.             */
+/*                                                                    */
+/* In this example we call a program called "DBLOGIN.EXE" to logon    */
+/* to a database and extract some data. The program reads the UserId, */
+/* the Password and the name of the database from STDIN.              */
+/* It writes all input (including the password!) also to STDOUT.      */
+/* To suppress the report of the Password on the screen we filter the */
+/* output of the program before printing it to the screen.            */
+/*                                                                    */
+/* Use <A HREF="505_L4H_DummyprogramfortheRE.html">DBLOGIN.CMD</A> to test this program.                              */
+/*                                                                    */
+/* Note that the method used in this program is only possible for     */
+/* textmode programs using only STDIN, STDOUT and STDERR for input    */
+/* and output!                                                        */
+/*                                                                    */
+/* (see also <A HREF="506_L3_Navigateanotherprogr.html">Navigate another program</A>)                                */
+/*                                                                    */
+/*                                                                    */
+/* History:                                                           */
+/*   23.03.1996 /bs                                                   */
+/*     - initial release                                              */
+/*                                                                    */
+/* (c) 1996 <A HREF="002_L1_GeneralForeword.html">Bernd Schemmer</A>, Germany, EMail: Bernd.Schemmer@gmx.de     */
+/*                                                                    */
+
+                    /* turn off CTRL-BREAK                            */
+  signal OFF halt
+
+                    /* init some global variables                     */
+
+                    /* name of the program to call                    */
+                    /* Note: We are using the .CMD for test purposes  */
+                    /*       only!                                    */
+  exeToCall = "<A HREF="505_L4H_DummyprogramfortheRE.html">DBLOGIN.CMD</A>"
+
+                    /* name of the default database                   */
+  defDatabase = "TestDB"
+
+                    /* default user ID                                */
+  defUserID = "TestUser"
+
+                    /* parameter to distinguish between the calls     */
+  Pass2Marker = "$$SECOND$$"
+  Pass3Marker = "$$THIRD$$"
+  Pass4Marker = "$$FOURTH$$"
+
+  EndOfProgram = "$$END$$"
+
+                    /* get the parameter of this program              */
+  parse upper arg thisPass .
+
+                    /* check in which pass we are running             */
+  select
+
+    when ThisPass = pass4Marker then
+    do
+                    /* fourth pass - read the output from the program */
+                    /*               filter it and write it to STDOUT */
+
+                    /* ---------------------------------------------- */
+                    /* STDIN  in this pass is STDOUT from Pass 3      */
+                    /* STDOUT in this pass is the screen              */
+                    /* ---------------------------------------------- */
+      call ExecutePass4
+
+    end /* when */
+
+    when ThisPass = pass3Marker then
+    do
+                    /* third pass  - call the program and write the   */
+                    /*               end marker to STDOUT after       */
+                    /*               the program stops                */
+
+                    /* ---------------------------------------------- */
+                    /* STDIN  in this pass is STDOUT from Pass 2      */
+                    /* STDOUT in this pass is STDIN for Pass 4        */
+                    /* ---------------------------------------------- */
+
+      parse arg . pass3Parms
+
+      call ExecutePass3 pass3Parms
+
+    end /* when */
+
+    when ThisPass = pass2Marker then
+    do
+                    /* second pass - read the input for the program   */
+                    /*               from the REXX queue and write it */
+                    /*               to STDOUT                        */
+
+                    /* ---------------------------------------------- */
+                    /* STDIN  in this pass is the keyboard (not used, */
+                    /* this pass reads the input from the REXX queue) */
+                    /* STDOUT in this pass is STDIN for Pass 3        */
+                    /* ---------------------------------------------- */
+
+      call ExecutePass2
+
+    end /* when */
+
+    otherwise
+    do
+                    /* first pass - get the user input and call the   */
+                    /*              EXE with redirected STDIN, STDOUT */
+                    /*              and STDERR.                       */
+
+                    /* get the parameter for the program to call      */
+      parse arg ParameterForEXE
+
+                    /* ---------------------------------------------- */
+                    /* STDIN  in this pass is the keyboard            */
+                    /* STDOUT in this pass is the screen              */
+                    /* ---------------------------------------------- */
+
+      call ExecutePass1
+
+    end /* otherwise */
+
+  end /* select */
+
+exit
+                    /* error handler for CTRl-BREAK                   */
+UserAbort:
+
+  call LineOut , "Program aborted by the user!"
+exit 1
+
+/* ------------------------------------------------------------------ */
+/* function: execute pass 1                                           */
+/*                                                                    */
+/* call:     ExecutePass1                                             */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  -                                                        */
+/*                                                                    */
+ExecutePass1:
+
+                    /* first pass - get the user input and call the   */
+                    /*              EXE with redirected STDIN, STDOUT */
+                    /*              and STDERR.                       */
+
+                    /* turn on CTRL-BREAK in pass 1                   */
+  signal ON halt name UserAbort
+
+                    /* show the logo                                  */
+  call LineOut
+  call LineOut , "*** DBLOGIN - Get Data from our database ***"
+  call LineOut
+
+                    /* flush the queue                                */
+  do while queued() &lt;&gt; 0
+    parse pull
+  end /* do while queued() &lt;&gt; 0 */
+
+                    /* check the ANSI status                          */
+                    /* We need ANSI support to suppress the printing  */
+                    /* of the password to the screen!                 */
+  curAnsiStatus = CheckAnsi()
+  if curAnsiStatus &lt;&gt; 1 then
+  do
+                    /* turn ANSI support on                           */
+    "@ANSI ON 2&gt;NUL | rxqueue 2&gt;NUL"
+
+                    /* check if the command was successful            */
+    if CheckAnsi() &lt;&gt; 1 then
+    do
+      call LineOut , "Error: Cannot turn ANSI support on!"
+      exit 254
+    end /* if CheckAnsi() &lt;&gt; 1 then */
+  end /* if curAnsiStatus &lt;&gt; 1 then */
+
+                    /* get the name and path of this file             */
+  parse source . . prog.__Name
+  thisDir = fileSpec( "D", prog.__Name ) || ,
+            fileSpec( "P", prog.__Name )
+
+                    /* search the program to call                     */
+                    /* The program to call has to be in the current   */
+                    /* directory or in the directory where this       */
+                    /* wrapper program resides.                       */
+  select
+
+    when stream( ".<!-- entering slot 522 -->\" || exeToCall, "c", "QUERY EXISTS" ) &lt;&gt; "" then
+      exeToCall = ".\" || exeToCall
+
+    when stream( thisDir || exeToCall, "c", "QUERY EXISTS" ) &lt;&gt; "" then
+      exeToCall = thisDir || exeToCall
+
+    otherwise
+    do
+      call LineOut , "Error: Cannot find " || exeToCall || "!"
+      exit 255
+    end /* otherwise */
+
+  end /* select */
+
+  call LineOut , "  Using the program " exeToCall
+  call LineOut
+
+                    /* get the data from the user                     */
+
+  call CharOut , "  Please enter the UserID (def.: " || ,
+                 defUserID || "): "
+  myUserID = lineIn()
+  if myUserID = "" then
+    myUserID = defUserID
+
+  myPassWord = GetPassword( "  Please enter the Password: " )
+
+  call CharOut , "  Please enter the database (def.: " || ,
+                 defDataBase || "): "
+  myDataBase = lineIn()
+  if myDataBase = "" then
+    myDataBase = defDataBase
+
+                    /* copy the user input to the queue               */
+  queue MyUserID
+  queue MyPassword
+  queue MyDataBase
+
+  call LineOut, "  Now calling " || exeToCall || " ..."
+
+                    /* turn CTRL-BREAK off                            */
+  signal off HALT
+
+                    /* call the program                               */
+  "@cmd /c  " prog.__Name pass2Marker "|" ,
+              prog.__Name pass3Marker exeToCall ParameterForEXE "2&gt;&gt;&amp;1 |" ,
+              prog.__Name pass4Marker
+
+                    /* restore the ANSI status if neccessary          */
+  if curAnsiStatus &lt;&gt; 1 then
+    "@ANSI OFF 2&gt;NUL | rxqueue 2&gt;NUL"
+
+RETURN
+
+/* ------------------------------------------------------------------ */
+/* function: execute pass 2                                           */
+/*                                                                    */
+/* call:     ExecutePass2                                             */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  -                                                        */
+/*                                                                    */
+ExecutePass2: PROCEDURE
+                    /* second pass - read the input for the program   */
+                    /*               from the REXX queue and write it */
+                    /*               to STDOUT                        */
+  do while queued() &lt;&gt; 0
+    parse pull nextLine
+    call LineOut, nextLine
+  end /* do while queued() &lt;&gt; 0 */
+
+RETURN
+
+/* ------------------------------------------------------------------ */
+/* function: execute pass 3                                           */
+/*                                                                    */
+/* call:     ExecutePass3 parameters                                  */
+/*                                                                    */
+/* where:    parameters - command to execute (prog and parms)         */
+/*                                                                    */
+/* returns:  "RC = nn" where nn is the return code of the program     */
+/*           or "nn" where nn is an error no. in case of an error     */
+/*                                                                    */
+ExecutePass3: PROCEDURE expose EndOfProgram
+                    /* third pass  - call the program and write the   */
+                    /*               end marker to STDOUT after       */
+                    /*               the program stops                */
+
+                    /* init the return code                           */
+  rc = 0
+
+                    /* install local error handlers                   */
+  signal on syntax   name pass3End
+  signal on error    name pass3End
+  signal on halt     name pass3End
+  signal on notready name pass3End
+
+  parse arg pass3Parms
+
+                    /* call the program                               */
+                    /* the use of "cmd /c" _IS_ necessary to avoid    */
+                    /* endless loops if the user presses CTRL-BREAK   */
+                    /* while running the program!                     */
+  "@cmd /c " || pass3Parms
+  rc = "RC = " || rc
+
+pass3End:
+                    /* write the end of program marker                */
+                    /* This marker is necessary for Pass 4 to detect  */
+                    /* that the program has ended!                    */
+  call LineOut , EndOfProgram
+
+RETURN rc
+
+/* ------------------------------------------------------------------ */
+/* function: execute pass 4                                           */
+/*                                                                    */
+/* call:     ExecutePass4                                             */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  -                                                        */
+/*                                                                    */
+ExecutePass4: PROCEDURE expose endOfProgram
+                    /* fourth pass - read the output from the program */
+                    /*               filter it and write it to STDOUT */
+  do forever
+    call CharOut , "  --&gt; "
+
+                /* get the next line from the output of the program   */
+    thisLine = lineIn()
+    testLine = translate( strip( thisLine ) )
+
+                    /* check if the program has ended                 */
+    if testLine = endOfProgram then
+      leave
+    else
+    do
+                    /* filter the output lines                        */
+      if pos( "PASSWORT", testLine ) | ,
+         pos( "PASSWORD", testLine ) &lt;&gt; 0 then
+        call LineOut, "*** Password entered ***"
+      else
+        call LineOut, thisLine
+    end /* else */
+
+  end /* do forever */
+
+RETURN
+
+/* ------------------------------------------------------------------ */
+/* function: get a password from the user (without showing it on the  */
+/*           screen)                                                  */
+/*                                                                    */
+/* call:     GetPassword( {prompt} )                                  */
+/*                                                                    */
+/* where:    prompt - prompt string                                   */
+/*                    def.: none                                      */
+/*                                                                    */
+/* returns:  the entered password                                     */
+/*                                                                    */
+/* note:     This code only works with ANSI enabled                   */
+/*                                                                    */
+/*                                                                    */
+GetPassword: PROCEDURE
+  parse arg prompt
+
+                    /* show the prompt (if any) and set the screen   */
+                    /* attributes to notvisible                      */
+  call CharOut , prompt || "1B"x || "[8m"
+
+                    /* get the user input                            */
+  parse pull password
+                    /* reset the screen attributes                   */
+  call CharOut , "1B"x || "[0m"
+
+RETURN password
+
+/* ------------------------------------------------------------------ */
+/* function: Check if ANSI is activated                               */
+/*                                                                    */
+/* call:     CheckAnsi                                                */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  1 - ANSI support detected                                */
+/*           0 - no ANSI support available                            */
+/*          -1 - error detecting ansi                                 */
+/*                                                                    */
+/* note:     Tested with the German and the US version of OS/2 3.0    */
+/*                                                                    */
+/*                                                                    */
+CheckAnsi: PROCEDURE
+  thisRC = -1
+
+  trace off
+                         /* install a local error handler              */
+  SIGNAL ON ERROR Name InitAnsiEnd
+
+  "@ANSI 2&gt;NUL | rxqueue 2&gt;NUL"
+
+  thisRC = 0
+
+  do while queued() &lt;&gt; 0
+    queueLine = lineIN( "QUEUE:" )
+    if pos( " on.", queueLine ) &lt;&gt; 0 | ,                       /* USA */
+       pos( " (ON).", queueLine ) &lt;&gt; 0 then                    /* GER */
+      thisRC = 1
+  end /* do while queued() &lt;&gt; 0 */
+
+InitAnsiEnd:
+RETURN thisRC
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="503_L3_Usingafileassemaphor.html">[Back: Using a file as semaphore]</A> <BR>
+<A HREF="505_L4H_DummyprogramfortheRE.html">[Next: Dummy program for the REXX Wrapper]</A> 
+</BODY>
+</HTML>

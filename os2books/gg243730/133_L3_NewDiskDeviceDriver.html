@@ -1,0 +1,109 @@
+<HTML>
+<HEAD>
+<TITLE>New Disk Device Driver</TITLE>
+</HEAD>
+<BODY>
+<H1>New Disk Device Driver</H1><!-- entering slot 148 -->
+<P>
+A new disk device driver interface has been defined for use by OS/2 V2.0
+file systems. The request-passing mechanism employs a request list of prioritized
+commands which the device driver may reorder to optimize access.  Read and
+write operations use scatter/gather descriptors (as used by SCSI adapters)
+allowing data transfer to and from discontiguous memory buffers.  The interface
+is designed to be data-structure compatible with future versions of OS/2
+in order to minimize work at the time of migration.
+<P>
+With this extended device driver support, both the standard OS/2 interface
+(using ABIOS read/write) and the new high performance interface (using the
+ABIOS Transfer SCB) allow both OS/2 file systems and the OS/2 kernel to
+access the disk.
+<P>
+The following is a summary of the device driver changes:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->The disk device driver records the information indicating
+the type of DASD (ESDI/ST506 or SCSI) and the level of caching support for
+each logical drive (LID)<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Support is provided for the new device command<B> 1Dh
+- GetDeviceSupport</B>.  The device driver will return addresses to two
+structures in the request packet:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 7 -->The<I> Driver Capabilities Structure (DCS)</I> indicates
+the specific features that are supported by the device driver
+<P>
+Examples are disk mirroring, disk duplexing and whether the device supports
+more than 16MB of memory.<!-- lm: 0x2 3 -->
+<P>
+ <LI><LI><!-- lm: 0x2 7 -->The<I> Volume Characteristics Structure (VCS)
+</I>for the device identified by the unit code in the device command
+<P>
+Examples of characteristics reported in this structure are read-only, removable
+media, average seek time, outboard caching supported, SCB protocol supported
+and read prefetch supported.<!-- lm: 0x2 2 --><!-- lm: 0x2 0 -->
+</UL> <!-- lm: 0x2 2 -->
+<UL>Support
+is provided for the new device command<B> 1Ch - ExecuteChain</B><!-- lm: 0x2 0 -->
+</UL> <!-- lm: 0x2 2 -->
+<UL>Support
+is provided for the new device commands<B> 1Eh, 1Fh, and 20h - Read, Write
+and WriteVerify</B><!-- lm: 0x2 0 -->
+</UL> <!-- lm: 0x2 2 -->
+<UL>Support
+is provided for the new device command<B> 21h - Prefetch</B><!-- lm: 0x2 0 -->
+</UL> <!-- lm: 0x2 2 -->
+<UL>I/O
+requests are placed on the device queue based on a priority passed in the
+request list
+<P>
+To optimize the I/O operation, all requests are sorted in logical block
+number sequence.  If a specific flag is on in the request list indicating
+that the execution order is critical, then the list will not be sorted.
+
+<P>
+The possible priorities are:<B><I><!-- lm: 0x2 3 -->
+<UL>
+<P>
+Priority<!-- lm: 0x2 13 -->
+<UL> Meaning</B></I><!-- lm: 0x2 3 -->
+</UL><B> 00h
+</B><!-- lm: 0x2 13 -->
+<UL>Prefetch requests<!-- lm: 0x2 3 -->
+</UL><B> 01h
+</B><!-- lm: 0x2 13 -->
+<UL>Low priority request - (lazy-write)<!-- lm: 0x2 3 -->
+</UL><B> 02h
+</B><!-- lm: 0x2 13 -->
+<UL>Read ahead, low priority pager I/O<!-- lm: 0x2 3 -->
+</UL><B> 04h
+</B><!-- lm: 0x2 13 -->
+<UL>Background synchronous user I/O<!-- lm: 0x2 3 -->
+</UL><B> 08h
+</B><!-- lm: 0x2 13 -->
+<UL>Foreground synchronous user I/O<!-- lm: 0x2 3 -->
+</UL><B> 10h
+</B><!-- lm: 0x2 13 -->
+<UL>High priority pager I/O<!-- lm: 0x2 3 -->
+</UL><B> 80h
+</B><!-- lm: 0x2 13 -->
+<UL>Urgent request - used by kernel in critical
+situations.<!-- lm: 0x2 2 --><!-- lm: 0x2 0 -->
+</UL> <!-- lm: 0x2 2 -->
+<UL>Calling
+threads with<B> ExecuteChain()</B> requests are no longer blocked by the
+device driver strategy routine
+<P>
+The strategy routine instead returns control to the caller after the I/O
+is initiated or queued.<!-- lm: 0x2 0 -->
+</UL> <!-- lm: 0x2 2 -->
+<UL>Upon
+I/O completion, the device driver calls the notification routine specified
+in the request list.<!-- lm: 0x2 0 -->
+</UL>
+
+<P><HR>
+
+<A HREF="132_L3_DeviceHelperFunction.html">[Back: Device Helper Functions]</A> <BR>
+<A HREF="134_L3_LayeredDeviceDriverA.html">[Next: Layered Device Driver Architecture]</A> 
+</BODY>
+</HTML>

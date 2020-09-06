@@ -1,0 +1,125 @@
+<HTML>
+<HEAD>
+<TITLE>Critical Sections</TITLE>
+</HEAD>
+<BODY>
+<H1>Critical Sections</H1><!-- entering slot 212 -->
+<P>
+When a thread enters critical section it effectively suspends all other
+threads in its process. There is an exception to this. If a signal is sent
+to the process and a signal handler is registered, then thread 1 will be
+dispatched to run the signal handler regardless of critical section.
+<P>
+The critical section thread may voluntarily block.
+<P>
+Other threads may attempt to become ready. If this happens the dispatcher
+will temporarily suspend them in<B> crt</B> state.
+<P>
+The appearance of the<B> crt</B>  state certainly guarantees that another
+thread in the same process is in critical section. However, the converse
+in not true:  the absence of<B> crt</B> does not preclude another thread
+from being in a critical section.
+<P>
+If a thread running in Critical Section blocks on a resource owned by any
+other thread in the same process then a deadlock will result.  Because of
+this it is unwise to call any System API when in Critical Section.
+<P>
+Thread running in Critical Section have their TCB address stored in their
+process's PTDA at ptda_pTCBCritSec.
+<P>
+The following example illustrates locating the critical section thread in
+a process.
+<PRE># .p
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 0001  0001 0000 0000 0001 blk 0100 ffe4b000 ffe4c7dc ffe4c624 0e84 00 *ager
+ 0002  0001 0000 0000 0002 blk 0200 7a49e000 ffe4c7dc 7b49c020 0f44 00 *tsd
+ 0003  0001 0000 0000 0003 blk 0200 7a49f000 ffe4c7dc 7b49c1d8 0f54 00 *ctxh
+ 0004  0001 0000 0000 0004 blk 0800 7a4a0000 ffe4c7dc 7b49c390 0f24 00 *kdb
+ 0005  0001 0000 0000 0005 blk 0800 7a4a1000 ffe4c7dc 7b49c548 0f40 00 *lazyw
+ 000a  0004 0000 0004 0001 blk 0200 7a4a6000 7b655068 7b49cde0      00 LANMSGEX
+*000c# 0006 0000 0006 0001 blk 0804 7a4a8000 7b6560b0 7b49d150 0c94 00 CNTRL
+ 000d  0006 0000 0006 0002 blk 0804 7a4a9000 7b6560b0 7b49d308      00 CNTRL
+ 000e  0006 0000 0006 0003 blk 0804 7a4aa000 7b6560b0 7b49d4c0 0f04 00 CNTRL
+ 000f  0006 0000 0006 0004 blk 0804 7a4ab000 7b6560b0 7b49d678 0f04 00 CNTRL
+ 0010  0006 0000 0006 0005 blk 0804 7a4ac000 7b6560b0 7b49d830      00 CNTRL
+ 0011  0006 0000 0006 0006 blk 0804 7a4ad000 7b6560b0 7b49d9e8 0cc4 00 CNTRL
+ 0012  0006 0000 0006 0007 blk 0804 7a4ae000 7b6560b0 7b49dba0 0f04 00 CNTRL
+ 0013  0006 0000 0006 0008 blk 0804 7a4af000 7b6560b0 7b49dd58 0cb0 00 CNTRL
+ 0007  0007 0001 0007 0001 blk 0500 7a4a3000 7b6568d4 7b49c8b8 0ebc 01 PMSHL32
+ 000b  0007 0001 0007 0002 blk 0800 7a4a7000 7b6568d4 7b49cf98      01 PMSHL32
+ 0009  0007 0001 0007 0003 blk 0800 7a4a5000 7b6568d4 7b49cc28      01 PMSHL32
+ 0014  0007 0001 0007 0004 blk 0800 7a4b0000 7b6568d4 7b49df10      01 PMSHL32
+ 0015  0007 0001 0007 0005 blk 0800 7a4b1000 7b6568d4 7b49e0c8      01 PMSHL32
+ 0006  0007 0001 0007 0006 blk 0200 7a4a2000 7b6568d4 7b49c700      01 PMSHL32
+ 0018  0007 0001 0007 0007 blk 0200 7a4b4000 7b6568d4 7b49e5f0 0ed4 01 PMSHL32
+ 0019  0007 0001 0007 0008 blk 0200 7a4b5000 7b6568d4 7b49e7a8      01 PMSHL32
+ 001a  0007 0001 0007 0009 blk 0200 7a4b6000 7b6568d4 7b49e960      01 PMSHL32
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 001b  0007 0001 0007 000a blk 0800 7a4b7000 7b6568d4 7b49eb18      01 PMSHL32
+ 001c  0007 0001 0007 000b blk 0800 7a4b8000 7b6568d4 7b49ecd0      01 PMSHL32
+ 001d  0007 0001 0007 000c blk 0800 7a4b9000 7b6568d4 7b49ee88      01 PMSHL32
+ 001e  0007 0001 0007 000d blk 0804 7a4ba000 7b6568d4 7b49f040      01 PMSHL32
+ 001f  0007 0001 0007 000e blk 0804 7a4bb000 7b6568d4 7b49f1f8      01 PMSHL32
+ 0020  0007 0001 0007 000f blk 0500 7a4bc000 7b6568d4 7b49f3b0      01 PMSHL32
+ 0021  0007 0001 0007 0010 blk 0200 <!-- entering slot 213 -->7a4bd000 7b6568d4 7b49f568 0ebc 01 PMSHL32
+ 002f  0012 0007 0012 0001 blk 0200 7a4cb000 7b658140 7b4a0d78      15 CMD
+ 002e  0011 0007 0011 0001 blk 0200 7a4ca000 7b65791c 7b4a0bc0      14 CMD
+ 0026  000b 0007 000b 0001 blk 0400 7a4c2000 7b6570f8 7b49fe00 0ebc 12 CMD
+ 0023  000a 0007 000a 0001 blk 0500 7a4bf000 7b654844 7b49f8d8 0ebc 11 PMSHL32
+ 0024  000a 0007 000a 0002 blk 0200 7a4c0000 7b654844 7b49fa90      11 PMSHL32
+ 0025  000a 0007 000a 0003 blk 0200 7a4c1000 7b654844 7b49fc48 0ebc 11 PMSHL32
+ 0022  000a 0007 000a 0004 blk 0200 7a4be000 7b654844 7b49f720      11 PMSHL32
+ 0027  000a 0007 000a 0005 blk 0200 7a4c3000 7b654844 7b49ffb8 0ed4 11 PMSHL32
+ 0028  000a 0007 000a 0006 blk 0200 7a4c4000 7b654844 7b4a0170      11 PMSHL32
+ 0029  000a 0007 000a 0007 blk 0200 7a4c5000 7b654844 7b4a0328      11 PMSHL32
+ 002a  000a 0007 000a 0008 blk 0200 7a4c6000 7b654844 7b4a04e0      11 PMSHL32
+ 002c  000a 0007 000a 000a blk 0200 7a4c8000 7b654844 7b4a0850 0eb0 11 PMSHL32
+ 002d  000a 0007 000a 000b blk 0200 7a4c9000 7b654844 7b4a0a08 0ebc 11 PMSHL32
+ 0008  0008 0007 0008 0001 blk 0800 7a4a4000 7b654020 7b49ca70      00 HARDERR
+ 0016  0008 0007 0008 0002 blk 0800 7a4b2000 7b654020 7b49e280      00 HARDERR
+ 0017  0008 0007 0008 0003 blk 0800 7a4b3000 7b654020 7b49e438      00 HARDERR
+ 002b  0013 0011 0013 0001 blk 0200 7a4c7000 7b65588c 7b4a0698      14 DEMORUN
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 0030  0014 0013 0014 0001 blk 0200 7a4cc000 7b658964 7b4a0f30      14 CMD
+ 0031  0015 0014 0015 0001 crt 0809 7a4cd000 7b659188 7b4a10e8 0f24 14 DEMOCRT
+ 0032  0015 0014 0015 0002 crt 080b 7a4ce000 7b659188 7b4a12a0 0f0c 14 DEMOCRT
+ 0033  0015 0014 0015 0003 blk 080b 7a4cf000 7b659188 7b4a1458 0cc4 14 DEMOCRT
+ 0034  0015 0014 0015 0004 crt 011e 7a4d0000 7b659188 7b4a1610 0f20 14 DEMOCRT
+ 0035  0015 0014 0015 0005 crt 080f 7a4d1000 7b659188 7b4a17c8 0f0c 14 DEMOCRT
+ 0036  0015 0014 0015 0006 blk 080a 7a4d2000 7b659188 7b4a1980 0c04 14 DEMOCRT
+ 003c  0015 0014 0015 0007 blk 080a 7a4d8000 7b659188 7b4a23d0 0eb8 14 DEMOCRT
+ 0038  0015 0014 0015 0008 blk 080a 7a4d4000 7b659188 7b4a1cf0      14 DEMOCRT
+ 0039  0015 0014 0015 0009 blk 080a 7a4d5000 7b659188 7b4a1ea8      14 DEMOCRT
+ 003a  0015 0014 0015 000a crt 080c 7a4d6000 7b659188 7b4a2060 0f0c 14 DEMOCRT
+ 003b  0015 0014 0015 000b blk 080c 7a4d7000 7b659188 7b4a2218 0c80 14 DEMOCRT
+
+# dd %7b659188+ptda_ptcbcritsec-ptda_start l1
+%7b6596c0  7b4a23d0
+
+# dw %7b4a23d0 l2
+%7b4a23d0  0007 003c
+
+# .pb 3c
+ Slot  Sta BlockID  Name     Type        Addr        Symbol
+ 003c  blk fffe0027 DEMOCRT  RamSem    00bf:0024
+</PRE>
+
+<P>
+In this example pid 15 is stuck, threads are either blocked or suspended
+by critical section.
+<P>
+From the PTDA we find the critical section TCB address. From this we can
+either scan the .P listing for the TCB address or look at the second word,
+which contains the slot number for the thread.
+<P>
+The critical section thread has blocked on a RAMSEM whose address is<B> 00bf:0024</B>.
+Since the selector is less than<B> 2007</B> this has to be in its private
+arena. This is significant:<!-- entering slot 214 --> only another thread
+in the same process could possibly post this semaphore.
+
+<P><HR>
+
+<A HREF="162_L5_PreemptionandPriorit.html">[Back: Pre-emption and Priority Calculation]</A> <BR>
+<A HREF="164_L5_SuspensionandFreezin.html">[Next: Suspension and Freezing]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,290 @@
+<HTML>
+<HEAD>
+<TITLE>Debugging on OS/2 Warp (PowerPC Edition)</TITLE>
+</HEAD>
+<BODY>
+<H1>Debugging on OS/2 Warp (PowerPC Edition)</H1><!-- entering slot 679 -->
+<P>
+The following are the specific features available for debugging for OS/2
+Warp (PowerPC Edition):<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 --><B>PowerPC-specific debug buffer:</B> The debug
+buffer is specified in the value field of DBG_C_Connect command as follows:
+<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->Intel:
+<PRE>DBG_L_386
+</PRE>
+
+<P>
+This is not defined in bsedos.h.<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->PowerPC:
+<PRE>DBG_L_PPC
+</PRE>
+
+<P>
+This is defined in bsedos.h.<!-- lm: 0x2 6 --><!-- lm: 0x2 2 -->
+</UL>  2.<!-- lm: 0x2 6 -->
+<UL><B>PowerPC-specific
+functions:</B><!-- lm: 0x2 7 -->
+<UL>
+<P>
+ a.<!-- lm: 0x2 11 -->
+<UL><B>DBG_C_ATTACH:</B> This debug command has the
+following parameters:<!-- lm: 0x2 11 -->
+<P>
+PID<!-- lm: 0x12 26 -->
+<UL> Process ID of debuggee<!-- lm: 0x2 11 -->
+</UL> CMD
+<!-- lm: 0x12 26 -->
+<UL>DBG_C_Attach<!-- lm: 0x2 11 -->
+</UL> VALUE<!-- lm: 0x12 26 -->
+<UL> DBG_L_PPC
+<!-- lm: 0x2 11 -->
+</UL>This command is defined as follows:<!-- lm: 0x2 13 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 16 -->For clients in bsedos.h<!-- lm: 0x2 13 -->
+<BR>
+<LI><!-- lm: 0x2 16 -->For servers in server\include\debug_types.h as follows:
+
+<PRE>      #define DBG_L_PPC       2
+</PRE>
+<!-- lm: 0x2 11 -->
+</UL>This command returns:<!-- lm: 0x2 11 -->
+<P>
+DBG_N_Success<!-- lm: 0x12 36 -->
+<UL> Attachment made<!-- lm: 0x2 11 -->
+</UL> DBG_N_Error
+<!-- lm: 0x12 36 -->
+<UL>Any OS/2-defined error<!-- lm: 0x2 11 -->
+</UL> This
+command allows attaching to a currently running task.
+<P>
+<B>Note: </B> A DBG_C_Connect does not need to be issued because DBG_C_Attach
+will perform the connection.  Also, because the debugger did not start the
+task, it will not have a parent/child relationship as in a DBG_C_Connect.
+
+<P>
+DosDebug generates the following notifications:<!-- lm: 0x2 12 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 16 -->DBG_N_ModuleLoad notifications for all loaded
+modules<!-- lm: 0x2 12 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 16 -->DBG_N_ThreadCreate notifications for all active
+threads in task<!-- lm: 0x2 11 -->
+</UL><B> Note: </B> Unlike DBG_C_Connect,
+there will not be any DBG_N_ModuleInit notifications because the task is
+most likely already in _main.<!-- lm: 0x2 7 -->
+</UL>  b.<!-- lm: 0x2 11 -->
+<UL><B>DBG_C_Detach:
+</B>This debug command has the following parameters:<!-- lm: 0x2 11 -->
+<P>
+PID<!-- lm: 0x12 26 -->
+<UL> Process ID of debuggee<!-- lm: 0x2 11 -->
+</UL> CMD
+<!-- lm: 0x12 26 -->
+<UL>DBG_C_Detach<!-- lm: 0x2 11 -->
+</UL> This command
+returns:<!-- lm: 0x2 11 -->
+<P>
+DBG_N_Success<!-- lm: 0x12 36 -->
+<UL> Attachment made<!-- lm: 0x2 11 -->
+</UL> DBG_N_Error
+<!-- lm: 0x12 36 -->
+<UL>Any OS/2-defined error<!-- lm: 0x2 11 -->
+</UL> This
+command detaches from attached and connected tasks. The specified task is
+resumed and all debugging hooks are removed.
+<P>
+<B>Note: </B> This is the only call that will cleanly turn off debugging
+and resume the specified task. DBG_C_Term will kill the task whether it
+was connected or attached.<!-- lm: 0x2 6 --><!-- lm: 0x2 2 -->
+</UL>  3.<!-- lm: 0x2 6 -->
+<UL><B>PowerPC-specific
+notifications:</B> are as follows:<!-- lm: 0x2 7 -->
+<UL>
+<P>
+ a.<!-- lm: 0x2 11 -->
+<UL>DBG_N_ModuleInit: Module initialization routine
+about to run. This notification is the same format as DBG_N_ModuleLoad.
+<!-- lm: 0x2 11 -->
+<BR>
+CMD<!-- lm: 0x12 26 -->
+<UL> DBG_N_ModuleInit<!-- lm: 0x2 11 -->
+</UL> Value
+<!-- lm: 0x12 26 -->
+<UL>MTE (module handle)<!-- lm: 0x2 11 -->
+</UL> Addr
+<!-- lm: 0x12 26 -->
+<UL>0<!-- lm: 0x2 11 --><!-- lm: 0x2 7 -->
+</UL> b.<!-- lm: 0x2 11 -->
+<UL>DBG_N_ReadyToRunMain: Debuggee thread 1
+ready to run _start. Issued after all import DLL Init/Term routines have
+completed. This allows the debugger to know that the debugged task has finished
+loading and is ready to run.
+<P>
+<B>Note: </B> For descendant debuggee tasks, DBG_N_NewProc will be sent
+instead.<!-- lm: 0x2 11 --> CMD<!-- lm: 0x12 26 -->
+<UL> DBG_N_ReadyToRunMain
+<!-- lm: 0x2 11 -->
+</UL>Value<!-- lm: 0x12 26 -->
+<UL> Process ID of debuggee
+<!-- lm: 0x2 11 --><!-- lm: 0x2 6 --><!-- lm: 0x2 2 -->
+</UL> 4.<!-- lm: 0x2 6 -->
+<UL><B>DBG_C_Go
+and DBG_C_SStep:</B> will stop and return any pending notifications.<!-- lm: 0x2 2 -->
+</UL>
+5.<!-- lm: 0x2 6 -->
+<UL><B>Serialization of command execution:</B> All
+notifications other than DBG_N_Success and DBG_N_Error must be acknowledged
+through DBG_C_Continue before processing resumes or another notification
+can be grabbed.  Thus, only GO/SStep and Stop (to prevent retrieving a pending
+notification) will be prevented from running.  All other subcommands can
+be executed.
+<P>
+DosDebug informs the debugger that a notification has been returned, but
+not acknowledged.  If you issue a Go/SStep/Stop and get the following synchronous
+notification, then you must issue a DBG_C_Continue before resuming execution.
+
+<PRE>       rc = DosDebug() = 0;
+       puDB-&gt;Cmd   = DBG_N_Error;
+       puDB-&gt;Value = ERROR_INVALID_FUNCTION;
+</PRE>
+
+<P>
+The following code segments illustrate the use of various commands:
+<PRE>/*********************************************************************/
+/* Connect and grab all pending DBG_N_ThreadCreate, DBG_N_ModuleInit */
+/* and DBG_N_ModuleLoad notifications. Note, Stop returns            */
+/* DBG_N_Success when there are no more notifications.               */
+/*********************************************************************/
+
+      DBG_C_Connect
+
+      DBG_C_Stop
+      while ( puDB-&gt;Cmd <!-- entering slot 680 -->!= DBG_N_Success ) {
+        DBG_C_Continue w XCPT_CONTINUE_STOP
+        DBG_C_Stop
+      }
+</PRE>
+
+<PRE>/**********************************************************************/
+/* Go until certain notification occurs. This loop will also grab any */
+/* pending notifications that are outstanding since DBG_C_Go won't    */
+/* execute if any notifications are pending.                          */
+/**********************************************************************/
+
+
+      DBG_C_Go
+      while (debug_buffer-&gt;Cmd != Notification your looking for) {
+
+         DBG_C_Continue w XCPT_CONTINUE_STOP
+         DBG_C_GO
+      }
+
+</PRE>
+
+<PRE>/*********************************************************************/
+/* Clear all pending notifications and acknowledge each notification */
+/*********************************************************************/
+
+      DBG_C_STOP
+      while (debug_buffer-&gt;Cmd != DBG_N_Success) {
+         DBG_C_Continue w XCPT_CONTINUE_STOP
+         DBG_C_STOP
+      }
+
+</PRE>
+<!-- lm: 0x2 2 -->
+</UL> 6.<!-- lm: 0x2 6 -->
+<UL><B>Per task serialization
+of all DosDebug subcommands:</B> A debugger can be multi-threaded.  If the
+debugger issues subcommands for different tasks they can run concurrently.
+ If the debugger issues subcommands for the same task they will be serialized.
+<!-- lm: 0x2 2 -->
+</UL> 7.<!-- lm: 0x2 6 -->
+<UL><B>Breakpoint exceptions
+(trap word instruction):</B> Debugger must increment IP to next instruction
+(+4) whenever a breakpoint exception occurs.<!-- lm: 0x2 2 -->
+</UL>  8.<!-- lm: 0x2 6 -->
+<UL><B>DBG_N_Exception
+notification:</B> Returns Thread ID of thread taking exception in debug_buffer-&gt;TID
+field. When responding to exception notifications use the proper Thread
+ID in the DBG_C_Continue call.<!-- lm: 0x2 2 -->
+</UL>  9.<!-- lm: 0x2 6 -->
+<UL><B>Unsupported
+or not working for the PowerPC:</B><!-- lm: 0x2 7 -->
+<UL>
+<P>
+ a.<!-- lm: 0x2 11 -->
+<UL>Calls to these commands will result in a DBG_C_Null:
+<!-- lm: 0x2 13 -->
+<UL>
+<BR>
+<LI><!-- lm: 0x2 16 -->DBG_C_XchngOpcode<!-- lm: 0x2 13 -->
+<BR>
+<LI><!-- lm: 0x2 16 -->DBG_C_RangeStep<!-- lm: 0x2 13 -->
+<BR>
+<LI><!-- lm: 0x2 16 -->DBG_C_MapRWAlias<!-- lm: 0x2 13 -->
+<BR>
+<LI><!-- lm: 0x2 16 -->DBG_C_UnMapAlias<!-- lm: 0x2 13 -->
+<BR>
+<LI><!-- lm: 0x2 16 -->DBG_C_MapROAlias<!-- lm: 0x2 13 -->
+<BR>
+<LI><!-- lm: 0x2 16 -->DBG_C_LinToSel<!-- lm: 0x2 13 -->
+<BR>
+<LI><!-- lm: 0x2 16 -->DBG_C_SelToLin<!-- lm: 0x2 11 --><!-- lm: 0x2 7 -->
+</UL> b.<!-- lm: 0x2 11 -->
+<UL>Global scope watchpoints: Watchpoint effective
+in the context of any task currently not allowed.<!-- lm: 0x2 7 -->
+</UL> c.<!-- lm: 0x2 11 -->
+<UL>Descendant (task or session) debugging not
+working.<!-- lm: 0x2 12 -->
+<UL>  1.<!-- lm: 0x2 16 -->
+<UL>EXEC_ASYNCRESULTDB:
+Tasking flag will act like EXEC_TRACE<!-- lm: 0x2 12 -->
+</UL> 2.<!-- lm: 0x2 16 -->
+<UL>SSF_TRACEOPT_TRACEALL:  Session flag will
+act like SSF_TRACEOPT_TRACE<!-- lm: 0x2 12 -->
+</UL> 3.<!-- lm: 0x2 16 -->
+<UL>DBG_N_ProcNew notification never sent<!-- lm: 0x2 11 --><!-- lm: 0x2 6 --><!-- lm: 0x2 2 -->
+</UL> 10.<!-- lm: 0x2 6 -->
+<UL><B>DBG_C_NumToAddr
+and DBG_AddrToNum:</B> these functions are not fully supported on the PowerPC
+as there meaning differs between Intel and PowerPC architectures.  The following
+has been observed:<!-- lm: 0x2 7 -->
+<UL>
+<P>
+ a.<!-- lm: 0x2 11 -->
+<UL>On Intel, this should be data segment.  It appears
+to be data segment on the PowerPC:
+<PRE>    PBuf-&gt;Cmd = DBG_C_NumToAddr;    PBuf-&gt;Value = 1;
+</PRE>
+<!-- lm: 0x2 7 -->
+</UL> b.<!-- lm: 0x2 11 -->
+<UL>On Intel, this should
+be a code segment.  On the PowerPC, this is invalid:
+<PRE>    PBuf-&gt;Cmd = DBG_C_NumToAddr;
+    PBuf-&gt;Value = 2;
+</PRE>
+<!-- lm: 0x2 7 -->
+</UL> c.<!-- lm: 0x2 11 -->
+<UL>On Intel, this should
+be invalid. On the PowerPC, this appears to be code segment:
+<PRE>    PBuf-&gt;Cmd = DBG_C_NumToAddr;
+    PBuf-&gt;Value = 0;
+</PRE>
+<!-- lm: 0x2 6 --><!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="668_L2_UsingtheDebuggingFun.html">[Back: Using the Debugging Function]</A> <BR>
+<A HREF="670_L3_Summaryofbsedosh.html">[Next: Summary of bsedos.h]</A> 
+</BODY>
+</HTML>

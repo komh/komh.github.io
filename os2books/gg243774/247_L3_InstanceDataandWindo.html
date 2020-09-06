@@ -1,0 +1,80 @@
+<HTML>
+<HEAD>
+<TITLE>Instance Data and Window Words</TITLE>
+</HEAD>
+<BODY>
+<H1>Instance Data and Window Words</H1><!-- entering slot 265 -->
+<P>
+For data that is private to a particular instance of a window class, each
+window may have an area of storage associated with it, assigned by Presentation
+Manager and located within the Presentation Manager control block for that
+ window.  This area is known as the <A HREF="713_L2_windowwords.html"><B>window
+words</B></A>. The amount of space allocated for window words in a particular
+window class is variable, and is defined in the<B> WinRegisterClass()</B> function
+call at the time the class is registered to Presentation Manager.
+<P>
+It is recommended that for storage of amounts of data larger than four bytes,
+a memory object is obtained from the operating system using  the<B> DosAllocMem()
+</B>or<B> DosSubAlloc()</B> functions, and a pointer to this object is placed
+in the window words of the associated window.  An example of this technique
+is given in <A HREF="027_L2_StoringInstanceDatai.html">Figure "Storing Instance
+Data in Window Words"</A>.
+<P>
+A memory object corresponding to the size of the data structure MYSTRUCT
+is obtained from the operating system using the<B> DosAllocMem()</B> function,
+and a pointer to this memory object is set by the application. This pointer
+is then placed in the window words of the current window's parent (that
+is, the frame window) using the<B> WinSetWindowULong()</B> function, at
+offset QWL_USER.  A number of predefined Presentation Manager window classes,
+including the frame window class, contain a 32-bit word at this offset,
+which is available for application use.
+<P>
+Note the use of the PAG_COMMIT flag in the<B> DosAllocMem()</B> function
+call. This flag causes storage to be allocated immediately for the memory
+object being created, since OS/2 Version 2.0 by default uses a two-phase
+process for dynamic memory allocation.
+<P>
+The concept of committing memory is new to Version 2.0, and allows a storage
+map for the application to be defined, but the storage is not reserved in
+memory until it is needed, at which time the application may explicitly
+commit the storage using the<B> DosSetMem()</B> function.  Optionally, the
+application may set the PAG_COMMIT flag in the<B> DosAllocMem()</B> function
+call to commit the storage immediately upon allocation.
+<P>
+Failure to commit storage, either by use of the PAG_COMMIT flag or the<B> DosSetMem()
+</B>function, will result in a page fault exception (Trap 000E) when the
+application attempts to write to the storage area.  The concept of allocating
+and committing storage is explained fully in<I> OS/2 Version 2.0 - Volume
+1:  Control Program</I>, and the use of these techniques by applications
+is described in <A HREF="227_L1_TheFlatMemoryModel.html">The Flat Memory
+Model</A>.
+<P>
+After the memory object containing instance data is initially allocated,
+the window procedure may access it during processing of subsequent messages
+by issuing a<B> WinQueryWindowULong()</B> call to Presentation Manager,
+as shown in <A HREF="028_L2_RetrievingInstanceDa.html">Figure "Retrieving
+Instance Data from Window Words"</A>.
+<P>
+Upon termination of the window by the application, the window procedure
+receives a WM_DESTROY message.  As described in <A HREF="246_L3_WindowClosure.html">Window
+Closure</A> , the window procedure should process this message by releasing
+any resources to which it has access.  This includes the instance data control
+block, which must be released using the<B> DosFreeMem()</B> function as
+shown in <A HREF="029_L2_ReleasingInstanceDat.html">Figure "Releasing Instance
+Data Storage"</A>.
+<P>
+In the above example, the pointer to the instance data control block is
+first retrieved from the window words, giving access to the handles of any
+data objects or Presentation Manager resources obtained by the window, in
+order that these may be released.  Once this has been achieved, the memory
+object containing the control block is released by the window procedure.
+ Failure to release the data objects and resources before freeing the memory
+object would result in a general protection exception (Trap 000D) when the
+data objects or resources were subsequently released.
+
+<P><HR>
+
+<A HREF="246_L3_WindowClosure.html">[Back: Window Closure]</A> <BR>
+<A HREF="248_L3_SubclassingaWindow.html">[Next: Subclassing a Window]</A> 
+</BODY>
+</HTML>

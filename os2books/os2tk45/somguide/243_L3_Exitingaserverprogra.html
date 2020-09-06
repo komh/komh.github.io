@@ -1,0 +1,57 @@
+<HTML>
+<HEAD>
+<TITLE>Exiting a server program</TITLE>
+</HEAD>
+<BODY>
+<H1>Exiting a server program</H1><!-- entering slot 280 -->
+<P>
+When a server program exits, it should notify the DSOM run time that it
+is no longer accepting requests. This should be done whether the program
+exits normally, or as the result of an error. If this is not done,<B> somdd
+</B>will continue to think that the server program is active, allowing clients
+to attempt to connect to it, as well as preventing a new copy of that server
+from being activated.
+<P>
+To notify DSOM when the server program is exiting, the<B> deactivate_impl
+</B>method defined on SOMOA should be called. For example,
+<PRE> /* tell DSOM (via SOMOA) that server is now terminating */
+    _deactivate_impl(SOMD_SOMOAObject, &amp;ev, SOMD_ImplDefObject);
+</PRE>
+
+<P>
+<B>Note: </B> For robustness, it would be worthwhile to add appropriate
+"exit handlers" or "signal handlers" to your application servers that call
+the<B> deactivate_impl</B> method upon abnormal program termination. This
+ensures the the DSOM daemon is made aware of the server's termination, so
+that client connections are no longer allowed.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+Finally, at the end of a server program, the<B> SOMD_Uninit</B> procedure
+must be called to free DSOM run-time objects, and to release semaphores,
+shared memory segments, and any other system resources.
+<P>
+For example, the exit code in the server program might look like this:
+<PRE>    ...
+    SOMD_Uninit(&amp;e);
+    SOM_UninitEnvironment(&amp;e);
+}
+
+</PRE>
+
+<P>
+Observe also the<B> SOM_UninitEnvironment</B> call, which frees any memory
+associated with the specified<B> Environment</B> structure.
+<P>
+When a Windows DSOM server application receives a WM_QUIT message while
+processing incoming requests, the<B> execute_request_loop</B> method will
+return SOMDERROR_WMQUIT.  When the server receives SOMDERROR_WMQUIT, it
+should perform its usual clean up and termination procedures.
+
+<P><HR>
+
+<A HREF="242_L3_Processingrequests.html">[Back: Processing requests]</A> <BR>
+<A HREF="244_L3_Managingobjectsinthe.html">[Next: Managing objects in the server]</A> 
+</BODY>
+</HTML>

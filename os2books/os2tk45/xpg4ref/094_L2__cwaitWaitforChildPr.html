@@ -1,0 +1,165 @@
+<HTML>
+<HEAD>
+<TITLE>_cwait - Wait for Child Process</TITLE>
+</HEAD>
+<BODY>
+<H1>_cwait - Wait for Child Process</H1><!-- entering slot 96 -->_cwait - Wait for Child Process<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>#include &lt;process.h&gt;
+int _cwait(int <I>*stat_loc</I>, int <I>process_id</I>, int <I>action_code</I>);
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Description
+<P>
+<!-- lm: 0x2 10 -->
+<UL><LI>cwait delays the completion of a parent process
+until the child process specified by<I> process_id</I> ends.
+<P>
+The<I> process_id</I> is the value returned by the _spawn function that
+started the child process. If the specified child process ends before _cwait
+is called, _cwait returns to the calling process immediately with a value
+of -1. If the value of<I> process_id</I> is 0, the parent process waits
+until all of its child processes end.
+<P>
+If the variable pointed to by<I> stat_loc</I> is NULL, _cwait does not use
+it. If it is not NULL, _cwait places information about the return status
+and the return code of the child process in the location pointed to by<I> stat_loc</I>.
+
+<P>
+If the child process ended normally with a call to the OS/2 DosExit function,
+the lowest-order byte of the variable pointed to by<I> stat_loc</I> is 0.
+ The next highest-order byte contains the lowest-order byte of the argument
+passed to DosExit by the child process. The value of this byte depends on
+how the child process caused the system to call DosExit. If the child called
+exit, _exit, or return from main, or used a DosExit coded into the program,
+the byte contains the lowest-order byte of the argument the child passed
+to exit, _exit, or return. The value of the byte is undefined if the child
+caused a DosExit call simply by reaching the end of main.
+<P>
+If the child process ended abnormally (without a call to DosExit), the lowest-order
+byte of the variable pointed to by<I> stat_loc</I> contains the return code
+from the OS/2 DosWaitChild function, and the next higher-order byte is 0.
+See the OS/2 online reference for details about the DosWaitChild return
+codes.
+<P>
+The<I> action_code</I> specifies when the parent process is to start running
+again.  Values for<I> action_code</I> include:<B><!-- lm: 0x2 10 -->
+<P>
+Action Code<!-- lm: 0x2 30 -->
+<UL> Meaning</B><!-- lm: 0x2 10 -->
+</UL> WAIT_CHILD
+<!-- lm: 0x12 30 -->
+<UL>The parent process waits until the specified child
+process ends.<!-- lm: 0x2 10 -->
+</UL> WAIT_GRANDCHILD<!-- lm: 0x12 30 -->
+<UL> The
+parent process waits until the child process and all of the child processes
+of that process end.<!-- lm: 0x2 10 -->
+</UL>The action code values are defined in &lt;process.h&gt;.
+<P>
+An alternative to this function is the DosWaitChild call.<!-- lm: 0x2 1 -->
+</UL> Returns
+
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+At the normal end of the child process, _cwait returns the process identifier
+of the child to the parent process. If a child process ends abnormally,
+_cwait returns -1 to the parent process and sets errno to EINTR. In the
+case of an error, _cwait returns immediately with a value of -1 and sets
+errno to one of the following values:<B><!-- lm: 0x2 10 -->
+<P>
+Value<!-- lm: 0x2 18 -->
+<UL> Meaning</B><!-- lm: 0x2 10 -->
+</UL>EINVAL<!-- lm: 0x12 18 -->
+<UL> Incorrect action code.<!-- lm: 0x2 10 -->
+</UL>ECHILD<!-- lm: 0x12 18 -->
+<UL> No child process exists, or the process
+identifier is incorrect.<!-- lm: 0x2 10 -->
+</UL><!-- lm: 0x2 1 -->
+</UL>Example Code
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+This example creates a new process called child.exe.  The parent calls _cwait
+and waits for the child to end.  The parent then displays the child's return
+information in hexadecimal.
+<PRE>#include &lt;stdio.h&gt;#include &lt;process.h&gt;
+#include &lt;errno.h&gt;
+
+int stat_child;
+
+int main(void)
+{
+   int i,result;
+
+   /* spawn a child and 'cwait' for it to finish                              */
+
+   if ((result = _spawnl(P_NOWAIT, "child", "child", "1", NULL)) != -1) {
+      if ((i = _cwait(&amp;stat_child, result, WAIT_CHILD)) != result)
+         printf("Error ...expected pid from child");
+      else {
+         if (0 == errno) {
+            printf("Child process ended successfully and ...\n");
+            printf("program returned to the Parent process.\n");
+         }
+         else
+            printf("Child process had an error\n");
+      }
+   }
+   else
+      printf("Error ...could not spawn a child process\n");
+   return 0;
+
+   /****************************************************************************
+
+      If the source code for child.exe is:
+
+      #include &lt;stdio.h&gt;
+
+      int main(void) {
+
+         puts("This line was written by child.exe");
+         return 0;
+      }
+
+      The output should be similar to :
+
+      This line was written by child.exe
+      Child process ended successfully and ...
+      program returned to the Parent process.
+   ****************************************************************************/
+}
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Related Information
+<P>
+<!-- lm: 0x2 10 -->
+<UL><!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 --><A HREF="105_L2_exitEndProgram.html">exit</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="106_L2__exitEndProcess.html"><LI>exit</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="244_L2__spawnl_spawnvpeStar.html"><LI>spawnl
+- _spawnvpe</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="324_L2_waitWaitforChildProc.html">wait</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 -->return<!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="093_L2_ctimeConvertTimetoCh.html">[Back: ctime - Convert Time to Character String]</A> <BR>
+<A HREF="095_L2_difftimeComputeTimeD.html">[Next: difftime - Compute Time Difference]</A> 
+</BODY>
+</HTML>

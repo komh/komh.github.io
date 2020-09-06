@@ -1,0 +1,72 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosProtectSetFHState - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosProtectSetFHState - Example Code</H1><!-- entering slot 990 -->
+<P>
+This example queries and sets the file handle state of a protected file
+named "DOSPQFH.DAT".
+<PRE> #define INCL_DOSFILEMGR   /* File Manager values */
+ #define INCL_DOSERRORS    /* DOS error values    */
+ #include &lt;os2.h&gt;
+ #include &lt;stdio.h&gt;
+
+ int main(VOID) {
+
+ UCHAR       uchFileName[]   = "DOSPQFH.DAT";   /* File to manipulate        */
+ HFILE       fhQryFile       = 0;               /* File handle from DosOpen  */
+ FILESTATUS3 fsts3FileInfo   = {{0}};  /* Information associated with file   */
+ ULONG       ulOpenAction    = 0;                 /* Action taken by DosOpen */
+ ULONG       FHState         = 0;                 /* File Handle State       */
+ APIRET      rc              = NO_ERROR;          /* Return code             */
+ FHLOCK      FileHandleLock  = 0;                 /* File handle lock        */
+
+  rc = DosProtectOpen(uchFileName, &amp;fhQryFile,
+               &amp;ulOpenAction, 10L, FILE_NORMAL,
+               OPEN_ACTION_CREATE_IF_NEW | OPEN_ACTION_OPEN_IF_EXISTS,
+               OPEN_ACCESS_READWRITE | OPEN_SHARE_DENYNONE, 0L,
+               &amp;FileHandleLock);
+  if (rc != NO_ERROR) {
+     printf("DosProtectOpen error: return code = %u\n", rc);
+     return 1;
+  }
+
+  rc = DosProtectQueryFHState(fhQryFile, &amp;FHState, FileHandleLock);
+  if (rc != NO_ERROR) {
+      printf("DosProtectQueryFHState error: return code = %u\n", rc);
+      return 1;
+  } else printf("FHState is: %x\n", FHState);
+
+    /*   Change state to indicate that data should not be cached */
+
+    FHState &amp;= 0x7F88;                  /* Turn off non-participating bits */
+    rc = DosProtectSetFHState(fhQryFile, FHState | OPEN_FLAGS_NO_CACHE,
+                              FileHandleLock);
+    if (rc != NO_ERROR) {
+        printf("DosProtectSetFHState error: return code = %u\n", rc);
+        return 1;
+    }
+
+    rc = DosProtectClose(fhQryFile, FileHandleLock);
+    /* Should check if (rc != NO_ERROR) here */
+
+    rc = DosDelete(uchFileName);      /* Delete the file */
+    if (rc != NO_ERROR) {
+        printf("DosDelete error: return code = %u\n", rc);
+        return 1;
+    } else {
+        printf("File %s has been deleted.\n",uchFileName);
+    } /* endif */
+
+   return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="973_L2H_DosProtectSetFHState.html">[Back: DosProtectSetFHState - Related Functions]</A> <BR>
+<A HREF="975_L2H_DosProtectSetFHState.html">[Next: DosProtectSetFHState - Topics]</A> 
+</BODY>
+</HTML>

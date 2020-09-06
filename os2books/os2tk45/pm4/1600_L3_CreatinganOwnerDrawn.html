@@ -1,0 +1,137 @@
+<HTML>
+<HEAD>
+<TITLE>Creating an Owner-Drawn List Item</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating an Owner-Drawn List Item</H1><!-- entering slot 1635 -->
+<P>
+To draw its own list items, an application must create a list that has the
+style LS_OWNERDRAW:  the owner window of the list box must respond to the
+WM_MEASUREITEM and WM_DRAWITEM messages.
+<P>
+When the owner window receives a WM_MEASUREITEM message, it must return
+the height of the list item.  All items in a list must have the same height
+(greater than or equal to 1).  The WM_MEASUREITEM message is sent when the
+list box is created, and every time an item is added.  You can change the
+item height by sending an LM_SETITEMHEIGHT message to the list-box window.
+The maximum width of a list box created with the LM_HORZSCROLL style can
+be set using an LM_SETITEMWIDTH message.
+<P>
+The owner window receives a WM_DRAWITEM message whenever an item in an owner-drawn
+list should be drawn or highlighted.  Although it is quite common for an
+owner-drawn list to draw items, it is less common to override the system-default
+method of highlighting.  (This method inverts the rectangle that contains
+the item.)  Do not create your own highlighting unless, for some reason,
+the system-default method is unacceptable to you.
+<P>
+The WM_DRAWITEM message contains a pointer to an OWNERITEM data structure.
+ The OWNERITEM structure contains the window identifier for the list box,
+a presentation-space handle, a bounding rectangle for the item, the position
+index for the item, and the application-defined item handle.  This structure
+also contains two fields that determine whether a message draws, highlights,
+or removes the highlighting from an item.  The OWNERITEM structure has the
+following form:
+<PRE>    typedef struct _OWNERITEM { /* oi */
+        HWND    hwnd;
+        HPS     hps;
+        ULONG   fsState;
+        ULONG   fsAttribute;
+        ULONG   fsStateOld;
+        ULONG   fsAttributeOld;
+        RECTL   rclItem;
+        LONG    idItem;
+        ULONG   hItem;
+    } OWNERITEM;
+
+</PRE>
+When the item must be drawn, the owner window receives a WM_DRAWITEM message
+with the<I> fsState</I> field set differently from the<I> fsStateOld</I> field.
+ If the owner window draws the item in response to this message, it returns
+TRUE, telling the system not to draw the item.  If the owner window returns
+FALSE, the system draws the item, using the default list-item drawing method.
+
+<P>
+You can get the text of a list item by sending an LM_QUERYITEMTEXT message
+to the list-box window.  You should draw the item using the<I> hps</I> and
+<I>rclItem</I> arguments provided in the OWNERITEM structure.
+<P>
+If the item being drawn is currently selected, the<I> fsState</I> and<I> fsStateOld
+</I>fields are both TRUE; they both will be FALSE if the item is not currently
+selected.  The window receiving a WM_DRAWITEM message can use this information
+to highlight the selected item at the same time it draws the item.  If the
+owner window highlights the item, it must leave the<I> fsState</I> and<I> fsStateOld
+</I>fields equal to each other.  If the system provides default highlighting
+for the item (by inverting the item rectangle), the owner window must set
+the<I> fsState</I> field to<I> 1</I> and the<I> fsStateOld</I> field to
+<I>0</I> before returning from the WM_DRAWITEM message.
+<P>
+The owner window also receives a WM_DRAWITEM message when the highlight
+state of a list item changes.  For example, when a user clicks an item,
+the highlighting must be removed from the currently selected item, and the
+new selection must be highlighted.  If these items are owner-drawn, the
+owner window receives one WM_DRAWITEM message for each unhighlighted item
+and one message for the newly highlighted item.  To highlight an item, the
+<I>fsState</I> field must equal TRUE, and the<I> fsStateOld</I> field must
+equal FALSE.  In this case, the application should highlight the item and
+return the<I> fsState</I> and<I> fsStateOld</I> fields equal to FALSE, which
+tells the system not to highlight the item.  The application also can return
+the<I> fsState</I> and<I> fsStateOld</I> fields with two different (unequal)
+values and the list box will highlight the item (the default action).
+<P>
+To remove highlighting from an item, the<I> fsState</I> field must equal
+FALSE and the<I> fsStateOld</I> field must equal TRUE.  In this case, the
+application removes the highlighting and returns both the<I> fsState</I> and
+the<I> fsStateOld</I> fields equal to FALSE.  This tells the system not
+to attempt to remove the highlighting.  The application also can return
+the<I> fsState</I> and<I> fsStateOld</I> fields with two different (unequal)
+values, and the list box will remove the highlighting (the default response).
+The following code fragment shows these selection processes:
+<PRE>    OWNERITEM *poi;
+
+    case WM_DRAWITEM:
+
+        /* Convert mp2 into an OWNERITEM structure pointer.                */
+        poi = (POWNERITEM) PVOIDFROMMP(mp2);
+
+        /* Test to see if this is drawing or highlighting/unhighlighting.  */
+        if (poi-&gt;fsState != poi-&gt;fsStateOld) {
+
+            /* This is either highlighting or unhighlighting.              */
+            if (poi-&gt;fsState) {
+                .
+                . /* Highlight the item.                                   */
+                .
+            }
+            else {
+                .
+                . /* Remove the highlighting.                              */
+                .
+            }
+
+            /* Set fsState = fsStateOld to tell system you did it.         */
+            poi-&gt;fsState = poi-&gt;fsStateOld = 0;
+
+            return TRUE;  /* Tells list box you did the highlighting.      */
+
+        }
+        else {
+            .
+            . /* Draw the item.                                            */
+            .
+            if (poi-&gt;fsState) {   /* Checks to see if item is selected     */
+                .
+                . /* Highlight the item.                                   */
+                .
+                /* Set fsState = fsStateOld to tell system you did it.     */
+           }
+           return TRUE;  /* Tells list box you did the drawing.            */
+        }
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1599_L3_HandlingMultipleSele.html">[Back: Handling Multiple Selections]</A> <BR>
+<A HREF="1601_L3_DefaultListBoxBehavi.html">[Next: Default List-Box Behavior]</A> 
+</BODY>
+</HTML>

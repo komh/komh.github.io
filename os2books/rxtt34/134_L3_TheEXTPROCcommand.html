@@ -1,0 +1,288 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>The EXTPROC command</TITLE>
+</HEAD>
+<BODY>
+<H1>The EXTPROC command</H1><!-- entering slot 132 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+You can use the EXTPROC</A> command to instruct the CMD.EXE to automatically
+call your REXX program for your data files.
+<P>
+To provide a datafile with this capability, you must give it the extension
+<B>.CMD</B> and use<B> EXTPROC</B> as the first line in the datafile. The
+<B>EXTPROC</B> statement in the datafile will call the REXX program you
+specify following<B> EXTPROC</B>. (see examples below or download <A HREF="866_L3_RxLBoxmenuroutineinR.html">RxLBox
+</A>for a working example). In addition, you will need to set up the specified
+REXX program to ignore the line of the datafile that starts with<B> EXTPROC</B>.
+
+<P>
+Example:
+<P>
+Let's say we have a datafile called<B> MYDATA1.CMD</B>.
+<BR>
+The contents of the file may look like:
+<PRE> 
+EXTPROC myprog1
+datarecord 1
+datarecord 2
+datarecord 3
+</PRE>
+
+<P>
+
+<P>
+The REXX program<B> MYPROG1.CMD</B> could be launched automatically from
+<B>MYDATA1</B>. It might look like:
+<P>
+Example:
+<P>
+
+<PRE> 
+/* MYPROG1.CMD                                                      */
+/* - sample REXX program for processing datafiles using EXTPROC     */
+/*                                                                  */
+/* This program assumes that the only parameter of the EXTPROC      */
+/* statement is the name of the program to call. The name of the    */
+/* datafile is automatically added by the CMD.EXE.                  */
+/* You can use the fully qualified name of your CMD in the EXTPROC  */
+/* statement. Or you can use only the name of your CMD (without     */
+/* the path) if it's available via the environment variable PATH.   */
+/* Example:                                                         */
+/*                                                                  */
+/*   EXTPROC MYPROG1.CMD                                            */
+/*                                                                  */
+/* or                                                               */
+/*                                                                  */
+/*   EXTPROC C:\test\MYPROG1.CMD                                    */
+/*                                                                  */
+/* This programs works only if the datafile is in the current       */
+/* directory when it is run (see below)                             */
+/*                                                                  */
+  parse arg dataFile
+
+  say 'The name of the datafile is:'
+  say '  "' || datafile || '"'
+
+                    /* now read the data file                       */
+  fileStem.0 = 0
+  i = 0
+  do while lines( dataFile ) &lt;&gt; 0
+                    /* ignore the EXTPROC line                      */
+    curLine = lineIn( dataFile )
+    if translate( word( curLine, 1 ) ) = 'EXTPROC' &amp; i = 0 then
+      iterate
+    i = i+1
+    fileStem.i = curLine
+  end /* do while lines( dataFile ) &lt;&gt; 0 */
+  fileStem.0 = i
+
+                    /* do something ...                             */
+  say fileStem.0 || ' lines read:'
+  do i = 1 to fileStem.0
+    say 'Line ' || i || ' is "' || fileStem.i || '"'
+  end /* do i = 1 to fileStem.0 */
+
+exit
+</PRE>
+
+<P>
+Be sure your datafile is structured as in the above example, with the EXTPROC
+statement on the first line. (Note that the EXTPROC statement must be the
+first text in the file or it will not work. Note also that the<B><I> @Echo
+off</B></I> statement, commonly included at the beginning of batch files,
+cannot precede the EXTPROC statement.)
+<P>
+Now you can simply call the datafile to call your REXX program to process
+it via:
+<PRE> 
+  MYDATA1
+</PRE>
+
+<P>
+
+<P>
+<!--0xfb-->---------- * ----------
+<BR>
+
+<P>
+You can also add static parameters to the EXTPROC statement and/or use variable
+parameters when calling the data file.
+<P>
+The only disadvantage (you may call it a bug) of the EXTPROC feature is
+that the CMD.EXE always passes the name of the datafile<B> without</B> the
+path to your REXX program.
+<BR>
+Therefore either the directory with your datafile<B> must</B> be the current
+directory when calling the data file or you should use the workaround in
+the code below.
+<P>
+The workaround uses the fact that the CMD.EXE handles CMD files with EXTPROC
+statements like any other CMD file. This includes the processing of environment
+variables (for example<B><I> %COMSPEC%</B></I>) and parameters (for example
+<B><I>%1</B></I>,<B><I> %2</B></I>, etc.). Therefore we simply add the placeholder
+for the name of the CMD program,<B><I> %0</B></I>, as parameter for the
+EXTPROC statement. The<B><I> %0</B></I> is always replaced with the name
+of the CMD as entered by the user.
+<P>
+An example datafile using this feature might look like:
+<PRE> 
+EXTPROC myprog2 %0 /PARM staticParameter1 staticParameter2
+datarecord 1
+datarecord 2
+datarecord 3
+</PRE>
+
+<P>
+
+<P>
+(The comments below, incorporated into MYPROG2.CMD, explain the use of the
+EXTPROC line shown in the<B> MYDATA2.CMD</B> example above and describe
+each parameter)
+<P>
+The REXX program<B> MYPROG2.CMD</B> to process this datafile might look
+like :
+<PRE> 
+/* MYPROG2.CMD                                                      */
+/* - sample REXX program for processing datafiles using EXTPROC     */
+/*                                                                  */
+/* The format of the EXTPROC statement for the datafile             */
+/* invoking this program is:                                        */
+/*                                                                  */
+/*   EXTPROC MYPROG2.CMD %0 /PARM {staticParameters}                */
+/*                                                                  */
+/* MYPROG2.CMD is the name of the CMD to process the datafile.      */
+/*                                                                  */
+/* The string %0 is replaced by the name of the datafile as entered */
+/* by the user. This is necessary, because MYPROG2.CMD needs it to  */
+/* detect the directory with the datafile if it is not the default  */
+/* directory.                                                       */
+/*                                                                  */
+/* The string /PARM is necessary because without it (or something   */
+/* similar) MYPROG2.CMD cannot detect the begin of the static       */
+/* parameters if the name of the datafile contains blanks.          */
+/*                                                                  */
+/* {staticParameters} are parameters for the CMD <!-- entering slot 133 -->which you can      */
+/* hardcode in the datafile. The number of static parameters is     */
+/* not limited.                                                     */
+/*                                                                  */
+/* Assuming your datafile is called MYDATA2.CMD you can call it     */
+/* with                                                             */
+/*                                                                  */
+/*    MYDATA2                                                       */
+/*                                                                  */
+/* or, if you want to use variable parameter                        */
+/*                                                                  */
+/*    MYDATA2 varParameters                                         */
+/*                                                                  */
+/* The number of variable parameters is not limited.                */
+/*                                                                  */
+/* If MYDATA2.CMD is not in the current directory you can call it   */
+/* with an relative path like                                       */
+/*                                                                  */
+/*    ..\MYDATA2                                                    */
+/*                                                                  */
+/* or also with an absolute path like                               */
+/*                                                                  */
+/*    c:\test\MYDATA2                                               */
+/*                                                                  */
+/* In both cases you can add additional variable parameters if      */
+/* you like.                                                        */
+/*                                                                  */
+
+  parse arg thisParameter
+
+  say 'This is MYPROG.CMD called with the parameters'
+  say '  "' || thisParameter || '"'
+
+                    /* now split the parameter into filename and    */
+                    /* real parameter                               */
+                    /*                                              */
+                    /* Note that we use the first parameter (that   */
+                    /* is the %0 from the EXTPROC statement) as     */
+                    /* name of the datafile and not the filename    */
+                    /* added by the CMD.EXE. This is necessary      */
+                    /* because the name added by the CMD.EXE never  */
+                    /* contains the path of the file.               */
+                    /*                                              */
+  parse var thisParameter dataFile '/PARM' thisParameter
+
+  dataFile = strip( strip( dataFile ), 'B', '"' )
+  if translate( right( dataFile, 4 ) ) &lt;&gt; '.CMD' then
+    dataFile = dataFile || '.CMD'
+
+  dataFileName = filespec( 'N', dataFile )
+  if translate( right( dataFileName, 4 ) ) &lt;&gt; '.CMD' then
+    dataFileName = dataFileName || '.CMD'
+
+                    /* now remove the filename added by the CMD.EXE */
+
+                    /* in Object REXX you can use:                  */
+/*  parse caseless var thisParameter tParm1 (dataFilename) tParm2   */
+/*  thisParameter = strip( tParm1 tParm2 )                          */
+
+
+                    /* in Classic REXX you must use:                */
+  dataFileName = translate( datafilename )
+  i = pos( dataFileName, translate( thisParameter ) )
+  j = length( dataFileName )
+  thisParameter = strip( substr( thisParameter,1, i-1 ) || ,
+                         substr( thisParameter,i+j ) )
+
+  say 'The parameter without the name of the datafile are:'
+  say '  "' || thisParameter || '"'
+
+  say 'The name of the datafile is:'
+  say '  "' || datafile || '"'
+
+                    /* now read the data file                       */
+  fileStem.0 = 0
+  i = 0
+  do while lines( dataFile ) &lt;&gt; 0
+                    /* ignore the EXTPROC line                      */
+    curLine = lineIn( dataFile )
+    if translate( word( curLine, 1 ) ) = 'EXTPROC' &amp; i = 0 then
+      iterate
+    i = i+1
+    fileStem.i = curLine
+  end /* do while lines( dataFile ) &lt;&gt; 0 */
+  fileStem.0 = i
+
+                    /* do something ...                             */
+  say fileStem.0 || ' lines read:'
+  do i = 1 to fileStem.0
+    say 'Line ' || i || ' is "' || fileStem.i || '"'
+  end /* do i = 1 to fileStem.0 */
+
+exit
+</PRE>
+
+<P>
+You can call MYDATA2 with one of the following statements to see how it
+works (assuming you've copied the file into the directory C:\TEST, C: is
+your OS/2 boot drive and you've copied MYPROG2.CMD to a directory available
+through the environment variable PATH):
+<PRE> 
+  MYDATA2
+
+  MYDATA2 varP1 varP2 varP3
+
+  c:\test\MYDATA2
+
+  c:\test\MYDATA2 varP1 varP2 varP3
+
+  c:\os2\dll\..\..\test\MYDATA2
+
+  c:\os2\dll\..\..\test\MYDATA2 varP1 varP2 varP3
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="133_L3_TheFDISKcommand.html">[Back: The FDISK command]</A> <BR>
+<A HREF="135_L3_TheFORMATcommand.html">[Next: The FORMAT command]</A> 
+</BODY>
+</HTML>

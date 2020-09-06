@@ -1,0 +1,48 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosExit - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosExit - Example Code</H1><!-- entering slot 474 -->
+<P>
+This example simulates the command "CHKDSK C: /F:O", but only shows the
+second half of the information. It returns the number of available allocation
+units to the initiating process. Some return code checking has been omitted
+for brevity.
+<PRE>#define INCL_DOSFILEMGR   /* File Manager values */
+#define INCL_DOSERRORS    /* DOS Error values    */
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+
+int main (VOID) {
+   ULONG   aulFSInfoBuf[40] = {0};         /* File system info buffer     */
+   APIRET  rc               = NO_ERROR;    /* Return code                 */
+
+   rc = DosQueryFSInfo(3L,                     /* Drive number 3 (C:)     */
+                       FSIL_ALLOC,             /* Level 1 allocation info */
+                       (PVOID)aulFSInfoBuf,    /* Buffer                  */
+                       sizeof(aulFSInfoBuf));  /* Size of buffer          */
+
+   if (rc != NO_ERROR) {
+      printf("DosQueryFSInfo error: return code = %u\n", rc);
+      return 1;
+   } else {
+      printf ("%12ld bytes in each allocation unit.\n",
+               aulFSInfoBuf[1] * (USHORT)aulFSInfoBuf[4]);
+             /* (Sectors per allocation unit) * (Bytes per sector) */
+      printf ("%12ld total allocation units.\n", aulFSInfoBuf[2]);
+      printf ("%12ld available allocation units on disk.\n", aulFSInfoBuf[3]);
+   }
+   DosExit(EXIT_THREAD,aulFSInfoBuf[3]);  /* Return available allocation units
+                                             to the initiating process      */
+   return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="467_L2H_DosExitRelatedFuncti.html">[Back: DosExit - Related Functions]</A> <BR>
+<A HREF="469_L2H_DosExitTopics.html">[Next: DosExit - Topics]</A> 
+</BODY>
+</HTML>

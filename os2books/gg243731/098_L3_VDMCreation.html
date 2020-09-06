@@ -1,0 +1,135 @@
+<HTML>
+<HEAD>
+<TITLE>VDM Creation</TITLE>
+</HEAD>
+<BODY>
+<H1>VDM Creation</H1><!-- entering slot 104 -->
+<P>
+A number of tasks are performed when a VDM is initialized. The four main
+tasks managed by the Virtual DOS Machine Manager are:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Task state segment (TSS) initialization<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Virtual DOS machine process initialization<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->8086 Emulation initialization<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->DOS Emulation initialization.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+<B>Task State Segment Initialization</B>
+<P>
+The <A HREF="455_L2_taskstatesegment.html"><B>task state segment</B></A> describes
+the current machine state, including CPU register contents, and the current
+software state of a task, such as file descriptors and priority information.
+The following steps are necessary to initialize the TSS:
+<P>
+<A HREF="014_L2_VDMInitialization.html">Figure "VDM Initialization"</A><!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The VM bit in EFLAGS is set to 1, indicating
+that the process is a virtual DOS machine.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The IOPL indicator in EFLAGS is set to 3<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The instruction pointer is set to the task's
+entry point<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The code segment (CS) register is set to the
+linear base address of the task's initial code segment<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->An LDT is not used in V86 mode, but one must
+be initialized since interrupt or exception routines might use an LDT<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->I/O access rights are defined in the I/O permission
+map.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+<B>VDM Process Initialization</B>
+<P>
+The<I> VDM process initialization</I> is very similar to the creation of
+a protected mode session:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The Per-Task Data Area (PTDA) is created<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->A process slot and a process ID are allocated
+<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The operating system's memory manager provides
+a 4MB linear address space<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->A 4MB global Page Directory Entry, which references
+the 4MB linear space, is created<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The VDM process is started.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+<B>8086 Emulation (V86) Initialization</B>
+<P>
+The<I> 8086 Emulation initialization</I> then proceeds as follows:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The 8086 Emulation code is loaded<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->VDM kernel data is allocated in per-VDM memory
+below 4MB<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Virtual device driver instance data is allocated
+in per-VDM memory below 4MB<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->All known VDM creation hooks (registered by VDHInstallUserHook)
+are invoked to initialize virtual device drivers on a per-VDM basis<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The VEMM (expanded memory) virtual device driver
+(if used) allocates a block of memory in a mappable window either between
+640KB and 1MB or in the area between 256KB and RMSIZE (as specified in CONFIG.SYS),
+and maps it into the VDM address space.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+<B>DOS Emulation Initialization</B>
+<P>
+The<I> DOS Emulation initialization</I> then proceeds as follows:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->VDM-related kernel structures are initialized
+<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->DOS Emulation kernel (DOSKRNL) is loaded<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Virtual processor mode is started<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Standard file handles are opened<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Virtual device driver and DOS device driver "stubs"
+are initialized<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->DOS device drivers are initialized<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->DOS shell is loaded and executed.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+DOS Emulation initialization and VDM creation are discussed in greater detail
+in <A HREF="120_L1_MVDMDOSEmulation.html">MVDM DOS Emulation</A>.
+<P>
+Once DOS Emulation is complete, the Virtual DOS Machine Manager then issues
+the VDM_CREATE_DONE event handler to install default I/O hooks, page fault
+hooks, or INT hooks. Control is then passed to the DOS Emulation kernel
+to initialize and start the user application program.
+<P>
+Once the VDM creation process is complete, the name of the DOS program and
+other customization parameters are passed to the new VDM. Customization
+parameters for a specific DOS application can be specified in the Workplace
+Shell folder in which the name of the DOS program is contained. To change
+these parameters select the<I> DOS Settings</I> pushbutton.
+<P>
+DOS Settings allow the user to tune the VDM environment in which a DOS application
+runs in order to achieve optimal execution of the program.
+
+<P><HR>
+
+<A HREF="097_L3_VDMAddressSpaceManag.html">[Back: VDM Address Space Management]</A> <BR>
+<A HREF="099_L3_VDMTermination.html">[Next: VDM Termination]</A> 
+</BODY>
+</HTML>

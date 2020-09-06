@@ -1,0 +1,181 @@
+<HTML>
+<HEAD>
+<TITLE>Caption Sample Application</TITLE>
+</HEAD>
+<BODY>
+<H1>Caption Sample Application</H1><!-- entering slot 169 -->
+<P>
+The Caption Sample Application demonstrates the incorporation of captioning
+in an application using caption files and the Caption DLL.
+<P>
+As part of its initialization and termination routines, the Caption Sample
+Application issues <A HREF="277_L2_ccInitialize.html">ccInitialize</A> and
+<A HREF="295_L2_ccTerminate.html">ccTerminate</A> respectively.  This notifies
+the DLL to begin and end captioning.
+<PRE>   /*
+    * Create the caption window and save the handle for further use.
+    */
+   hwndCaption = ccInitialize ( (HWND) hwndMainDialogBox );
+</PRE>
+
+<P>
+When the <A HREF="277_L2_ccInitialize.html">ccInitialize</A> function is
+called, the DLL creates the caption window, but keeps it hidden until the
+DLL receives a <A HREF="285_L2_ccSendCommand.html">ccSendCommand</A> with
+a CC_START message.
+<PRE> /*
+  * Close the captioning system. This will release all the resources
+  * that were allocated.
+  */
+   ccTerminate(hwndCaption);
+</PRE>
+
+<P>
+When the user selects<B> Play</B>, the Caption Sample Application opens
+the audio file and obtains a device ID.  It then plays the audio file.  Finally,
+it checks the system's captioning flag.  If it is set, the Caption Sample
+Application issues <A HREF="285_L2_ccSendCommand.html">ccSendCommand</A> with
+a CC_START command. This is all an application must do to implement captioning
+with OS/2 multimedia. The Caption DLL then starts providing captioning for
+the application. Three important parameters are sent with this function.
+First, the device ID or alias is passed.  This tells the DLL the correct
+audio device for which to request position-advise messages. Second, the
+name of the caption file is passed, and third, the application's window
+handle is passed.  This tells the DLL which caption file to display and
+the handle of the window to display it in.
+<PRE> /*
+  * Test the MMPM/2 Captioning Flag.  If it is ON, then the user
+  * wants to see captioning.  If it is OFF, the user does not want to
+  * see captioning.
+  */
+ mciQuerySysValue ( MSV_CLOSEDCAPTION, &amp;bCCflag );
+     .
+     .
+     .
+
+ /*
+  * Captioning flag is ON.
+  * Fill in the CC_START_PARMS structure and then call ccSendCommand
+  * to make the captioning window visible.  The hwndOwner field holds
+  * the window handle that we want the Caption DLL to send the
+  * position change messages to, when it is done processing them.
+  */
+
+ csp.pszDeviceName    = (PSZ) "capsamp";     /* Alias name          */
+ csp.pszCaptionFile   = (PSZ) "CAPSAMP._CC"; /* File name to use    */
+ csp.hwndOwner        =  hwnd;               /* for position change */
+
+ ulReturn = ccSendCommand ( CC_START, MPFROMHWND(hwndCaption), &amp;csp );
+                                             /* Start captioning    */
+
+</PRE>
+
+<P>
+If you pause the audio file, change the volume, or move the audio slider
+position, the Caption Sample Application does not have to do<I> any</I> special
+processing to manage the caption window. The Caption DLL handles this.
+<P>
+If you select<B> Stop</B>, the Caption Sample Application issues an MCI_STOP
+to the audio device, and then it issues a <A HREF="285_L2_ccSendCommand.html">ccSendCommand
+</A>of CC_STOP to the Caption DLL.  This function informs the Caption DLL
+to stop displaying the caption window in the application and hide the caption
+window.
+<PRE>        case IDC_GPB_STOP:     /* User selected "Stop" push button */
+           /*
+            * If the audio is not in stopped state, stop the device
+            * and hide the text window.
+            */
+           if (eState != ST_STOPPED)
+           {
+              StopTheDevice();
+              ccSendCommand( CC_STOP, MPFROMHWND(hwndCaption), 0 );
+           }
+           break;
+</PRE>
+
+<P>
+The application issues a <A HREF="285_L2_ccSendCommand.html">ccSendCommand
+</A>with CC_STATUS to determine the current properties of the caption window.
+ This function initializes the settings dialog box to display it to the
+user. The following figure shows the status request for the text columns.
+Requests for the status of the text rows, background color, text color,
+and window position are handled similarly.
+<PRE>
+   /*
+    * Query the current status of the text columns.
+    * The CC_STATUS returns the actual value in the ulReturn field.
+    */
+  ccStatusParms.ulItem = CC_STATUS_TEXT_COLUMNS;
+  ccSendCommand( CC_STATUS, MPFROMHWND(hwndCaption), &amp;ccStatusParms );
+
+   /*
+    * <!-- entering slot 170 -->Get the index value for the ulReturn field.
+    */
+   if (ccStatusParms.ulReturn == 15)
+      ulArrayIndexValue = 0;
+   else
+   if (ccStatusParms.ulReturn == 35)
+      ulArrayIndexValue = 1;
+   else
+   if (ccStatusParms.ulReturn == 50)
+      ulArrayIndexValue = 2;
+
+/*
+ * Set the current index value in the spin button.
+ */
+WinSendDlgItemMsg( hwnd,                 /* Handle to the dialog box  */
+                   IDC_TEXT_COLUMNS_SB,  /* ID of the spin button  */
+                   SPBM_SETCURRENTVALUE, /* Set current index value */
+                   MPFROMLONG(ulArrayIndexValue),/* Current index */
+                   NULL );                       /* Ignore        */
+</PRE>
+
+<P>
+You can change several properties of the caption window by selecting<B> Settings
+</B>from the<B> Options</B> pull-down menu of the Caption Sample Application.
+When you select<B> OK</B> to save the desired properties, the Caption Sample
+Application issues <A HREF="285_L2_ccSendCommand.html">ccSendCommand</A> with
+a CC_SET message.  The Caption DLL handles changing and displaying the new
+properties of the caption window. The following figure shows sample code
+from the Caption Sample Application that sets up the CC_SET_PARMS data structure
+for the text rows.  Changing the settings for the background color, text
+color, window position, and text columns is handled similarly.
+<PRE>   CC_SET_PARMS       ccSetParms;    /* Set parms for CC_SET   */
+   ULONG              ulArrayIndexValue=0; /* For spin button return
+                                              value            */
+
+
+    /*
+     * Query the text rows spin button. The array index
+     * value will be returned in ulArrayIndexValue variable.
+     */
+    WinSendDlgItemMsg(
+       hwnd,
+       IDC_TEXT_ROWS_SB,
+       SPBM_QUERYVALUE,
+       (MPARAM) &amp;ulArrayIndexValue,
+       MPFROMLONG(0));
+
+    /*
+     * Get the actual value and initialize the CC_SET_PARMS
+     * data structure with the appropriate information.
+     */
+    ccSetParms.ulRows = (ULONG) atoi( textRows[ulArrayIndexValue] );
+
+    /*
+     * Issue the CC_SET command with the ccSendCommand and close
+     * the dialog box.
+     */
+    ccSendCommand(CC_SET, MPFROMHWND(hwndCaption), &amp;ccSetParms);
+    WinDismissDlg( hwnd, TRUE );
+
+    return( 0 );
+</PRE>
+
+
+<P><HR>
+
+<A HREF="155_L2_DisplayingCaptionsin.html">[Back: Displaying Captions in a Window]</A> <BR>
+<A HREF="157_L1_OS2MultimediaControl.html">[Next: OS/2 Multimedia Controls]</A> 
+</BODY>
+</HTML>

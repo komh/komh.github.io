@@ -1,0 +1,229 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Convert Microsoft/IEEE Float binary into a string in Classic REXX</TITLE>
+</HEAD>
+<BODY>
+<H1>Convert Microsoft/IEEE Float binary into a string in Classic REXX</H1><!-- entering slot 467 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+(see also <A HREF="451_L3_ConvertMicrosoftIEEE.html">Convert Microsoft/IEEE
+Float binary into a string in Object REXX</A>)
+<PRE> 
+/**********************************************************************/
+/* These routines are the original work of Thos Davis                 */
+/* (see <A HREF="946_L2H_EMailaddressesD.html">EMail Addresses</A>)                                              */
+/* and to the best of his knowledge do not include any copyrighted    */
+/* materials.                                                         */
+/*                                                                    */
+/* These routines are hereby released into the Public Domain          */
+/**********************************************************************/
+/* Microsoft/IEEE Float binary:                                       *
+  +--------------------------------------------------------------------+
+  |bit |0 1 2 3 4 5 6 7 8 9 A B C D E F 0 1 2 3 4 5 6 7 8 9 A B C D E F|
+  +====+=============================================+=+===============+
+  |MKS |              mantissa                       |s|   exponent    |
+  +----+---------------------------------------------+-+-------------+-|
+  |IEEE|              mantissa                       |    exponent   |s|
+  +--------------------------------------------------+---------------+-+
+                                                                      */
+/* In both cases, the mantissa is the lower (least significant)       */
+/* 23 bits (plus an implied value of 1 for bit 24, the most           */
+/* significant bit of the mantissa), the sign is one bit, and         */
+/* the exponent is 8 bits.                                            */
+/*                                                                    */
+/* Because the mantissa has a 'virtual bit' whose value is always 1,  */
+/* the exponent is used to determine if the value is 0.               */
+/*                                                                    */
+/* IEEE Double Float binary is the same format as the single Float    */
+/* but the mantissa is 52 bits long (for 53 bits of significant       */
+/* binary digits [is that bigits?] after including the 'virtual 1'    */
+/* most significant bit) and the exponent is 11 bits long.            */
+/*                                                                    */
+/* !!! I M P O R T A N T !!!                                          */
+/*                                                                    */
+/* NUMERIC DIGITS should be set to about 16 to get the full value of  */
+/* Doubles. If these procedures are made into ROUTINES, it will be    */
+/* necessary to add the NUMERIC DIGITS setting to DoubleToString and  */
+/* GeneralFloat.                                                      */
+/*                                                                    */
+/* !!! A L S O   I M P O R T A N T !!!                                */
+/*                                                                    */
+/* These functions do not recognize the special values                */
+/*    +INF    plus infinity                                           */
+/*    -INF    minus infinity                                          */
+/*    +NAN    not a number                                            */
+/*    -NAN    not a number                                            */
+/*                                                                    */
+
+mksToString: procedure
+  TheFloat = arg(1)
+
+                    /* mks is the format used in older versions of    */
+                    /* MicroSoft BASIC and is, for some bizarre       */
+                    /* reason, used as the index value in the QWK     */
+                    /* BBS message packing scheme                     */
+
+                    /* Intel uses different BYTE ordering and BIT     */
+                    /* ordering so byte strings must be REVERSED to   */
+                    /* make all ordering the same                     */
+    bFloat = Reverse( TheFloat )
+
+                    /* There is no c2b function                       */
+    bFloat = x2b( c2x( bFloat ) )
+
+                    /* make sure its 32 bits long                     */
+    bFloat = Right( bFloat, 32, '0' )
+    fMantissa = '1' || Right( bFloat, 23 )
+    fExponent = Left( bFloat, 8 )
+    fSign = SubStr( bFloat, 9, 1 )
+
+                    /* I found the magicNumber values by trial and    */
+                    /* error                                          */
+    magicNumber = 152
+
+return GeneralFloat( fSign, fMantissa, fExponent, magicNumber )
+
+
+FloatToString: procedure
+  TheFloat = arg(1)
+
+    bFloat = Reverse( TheFloat )
+    bFloat = x2b( c2x( bFloat ) )
+    bFloat = Right( bFloat, 32, '0' )
+    fMantissa = '1' || Right( bFloat, 23 )
+    fExponent = SubStr( bFloat, 2, 8 )
+    fSign = Left( bFloat, 1 )
+    magicNumber = 150
+return GeneralFloat( fSign, fMantissa, fExponent, magicNumber )
+
+
+DoubleToString: procedure
+  TheDouble = arg(1)
+
+    bDouble = Reverse( TheDouble )
+    bDouble = x2b( c2x( bDouble ) )
+    bDouble = Right( bDouble, 64, '0' )
+    dMantissa = '1' || Right( bDouble, 52 )
+    dExponent = SubStr( bDouble, 2, 11 )
+    dSign = Left( bDouble, 1 )
+    magicNumber = 1075
+return GeneralFloat( dSign, dMantissa, dExponent, magicNumber )
+
+
+GeneralFloat: procedure
+  theSign = arg(1)
+  theMantissa = arg(2)
+  theExponent = arg(3)
+  magicNumber = arg(4)
+
+    if theExponent = 0 then
+        ascFloat = 0
+    else
+      do
+        decMantissa = x2d( b2x( theMantissa ) )
+        decExponent = x2d( b2x( theExponent ) )
+        ascFloat = decMantissa * ( 2 ** ( decExponent - magicNumber ))
+      end
+
+    if theSign then
+        ascFloat = '-'ascFloat
+
+return ascFloat
+
+</PRE>
+
+<P>
+
+<P>
+<B>AN ADDENDUM</B>
+<P>
+While<!-- entering slot 468 --> converting from binary fractions to decimal
+fractions has some inherent inaccuracies, the REXX procedures I gave have
+some additional ones built in.  REXX does not use binary arithmetic (at
+least it is not supposed to).  Instead it uses decimal methods modeled on
+human arithmetic systems.  This gives better results for decimal numbers,
+but tends to make arithmetic with binary fractions somewhat less accurate.
+
+<P>
+Because of this, and because I use arithmetic on the numbers when converting,
+_sometimes_ 'conversion artifacts' will be introduced which result in a
+representation slightly greater or less than the value which is returned
+by standard C library functions (e.g.  printf() ). For example 0.5 decimal
+(1/2), which is 0.1 binary, should translate perfectly from one system to
+the other, will be translated from the double to 0.5000000000000002 using
+DoubleToString.  Likewise 0.0625 decimal (1/16), which is 0.0001 binary,
+is translated as 0.06250000000000001.
+<P>
+Additionally, the results are dependent on the value of NUMERIC DIGITS.
+For example:  1.0 is translated by FloatToString() as 0.99999999999 when
+NUMERIC DIGITS is set to 11 (decimal), and 0.5 (decimal) is translated by
+DoubleToString as 0.49999999999999999999 when NUMERIC DIGITS is 20.
+<P>
+It is important to note that the actual value stored in the file is not
+changed.
+<P>
+If it is important to see very precise translations, these procedures may
+not be for you.  However, with the information on the format of the numbers,
+you may be able to devise your own conversion procedures.
+<P>
+Additionally, I did not include the IEEE +INFINITY, -INFINITY, +NOT-A-NUMBER,
+and -NOT-A-NUMBER, because I do not have documentation on these values.
+ However, based on actual conversions by Borland's C++ for OS/2 (version
+1.5), I am led to believe that an exponent whose bits are all set to 1 indicates
+a SPECIAL VALUE.  If the exponent is all ones, and the mantissa (with the
+virtual bit) has only its most significant bit set to 1, then that is INFINITY
+(+/- depending on the sign), and if the two most significant bits (including
+the virtual bit) are both set to 1 and no other bits in the mantissa are
+set to 1, then that is NOT-A-NUMBER.  If the other bits are set to 1, I
+don't know what that means.
+<P>
+I use a test for the special exponent in my own routines (I use ObjectREXX)
+and then call SpecialFloat if it matches.  If you use this type of procedure,
+then it may be necessary for your program to test for these values before
+performing additional math on them!  I do not know if the MicroSoft Format
+used by early versions of BASIC has any special values. 
+<PRE> 
+::ROUTINE FloatToString PUBLIC
+    ...
+
+    if fExponent = '11111111' then
+      return SpecialFloat( fSign, fMantissa, 'S' )
+    else
+      return GeneralFloat( ... )
+
+
+::ROUTINE SpecialFloat
+  use arg theSign, theMantissa, theType
+
+    SELECT
+      WHEN theType = 'S' then lenMantissa = 24
+      WHEN theType = 'D' then lenMantissa = 53
+    END
+
+    SELECT
+      WHEN theMantissa = '1'~Left( lenMantissa, '0' ) <!-- entering slot 469 -->THEN
+        ieeeSpecial = 'INFINITY'
+      WHEN theMantissa = '11'~Left( lenMantissa, '0' ) THEN
+        ieeeSpecial = 'NOT-A-NUMBER'
+      OTHERWISE
+        ieeeSpecial = 'UNKNOWN-MEANING'
+    END /* SELECT */
+
+    if theSign then
+      ieeeSpecial = '-'ieeeSpecial
+    else
+      ieeeSpecial = '+'ieeeSpecial
+
+    return 'IEEE:' ieeeSpecial
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="449_L3_ConvertASCII850strin.html">[Back: Convert ASCII 850 string into/from ISO 8859-1 (1004) string]</A> <BR>
+<A HREF="451_L3_ConvertMicrosoftIEEE.html">[Next: Convert Microsoft/IEEE Float binary into a string in Object REXX]</A> 
+</BODY>
+</HTML>

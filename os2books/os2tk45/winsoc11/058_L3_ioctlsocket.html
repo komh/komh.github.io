@@ -1,0 +1,125 @@
+<HTML>
+<HEAD>
+<TITLE>ioctlsocket()</TITLE>
+</HEAD>
+<BODY>
+<H1>ioctlsocket()</H1><!-- entering slot 62 -->
+<P>
+<B>Description</B>
+<P>
+Control the mode of a socket.
+<P>
+
+<PRE>#include &lt;winsock.h&gt;</PRE>
+ 
+<P>
+<B>int PASCAL FAR ioctlsocket ( SOCKET</B><I> s</I><B>, long</B><I> cmd</I><B>,
+u_long FAR *</B><I> argp</I><B>);</B><!-- lm: 0x2 1 -->
+<UL>
+<P>
+<I>s</I><!-- lm: 0x11 3 -->
+<UL> A descriptor identifying a socket.<!-- lm: 0x2 1 -->
+</UL><I> cmd
+</I><!-- lm: 0x11 3 -->
+<UL>The command to perform on the socket<I> s</I>.
+<!-- lm: 0x2 1 -->
+</UL><I>argp</I><!-- lm: 0x11 3 -->
+<UL> A pointer to
+a parameter for<I> cmd</I>.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Remarks</B>
+<P>
+This routine may be used on any socket in any state.  It is used to get
+or retrieve operating parameters associated with the socket, independent
+of the protocol and communications subsystem.  The following commands are
+supported:
+<P>
+<!-- lm: 0x2 1 -->
+<P>
+<I>FIONBIO</I><!-- lm: 0x11 11 -->
+<UL> Enable or disable non-blocking mode
+on the socket<I> s</I>. <I> argp</I> points at an<B> unsigned long</B>,
+which is non-zero if non-blocking mode is to be enabled and zero if it is
+to be disabled.  When a socket is created, it operates in blocking mode
+(i.e. non-blocking mode is disabled).  This is consistent with BSD sockets.
+ The <A HREF="085_L3_WSAAsyncSelect.html">WSAAsyncSelect()</A> routine automatically
+sets a socket to nonblocking mode.  If<B> WSAAsyncSelect()</B> has been
+issued on a socket, then any attempt to use<B> ioctlsocket()</B> to set
+the socket back to blocking mode will fail with WSAEINVAL.  To set the socket
+back to blocking mode, an application must first disable<B> WSAAsyncSelect()
+</B>by calling<B> WSAAsyncSelect()</B> with the<I> lEvent</I> parameter
+equal to 0. <!-- lm: 0x2 1 -->
+</UL><I> FIONREAD</I><!-- lm: 0x11 11 -->
+<UL> Determine
+the amount of data which can be read atomically from socket<I> s</I>. <I> argp
+</I>points at an<B> unsigned long</B> in which<B> ioctlsocket()</B> stores
+the result.  If<I> s</I> is of type SOCK_STREAM, FIONREAD returns the total
+amount of data which may be read in a single<B> recv()</B>; this is normally
+the same as the total amount of data queued on the socket.  If<I> s</I> is
+of type SOCK_DGRAM, FIONREAD returns the size of the first datagram queued
+on the socket. <!-- lm: 0x2 1 -->
+</UL><I> SIOCATMARK</I><!-- lm: 0x11 11 -->
+<UL> Determine
+whether or not all out-of-band data has been read.  This applies only to
+a socket of type SOCK_STREAM which has been configured for in-line reception
+of any out-of-band data (SO_OOBINLINE).  If no out-of-band data is waiting
+to be read, the operation returns TRUE.  Otherwise it returns FALSE, and
+the next <A HREF="062_L3_recv.html">recv()</A> or <A HREF="063_L3_recvfrom.html">recvfrom()
+</A>performed on the socket will retrieve some or all of the data preceding
+the "mark"; the application should use the SIOCATMARK operation to determine
+whether any remains.  If there is any normal data preceding the "urgent"
+(out of band) data, it will be received in order.  (Note that a <A HREF="062_L3_recv.html">recv()
+</A>or <A HREF="063_L3_recvfrom.html">recvfrom()</A> will never mix out-of-band
+and normal data in the same call.) <I> argp</I> points at a<B> BOOL</B> in
+which<B> ioctlsocket()</B> stores the result.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Compatibility This function is a subset of<B> ioctl()</B> as used in Berkeley
+sockets.  In particular, there is no command which is equivalent to FIOASYNC,
+while SIOCATMARK is the only socket-level command which is supported.
+<P>
+<B>Return Value</B>
+<P>
+Upon successful completion, the<B> ioctlsocket()</B> returns 0.  Otherwise,
+a value of SOCKET_ERROR is returned, and a specific error code may be retrieved
+by calling <A HREF="089_L3_WSAGetLastError.html">WSAGetLastError()</A>
+<P>
+<B>Error Codes</B>
+<P>
+<!-- lm: 0x2 1 -->
+<P>
+WSANOTINITIALISED<!-- lm: 0x11 11 -->
+<UL> A successful <A HREF="093_L3_WSAStartup.html">WSAStartup()
+</A>must occur before using this API.<!-- lm: 0x2 1 -->
+</UL> WSAENETDOWN
+<!-- lm: 0x11 11 -->
+<UL>The Windows Sockets implementation has detected
+that the network subsystem has failed.<!-- lm: 0x2 1 -->
+</UL> WSAEINVAL
+<!-- lm: 0x11 11 -->
+<UL><I>cmd</I> is not a valid command, or<I> argp</I> is
+not an acceptable parameter for<I> cmd</I>, or the command is not applicable
+to the type of socket supplied<!-- lm: 0x2 1 -->
+</UL> WSAEINPROGRESS<!-- lm: 0x11 11 -->
+<UL> A
+blocking Windows Sockets operation is in progress.<!-- lm: 0x2 1 -->
+</UL> WSAENOTSOCK
+<!-- lm: 0x11 11 -->
+<UL>The descriptor<I> s</I> is not a socket.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>See Also</B>
+<P>
+<A HREF="069_L3_socket.html">socket()</A><B>,</B> <A HREF="067_L3_setsockopt.html">setsockopt()</A><B>,
+</B><A HREF="053_L3_getsockopt.html">getsockopt()</A><B>,</B> <A HREF="085_L3_WSAAsyncSelect.html">WSAAsyncSelect()
+</A>
+<P>
+
+
+<P><HR>
+
+<A HREF="057_L3_inet_ntoa.html">[Back: inet_ntoa()]</A> <BR>
+<A HREF="059_L3_listen.html">[Next: listen()]</A> 
+</BODY>
+</HTML>

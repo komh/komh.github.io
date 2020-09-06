@@ -1,0 +1,205 @@
+<HTML>
+<HEAD>
+<TITLE>Synchronized MIDI and Waveform Streams</TITLE>
+</HEAD>
+<BODY>
+<H1>Synchronized MIDI and Waveform Streams</H1><!-- entering slot 90 -->
+<P>
+This scenario describes how two streams (waveform audio and MIDI) are created
+and synchronized with each other. The audio stream is the synchronization
+master stream. The source handler for the waveform stream is the File System
+Stream Handler DLL. The source handler for the MIDI stream is the File System
+Stream Handler DLL.
+<P>
+Currently, the audio stream handler does not provide the ability to be a
+slave to a master stream. It does, however, have the ability to be the master
+stream handler.
+<PRE> /**************************************************************/
+ /*                         M A I N                            */
+ /**************************************************************/
+ main()
+ {
+ RC           ulRC;             /* Error return code */
+
+ SPCBKEY      spcbkey;          /* Data type to stream */
+ IMPL_EVCB    evcb1, evcb2;     /* Event control block for implicit events */
+ ACB_MMIO     acb;              /* Associate control block used to assoc */
+                                /* The file to stream (play) */
+ DCB_AUDIOSH  dcb;              /* Audio device driver information */
+ HAND         ahand[5];         /* Enumerate handler info */
+ ULONG        ulNumHand = 5;
+ HID          hidSource1, hidTarget1, hidunused;    /* Handler IDs */
+ HID          hidSource2, hidTarget2
+ HSTREAM      hstream1, hstream2; /* Stream handle */
+ HEVENT       hevent1, hevent2; /* Event handle for implicit events */
+ HMMIO        hmmio1, hmmio2;   /* Handle to mmio file open */
+ SLAVE        slave[1];         /* Sync slave structure */
+
+ /* Get list of all Stream handlers in system */
+ if (rc = SpiEnumerateHandlers(&amp;ahand, &amp;ulNumHand))
+    return(rc);    /* error! */
+
+ /********************************************************/
+ /****** CREATE WAVEFORM AUDIO STREAM  (Stream # 1) ******/
+ /********************************************************/
+ /* Get the stream Handler ID for the file system stream handler */
+ if (rc = SpiGetHandler("FSSH",&amp;hidSource1,&amp;hidunused))
+    return(rc);    /* error! */
+ /* Get the stream handler ID for the Audio Stream Handler */
+ if (rc = SpiGetHandler("AUDIOSH$",&amp;hidunused,&amp;hidTarget1))
+    return(rc);    /* error! */
+ /* Create a data stream from the file system to */
+ /* the audio ACPA device connected to speakers.  */
+ spcbkey.ulDataType = DATATYPE_ADPCM_AVC;
+ spcbkey.ulDataSubType = ADPCM_AVC_HQ;
+ spcbkey.ulINtKey = 0;
+ strcpy(dcb.szDevName,"AUDIO1$");
+ dcb.ulDCBLen = sizeof(dcb);
+ dcb.hSysFileNum = (** hSysFileNum returned by audio dd on audio_init call)
+ if (rc = SpiCreateStream(hidSource1,
+                          hidTarget1,
+                          &amp;spcbkey,
+                          NULL,
+                          (PDCB)&amp;dcb,
+                          (PEVCB)&amp;evcb1,
+                          EventProc,
+                          0,
+                          &amp;hstream1,
+                          &amp;hevent1))
+    return(rc);    /* error! */
+ /* USE MMIO to access a waveform audio object */
+ if ((hmmio1 = mmioOpen("E:\Mygreat\waveform\file\screams.hq"
+                        NULL,
+                        MMIO_READWRITE|
+                        MMIO_DENYNONE)) == NULL)
+    return(ERROR_FILE_NOT_FOUND);
+ /* Fill in acb with data object info */
+ acb.ulACBLen = sizeof(ACB_MMIO);
+ acb.ulObjType = ACBTYPE_MMIO;
+ acb.hmmio = hmmio1;
+ /* Associate the waveform data object with the source handler */
+ if (rc = SpiAssociate(hstream1,hidSource1,&amp;acb))
+    return(rc);    /* error! */
+
+ /**********************************************/
+ /****** CREATE MIDI STREAM  (Stream # 2) ******/
+ /**********************************************/
+ /* Get the stream handler ID for the File System Stream Handler */
+ if (rc = SpiGetHandler("FSSH",&amp;hidSource2,&amp;hidunused))
+    return(rc);    /* error! */
+ /* Get the stream handler ID for the MIDI Audio Stream Handler */
+ if (rc = SpiGetHandler("AUDIOSH$",&amp;hidunused,&amp;hidTarget2))
+    return(rc);    /* error! */
+
+ /* Create a data stream from the memory to an */
+ /* OEM audio device connected to speakers.     */
+ spcbkey.ulDataType = DATATYPE_MIDI;
+ spcbkey.ulDataSubType = SUBTYPE_NONE;
+ spcbkey.ulINtKey = 0;
+ strcpy(dcb.szDevName,"AUDIO99$");
+ dcb.ulDCBLen = sizeof(dcb);
+ dcb.hSysFileNum = (** hSysFileNum returned by audio dd on audio_init call)
+ if (rc = SpiCreateStream(hidSource2,
+                          hidTarget2,
+                          &amp;spcbkey,
+                          NULL,
+                          (PDCB)&amp;dcb,
+                          (PEVCB)&amp;evcb2,
+                          EventProc,
+                          0,
+                          &amp;hstream2,
+                          &amp;hevent2))
+    return(rc);    /* error! */
+
+ /* USE MMIO to access a waveform audio object */
+ if ((hmmio2 = mmioOpen("E:Mygreat\midi\file\screams.mid"
+                        NULL,
+                        MMIO_READWRITE|
+                        MMIO_DENYNONE)) == NULL)
+    return(ERROR_FILE_NOT_FOUND);
+ /* Fill in acb with data object info */
+ acb.ulACBLen = sizeof(ACB_MMIO);
+ acb.ulObjType = ACBTYPE_MMIO;
+ acb.hmmio = hmmio2;
+ /* Associate the waveform data object with the source handler */
+ if (rc = SpiAssociate(hstream2,hidSource2,&amp;acb))
+    return(rc);    /* error! */
+
+
+ /**************************************************************/
+ /***** SETUP THE SYNCHRONIZATION BETWEEN THE TWO STREAMS ******/
+ /**************************************************************/
+ slave[0].hSlaveStream = hstream2;   /* MIDI stream is slave */
+ slave[0].mmtimeStart = 0;           /* Time to start slave */
+ if (rc = SpiEnableSync(hstream1,          /* Audio stream is master */
+                        &amp;slave,
+                        1,                 /* Number of slaves */
+                        0))                /* Use spcb sync granularity */
+    return(rc);    /* error! */
+ /* Start streams by passing the handle to the stream sync master */
+ if (rc = SpiStartStream(hstream1, SPI_START_SLAVES))
+    return(rc);    /* error! */
+
+ /* Do other processing */
+                    .
+                    .
+                    .
+
+ /* Create a semaphore and block <!-- entering slot 91 -->this thread on the semaphore */
+ /* until the streaming is complete                           */
+                    .
+                    .
+                    .
+
+ /* Destroy both streams when completed */
+ if (rc = SpiDestroyStream(hstream1))
+    return(rc);    /* error! */
+ if (rc = SpiDestroyStream(hstream2))
+    return(rc);    /* error! */
+
+ /* Perform other resource cleanup */
+ }
+ /**************************************************************/
+ /*                E v e n t   P r o c e d u r e               */
+ /**************************************************************/
+ RC EventProc(EVCB *pEVCB)
+ {
+ if (pEVCB == &amp;EVCB1)      /* Stream #1 or Stream # 2 event ? */
+    /* Process Stream #1 events */
+ else
+    /* Process Stream #2 events */
+ /* Handle events from the Sync/Stream Manager */
+ switch (pEVCB-&gt;ulType) {
+    case EVENT_IMPLICIT_TYPE:
+       switch (pEVCB-&gt;ulSubType) {
+          case EVENT_EOS:     /* End of Stream */
+             /* Clear the semaphore so that the main routine can */
+             /* continue execution.                              */
+             break;
+          case EVENT_ERROR:   /* Error occurred */
+             /* flag error condition in main line application */
+             break;
+          case EVENT_STREAM_STOPPED:  /* Discard/Flush Stop */
+             /* Do processing while stream stopped */
+             break;
+          case EVENT_SYNC_PREROLLED:  /* Stream is prerolled */
+             /* Now that the producers are prerolled, do a real
+                start to the stream handlers */
+             break;
+          default:
+             /* Unknown event, do something */
+          }
+       break;
+    default:
+       /* Unknown event, do something */
+    }
+ }
+</PRE>
+
+
+<P><HR>
+
+<A HREF="071_L3_StreamingWaveformAud.html">[Back: Streaming Waveform Audio Data from the File System]</A> <BR>
+<A HREF="073_L2_DLLModelFileSystemSt.html">[Next: DLL Model: File System Stream Handler]</A> 
+</BODY>
+</HTML>

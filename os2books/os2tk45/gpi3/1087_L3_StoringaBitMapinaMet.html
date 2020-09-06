@@ -1,0 +1,64 @@
+<HTML>
+<HEAD>
+<TITLE>Storing a Bit Map in a Metafile</TITLE>
+</HEAD>
+<BODY>
+<H1>Storing a Bit Map in a Metafile</H1><!-- entering slot 1108 -->
+<P>
+You can draw bit maps in a metafile or segment by calling<A><!-- external link: 1D 61 C4 FC --> GpiWCBitBlt</A>.
+The operating system converts this function to a drawing order. The target-rectangle
+dimensions that you pass to<A><!-- external link: 1D 61 C4 41 --> GpiWCBitBlt
+</A>are in world coordinates, not device coordinates. The following figure
+shows how to draw a bit map in a metafile, and then play the metafile.
+<P>
+
+<PRE>    DEVOPENSTRUC dop;
+    HDC hdcMeta;
+    HPS hps, hpsMeta;
+    SIZEL sizlPage;
+    HMF hmf;
+    HBITMAP hbm;
+    HAB hab;
+    HWND hwnd;
+    POINTL aptl[4];
+
+    dop.pszLogAddress = NULL;
+    dop.pszDriverName = "DISPLAY";
+    dop.pdriv = NULL;
+    dop.pszDataType = NULL;
+
+    hdcMeta = DevOpenDC(hab, OD_METAFILE, "*", 4L,
+                  (PDEVOPENDATA) &amp;dop, NULLHANDLE);
+    hpsMeta = GpiCreatePS(hab, hdcMeta, &amp;sizlPage, PU_PELS | GPIA_ASSOC);
+
+    hbm = GpiLoadBitmap(hpsMeta, NULLHANDLE, IDB_PATTERN, 16L, 16L);
+
+    aptl[0].x = aptl[0].y = 0;  /* Lower-left corner target rectangle        */
+    aptl[1].x = 150;            /* X coordinate upper-right target rectangle */
+    aptl[1].y = 300;            /* Y coordinate upper-right target rectangle */
+    aptl[2].x = aptl[2].y = 0;  /* Lower-left corner source rectangle        */
+    aptl[3].x = aptl[3].y = 16; /* Upper-right corner source rectangle       */
+
+    GpiWCBitBlt(hpsMeta, hbm, 4L, aptl, ROP_SRCCOPY, BBO_IGNORE);
+
+    GpiAssociate(hpsMeta, NULLHANDLE);
+    hmf = DevCloseDC(hdcMeta);
+
+    hps = WinGetPS(hwnd);
+
+    GpiPlayMetaFile(hps, hmf, 0L, NULL, NULL, 0L, NULL);
+
+    WinReleasePS(hps);
+</PRE>
+
+<P>
+You can also store a bit map in a metafile by calling<A><!-- external link: 1D 62 C3 FC --> GpiBitBlt</A>.
+In this case, however, the bit map will be stored inside an escape order.
+
+
+<P><HR>
+
+<A HREF="1086_L3_LoadingaBitMapfromaF.html">[Back: Loading a Bit Map from a File]</A> <BR>
+<A HREF="1088_L1_CreatingandDrawingRe.html">[Next: Creating and Drawing Retained Graphics]</A> 
+</BODY>
+</HTML>

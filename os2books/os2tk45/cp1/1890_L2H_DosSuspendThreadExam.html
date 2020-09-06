@@ -1,0 +1,81 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosSuspendThread - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosSuspendThread - Example Code</H1><!-- entering slot 1910 -->
+<P>
+This example creates a new thread within a process, sleeps for 1 second,
+suspends the thread for 5 seconds, and then waits for the thread to terminate.
+
+<P>
+Compile this example with MULTITHREAD LIBRARIES. If you are using IBM CSet/2,
+use the  /Gm+ switch.
+<PRE>#define INCL_DOSPROCESS     /* Process and thread values */
+#define INCL_DOSERRORS      /* DOS error values          */
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+
+void _System CntThreadProc(ULONG LoopMax);  /* Count Thread */
+
+int main(VOID) {
+   TID         tidCntThread = 0;     /* ID returned for newly created thread */
+   PFNTHREAD   pfnCntThread = &amp;CntThreadProc; /* Address of thread program   */
+   ULONG       ulThreadParm = 100;        /* Parameter to thread routine     */
+   APIRET      rc           = NO_ERROR;   /* Return code                     */
+
+   rc = DosCreateThread(&amp;tidCntThread,  /* Thread ID (returned by function)  */
+                        pfnCntThread,   /* Address of thread program         */
+                        ulThreadParm,   /* Parameter passed to ThreadProc    */
+                        CREATE_READY |  /* Thread is ready when created      */
+                        STACK_SPARSE,   /* Do not pre-commit stack pages     */
+                        8192L);         /* Stack size, rounded to page bdy   */
+   if (rc != NO_ERROR) {
+      printf("DosCreateThread error: return code = %u\n", rc);
+      return 1;
+   }
+
+   rc = DosSleep (1000);  /* Sleep for a second to allow thread to run a bit */
+
+   rc = DosSuspendThread (tidCntThread);
+   if (rc != NO_ERROR) {
+      printf("DosSuspendThread error: return code = %u\n", rc);
+      return 1;
+   }
+
+   rc = DosSleep (5000);  /* Sleep 5 seconds before resuming the thread     */
+
+   rc = DosResumeThread (tidCntThread);
+   if (rc != NO_ERROR) {
+      printf("DosResumeThread error: return code = %u\n", rc);
+      return 1;
+   }
+
+   rc = DosWaitThread (&amp;tidCntThread, DCWW_WAIT);
+   if (rc != NO_ERROR) {
+      printf ("DosWaitThread error : return code = %u\n", rc);
+   }
+
+   printf ("Thread has completed!\n");
+
+   return NO_ERROR;
+}
+void _System CntThreadProc(ULONG LoopMax )  /* Count thread */
+{
+   ULONG i = 0;                 /* Loop index */
+
+   for (i=0;i &lt; LoopMax;i++ ) {
+      printf ("%d\n", i);
+   }
+
+   return;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1889_L2H_DosSuspendThreadRela.html">[Back: DosSuspendThread - Related Functions]</A> <BR>
+<A HREF="1891_L2H_DosSuspendThreadTopi.html">[Next: DosSuspendThread - Topics]</A> 
+</BODY>
+</HTML>

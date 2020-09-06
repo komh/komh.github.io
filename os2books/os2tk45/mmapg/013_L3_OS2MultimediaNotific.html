@@ -1,0 +1,149 @@
+<HTML>
+<HEAD>
+<TITLE>OS/2 Multimedia Notification Messages</TITLE>
+</HEAD>
+<BODY>
+<H1>OS/2 Multimedia Notification Messages</H1><!-- entering slot 15 -->
+<P>
+The system returns notification messages to applications to indicate OS/2
+multimedia events such as completing a media device function or passing
+ownership of a media device from one process to another. Following is a
+list of OS/2 multimedia notification messages.
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Notification Message ³Reason for Notification                           ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³MM_MCICUEPOINT       ³A cue point was detected. Cue points are set with ³
+³                     ³the playlist CUEPOINT instruction or the          ³
+³                     ³MCI_SET_CUEPOINT command message.                 ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³MM_MCIEVENT          ³A device has generated an event.                  ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³MM_MCINOTIFY         ³A device has completed an action, or an error has ³
+³                     ³occurred.                                         ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³MM_MCIPASSDEVICE     ³A shared device is being lost or gained.          ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³MM_MCIPLAYLISTMESSAGE³A MESSAGE instruction was encountered in a        ³
+³                     ³playlist.                                         ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³MM_MCIPOSITIONCHANGE ³The time period or position specified with the    ³
+³                     ³MCI_SET_POSITION_ADVISE command message has       ³
+³                     ³passed.                                           ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+With the exception of MM_MCIEVENT, the system returns notification messages
+asynchronously to applications using WinPostMsg; MM_MCIEVENT notifications
+are returned synchronously with WinSendMsg.
+<P>
+A PM application receives notifications by passing its message queue window
+handle as a parameter on the mciSendCommand or mciSendString call. Applications
+can also receive notifications by passing a handle to a Control Program
+queue. For more information see <A HREF="014_L3_UsingaControlProgram.html">Using
+a Control Program Queue for Notifications</A>.
+<P>
+If an application sends a command message with mciSendCommand and specifies
+the MCI_NOTIFY flag, control returns immediately to the application. The
+media control interface posts a notification message to the window specified
+in the callback window handle after the command completes processing. The
+MM_MCINOTIFY message is returned asynchronously to the application using
+WinPostMsg. It can have any of the following values:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Notification Code       ³Meaning                             ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³MCI_NOTIFY_SUCCESSFUL   ³The command completed successfully. ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³MCI_NOTIFY_SUPERSEDED   ³Another command is being processed. ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³MCI_NOTIFY_ABORTED      ³Another command interrupted this    ³
+³                        ³one.                                ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+<B>Note: </B> If none of the above notification codes are returned, an error
+code is returned, indicating that the asynchronous processing of the command
+ended in an error condition. To convert the error code to a textual description
+of the error, the application calls the mciGetErrorString function.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+The following code fragment illustrates how the Audio Recorder Sample program,
+provided in the Toolkit (\TOOLKIT\SAMPLES\MM\RECORDER), handles the MM_MCINOTIFY
+notification message.
+<PRE>case MM_MCINOTIFY:
+ /*
+  * This message is returned to an application when a device
+  * successfully completes a command that was issued with a NOTIFY
+  * flag, or when an error occurs with the command.
+  *
+  * This message returns two values. A user parameter (mp1) and
+  * the command message (mp2) that was issued. The low word of mp1
+  * is the Notification Message Code, which indicates the status of the
+  * command like success or failure. The high word of mp2 is the
+  * Command Message which indicates the source of the command.
+  */
+
+  usNotifyCode = (USHORT) SHORT1FROMMP( mp1);     /* low-word  */
+  usCommandMessage = (USHORT) SHORT2FROMMP( mp2); /* high-word */
+
+  switch (usCommandMessage)
+  {
+   case MCI_PLAY:
+      switch (usNotifyCode)
+      {
+         case MCI_NOTIFY_SUCCESSFUL:
+            if (eState != ST_STOPPED)
+            {
+               /*
+                * Update the status line with <!-- entering slot 16 -->appropriate message.
+                */
+               UpdateTheStatusLine(hwnd, IDS_STOPPED);
+               eState = ST_STOPPED;
+
+               /*
+                * Stop the play button animation
+                */
+               WinSendMsg( hwndPlayPB,        /* Play button handle */
+                           GBM_ANIMATE,       /* Animation control  */
+                           MPFROMSHORT(FALSE),/* Animation flag     */
+                           NULL );            /* Ignore return data */
+            }
+            break;
+
+         case MCI_NOTIFY_SUPERSEDED:
+         case MCI_NOTIFY_ABORTED:
+            /* we don't need to handle these messages. */
+            break;
+
+         default:
+            /*
+             * If the message is none of the above, then it must be
+             * a notification error message.
+             */
+            ShowMCIErrorMessage( usNotifyCode);
+            eState = ST_STOPPED;
+
+            /*
+             * Stop the play button animation and update the status
+             * line with appropriate text.
+             */
+            WinSendMsg( hwndPlayPB,         /* Play button handle  */
+                        GBM_ANIMATE,        /* Animation control   */
+                        MPFROMSHORT(FALSE), /* Animation flag      */
+                        NULL );             /* Ignore return data  */
+            UpdateTheStatusLine(hwnd, IDS_STOPPED);
+            break;
+      }
+      break;
+}
+return( (MRESULT) 0);
+</PRE>
+
+
+<P><HR>
+
+<A HREF="012_L3_WaitandNotifyFlags.html">[Back: Wait and Notify Flags]</A> <BR>
+<A HREF="014_L3_UsingaControlProgram.html">[Next: Using a Control Program Queue for Notifications]</A> 
+</BODY>
+</HTML>

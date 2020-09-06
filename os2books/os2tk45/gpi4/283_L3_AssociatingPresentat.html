@@ -1,0 +1,98 @@
+<HTML>
+<HEAD>
+<TITLE>Associating Presentation Spaces with Device Contexts</TITLE>
+</HEAD>
+<BODY>
+<H1>Associating Presentation Spaces with Device Contexts</H1><!-- entering slot 296 -->
+<P>
+Drawing graphic objects requires a presentation space and a device context
+to direct output to a specific instance of an output device, such as a display
+window or a printer. This<I> association</I> enables the device context
+to identify the output device for that presentation space. Further, the
+device context identifies the particular<I> instance</I> of the output device,
+such as a printer or display window.
+<P>
+A presentation space can be associated with only one device context at a
+time. The reverse is also true: a device context can be associated with
+only one presentation space at a time.
+<P>
+The following figure shows how a presentation space is associated with a
+window device context. It is then disassociated from the window device context
+and associated with a printer device context. It cannot be associated with
+both device contexts simultaneously.
+<PRE>    WM_Create:
+         hdcScreen = WinOpenWindowsDC (hwnd);
+         phs = GpiCreatePS (...GPIA.Assoc);
+          .
+          .
+          .
+
+    WM_COMMAND:
+
+      Case IDM_File PRINT:                       /* Device selection        */
+         hdcPrinter = DevOpenDC (...);
+         GpiAssociate (hps, NULL);               /* Disconnect from screen  */
+         GpiAssociate (hps, hdcPrinter);         /* Connect to printer      */
+          .
+          .                                      /* Output                  */
+          .
+         GpiAssociate (hps, NULL);               /* Disconnect from print   */
+         GpiAssociate (hps, hdcScreen);          /* Reconnect to screen     */
+          .
+          .
+          .
+
+    WM_PAINT:
+         WinBeginPaint (hwnd, hps, NULL);
+          .
+          .                                      /* Output                  */
+          .
+
+</PRE>
+
+<P>
+The following figure shows how to open a window device context and associate
+it with a normal presentation space.
+<PRE>    HDC hdcWin;            /* Window device-context handle     */
+    HPS hpsWin;            /* Normal-presentation-space handle */
+    HWND hwndClient;       /* Client-window handle             */
+    HAB hab;               /* Anchor-block handle              */
+    SIZEL sizlPage;        /* Presentation page                */
+
+    hdcWin = WinOpenWindowDC(hwndClient);
+    hpsWin = GpiCreatePS(hab, hdcWin, &amp;sizlPage,
+                         PU_LOENGLISH | GPIA_ASSOC);
+
+</PRE>
+
+<P>
+<B>Note: </B> This type of code is used when the device context is defined
+before the presentation space.
+<P>
+WinOpenWindowDC can be called only once for a particular window and returns
+an error if called a second time. WinQueryWindowDC can be used to obtain
+a window device context previously allocated using WinOpenWindowDC. The
+following figure shows how to create a presentation space with page units
+of 0.01 inch (PU_LOENGLISH) and associate it with a printer device context.
+As input to<A><!-- external link: 1D 77 C3 FC --> GpiCreatePS</A>, you supply
+the height and width of the presentation page.
+<PRE>
+    HAB hab;          /* Anchor-block handle         */
+    HPS hpsPrinter;   /* Presentation-space handle   */
+    HDC hdcPrinter;   /* Device-context handle       */
+    SIZEL sizlPage;   /* Page structure              */
+    .
+    .
+    .
+    hpsPrinter = GpiCreatePS(hab, hdcPrinter, &amp;sizlPage,
+       PU_LOENGLISH | GPIA_ASSOC);
+
+</PRE>
+ 
+
+<P><HR>
+
+<A HREF="282_L3_CreatingaDeviceConte.html">[Back: Creating a Device Context]</A> <BR>
+<A HREF="284_L3_ClosingaDeviceContex.html">[Next: Closing a Device Context]</A> 
+</BODY>
+</HTML>

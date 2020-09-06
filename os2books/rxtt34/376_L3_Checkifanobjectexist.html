@@ -1,0 +1,105 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Check if an object exist</TITLE>
+</HEAD>
+<BODY>
+<H1>Check if an object exist</H1><!-- entering slot 388 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+There's no REXX function to check if an object exists. But if you know the
+object ID of the object you can use the code below to test if an object
+already exists. (see also <A HREF="347_L4_ListallWPSknownobjec.html">List
+all WPS known object IDs</A>)
+<P>
+
+<PRE> 
+/* sample code to check if an object exists. Note that this code      */
+/* works for objects with object IDs only!                            */
+
+                        /* load the SysCreateObject function          */
+  call rxFuncAdd "SysCreateObject", "REXXUTIL", "SysCreateObject"
+                        /* load the SysDestroyObject function         */
+  call rxFuncAdd "SysDestroyObject", "REXXUTIL", "SysDestroyObject"
+
+  do until myInput = ""
+    say "Enter the ID of the object to check (RETURN to exit): "
+    myInput = strip( lineIn() )
+    if myInput &lt;&gt; "" then
+    do
+      objectExist = ObjectExist( myInput )
+
+      select
+        when objectExist = 0 then
+          say "The object """ || myInput || """ does not exist."
+
+        when objectExist = 1 then
+          say "The object """ || myInput || """ exist."
+
+        otherwise
+          say "Error """ || objectExist || """ executing ObjectExist!"
+
+      end /* select */
+
+    end /* if myInput &lt;&gt; "" then */
+  end /* do until myInput = "" */
+
+exit 0
+
+/* ------------------------------------------------------------------ */
+/* function: Check if an object with a given object ID exists         */
+/*                                                                    */
+/* Usage:    ObjectExist objectID                                     */
+/*                                                                    */
+/* where:    objectID = object ID of the object to test               */
+/*                                                                    */
+/* returns:  1 - the object exist                                     */
+/*           0 - the object does not exist                            */
+/*           else                                                     */
+/*             error code of the SysCreateObject function             */
+/*                                                                    */
+ObjectExist: PROCEDURE
+  parse arg objectID
+
+                        /* init the return code                       */
+  rc = 43               /* error code 43 = routine not found          */
+
+                        /* install a local error handler              */
+  SIGNAL ON SYNTAX NAME ObjectExistError
+
+                        /* check the parameter                        */
+  if substr( objectID, 2, 1 ) &lt;&gt; ":" then
+    if left( objectID,1 ) &lt;&gt; "&lt;" &amp; right( objectID,1 ) &lt;&gt; "&gt;" then
+      objectID = "&lt;" || objectID || "&gt;"
+
+                        /* try to create an object with this ID       */
+  tempRC = SysCreateObject( "WPFolder"                     ,,
+                            "TestObject"                   ,,
+                            "&lt;WP_NOWHERE&gt;"                 ,,
+                            "OBJECTID=" || objectID || ";" ,,
+                            "FAIL" )
+
+  if tempRC = 1 then
+  do
+                        /* object created, delete it                  */
+    call SysDestroyObject objectID
+    rc = 0              /* set return code to "Object does not exist" */
+  end /* if tempRC = 1 then */
+  else
+    rc = 1              /* set return code to "Object does exist"     */
+
+ObjectExistError:
+
+RETURN rc
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="375_L3_Getdefaultobjectsett.html">[Back: Get default object settings]</A> <BR>
+<A HREF="377_L3_TransientObjects.html">[Next: Transient Objects]</A> 
+</BODY>
+</HTML>

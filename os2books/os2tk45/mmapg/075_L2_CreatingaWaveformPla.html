@@ -1,0 +1,192 @@
+<HTML>
+<HEAD>
+<TITLE>Creating a Waveform Playlist</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating a Waveform Playlist</H1><!-- entering slot 83 -->
+<P>
+Specialized applications such as a waveform editor might require the capability
+of playing and recording using application memory buffers instead of files.
+ The<I> memory playlist</I> feature of OS/2 multimedia provides the construct
+for supplying memory buffers to the waveaudio device.  Besides implementing
+simple circular buffering schemes, memory playlists can be used to synthesize
+complex and unique waveform sounds. By following each DATA statement with
+a MESSAGE statement, an application can be informed as to when the buffer
+can be reused.
+<P>
+<B>Playlist Structure</B>
+<P>
+Depending on the complexity of the application, memory playlists can be
+used to provide a single large memory buffer, or multiple buffers in a circular
+buffering scheme. The following is an example of how a memory playlist might
+be constructed to implement a simple circular buffering scheme.
+<PRE>    0:    NOP
+    1:    DATA...
+    2:    MESSAGE...
+    3:    DATA...
+    4:    MESSAGE...
+    5:    DATA...
+    6:    MESSAGE...
+    7:    BRANCH 0
+</PRE>
+
+<P>
+Note that regardless of whether the playlist is being used for play or record
+operations, the MESSAGE instruction will notify the application when the
+playlist processor has consumed or filled the preceding DATA buffer.  An
+MM_MCIPLAYLISTMESSAGE will be sent to the window procedure specified when
+the waveaudio device was originally opened.
+<P>
+The following code fragment shows the SetUpPlaylist procedure that is performed
+once, during initialization of the Clock Sample program.  It calls the procedure
+CopyWaveformIntoMemory to copy the waveform files into memory buffers.  It
+also initializes the playlist data structure by supplying the address and
+size of the memory buffers holding the data in the appropriate data structure
+fields.
+<PRE>VOID SetupPlayList( VOID )
+{
+ /*
+  * This array keeps the address of each audio chime file.
+  */
+ static LONG *pulBaseAddress[ NUMBER_OF_CHIME_FILES ];
+
+ USHORT usChimeFileId;            /* Chime audio file ID.        */
+ ULONG  ulSizeOfFile,             /* Size of audio file.         */
+
+ulMemoryAllocationFlags = PAG_COMMIT | PAG_READ | PAG_WRITE;
+for(usChimeFileId=0; usChimeFileId&lt;NUMBER_OF_CHIME_FILES;
+    usChimeFileId++)
+ {
+
+    ulSizeOfFile = HowBigIsTheChimeFile( usChimeFileId );
+  /*
+   * If the returned file size is 0, there is a problem with the
+   * chime files.  A message will already have been shown to the user
+   * by the HowBigIsTheChimeFile function so exit this routine.
+   */
+    if ( ulSizeOfFile == 0 )
+    {
+       return;
+    }
+    if ( (pulBaseAddress[ usChimeFileId ] = (LONG *)
+            malloc( ulSizeOfFile )) == (LONG *) NULL )
+    {
+       /*
+        * The memory for the waveform files cannot be allocated.
+        * Notify the user and return from this routine.  No playlist
+        * can be created/played until memory is available.
+        */
+       ShowAMessage(
+          acStringBuffer[
+             IDS_NORMAL_ERROR_MESSAGE_BOX_TEXT - 1 ],
+          IDS_CANNOT_GET_MEMORY, /* ID of the message to show. */
+          MB_OK | MB_INFORMATION | MB_HELP |  MB_APPLMODAL |
+             MB_MOVEABLE );           /* Style of the message box. */
+
+       return;
+
+    }  /* End of IF allocation fails. */
+    /*
+     * <!-- entering slot 84 -->Place the waveform files into the memory buffer that was just
+     * created.
+     */
+    CopyWaveformIntoMemory(
+       pulBaseAddress[ usChimeFileId ],
+       ulSizeOfFile,
+       usChimeFileId );
+    /*
+     * Now that we've loaded the waveform into memory, we need to put
+     * its address and size into the playlist data statements that
+     * use this particular file.
+     *
+     * Its address must be placed into the data statement's first
+     * operand and its size must be placed in the data
+     * statement's second operand.
+     *
+     * For the four different playlists, one for each chime time
+     * (1/4, 1/2, 3/4 and 1 hour increments),
+     * the address of the chime file and its size will be loaded
+     * into each data statement of the Playlist.
+     */
+    if ( usChimeFileId == 0 )
+    /* If we just loaded CLOCK1.WAV */
+    {
+       /*
+        * Put the address of this chime into the first operand of
+        * every data operation that uses this particular chime.
+        */
+    apltPlayList[ 0 ][ 0 ].ulOperandOne =  /* 1/4 hour 1st data op */
+    apltPlayList[ 1 ][ 0 ].ulOperandOne =  /* 1/2 hour 1st data op */
+    apltPlayList[ 2 ][ 0 ].ulOperandOne =  /* 3/4 hour 1st data op */
+    apltPlayList[ 2 ][ 2 ].ulOperandOne =  /* 3/4 hour 3rd data op */
+    apltPlayList[ 3 ][ 0 ].ulOperandOne =  /* 1   hour 1st data op */
+    apltPlayList[ 3 ][ 2 ].ulOperandOne =  /* 1   hour 3rd data op */
+       (ULONG) pulBaseAddress[ usChimeFileId ];  /* address        */
+    /*
+     * Now put the size of the file into the second operand of every
+     * data operation that uses this particular chime.
+     */
+    apltPlayList[ 0 ][ 0 ].ulOperandTwo =  /* 1/4 hour 1st data op */
+    apltPlayList[ 1 ][ 0 ].ulOperandTwo =  /* 1/2 hour 1st data op */
+    apltPlayList[ 2 ][ 0 ].ulOperandTwo =  /* 3/4 hour 1st data op */
+    apltPlayList[ 2 ][ 2 ].ulOperandTwo =  /* 3/4 hour 3rd data op */
+    apltPlayList[ 3 ][ 0 ].ulOperandTwo =  /* 1   hour 1st data op */
+    apltPlayList[ 3 ][ 2 ].ulOperandTwo =  /* 1   hour 3rd data op */
+       ulSizeOfFile;                             /* size         */
+ }
+ else
+ if ( usChimeFileId == 1 )
+ /* If we just loaded CLOCK2.WAV */
+ {
+    /*
+     * Put the address of this chime into the first operand of
+     * every data operation that uses this particular chime.
+     */
+    apltPlayList[ 1 ][ 1 ].ulOperandOne =  /* 1/2 hour 2nd data op */
+    apltPlayList[ 2 ][ 1 ].ulOperandOne =  /* 3/4 hour 2nd data op */
+    apltPlayList[ 3 ][ 1 ].ulOperandOne =  /* 1   hour 2nd data op */
+    apltPlayList[ 3 ][ 3 ].ulOperandOne =  /* 1   hour 4th data op */
+       (ULONG) pulBaseAddress[ usChimeFileId ];  /* address    */
+    /*
+     * Now put the size of the file into the second operand of every
+     * data operation that uses this particular chime.
+     */
+    apltPlayList[ 1 ][ 1 ].ulOperandTwo =  /* 1/2 hour 2nd data op */
+    apltPlayList[ 2 ][ 1 ].ulOperandTwo =  /* 3/4 hour 2nd data op */
+    apltPlayList[ 3 ][ 1 ].ulOperandTwo =  /* 1   hour 2nd data op */
+    apltPlayList[ 3 ][ 3 ].ulOperandTwo =  /* 1   hour 4th data op */
+       ulSizeOfFile;                             /* size        */
+ }
+ else
+ if ( usChimeFileId == 2 )
+ /* If we just loaded CLOCK3.WAV         */
+ /* (this is the gong part of the chime) */
+{
+    /*
+     * Put the address of this chime into the first operand of
+     * every data operation that uses this particular chime.
+     */
+    apltPlayList[ 3 ][ 5 ].ulOperandOne =  /* 1 hour 5th data op */
+       (ULONG) pulBaseAddress[ usChimeFileId ];
+
+    /*
+     * Now put the size of the file into the second operand of every
+     * data operation that uses this particular chime.
+     */
+
+    apltPlayList[ 3 ][ 5 ].ulOperandTwo =   /* 1 hour 5th data op */
+       ulSizeOfFile;
+  }
+
+ }  /* End of For loop of chime files. */
+
+}  /* End of SetupPlayList */
+</PRE>
+
+
+<P><HR>
+
+<A HREF="074_L2_PlayingandRecordingn.html">[Back: Playing and Recording non-RIFF Waveforms]</A> <BR>
+<A HREF="076_L3_SuggestedSetupsforPl.html">[Next: Suggested Setups for Playlists]</A> 
+</BODY>
+</HTML>

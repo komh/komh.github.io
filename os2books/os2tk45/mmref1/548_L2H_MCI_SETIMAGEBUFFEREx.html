@@ -1,0 +1,90 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>MCI_SETIMAGEBUFFER - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>MCI_SETIMAGEBUFFER - Example Code</H1><!-- entering slot 566 -->
+<P>
+The following code illustrates how to write data to the image capture buffer.
+
+<PRE>  USHORT  usUserParm = 0;
+  ULONG   ulReturn;
+  BITMAPINFOHEADER2 *pbmphdr;
+  MMOTIONHEADER *pmmothdr;
+  MCI_IMAGE_PARMS mciImageParms;
+
+  memset (mciImageParms, 0x00, sizeof (MCI_IMAGE_PARMS));
+  mciImageParms.hwndCallback = hwndNotify;
+
+  /* If you desire to set from a standard format converted */
+  /* buffer                                                */
+  if (ulFlags &amp; MCI_CONVERT)
+       {
+     /******************************/
+     /* For RGB BITMAP data buffer */
+     /******************************/
+     mciImageParms.ulPelFormat = MCI_IMG_RGB;
+     mciImageParms.usBitCount = 24;
+     mciImageParms.ulImageCompression = MCI_IMG_COMP_NONE;
+     mciImageParms.ulPelBufferWidth  = 200;
+     mciImageParms.ulPelBufferHeight = 100;
+     mciImageParms.ulBufLen = ((200 * 3) * 100) + sizeof
+      (BITMAPINFOHEADER2);
+     DosAllocMem (&amp;mciImageParms.pPelBuffer,
+                  mciImageParms.ulBufLen,
+                  PAG_COMMIT | PAG_WRITE | PAG_READ);
+
+     /* Set the BITMAP HEADER section to look like a real bitmap*/
+     pbmphdr = (BITMAPINFOHEADER2 *)mciImageParms.pPelBuffer;
+     pbmphdr-&gt;cbFix     = sizeof (BITMAPINFOHEADER2);
+     pbmphdr-&gt;cx        = mciImageParms.ulPelBufferWidth;
+     pbmphdr-&gt;cy        = mciImageParms.ulPelBufferHeight;
+     pbmphdr-&gt;cPlanes   = 1;
+     pbmphdr-&gt;cBitCount = mciImageParms.usBitCount;
+
+
+     /* Set the BITMAP DATA section to RGB white. */
+     memset ((PVOID)((LONG)mciImageParms.pPelBuffer + sizeof
+     (BITMAPINFOHEADER2)
+     ),
+        0xFF, mciImageParms.ulBufLen - sizeof (BITMAPINFOHEADER2));
+     }
+    else
+       {
+
+     /********************************/
+     /* For M-Motion YUV data buffer */
+     /********************************/
+     mciImageParms.ulPelFormat = MCI_IMG_YUV;
+     mciImageParms.usBitCount = 12;
+     mciImageParms.ulImageCompression = MCI_IMG_COMP_NONE;
+     mciImageParms.ulPelBufferWidth  = 200;
+     mciImageParms.ulPelBufferHeight = 100;
+     mciImageParms.ulBufLen = (200 * 100) + ((200 * 100) &gt;&gt; 1) + sizeof
+  (MMOTIONHEADER);
+     DosAllocMem (&amp;mciImageParms.pPelBuffer,
+                mciImageParms.ulBufLen,
+                  PAG_COMMIT | PAG_WRITE | PAG_READ);
+
+     /* Set the BITMAP HEADER section to look like a real bitmap */
+     pmmothdr = (MMOTIONHEADER *)mciImageParms.pPelBuffer;
+     strncpy (&amp;pmmothdr-&gt;mmID[0], "YUV12C", 6);
+     pmmothdr-&gt;mmXlen = mciImageParms.ulPelBufferWidth ;
+     pmmothdr-&gt;mmYlen = mciImageParms.ulPelBufferHeight;
+
+     /* Leave the yuv buffer black for this example.  */
+     }
+
+  ulReturn = mciSendCommand(usDeviceID, MCI_SETIMAGEBUFFER,
+                   MCI_WAIT | ulFlags,
+                   (PVOID)&amp;mciImageParms,
+                   usUserParm);
+</PRE>
+
+
+<P><HR>
+
+<A HREF="547_L2H_MCI_SETIMAGEBUFFERRe.html">[Back: MCI_SETIMAGEBUFFER - Remarks]</A> <BR>
+<A HREF="549_L2H_MCI_SETIMAGEBUFFERTo.html">[Next: MCI_SETIMAGEBUFFER - Topics]</A> 
+</BODY>
+</HTML>

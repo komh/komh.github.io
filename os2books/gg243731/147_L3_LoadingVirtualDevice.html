@@ -1,0 +1,60 @@
+<HTML>
+<HEAD>
+<TITLE>Loading Virtual Device Drivers</TITLE>
+</HEAD>
+<BODY>
+<H1>Loading Virtual Device Drivers</H1><!-- entering slot 155 -->
+<P>
+Virtual device drivers are loaded into memory when the initialization phase
+of the physical device drivers has completed.  Upon loading, the virtual
+device driver verifies the communication path to the corresponding physical
+device driver, and registers hooks with the Virtual DOS Machine Manager
+for VDM events such as creation, destruction, and foreground/background
+switching.
+<P>
+Upon creation of a VDM, the virtual device driver is notified by the Virtual
+DOS Machine Manager, and the creation routine of the virtual device driver
+is invoked.  This causes a stub device driver to be loaded into the VDM's
+V86 mode address space.  This stub driver accepts device requests from DOS
+applications within the VDM, and routes them to the virtual device driver
+outside the V86 mode address space.
+<P>
+This is typically achieved by having the stub device driver issue an instruction
+which causes a general protection exception.  This exception is passed to
+the operating system's general protection exception handler, which in turn
+passes it to the Virtual DOS Machine Manager, and finally to the appropriate
+virtual device driver.  The virtual device driver then communicates with
+the corresponding physical device driver in order to access the hardware
+device.
+<P>
+When a hardware interrupt occurs, the physical device driver is notified
+and communicates the event to the virtual device driver, which then takes
+the appropriate action to inform the DOS application.  This occurs even
+if the VDM is not currently executing in the foreground, since the virtual
+device driver can access its instance data directly.
+<P>
+Note that certain virtual device drivers do not have a corresponding physical
+device driver.  For example, the VEMM.SYS virtual device driver is used
+to provide support for the LIM Expanded Memory Specification Version 4.0;
+this virtual device driver communicates directly with the operating system's
+memory manager to allocate and manipulate expanded memory objects.
+<P>
+Virtual device drivers communicate with the OS/2 Version 2.0 kernel using
+<A HREF="464_L2_VirtualDeviceHelper.html"><B>virtual device helper</B> (<B>VDH</B>)
+</A>services. The use of these services is required because virtual device
+drivers execute at privilege level 0, and are thus prevented from issuing
+normal privilege level 3 function calls to the operating system kernel.
+ VDH services are also used to communicate with physical device drivers,
+and for communication between virtual device drivers.
+<P>
+Note that there is no fixed communication protocol between a virtual device
+driver and a physical device driver.  The programmer may use any protocol
+that suits the needs of the driver.  A shutdown protocol is recommended
+in case the virtual device driver has to be shut down.
+
+<P><HR>
+
+<A HREF="146_L2_VirtualDeviceDrivers.html">[Back: Virtual Device Drivers]</A> <BR>
+<A HREF="148_L3_VirtualDeviceDriverS.html">[Next: Virtual Device Driver Structure]</A> 
+</BODY>
+</HTML>

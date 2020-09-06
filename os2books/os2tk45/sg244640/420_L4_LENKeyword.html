@@ -1,0 +1,91 @@
+<HTML>
+<HEAD>
+<TITLE>LEN Keyword</TITLE>
+</HEAD>
+<BODY>
+<H1>LEN Keyword</H1><!-- entering slot 601 -->
+<P>
+The LEN parameter is an optional keyword parameter that defines the length
+of the variable length record that will follow in the next MEM or MEM32
+statement.
+<PRE>
+        LEN=(length_spec,flag),
+
+</PRE>
+
+<P>
+where:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+length_spec<!-- lm: 0x2 5 -->
+<UL>
+<P>
+is an address specification that points to the one word length field of
+the next memory specification. This format can be<B> symbolic_name+nnnnnnnn
+</B>where<B> symbolic_name</B> is a symbolic memory location and<B> nnnnnnnn
+</B>is the offset from that symbolic address. The<B> length_spec</B> can
+also be <A HREF="429_L5_FlatRegisterForm.html">Flat Register Form.</A> or
+<A HREF="430_L5_SegmentRegisterForm.html">Segment Register Form.</A> <!-- lm: 0x2 1 -->
+</UL> flag
+<!-- lm: 0x2 5 -->
+<UL>
+<P>
+is a mandatory parameter that identifies the level of indirection to be
+used on the length_spec. It is one of:<!-- lm: 0x2 10 -->
+<UL>
+<P>
+D[IRECT]<!-- lm: 0x2 10 -->
+<BR>
+I[NDIRECT][*[{+|-}iiiiiiii]]...<!-- lm: 0x2 5 -->
+</UL> DIRECT implies that
+the length_spec specifies a memory location that contains the length of
+the variable length record. INDIRECT means that the length_spec contains
+an address and is dereferenced to obtain the memory location.  The optional
+asterisks denote the level of indirection, one for each level.  The indirect
+offsets<B> iiiiiiii</B> are added to or subtracted from the value found
+at the given level of indirection.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following are example LEN statements followed by the memory statement
+whose length they describe.
+<PRE>    TRACE MINOR=.....,
+          /* Symbol vrecord is a record whose first field is a one */
+          /* word value that is the total length of the entire     */
+          /* variable length record.                               */
+          LEN=(vrecord,DIRECT),
+          MEM=(.vrecord,DIRECT,LEN),
+
+          /* Symbol vrec_ptr is a pointer to a variable length record */
+          /* and vend_ptr is a pointer to the end of the same record. */
+          /* The second field (10 bytes from end of record) is  total */
+          /* length of the variable length record.                    */
+          LEN=(vend_ptr,INDIRECT*-10),
+          MEM=(.vrec_ptr,INDIRECT,LEN),
+
+          /* Symbol vrec_ptr is a pointer to a variable length record.*/
+          /* The second field (2 bytes from beginning of record) is   */
+          /* total length of the variable length record.              */
+          LEN=(vrec_ptr,INDIRECT*+2),
+          MEM=(.vrec_ptr,INDIRECT,LEN),
+
+          /* Symbol ind_ptr is a pointer to a structure.  The third   */
+          /* field in the structure (6 bytes from beginning) is a     */
+          /* pointer to a variable record.  The fourth field in the   */
+          /* variable length record (8 bytes from beginning) is the   */
+          /* total length of this variable length record.             */
+          LEN=(ind_ptr,INDIRECT*+6*+8),
+          MEM=(.ind_ptr,INDIRECT*+6*,LEN),
+
+          /* If DS:DI contains the address of ind_ptr, to perform */
+          /* the above logging, the statements would be:              */
+          LEN=(RDS+DI,INDIRECT*+6*+8),
+          MEM=(RDS+DI,INDIRECT*+6*,LEN)
+</PRE>
+
+
+<P><HR>
+
+<A HREF="419_L4_FMTKeyword.html">[Back: FMT Keyword]</A> <BR>
+<A HREF="421_L4_DATA_STMT.html">[Next: DATA_STMT]</A> 
+</BODY>
+</HTML>

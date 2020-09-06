@@ -1,0 +1,69 @@
+<HTML>
+<HEAD>
+<TITLE>Exception Handler Interface</TITLE>
+</HEAD>
+<BODY>
+<H1>Exception Handler Interface</H1><!-- entering slot 842 -->
+<P>
+Exception handlers are passed four parameters. The interface for writing
+a 32-bit exception handler is:
+<PRE>    ExceptionHandler (ExceptionReportRecord,
+                      ExceptionRegistrationRecord,
+                      ContextRecord,
+                      DispatcherContext);
+</PRE>
+
+<P>
+The exception handler returns XCPT_CONTINUE_EXECUTION to indicate that the
+exception has been handled and is to be dismissed, or XCPT_CONTINUE_SEARCH
+to indicate that the exception has not been handled and is to be passed
+to the next exception handler on the chain.
+<P>
+Note that there are no invalid exception numbers; if a handler does not
+recognize an exception number, it simply returns XCPT_CONTINUE_SEARCH.
+<P>
+In addition to handling exceptions, exception handlers are used in<I> unwind
+operations</I>. An unwind operation simply calls and removes exception handlers
+from the exception handler chain of the thread. Unwind exceptions are not
+actually being delivered to the handlers, so the individual return codes
+are irrelevant, and they do not affect the unwind operation.
+<P>
+A single exception handler can be used to handle all the exceptions that
+you choose to handle. It is not necessary to have a separate exception handler
+for each exception.
+<P>
+A handler is not required to return to the system; it can handle the exception,
+and then continue thread execution directly. For example, when an application
+executes a longjmp(), the C language compiler adds code that essentially
+performs an unwind operation to clean up the stack. Execution then resumes
+at the point where the target setjmp() occurred.
+<P>
+For synchronous exceptions, an exception handler can alter the contents
+of the interrupted thread's context, except for the fields that cannot normally
+be altered during thread execution. For asynchronous exceptions (signal
+and termination) changes made to the context of the thread are ignored.
+
+<P>
+Some exceptions are<I> continuable</I>; if the thread's exception handler
+handles the exception, execution can continue. If the exception condition
+is such that execution cannot be continued safely, the exception is said
+to be<I> noncontinuable</I>. If an exception is noncontinuable the EH_NONCONTINUABLE
+bit is set in the exception structure, and it is an error to indicate the
+exception has been handled. Returning XCPT_CONTINUE_EXECUTION causes an
+XCPT_NONCONTINUABLE_EXCEPTION exception to be raised.
+<P>
+Generally, exception handlers can use any function while they are handling
+an exception. However, while handling a process-termination exception, an
+exception handler must not call<A><!-- external link: 1D 74 C3 FC --> DosCreateThread</A>,
+<A><!-- external link: 1D 83 C3 FC -->DosExecPgm</A>, or<A><!-- external link: 1D FB C3 FC --> DosStartSession</A>,
+because unpredictable results can occur. A handler also must not call<A><!-- external link: 1D 84 C3 45 --> DosExit
+</A>while handling a process-termination exception, because this request
+will cause the exception to be dispatched as a nested exception to the current
+thread's entire chain of handlers.
+
+<P><HR>
+
+<A HREF="822_L3_ErrorPopUpScreens.html">[Back: Error Pop-Up Screens]</A> <BR>
+<A HREF="824_L3_ExceptionHandlerPara.html">[Next: Exception Handler Parameters]</A> 
+</BODY>
+</HTML>

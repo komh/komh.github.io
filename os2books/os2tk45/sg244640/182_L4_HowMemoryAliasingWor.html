@@ -1,0 +1,306 @@
+<HTML>
+<HEAD>
+<TITLE>How Memory Aliasing Works</TITLE>
+</HEAD>
+<BODY>
+<H1>How Memory Aliasing Works</H1><!-- entering slot 268 --> 
+<P>
+Aliasing is a facility in virtual memory management whereby one or more
+pages of a memory object may be referenced from an alternative virtual address,
+possibly from a different process or arena and possibly with different read/write/execute
+characteristics. It is used extensively by device drivers debugging applications
+and VDMs. 
+<P>
+This example shows how aliasing is represented in the system for a debugging
+application and how shared storage becomes privatized. There are many ways
+of creating aliases. The application in this example is IPMD, which uses
+DosDebug function MapWRAlias to alias the debugee's storage and DosCreateCSAlias
+to map a code selector to one of his own data segments. 
+<P>
+We introduce the <A HREF="3337_L0_.html">memory alias record (VMAL)</A> and
+the <A HREF="356_L3_MLFormatMemoryAliasR.html">.ML command</A>. 
+<PRE>
+&gt;&gt;&gt; For reference list the thread slots in the system...
+
+.p
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ .
+ .
+ 001c  0004 0002 0004 0001 blk 0200 7b95e000 7bb45078 7bb2ac68      10 cmd
+ .
+ .
+ 0020  0008 0002 0008 0002 blk 0200 7b966000 7bb460d0 7bb2b338      12 mrfile32
+ 002b# 000b 0002 000b 0001 blk 0200 7b97c000 7bb468fc 7bb2c5f4 1eb8 14 ipmd
+ 002a  000b 0002 000b 0002 blk 0200 7b97a000 7bb468fc 7bb2c440 1eb8 14 ipmd
+ 002c  000d 0002 000d 0001 blk 0200 7b97e000 7bb47954 7bb2c7a8 1eb8 16 cmd
+ 002d  000c 0002 000c 0001 blk 0200 7b980000 7bb47128 7bb2c95c 1e98 15 dpmlines
+ 002e  000e 0002 000e 0001 blk 0300 7b982000 7bb48180 7bb2cb10 1eb8 17 epm
+ 002f  000e 0002 000e 0002 blk 0300 7b984000 7bb48180 7bb2ccc4 1ecc 17 epm
+
+
+&gt;&gt;&gt; Now list all the busy alias records:
+
+##.ml
+ hal=0001 pal=%ffe61020  har=00b8  hptda=009f  pgoff=00000  f=001
+ hal=0002 pal=%ffe61028  har=00b9  hptda=009f  pgoff=00000  f=001
+ hal=0003 pal=%ffe61030  har=001b  hptda=009f  pgoff=00000  f=001
+ hal=0004 pal=%ffe61038  har=0183  cs=00e6 ds=d446 cref=001 f=13
+ hal=0005 pal=%ffe61040  har=0199  hptda=009f  pgoff=00006  f=001
+ hal=0006 pal=%ffe61048  har=01b8  hptda=009f  pgoff=00000  f=021
+ hal=0007 pal=%ffe61050  har=01b9  hptda=009f  pgoff=00000  f=021
+ hal=0008 pal=%ffe61058  har=01ba  hptda=009f  pgoff=00000  f=021
+ hal=0009 pal=%ffe61060  har=01e7  hptda=009f  pgoff=00000  f=001
+ hal=000a pal=%ffe61068  har=0208  cs=0056 ds=d446 cref=001 f=13
+ hal=000b pal=%ffe61070  har=020b  cs=0056 ds=d446 cref=001 f=13
+ hal=000c pal=%ffe61078  har=026f  cs=007e ds=d446 cref=001 f=13
+ hal=000d pal=%ffe61080  har=02bf  cs=00ae ds=d446 cref=001 f=13
+ hal=000e pal=%ffe61088  har=02df  cs=01ae ds=0077 cref=001 f=13
+ hal=000f pal=%ffe61090  har=0305  hptda=0389  pgoff=00000  f=049
+ hal=0010 pal=%ffe61098  har=<!-- entering slot 269 -->0306  hptda=0389  pgoff=00000  f=049
+ hal=0011 pal=%ffe610a0  har=030e  cs=0056 ds=d446 cref=001 f=13
+ hal=0012 pal=%ffe610a8  har=0323  cs=0056 ds=d446 cref=001 f=13
+ hal=0013 pal=%ffe610b0  har=032e  cs=007e ds=d446 cref=001 f=13
+
+&gt;&gt;&gt; hal f &amp; 10 have f=049 = 0000 0100 1001
+&gt;&gt;&gt;                               |   |  |... Busy
+&gt;&gt;&gt;                               |   |
+&gt;&gt;&gt;                               |   ....... Debug
+&gt;&gt;&gt;                               |.......... Privatized
+&gt;&gt;&gt;
+&gt;&gt;&gt; har=305 is an alias for a linear address in hptda=389
+&gt;&gt;&gt; similarly har=306 is an alias for a linear address in hptda=389
+&gt;&gt;&gt; Now look closer at hal=f.
+
+##.mlc f
+&gt;&gt;&gt; chaining doesn't always work so..
+
+##.mac 305
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0305 %fed02278 00000010 %00520000 169 0307 0304 00b5 0000 00c1 000f hptda=031a
+ hal=000f pal=%ffe61090  har=0305  hptda=0389  pgoff=00000  f=049
+ har     par      cpg        va    flg next prev link hash hob   hal
+ 00b5 %fecfef98 00000010 %1a030000 3d9 00b4 00b6 0000 0000 00c1 0000  hco=00502
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 00c1  0305 0000  1838 00bd 00bd  0000 00  00 00 00 shared    c:doscall1.dll
+ hco=00502 pco=fe85e925  hconext=00473 hptda=03cb f=1c  pid=000e c:epm.exe
+ hco=00473 pco=fe85e65a  hconext=00455 hptda=03b9 f=1c  pid=000d c:cmd.exe
+ hco=00455 pco=fe85e5c4  hconext=0045a hptda=0389 f=9c  pid=000c d:dpmlines.exe
+ hco=0045a pco=fe85e5dd  hconext=00283 hptda=031a f=1c  pid=000b d:ipmd.exe
+ hco=00283 pco=fe85dcaa  hconext=0014a hptda=02d6 f=1c  pid=0008 c:mrfile32.exe
+ hco=0014a pco=fe85d68d  hconext=00133 hptda=0257 f=1c  pid=0005 c:pmshell.exe
+ hco=00133 pco=fe85d61a  hconext=00092 hptda=0248 f=1c  pid=0004 c:cmd.exe
+ hco=00092 pco=fe85d2f5  hconext=00020 hptda=01ae f=1c  pid=0003 c:harderr.exe
+ hco=00020 pco=fe85d0bb  hconext=00000 hptda=009f f=1c  pid=0002 c:pmshell.exe
+
+
+&gt;&gt;&gt; Ignoring hco=455 for the moment. har=b5 represents linear address range
+&gt;&gt;&gt; %1a030000 in the shared arena. This is in fact a shared object (hob=1c)
+&gt;&gt;&gt; which is being accessed by 9 different processes. The hco chain lists those
+&gt;&gt;&gt; processes that access this object. hob=1c is one of the objects in doscall1.dll
+
+&gt;&gt;&gt; Let's verify that %1a030000 is indeed that same data in each of the contexts.
+&gt;&gt;&gt; hco=133 is for pid=4, slot=1c, cmd.exe(1)
+##.s 1c
+##dp %1a030000 l2
+ linaddr   frame   pteframe  state res Dc Au CD WT Us rW Pn state
+%1a030000* 00236  frame=00236  2    0  D  A        U  W  P  resident
+%1a030000  00a22  frame=00a22  0    0  c  u        U  r  P  pageable
+%1a031000  00a1c  vp id=00320  0    0  c  u        U  r  n  pageable
+
+&gt;&gt;&gt; %1a030000 equates <!-- entering slot 270 -->to real address %%a22000
+&gt;&gt;&gt; hco=473 is for pid=d, slot=2c, cmd.exe (2)
+##.s 2c
+##dp %1a030000 l2
+ linaddr   frame   pteframe  state res Dc Au CD WT Us rW Pn state
+%1a030000* 00c3c  frame=00c3c  2    0  D  A        U  W  P  resident
+%1a030000  00a22  frame=00a22  0    0  c  u        U  r  P  pageable
+%1a031000  00a1c  frame=00a1c  0    0  c  u        U  r  P  pageable
+
+&gt;&gt;&gt; %1a030000 equates to real address %%a22000
+&gt;&gt;&gt; hco=502 is for pid=e, slot=2e, epm.exe
+##.s 2e
+##dp %1a030000 l2
+ linaddr   frame   pteframe  state res Dc Au CD WT Us rW Pn state
+%1a030000* 00418  frame=00418  2    0  D  A        U  W  P  resident
+%1a030000  00a22  frame=00a22  0    0  c  u        U  r  P  pageable
+%1a031000  00a1c  frame=00a1c  0    0  c  u        U  r  P  pageable
+
+&gt;&gt;&gt; In each of these cases looked so far, linear address %1a030000 is
+&gt;&gt;&gt; mapped to the same real address %%a22000.
+&gt;&gt;&gt; Now examine the hco flags:  9c = 1001 1100
+&gt;&gt;&gt;                                  |  | ||.... User
+&gt;&gt;&gt;                                  |  | |..... Executable
+&gt;&gt;&gt;                                  |  |....... Read
+&gt;&gt;&gt;                                  |.......... Privatized
+
+&gt;&gt;&gt; now turn our attention to har=305, hal=f, address %520000 and hco=455.
+
+&gt;&gt;&gt; hco=455 has the additional Privatized flag set.
+&gt;&gt;&gt; Now look at the PTE for this storage in slot=2d, pid=c, dpmlines.exe
+##.s 2d
+##dp %1a030000 l2
+ linaddr   frame   pteframe  state res Dc Au CD WT Us rW Pn state
+%1a030000* 005ab  frame=005ab  2    0  D  A        U  W  P  resident
+%1a030000  00bda  frame=00bda  0    0  c  u        U  r  P  pageable
+%1a031000         vp id=01616  0    0  c  u        U  r  n  pageable
+
+&gt;&gt;&gt; This is no-longer the same storage as in the other contexts. After DPMLINES
+&gt;&gt;&gt; was loaded, IPMD created an alias to object 1c reference by DMPLINES.
+&gt;&gt;&gt; The loader/memory had to make a private copy to protect the integrity
+&gt;&gt;&gt; of other contexts who were sharing the same object. Having privatized
+&gt;&gt;&gt; this object for the one context, the loader will not share it with
+&gt;&gt;&gt; other contexts.
+&gt;&gt;&gt; If we hadn't started with the alias record we could have done a .ml now
+&gt;&gt;&gt; and looked for the records which referenced hptda=389. As it happens we
+&gt;&gt;&gt; know already that har=305 is an alias of har=b5. We can check this out
+&gt;&gt;&gt; by looking at the page tables for %520000 in hptda=031a (pid=b, slot=2c)
+
+##.s 2c
+##dp %520000
+##.i %520000
+##dp %520000 l2
+ linaddr   frame   pteframe  state res Dc Au CD WT Us rW Pn state
+%00520000* 00390  frame=00390  2    0  D  A        U  W  P  resident
+%00520000  00bda  frame=00bda  0    0  c  u        U  W  P  pageable
+%00521000         vp id=01616  0    0  c  u        U  W  n  pageable
+
+&gt;&gt;&gt; %520000 is %%bda000 which is the same real address as %1a030000 in slot=
+&gt;&gt;&gt; 2d. We had to page in %520000 so we should check %1a030000 in slot=2d
+&gt;&gt;&gt; again, in case it was discarded.
+
+##.s 2d
+##dp %1a030000 l2
+ linaddr   frame   pteframe  state res Dc Au CD WT Us rW Pn state
+%1a030000* 005ab  frame=005ab  2    0  D  A        U  W  P  resident
+%1a030000  00bda  frame=00bda  0    0  c  u        U  r  P  pageable
+%1a031000         vp id=01616  0    0  c  u        U  r  n  pageable
+
+&gt; ... and it is the same.
+&gt; While we are at it, lets check %1a030000 in slot=2c (IPMD)
+
+##.s 2c
+##dp %1a030000 l2
+ linaddr   frame   pteframe  state res Dc Au CD WT Us rW Pn state
+%1a030000* 00611  frame=00611  2    0  D  A        U  W  P  resident
+%1a030000  00a22  frame=00a22  0    0  c  u        U  r  P  pageable
+%1a031000  00a1c  vp id=00320  0    0  c  u        U  r  n  pageable
+
+&gt;&gt;&gt; ... and yes as expected IPMD is referencing the shared %1a030000, in
+&gt;&gt;&gt; fact he is referencing both copies.
+
+&gt;&gt;&gt; Now let's look at some of the other aliases set up by IPMD
+##.mlc 10
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0306 %fed0228e 00000010 %00540000 169 0308 0307 02ee 0000 0386 0010 hptda=031a
+ hal=0010 <!-- entering slot 271 -->pal=%ffe61098  har=0306  hptda=0389  pgoff=00000  f=049
+ har     par      cpg        va    flg next prev link hash hob   hal
+ 02ee %fed0207e 00000010 %00010000 1d9 02ed 02f0 0000 0000 0386 ffff hptda=0389
+
+&gt;&gt;&gt; Note: hal=ffff for har=2ee. This is a special hal to indicate a
+&gt;&gt;&gt; privatized arena - there isn't a context record to put the privatized
+&gt;&gt;&gt; flag in as this was private arena, shared data.
+
+&gt;&gt;&gt; Check out the hptda pids as we have forgotten who 31a and 389 are..
+##.mo 31a
+ hob       va     flgs own  hmte  sown,cnt lt st xf
+ 031a  %7bb468fc  8000 ffcb 02db  0000 00  00 00 00 ptda 000b d:ipmd.exe
+##.mo 389
+ hob       va     flgs own  hmte  sown,cnt lt st xf
+ 0389  %7bb47128  8000 ffcb 0000  0000 00  00 00 00 ptda 000c d:dpmlines.exe
+
+&gt;&gt;&gt; Now check the page tables in each processes to prove we are looking
+&gt;&gt;&gt; at the same thing...
+##.ss 2b
+##dp %540000 l1
+ linaddr   frame   pteframe  state res Dc Au CD WT Us rW Pn state
+%00540000* 00390  frame=00390  2    0  D  A        U  W  P  resident
+%00540000         vp id=015f0  0    0  c  u        U  W  n  pageable
+##.i %540000
+##dp %540000 l1
+ linaddr   frame   pteframe  state res Dc Au CD WT Us rW Pn state
+%00540000* 00390  frame=00390  2    0  D  A        U  W  P  resident
+%00540000  005d2  frame=005d2  0    0  c  u        U  W  P  pageable
+##.ss 2d
+##dp %10000 l2
+##.i %10000
+##dp %10000 l2
+ linaddr   frame   pteframe  state res Dc Au CD WT Us rW Pn state
+%00010000* 002b3  frame=002b3  2    0  D  A        U  W  P  resident
+%00010000  005d2  frame=005d2  0    0  c  u        U  r  P  pageable
+%00011000         vp id=015f1  0    0  c  u        U  r  n  pageable
+##.ss 2b
+##dp %540000 l1
+ linaddr   frame   pteframe  state res Dc Au CD WT Us rW Pn state
+%00540000* 00390  frame=00390  2    0  D  A        U  W  P  resident
+%00540000  005d2  frame=005d2  0    0  c  u        U  W  P  pageable
+
+&gt;&gt;&gt; Finally look alias record hal=e. This is a CS Alias of a data
+&gt;&gt;&gt; segment within in the same process. The hal flags indicate:
+
+&gt;&gt;&gt; 13=0001 0011
+&gt;&gt;&gt;       |   ||... Busy (in use)
+&gt;&gt;&gt;       |   |.... CS Alias
+&gt;&gt;&gt;       |........ DS selector valid
+
+
+
+
+##.mlc e
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 02df %fed01f34 00000010 %00350000 1c9 02e2 02de 029d 0000 031b 000e hptda=031a
+ hal=000e pal=%ffe61088  har=02df  cs=01ae ds=0077 cref=001 f=13
+ har     par      cpg        va    flg next prev link hash hob   hal
+ 029d %fed01988 00000010 %000e0000 179 02b9 0293 0000 0000 031b 0000 hptda=031a
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 031b  02df 0000  102c 031a 031e  0000 00  00 00 00 priv 000b d:ipmd.exe
+
+&gt;&gt;&gt; Check out the page tables...
+##dp %350000 l2
+##.i %350000
+##dp %350000 l2
+ linaddr   frame   pteframe  state res Dc Au CD WT Us rW Pn state
+%00350000* 00625  frame=00625  2    0  D  A        U  W  P  resident
+%00350000  00362  frame=00362  0    0  c  u        U  r  P  pageable
+%00351000         vp id=01403  0    0  c  u        U  r  n  pageable
+##dp %e0000 l2
+ linaddr   frame   pteframe  state res Dc Au CD WT Us rW Pn state
+%000e0000* 00625  frame=00625  2    0  D  A        U  W  P  resident
+%000e0000  00362  vp id=01402  0    0  c  u        U  W  n  pageable
+%000e1000         vp id=01403  0    0  c  u        U  W  n  pageable
+##.i %e0000
+##dp %e0000 l2
+ linaddr   frame   pteframe  state res Dc Au CD WT Us rW Pn state
+%000e0000* 00625  frame=00625  2    0  D  A        U  W  P  resident
+%000e0000  00362  frame=00362  0    0  c  u        U  W  P  pageable
+%000e1000         vp id=01403  0    0  c  u        U  W  n  pageable
+##dp %350000 l2
+ linaddr   frame   pteframe  state res Dc Au CD WT Us rW Pn state
+%00350000* 00625  frame=00625  2    0  D  A        U  W  P  resident
+%00350000  00362  frame=00362  0    0  c  u        U  r  P  pageable
+%00351000         vp id=01403  0    0  c  u        U  r  n  pageable
+
+&gt;&gt;&gt; Check out the segment descriptors ....
+##dl 1ae
+01ae  Code    Bas=00350000 Lim=0000f15f DPL=2 P  RE C
+##dl 77
+0077  Data    Bas=000e0000 Lim=0000f15f DPL=3 P  RW    A
+##
+
+&gt;&gt;&gt; Beacuse of the existence of the CS/DS alias, IPMD can effectively
+&gt;&gt;&gt; read, write and execute the same storage. This is how IPMD is <!-- entering slot 272 -->able
+&gt;&gt;&gt; to implement break points, by copying code, patching in INT 3
+&gt;&gt;&gt; instructions and executing the copied code; all from ring 3 priviledge
+&gt;&gt;&gt; without compromising other processes or the system.
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="181_L4_HowtoCorrelateNamedM.html">[Back: How to Correlate Named Memory With its Address]</A> <BR>
+<A HREF="183_L3_Exploring32bitPresen.html">[Next: Exploring 32-bit Presentation Manager Under WARP]</A> 
+</BODY>
+</HTML>

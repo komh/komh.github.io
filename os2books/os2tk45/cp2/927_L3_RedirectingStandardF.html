@@ -1,0 +1,85 @@
+<HTML>
+<HEAD>
+<TITLE>Redirecting Standard File Handles</TITLE>
+</HEAD>
+<BODY>
+<H1>Redirecting Standard File Handles</H1><!-- entering slot 950 -->
+<P>
+The standard input, standard output, and standard error files are usually
+the keyboard and screen, but not always. For example, if you redirect standard
+output by using the greater-than (&gt;) redirection symbol on the application's
+command line, all data written to the standard output file goes to the given
+file.
+<P>
+The following command line redirects standard output to the file SAMPLE.TXT
+and redirects error messages to the file SAMPLE.ERR:
+<P>
+
+<PRE>    type startup.cmd &gt;sample.txt 2&gt;sample.err
+</PRE>
+When a standard file is redirected, its handle is still available but corresponds
+to the given disk file instead of to the keyboard or screen. You can still
+use<A><!-- external link: 1D D7 C3 3E --> DosRead</A> and<A><!-- external link: 1D 0F C4 3F --> DosWrite
+</A>to read from and write to the files.
+<P>
+You can use<A><!-- external link: 1D 7C C3 3B --> DosDupHandle</A> to redirect
+a standard file from inside your application. If you duplicate the standard
+input file handle, your application reads from the specified file rather
+than from the keyboard. Duplicating the standard output file handle causes
+output to be directed to a file or device instead of to the standard output
+device.
+<P>
+The following code fragment shows how to use the standard input handle to
+read from a file:
+<PRE>    #define INCL_DOSFILEMGR   /* File system values     */
+    #include &lt;os2.h&gt;
+
+    #define HF_STDIN  0       /* Standard input handle  */
+    #define HF_STDOUT 1       /* Standard output handle */
+    #define BUF_SIZE 80
+
+    BYTE    abBuffer[BUF_SIZE];
+    HFILE   hf,
+            hfNew;
+    ULONG   ulRead,
+            ulWritten,
+            ulAction;
+    APIRET  ulrc;
+
+    ulrc = DosOpen("SAMPLE.C",
+                   &amp;hf,
+                   &amp;ulAction,
+                   0,
+                   FILE_NORMAL,
+                   FILE_OPEN,
+                   OPEN_ACCESS_READONLY |
+                   OPEN_SHARE_DENYNONE,
+                   (PEAOP2) NULL);
+
+    if (!ulrc) {
+
+        hfNew = 0;      /* Duplicates standard input */
+
+        DosDupHandle(hf,
+                     &amp;hfNew);
+
+        DosRead(HF_STDIN,
+                abBuffer,
+                sizeof(abBuffer),
+                &amp;ulRead);
+
+        DosWrite(HF_STDOUT,
+                 abBuffer,
+                 ulRead,
+                 &amp;ulWritten);
+    }
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="926_L3_StandardInputOutputa.html">[Back: Standard Input, Output, and Error File Handles]</A> <BR>
+<A HREF="928_L1_FileNames.html">[Next: File Names]</A> 
+</BODY>
+</HTML>

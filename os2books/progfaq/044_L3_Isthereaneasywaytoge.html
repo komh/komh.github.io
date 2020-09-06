@@ -1,0 +1,73 @@
+<HTML>
+<HEAD>
+<TITLE>Is there an easy way to get printer output (another opinion)?</TITLE>
+</HEAD>
+<BODY>
+<H1>Is there an easy way to get printer output (another opinion)?</H1><!-- entering slot 52 -->
+<P>
+A reader who desires to remain anonymous writes:
+<P>
+<I>Generally:  My understanding was that OS/2 would handle printing for
+me.  That is to say that I wouldn't have to create separate printer drivers
+for every printer under the sun (or any for that matter).  Since I am creating
+an image on the screen that is device independent (well, mostly anyway),
+is there an easy way to get printer output?</I>
+<P>
+PM achieves a level of device independence by defining a logical output
+space.  This logical output space is then bound to a physical output space,
+which creates a mapping of logical characteristics to their physical counterparts.
+ The logical and physical output spaces are referred to as the presentation
+space and the device context (HPS and HDC) and are bound to one another
+by using either the GpiAssociate function or by specifying GPIA_ASSOC to
+the GpiCreatePS function.
+<P>
+The easiest way to accomplish what you desire is to organize your drawing
+code into one or more functions with a single entrypoint that accepts an
+HPS as a parameter.  Then, when you want to draw to the screen, you can
+call WinGetPS/WinBeginPaint to get an HPS and call the function. When you
+want hardcopy, you call DevOpenDC to get an HDC and GpiCreatePS to get an
+HPS and call the function.
+<P>
+Note that to get hardcopy, you need to perform some additional setup to
+get things to work properly.  The two most important things are that you
+initialize the DEVOPENSTRUC structure properly before calling DevOpenDC
+and that you send the following escape codes (via DevEscape) at the following
+times:
+<PRE>  hdcPrn=DevOpenDC(...);
+  hpsPrn=GpiCreatePS(...);
+
+  DevEscape(...,DEVESC_STARTDOC,...);
+
+  if (!doDraw(hpsPrn)) {
+     DevEscape(...,DEVESC_ABORTDOC,...);
+  } /* endif */
+
+  DevEscape(...,DEVESC_ENDDOC,...);
+
+  GpiDestroyPS(hpsPrn);
+  DevCloseDC(hdcPrn);
+</PRE>
+
+<P>
+I'm not sure because I can't seem to find my copy anywhere, but I belive
+that the book by Graham Winn (entitled something to the effect of "Building
+applications using the OS/2 Presentation Manager") dedicates a chapter to
+the nuances of printing.
+<P>
+(Quoted almost directly from EDMI/2 Edition 1)
+<BR>
+<B>Related Information:</B>
+<BR>
+
+<BR>
+<A HREF="035_L2_Whataregoodrefbooksf.html">What are good reference books
+for programming in OS/2 and PM?</A>
+<BR>
+ 
+
+<P><HR>
+
+<A HREF="043_L3_ArethereanySIMPLEexa.html">[Back: Are there any SIMPLE examples of printing?]</A> <BR>
+<A HREF="045_L3_HowdoIprintabitmap.html">[Next: How do I print a bitmap?]</A> 
+</BODY>
+</HTML>

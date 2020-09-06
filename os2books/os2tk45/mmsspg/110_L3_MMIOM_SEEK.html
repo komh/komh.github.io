@@ -1,0 +1,141 @@
+<HTML>
+<HEAD>
+<TITLE>MMIOM_SEEK</TITLE>
+</HEAD>
+<BODY>
+<H1>MMIOM_SEEK</H1><!-- entering slot 138 -->
+<P>
+This message is handled differently by each IOProc.  Because of the requirements
+of different file formats, you will need to determine if this message can
+be supported, and if so, how to implement the three different types of seeks.
+ A file format IOProc can use some type of calculation to determine the
+seek distance, and what those distance units are.  The file format IOProc
+should use mmioSeek to call the storage system IOProc.  A storage system
+IOProc can call the DOSSetFilePtr function to set the file's position.  The
+bounds checking that must occur for compound file elements is handled by
+the mmioSeek function for BND file elements.  Any other compound file IOProcs
+of this nature need to implement this checking in its own code.
+<P>
+The following example shows an example of how the M-Motion IOProc supports
+the MMIOM_SEEK message.
+<PRE>case MMIOM_SEEK:
+     {
+     /************************************************************
+      * Set up locals.
+      ************************************************************/
+     PMMFILESTATUS   pVidInfo;
+     LONG            lNewFilePosition;
+     LONG            lPosDesired;
+     SHORT           sSeekMode;
+
+     /************************************************************
+      * Check to make sure MMIOINFO block is valid.
+      ************************************************************/
+     if (!pmmioinfo)
+         return (MMIO_ERROR);
+
+     /************************************************************
+      * Set up our working file status variable.
+      ************************************************************/
+     pVidInfo = (PMMFILESTATUS)pmmioinfo-&gt;pExtraInfoStruct;
+
+     lPosDesired = lParam1;
+     sSeekMode = (SHORT)lParam2;
+
+     /************************************************************
+      * Is Translate Data on?
+      ************************************************************/
+     if (pmmioinfo-&gt;ulTranslate &amp; MMIO_TRANSLATEDATA)
+         {
+         /********************************************************
+          * Attempt to move the Image buffer pointer to the
+          * desired location.  App sends SEEK requests in
+          * positions relative to the image planes &amp; bits/pel
+          * We must also convert this to RGB positions
+          ********************************************************/
+         switch (sSeekMode)
+             {
+             case SEEK_SET:
+                 {
+                 lNewFilePosition = lPosDesired;
+                 break;
+                 }
+             case SEEK_CUR:
+                 {
+                 lNewFilePosition = pVidInfo-&gt;lImgBytePos + lPosDesired;
+                 break;
+                 }
+             case SEEK_END:
+                 {
+
+                 lNewFilePosition =
+                              pVidInfo-&gt;ulImgTotalBytes += lPosDesired;
+                 break;
+                 }
+
+             default :
+                return (MMIO_ERROR);
+             }
+
+         /********************************************************
+          * Make sure seek did not go before start of file.
+          * If so, then don't change anything, just return an error
+          ********************************************************/
+         if (lNewFilePosition &lt; 0)
+            {
+            return (MMIO_ERROR);
+            }
+
+         /********************************************************
+          * Make sure seek did not go past the end of file.
+          ********************************************************/
+         if (lNewFilePosition &gt; (LONG)pVidInfo-&gt;ulImgTotalBytes)
+             lNewFilePosition = pVidInfo-&gt;ulImgTotalBytes;
+
+         pVidInfo-&gt;lImgBytePos = lNewFilePosition;
+
+         return (pVidInfo-&gt;lImgBytePos);
+         } /* end  IF DATA TRANSLATED */
+
+     /************************************************************
+      * Translate Data is OFF...
+      ************************************************************
+      * if this is a seek from the beginning of the file,
+      *    we must account for and pass the header
+      ************************************************************/
+     if (lParam2==SEEK_SET)
+        lPosDesired += MMOTION_HEADER_SIZE;
+
+     lNewFilePosition = mmioSeek (pVidInfo-&gt;hmmioSS,
+                                  lPosDesired,
+                                  sSeekMode);
+
+     /********************************************
+      * Ensure we did not move to within the header
+      ********************************************/
+     if ((lNewFilePosition != MMIO_ERROR) &amp;&amp;
+         (lNewFilePosition &lt; MMOTION_HEADER_SIZE))
+        {
+        lNewFilePosition = mmioSeek (pVidInfo-&gt;hmmioSS,
+                                      (LONG)MMOTION_HEADER_SIZE,
+                                      SEEK_SET);
+        }
+
+     /************************************************************
+      * Return new position.  Always remove the length of the
+      *    header from the this position value
+      ************************************************************/
+     if (lNewFilePosition != MMIO_ERROR)
+        lNewFilePosition -= MMOTION_HEADER_SIZE;
+
+     return (lNewFilePosition);
+     }  /* end case of MMIOM_SEEK */
+</PRE>
+
+
+<P><HR>
+
+<A HREF="109_L3_MMIOM_READandMMIOM_W.html">[Back: MMIOM_READ and MMIOM_WRITE]</A> <BR>
+<A HREF="111_L3_MMIOM_CLOSE.html">[Next: MMIOM_CLOSE]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,130 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Search a file</TITLE>
+</HEAD>
+<BODY>
+<H1>Search a file</H1><!-- entering slot 487 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* routine(s) to search a file in the directories saved in an         */
+/* environment variable (e.g. "PATH")                                 */
+/* Note that this routine won't find hidden or system files.          */
+
+                        /* example call                               */
+  do forever
+    say "Enter a filename ("""" to abort):"
+    searchFile = strip( lineIn() )
+
+    if searchFile = '' then
+      leave
+
+    say "Result of SearchDataFile(" || searchFile || ") is: "
+    say "  """ || SearchDataFile( searchFile ) || """"
+    say "Result of SearchProgram(" || searchFile || ") is: "
+    say "  """ || SearchProgram( searchFile ) || """"
+  end /* do forever */
+
+exit 0
+
+/* ------------------------------------------------------------------ */
+/* function: Search a file in the current directory and in the        */
+/*           directories saved in an environment variable             */
+/*           (e.g. PATH, DPATH, ... )                                 */
+/*                                                                    */
+/* call:     SearchFile( fileName, varName {,environment})            */
+/*                                                                    */
+/* where:    fileName - name of the file to search                    */
+/*           varName - name of the environment variable containing    */
+/*                     the directories to search                      */
+/*           environment - environment with the environment Variable  */
+/*                         (Def.: OS2ENVIRONMENT)                     */
+/*                                                                    */
+/* returns:  full name of the file or "" if not found                 */
+/*                                                                    */
+SearchFile: PROCEDURE
+  parse arg fileName , envVar, environment
+  resultStr = ""
+
+  if fileName &lt;&gt; "" &amp; envVar &lt;&gt; "" then
+  do
+    if environment = '' then
+      environment = "OS2ENVIRONMENT"
+
+    searchDirs = ".;" || value( envVar, , environment )
+
+    do forever
+      parse var searchDirs curSearchDir ";" searchDirs
+
+      curSearchDir = strip( curSearchDir )
+
+      if curSearchDir = "" then
+        iterate
+
+      if right( curSearchDir, 1 ) &lt;&gt; "\" &amp; ,
+         right( curSearchDir, 1 ) &lt;&gt; ":" then
+        curSearchDir = curSearchDir || "\"
+
+      resultStr = stream( curSearchDir || fileName, "c", "QUERY EXISTS" )
+      if resultStr &lt;&gt; "" then
+        leave
+
+      if SearchDirs = "" then
+        leave
+
+    end /* do forverver */
+  end /* if fileName &lt;&gt; "" &amp; ... */
+
+RETURN resultStr
+
+/* ------------------------------------------------------------------ */
+/* function: Search a file in the current directory and in the        */
+/*           directories saved in the environment variable PATH       */
+/*                                                                    */
+/* call:     SearchProgram( progName {,environment})                  */
+/*                                                                    */
+/* where:    progName - name of the program to search                 */
+/*           environment - environment with the environment Variable  */
+/*                         (Def.: OS2ENVIRONMENT)                     */
+/*                                                                    */
+/* returns:  full name of the program or "" if not found              */
+/*                                                                    */
+SearchProgram: PROCEDURE
+  parse arg progName , environment
+  resultStr = ""
+  if progName &lt;&gt; "" then
+    resultStr = SearchFile( progName, "PATH", environment )
+RETURN resultStr
+
+/* ------------------------------------------------------------------ */
+/* function: Search a datafile in the current directory and in the    */
+/*           directories saved in the environment variable DPATH      */
+/*                                                                    */
+/* call:     SearchProgram( datafileName {,environment})              */
+/*                                                                    */
+/* where:    datafileName - name of the datafile to search            */
+/*           environment - environment with the environment Variable  */
+/*                         (Def.: OS2ENVIRONMENT)                     */
+/*                                                                    */
+/* returns:  full name of the datafile or "" if not found             */
+/*                                                                    */
+SearchDataFile: PROCEDURE
+  parse arg dataFileName , environment
+  resultStr = ""
+  if dataFileName &lt;&gt; "" then
+    resultStr = SearchFile( datafileName, "DPATH", environment )
+RETURN resultStr
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="468_L3_Getanameforatemporar.html">[Back: Get a name for a temporary file]</A> <BR>
+<A HREF="470_L3_Countlinesinafilequi.html">[Next: Count lines in a file quickly]</A> 
+</BODY>
+</HTML>

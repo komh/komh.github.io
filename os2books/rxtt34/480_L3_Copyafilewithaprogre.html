@@ -1,0 +1,89 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Copy a file with a progress indicator</TITLE>
+</HEAD>
+<BODY>
+<H1>Copy a file with a progress indicator</H1><!-- entering slot 499 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* Sample routines to copy a file and show the progress of the        */
+/* copy process                                                       */
+/*                                                                    */
+/*                                                                    */
+
+  say 'Please enter the source filename:'
+  sourceFile = lineIn()
+
+  say 'Please enter the target filename:'
+  targetFile = lineIn()
+
+  call CopyFileWithStatusBar sourceFile, targetFile
+exit
+
+/* ------------------------------------------------------------------ */
+/* function: copy a file and show a progress indicator                */
+/*                                                                    */
+/* usage:    thisRC = CopyFileWithStatusbar( sourceFile, targetFile ) */
+/*                                                                    */
+/* where:    sourceFile - name of the sourceFile                      */
+/*           targetfile - name of the target file                     */
+/*                                                                    */
+/* returns:  0 - okay                                                 */
+/*           else error                                               */
+/*                                                                    */
+/* Notes:                                                             */
+/*                                                                    */
+/* There is no error checking in this routine!                        */
+/*                                                                    */
+CopyFileWithStatusBar: PROCEDURE
+  parse arg sourceFile, targetFile
+
+  noOfPackets = 75
+                    /* get the size of the file                       */
+  fileSize = chars( sourceFile )
+
+                    /* calculate the packet size                      */
+  packetsize = fileSize % noOfPackets
+
+                    /* do not forget the rest - if any                */
+  lastPacket = fileSize // noOfPackets
+
+                    /* open the input and the output file             */
+  thisRC1 = stream( sourceFile, 'c', 'OPEN READ' )  = 'READY:'
+  thisRC2 = stream( targetFile, 'c', 'OPEN WRITE' ) = 'READY:'
+
+                    /* init the status bar                            */
+  call CharOut , copies( 'B0'x , noOfPackets ) || '0D'x
+
+                    /* copy the file in # steps                       */
+  do i = 1 to noOfPackets
+
+    call CharOut,  'DB'x
+
+    call CharOut targetFile, charin( sourceFile, , packetSize )
+  end /* do i = 1 to noOfPackets */
+
+                    /* do not forget the last packet                  */
+  if lastPacket &lt;&gt; 0 then
+    call CharOut targetFile, charin( sourceFile, , lastPacket )
+
+                   /* close the files                                 */
+  call stream sourceFile, 'c', 'CLOSE'
+  call stream targetFile, 'c', 'CLOSE'
+
+return 0
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="479_L3_Changingfileattribut.html">[Back: Changing file attributes]</A> <BR>
+<A HREF="481_L3_Adddefaultextension.html">[Next: Add default extension]</A> 
+</BODY>
+</HTML>

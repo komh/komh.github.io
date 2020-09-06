@@ -1,0 +1,97 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Sample for SHOWALLINTREEVIEW</TITLE>
+</HEAD>
+<BODY>
+<H1>Sample for SHOWALLINTREEVIEW</H1><!-- entering slot 399 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* TREEVIEW.CMD - change the default view of a folder to the new tree */
+/*                view of WARP 4                                      */
+/*                                                                    */
+/* Usage:                                                             */
+/*   TREEVIEW folder                                                  */
+/*                                                                    */
+/*                                                                    */
+/* Where:                                                             */
+/*   folder the name or the object ID of a folder                     */
+/*                                                                    */
+/* Author:                                                            */
+/*   Bernd Schemmer                                                   */
+/*                                                                    */
+/* Note:                                                              */
+/*                                                                    */
+/*   This program needs WARP 4!                                       */
+/*                                                                    */
+/* History                                                            */
+/*   29.05.1997 v1.00 /bs                                             */
+/*     - initial release (for RXT&amp;T v2.60)                            */
+/*                                                                    */
+/* (c) 1996 <A HREF="002_L1_GeneralForeword.html">Bernd Schemmer</A>, Germany, EMail: Bernd.Schemmer@gmx.de     */
+/* ------------------------------------------------------------------ */
+
+                    /* get the name of this program                   */
+   parse source . . progName
+   progName = fileSpec( 'N', progName )
+
+                    /* get the parameter                              */
+   parse arg targetFolder
+   targetFolder = strip( targetFolder )
+
+                    /* check the parameter                            */
+   if targetFolder = '' then
+   do
+     say 'Usage: ' || progName || ' folder'
+     exit 255
+   end /* if */
+
+   if right( targetFolder,1 ) = '\' then
+     targetFolder = dbrright( targetFolder, 1 )
+
+                    /* load REXXUTIL functions                        */
+   call rxfuncAdd 'SysLoadFuncs', 'REXXUTIL', 'SysLoadFuncs'
+   call SysLoadFuncs
+
+                    /* check the OS/2 version                         */
+   if SysOS2Ver() &lt; 2.40 then
+   do
+     say 'Error: ' || progName || ' needs OS/2 WARP 4!'
+     exit 254
+   end /* if */
+
+                    /* get the subfolder inside the folder            */
+   call SysFileTree targetFolder || '\*' , 'dirs.', 'DSO'
+
+                    /* add the parent folder to the stem              */
+   i = dirs.0+1
+   dirs.i = targetFolder
+   dirs.0 = i
+
+   call LineOut, 'Changing the default view of the directory '
+   call LineOut, '  ' || targetFolder
+   call LineOut, 'to TREEVIEW ...'
+
+   do i = 1 to dirs.0
+     call LineOut, '   Processing the directory '
+     call LineOut, '     ' || dirs.i
+     call SysSetObjectData dirs.i , 'SHOWALLINTREEVIEW=YES;DEFAULTVIEW=TREE;'
+     call LineOut, '   The result is ' || result
+   end /* do i = 1 to dirs.0 */
+   call LineOut, '... done.'
+
+exit 0
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="386_L4_IDsforthesetupstring.html">[Back: IDs for the setup string MENUITEMSELECTED]</A> <BR>
+<A HREF="388_L3_Setupstringsfordrive.html">[Next: Setup strings for drive objects]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,168 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Using the SELECT simulation for parameter checking</TITLE>
+</HEAD>
+<BODY>
+<H1>Using the SELECT simulation for parameter checking</H1><!-- entering slot 985 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+@ECHO OFF
+REM ------------------------------------------------------------------
+REM
+REM *** sample batch cmd to show a method for checking the parameter
+REM
+REM     Note: The maximum length for a label is 8 characters!
+REM           Therefore, GOTO L123456789A matches the label L12345678
+REM           and GOTO L12345678 matches the label L123456789A!
+REM
+REM           This means, that parameter processed with this method
+REM           can only have up to 7 characters (see note in line 25)!
+REM
+REM see also <A HREF="933_L3_Samplecodeforparamet.html">Sample code for parameter parsing</A>
+REM
+REM ------------------------------------------------------------------
+REM *** Special Parameter to distinguish between Pass1 and Pass2
+REM
+SET sParm=$$PASS2$$
+
+REM ------------------------------------------------------------------
+REM *** Save the name of this program
+REM     (necessary because we use the SHIFT command below!)
+REM
+SET sProg=%0
+
+REM ------------------------------------------------------------------
+REM *** check if this is a Pass1 or a Pass2 call
+REM     (Note: The leading 'x' (or any other character) is neccessary
+REM            because a label must begin with a character!)
+REM
+IF '%1' == '%sParm%' GOTO x%2
+
+REM ------------------------------------------------------------------
+REM *** This is pass1
+REM
+:$$Loop$$
+
+REM *** The environment variable ParamOK is set to 1 in pass2
+REM     if the parameter was ok
+REM
+SET paramOK=
+
+REM *** check for further parameter
+REM
+IF '%1' == '' GOTO $$End$$
+
+REM *** call this program again to check the parameter
+REM     (suppress STDERR to avoid error messages for the not
+REM      found labels in case of an unknown parameter)
+REM
+call %sProg% %sParm% %1 2&gt;NUL
+
+REM *** process the next parameter
+REM
+SHIFT
+
+REM *** check if the parameter is known
+REM
+IF '%paramOK%' == '1' GOTO $$LOOP$$
+
+REM *** Last parameter was unkown
+REM
+ECHO. Error: Do not know the parameter "%0"!
+
+GOTO $$LOOP$$
+
+REM ------------------------------------------------------------------
+REM *** code to process the parameter
+
+REM ------------------------------------------------------------------
+REM *** This code handles the parameter Help, /help -help, ?, /? and -?
+REM     in any case (mixed, upper and lower)
+REM
+:xHelp
+:x?
+:x/?
+:x/help
+:x-help
+:x-?
+ECHO.
+ECHO. Usage: %sProg% {anyParameter}
+ECHO.
+ECHO.        Known parameter are:
+ECHO.
+ECHO.          Help /help -help ? /? -?
+ECHO.          /Param1 /Param2
+ECHO.
+ECHO.        in any case (mixed, lower or upper).
+ECHO.
+ECHO. The parameter found is "%2".
+ECHO.
+
+REM *** Signal 'Parameter is okay' to the calling program
+REM
+SET paramOK=1
+
+REM *** and end pass2
+REM
+GOTO $$End1$$
+
+REM ------------------------------------------------------------------
+REM *** This code handles the parameter /PARAM1
+REM     in any case (mixed, upper and lower)
+REM
+:x/PARAM1
+ECHO.
+ECHO. Parameter /PARAM1 found!
+ECHO. (Parameter is "%2")
+
+REM *** Signal 'Parameter is okay' to the calling program
+REM
+SET paramOK=1
+
+REM *** and end pass2
+REM
+GOTO $$End1$$
+
+REM ------------------------------------------------------------------
+REM *** This code handles the parameter /PARAM2
+REM     in any case (mixed, upper and lower)
+REM
+:x/PARAM2
+ECHO.
+ECHO. Parameter /PARAM2 found!
+ECHO. (Parameter is "%2")
+
+REM *** Signal 'Parameter is okay' to the calling program
+REM
+SET paramOK=1
+
+REM *** and end pass2
+REM
+GOTO $$End1$$
+
+REM ------------------------------------------------------------------
+REM *** exit label for pass1
+REM     Housekeeping epilog
+REM
+:$$End$$
+SET sParm=
+SET sProg=
+
+REM ------------------------------------------------------------------
+REM *** exit label for pass2
+REM
+:$$End1$$
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="929_L3_SimulatingSELECTinba.html">[Back: Simulating SELECT in batch programs]</A> <BR>
+<A HREF="931_L3_Usingconditionalcomm.html">[Next: Using conditional command execution]</A> 
+</BODY>
+</HTML>

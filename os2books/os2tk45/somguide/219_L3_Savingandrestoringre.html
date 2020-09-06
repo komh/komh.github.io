@@ -1,0 +1,84 @@
+<HTML>
+<HEAD>
+<TITLE>Saving and restoring references to objects</TITLE>
+</HEAD>
+<BODY>
+<H1>Saving and restoring references to objects</H1><!-- entering slot 256 -->
+<P>
+A proxy is a kind of "object reference". An<I> object reference</I> contains
+information that is used to identify a target object.
+<P>
+To enable clients to save references to remote objects (in a file system,
+for example) or exchange references to remote objects (with other application
+processes), DSOM must be able to externalize proxies. To "externalize a
+proxy" means to create a string ID for a proxy that can be used by any process
+to identify the remote target object. DSOM must also support the translation
+of string IDs back into proxies.
+<P>
+The DSOM Object Manager defines two methods for converting between proxies
+and their string IDs:<B> somdGetIdFromObject</B> and<B> somdGetObjectFromId</B>.
+
+<P>
+Here is an example client program that creates a remote "Car" object. It
+generates a string ID corresponding to the proxy, and saves the string ID
+to a file for later use.
+<PRE>#include &lt;stdio.h&gt;
+#include &lt;somd.h&gt;
+#include &lt;Car.h&gt;
+main( )
+{
+    Environment ev;
+    Car car;
+    string somdObjectId;
+    FILE* file;
+
+    SOM_InitEnvironment(&amp;ev);
+    SOMD_Init(&amp;ev);
+
+    /* create a remote Car object */
+    car = _somdNewObject(SOMD_ObjectMgr, &amp;ev, "Car", "");
+
+    /* save the reference to the object */
+    somdObjectId = _somdGetIdFromObject(SOMD_ObjectMgr, &amp;ev, car);
+    file = fopen("/u/joe/mycar", "w");
+    fprintf(file, "%s", somdObjectId);
+...
+</PRE>
+
+<P>
+Next is an example client program that retrieves the string ID and regenerates
+a valid proxy for the original remote "Car" object (assuming the remote
+"Car" object can still be found in the server).
+<PRE>...
+    Environment ev;
+    Car car;
+    char buffer[256];
+    string somdObjectId;
+    FILE* file;
+
+...
+    /* restore proxy from its string form */
+    file = fopen("/u/joe/mycar", "r");
+    somdObjectId = (string) buffer;
+    fscanf(file, "%s", somdObjectId);
+    car = _somdGetObjectFromId(SOMD_ObjectMgr, &amp;ev, somdObjectId);
+...
+</PRE>
+
+<P>
+Once the proxy has been regenerated, methods can be invoked on the proxy
+and they will be forwarded to the remote target object, as always.
+<P>
+<B>Note: </B> The<B> somdGetIdFromObject</B> and<B> somdGetObjectFromId
+</B>methods directly correspond to the CORBA methods<B> ORB_object_to_string
+</B>and<B> ORB_string_to_object</B>, defined on the<B> ORB</B> class.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+
+<P><HR>
+
+<A HREF="218_L3_Creatingremoteobject.html">[Back: Creating remote objects using user-defined metaclasses]</A> <BR>
+<A HREF="220_L4_Findingexistingobjec.html">[Next: Finding existing objects]</A> 
+</BODY>
+</HTML>

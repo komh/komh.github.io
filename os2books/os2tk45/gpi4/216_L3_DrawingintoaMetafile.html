@@ -1,0 +1,84 @@
+<HTML>
+<HEAD>
+<TITLE>Drawing into a Metafile in Retain Mode</TITLE>
+</HEAD>
+<BODY>
+<H1>Drawing into a Metafile in Retain Mode</H1><!-- entering slot 226 -->
+<P>
+To draw into a metafile, set the drawing mode to the appropriate value for
+your application and then perform the drawing operations. The following
+figure shows an example of how to copy the contents of a segment into a
+metafile.
+<P>
+
+<PRE>#define INCL_GPIMETAFILES
+#define INCL_GPICONTROL
+#include &lt;os2.h&gt;
+void fncMETA02(void){
+    HDC hdcMeta, hdc;
+    POINTL ptl;
+    HMF hmf;
+    LONG alOpt[10];
+    HPS hps;
+
+    /*
+     * Open a segment, assign it an identifier of 10,
+     * and draw some text into it.
+     */
+
+    GpiSetDrawingMode(hps, DM_RETAIN);
+    GpiOpenSegment(hps, 10L);
+    ptl.x = 175; ptl.y = 230;
+    GpiMove(hps, &amp;ptl);
+    GpiSetColor(hps, CLR_PINK);
+    GpiCharString(hps, 41,
+        "METAFILE COPY METAFILE COPY METAFILE COPY");
+    GpiCloseSegment(hps);
+
+    GpiAssociate(hps, NULLHANDLE);   /* Disassociates PS and screen DC */
+    GpiAssociate(hps, hdcMeta);      /* Associates PS and meta DC      */
+    GpiDrawSegment(hps, 10L);        /* Draws segment into metafile    */
+    GpiAssociate(hps, NULLHANDLE);   /* Disassociates PS and meta DC   */
+    hmf = DevCloseDC(hdcMeta);       /* Closes metafile                */
+
+    GpiAssociate(hps, hdc);          /* Associates PS and screen DC    */
+    GpiSetDrawingMode(hps, DM_DRAW); /* Sets drawing mode to DM_DRAW   */
+
+    /*
+     * Load the array of options for GpiPlayMetaFile
+     * with default values.
+     */
+
+    alOpt[PMF_SEGBASE]  = 0;                   /* Reserved                */
+    alOpt[PMF_LOADTYPE] = LT_DEFAULT;          /* Default transformations */
+    alOpt[PMF_RESOLVE]  = 0;                   /* Reserved                */
+    alOpt[PMF_LCIDS]    = LC_DEFAULT;          /* Uses default lcids      */
+    alOpt[PMF_RESET]    = RES_DEFAULT;         /* Uses default            */
+    alOpt[PMF_SUPPRESS] = SUP_DEFAULT;         /* Uses default            */
+    alOpt[PMF_COLORTABLES] = CTAB_DEFAULT;     /* Uses default            */
+    alOpt[PMF_COLORREALIZABLE] = CREA_DEFAULT; /* Uses default            */
+
+    GpiPlayMetaFile(hps,                  /* Plays metafile onto screen   */
+        hmf, 8L, alOpt, (PLONG) NULL, 0L, (PSZ) NULL);
+} /* fncMETA02 */
+
+</PRE>
+
+<P>
+Copying a Graphic Segment to a Metafile
+<P>
+If you want to create a simple drawing in a metafile for repeated display,
+you can set the drawing mode to DM_DRAW and draw directly into the metafile.
+The code in the first code fragment shows an example of how to do this.
+You can store named segments in the metafile that you are recording in DM_DRAW
+mode by bracketing your output primitive functions between<A><!-- external link: 1D A4 C3 57 --> GpiOpenSegment
+</A>and<A><!-- external link: 1D 6A C3 FC --> GpiCloseSegment</A>.
+<P>
+
+
+<P><HR>
+
+<A HREF="215_L3_CreatingandDrawingin.html">[Back: Creating and Drawing into a Metafile]</A> <BR>
+<A HREF="217_L3_CopyingaMetafiletoDi.html">[Next: Copying a Metafile to Disk]</A> 
+</BODY>
+</HTML>

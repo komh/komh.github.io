@@ -1,0 +1,361 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Icon resources in default OS/2 DLLs</TITLE>
+</HEAD>
+<BODY>
+<H1>Icon resources in default OS/2 DLLs</H1><!-- entering slot 436 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+Many of the default icons used by OS/2 are saved as resources in the DLLs.
+To use them, you must use the setup string keyword<B> ICONRESOURCE</B>.
+To get a folder of the existing icons in the OS/2 DLLs you might use the
+following REXX program.
+<P>
+This program creates a folder called<B> OS/2 Iconresources</B> on your desktop.
+In this folder you find a folder for each directory with DLLs searched.
+The name of each folder is the name of the directory. Inside these folders
+are folders for each DLL with icon resources. The names of the folders are
+in the format<B> DLL: dllName</B>. In the folders for the DLLs are abstract
+objects for every icon resource from the DLL. The names of the objects are
+in the format<B> dllName:resourceNumber</B> (see also <A HREF="426_L3_Extracttheiconfromth.html">Extract
+the icon from the EAs</A> and <A HREF="425_L3_GeticonsfromtheOS2IN.html">Get
+ICONS from the OS2.INI file</A>).
+<PRE> 
+/*                                                                    */
+/* Name:     ShowICO.CMD                                              */
+/*                                                                    */
+/* Function:                                                          */
+/*   sample program to create some folders with the default           */
+/*   OS/2 icons which reside in various DLLs                          */
+/*                                                                    */
+/* Usage:                                                             */
+/*    ShowICO {path1} {...} {path#}                                   */
+/*                                                                    */
+/* Where:                                                             */
+/*   path# is the path of the DLLs to use, in this version            */
+/*   path# can be                                                     */
+/*                                                                    */
+/*   C:\OS2\DLL                                                       */
+/*   C:\TCPIP\DLL                                                     */
+/*   C:\TCPIP\UMAIL                                                   */
+/*                                                                    */
+/* Returns:                                                           */
+/*   -                                                                */
+/*                                                                    */
+/*                                                                    */
+/* Credits:                                                           */
+/*   Based on Mike Lamb's program ICONRES.CMD. ICONRES.CMD is part of */
+/*   <A HREF="607_L3_REXXUTILTXT.html">REXXUTIL.TXT</A>.                                                    */
+/*                                                                    */
+/*                                                                    */
+/* History:                                                           */
+/*   14.01.1995 /bs                                                   */
+/*     - initial release for RXT&amp;T v2.00                              */
+/*                                                                    */
+/* Notes:                                                             */
+/*                                                                    */
+/*   Used DLLs:                                                       */
+/*     OS/2 DLLs                                                      */
+/*     TCP/IP DLLs                                                    */
+/*                                                                    */
+/*   Tested only with WARP! Use ICONRES.CMD for OS/2 versions prior   */
+/*   to WARP.                                                         */
+/*                                                                    */
+/*   Tested with TCP/IP (CSD level XX00000) and Ultimedia Mail/2 Lite */
+/*   (CSD level UN00000). This program may not work correct with      */
+/*   other CSD levels!                                                */
+/*                                                                    */
+/*                                                                    */
+/* (c) 1996 <A HREF="002_L1_GeneralForeword.html">Bernd Schemmer</A>, Germany, EMail: Bernd.Schemmer@gmx.de     */
+/*                                                                    */
+                        /* get and save the parameter                 */
+  parse upper arg dirsToUse
+
+                        /* load REXXUTIL functions                    */
+  call rxFuncAdd "SysLoadFuncs", "REXXUTIL", "SysLoadFuncs"
+  call SysLoadFuncs
+
+                        /* install a CTRL-BREAK handler               */
+  signal on halt name UserAbort
+
+                        /* init some global variables                 */
+  BootDrive = substr( value( "RUNWORKPLACE",, "OS2ENVIRONMENT" ),1,2 )
+  OS2DLLPath =   BootDrive || "\OS2\DLL"
+  TCPIPDLLPath = BootDrive || "\TCPIP\DLL"
+  UMailDLLPath = BootDrive || "\TCPIP\UMAIL"
+
+  parse source . . thisProgram
+  parse value SysTextScreenSize() with cols rows
+
+  say ""
+  say center( fileSpec( "N", thisProgram ), rows )
+  say center( "Create abstract objects for icon " || ,
+              "resources from various DLLs", rows )
+
+  say ""
+  if dirsToUse = "" then
+  do
+    say "  This program asumes, the OS/2 dlls are in the directory "
+    say "    " || OS2DllPath
+    say "  and the TCP/IP dlls are in the directorys "
+    say "    " || TCPIPDLLPath
+    say "  and "
+    say "    " || UMailDLLPath
+    say "  If this is not true, abort the program and change the path in the"
+    say "  source code."
+    say ""
+
+    say "  Caution: "
+
+    say "  This program will create up to 22 folders and up to 144 objects"
+    say "  on your desktop!"
+  end /* if dirsToUse = "" then */
+  else
+  do
+    say "  This program creates objects for the icon resources of all "
+    say "  known DLLs in the directories:"
+    say ""
+    do i = 1 to words( dirsToUse )
+      say "    " || word( dirsToUse, i )
+    end /* do i = 1 to words( dirsToUse ) */
+  end /* else */
+
+  say ""
+  say "  Do you want to continue (Y/<!-- entering slot 437 -->n)?"
+  parse pull userInput
+  if right( translate( strip( userInput ) ) ,1 ) = "N" then
+    signal UserAbort
+
+                        /* init the stem with the DLL names and       */
+                        /* icon resource numbers                      */
+  call InitDLLStem
+
+                        /* no. of icon objects created                */
+  IconObjectsCreated = 0
+
+                        /* no. of folder objects created              */
+  FolderObjectsCreated = 0
+
+                        /* object ID for the base result folder       */
+  BaseFolderObjectID = "&lt;MY_ICONRESOURCE_FOLDER&gt;"
+
+                        /* create the base folder on the desktop      */
+  call SysCreateObject "WPFolder" ,,
+                       "OS/2 Iconresources" ,,
+                       "&lt;WP_DESKTOP&gt;" ,,
+                       "OBJECTID=" || BaseFolderObjectID || ";" ,,
+                       "U"
+
+  FolderObjectsCreated = FolderObjectsCreated + 1
+
+                        /* variable with the object IDs of the        */
+                        /* directory folders created                  */
+  SubFoldersCreated = ""
+
+                        /* now create an object for every icon        */
+                        /* resource in each DLL                       */
+  do i = 1 to DllStem.0
+    curDLLName = DLLStem.i.name
+    curDLLPath = DLLStem.i.path
+
+    if dirsToUse &lt;&gt; "" then
+      if wordPos( DLLStem.i.path, dirsToUse ) = 0 then
+        iterate
+
+    curResources = DLLStem.i.resources
+    curDLL = curDllPath || "\" || curDLLName
+
+    say "Creating icons from the DLL """ || curDLL || """ ..."
+
+    if stream( curDLL, "c", "QUERY EXISTS" ) = "" then
+    do
+      say "Error: DLL """ || curDll || """ not found!"
+      iterate
+    end /* if stream( ... */
+
+                        /* create the sub folder for this directory   */
+                        /* if necessary                               */
+    curDirectoryFolderObjectID = "&lt;Directory_" || curDllPath || "&gt;"
+    if pos( curDirectoryFolderObjectID, SubFoldersCreated ) = 0 then
+    do
+                        /* create a folder for this DLL               */
+      call SysCreateObject "WPFolder" ,,
+                           "Directory: " || curDLLPath ,,
+                           BaseFolderObjectID ,,
+                           "OBJECTID=" || curDirectoryFolderObjectID || ";" ,,
+                           "U"
+
+      SubFoldersCreated = SubFoldersCreated curDirectoryFolderObjectID
+
+      FolderObjectsCreated = FolderObjectsCreated + 1
+
+    end /* if pos( ... */
+
+                        /* object ID for this DLLs folder             */
+    curDLLFolderObjectID = "&lt;DLL_" || curDLLName || "&gt;"
+
+                        /* create a folder for this DLL               */
+    call SysCreateObject "WPFolder" ,,
+                         "DLL: " || curDLL ,,
+                         curDirectoryFolderObjectID ,,
+                         "OBJECTID=" || curDLLFolderObjectID || ";" ,,
+                         "U"
+
+    FolderObjectsCreated = FolderObjectsCreated + 1
+
+                        /* create the objects                         */
+    do j = 1 to words( curResources )
+
+      curResourceID = strip( word( curResources, j ) )
+
+      call CharOut , " " || curResourceID
+
+      if SysCreateObject( "WPAbstract" ,,
+                          curDLLName || ":" || curResourceID ,,
+                          curDLLFolderObjectID ,,
+                          "ICONRESOURCE=" || curResourceID || " " || curDLL || ";" ,,
+                          "U" ) = 0 then
+      do
+        say ""
+        say "Error creating the object: " || curDllName || ":" || curResourceID
+      end /* if SysCreateObject( ... */
+      else
+        IconObjectsCreated = IconObjectsCreated + 1
+
+    end /* do j = 1 to words curResources */
+    call LineOut , ""
+
+  end /* do i = 1 to DllStem.0 */
+
+
+  say ""
+  say FolderObjectsCreated || " folders created."
+  say IconObjectsCreated || " abstract objects created."
+
+exit
+
+/* ------------------------------------------------------------------ */
+/* Function: Init the stem with the DLL names and icon resource       */
+/*           numbers                                                  */
+/*                                                                    */
+InitDlLStem:
+                        /* init the stem with the DLL names and       */
+                        /* icon resource numbers                      */
+  DLLStem.0 = 0
+  i = DLLStem.0
+
+  i = i+1
+  DLLStem.i.name       = "IBMS332.DLL"
+  DLLStem.i.path       = OS2DllPath
+  DLLStem.i.resources  = "10 11 12 13 14"
+
+  i = i+1
+  DLLStem.i.name       = "MINXMRI.DLL"
+  DLLStem.i.path       = OS2DllPath
+  DLLStem.i.resources  = "1"
+
+  i = i+1
+  DLLStem.i.name       = "PMCTLS.DLL"
+  DLLStem.i.path       = OS2DllPath
+  DLLStem.i.resources  = "1 2 3 4 5 6 7 8 9 17 19"
+
+  i = i+1
+  DLLStem.i.name       = "PMMERGE.DLL"
+  DLLStem.i.path       = OS2DllPath
+  DLLStem.i.resources  = "10"
+
+  i = i+1
+  DLLStem.i.name       = "PMSDMRI.DLL"
+  DLLStem.i.path       = OS2DllPath
+  DLLStem.i.resources  = "300 301"
+
+  i = i+1
+  DLLStem.i.name      = "PMVIOP.DLL"
+  DLLStem.i.path       = OS2DllPath
+  DLLStem.i.resources = "1 2 3"
+
+  i = i+1
+  DLLStem.i.name      = "PMWP.DLL"
+  DLLStem.i.path       = OS2DllPath
+  DLLStem.i.resources = "1 2 3 4 6 8 9 10 12 13 15 16 17 18 19 20 22 23",
+                         "24 25 26 27 28 29 32 33 35 37 38 39 42 43 44",
+                         "46 47 48 49 52 53 56 57 58 59 60 61 62 63 64",
+                         "65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80",
+                         "2146 2147"
+
+  i = i+1
+  DLLStem.i.name      = "WINCFG.DLL"
+  DLLStem.i.path       = OS2DllPath
+  DLLStem.i.resources = "5000"
+
+  i = i+1
+  DLLStem.i.name      = "WPCONFIG.DLL"
+  DLLStem.i.path       = OS2DllPath
+  DLLStem.i.resources = "1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17"
+
+  i = i+1
+  DLLStem.i.name      = "WPCONMRI.DLL"
+  DLLStem.i.path       = OS2DllPath
+  DLLStem.i.resources = "15"
+
+  i = i+1
+  DLLStem.i.name      = "WPPRTMRI.DLL"
+  DLLStem.i.path       = OS2DllPath
+  DLLStem.i.resources = "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 19 20 21 22 23"
+
+  i = i+1
+  DLLStem.i.Name      = "ADV.DLL"
+  DLLStem.i.path       = TCPIPDllPath
+  DLLStem.i.resources = "619 683 1003 2002 3608 26387 26388 26388"
+
+  i = i+1
+  DLLStem.i.Name      = "FTPWPS.DLL"
+  DLLStem.i.path       = TCPIPDllPath
+  DLLStem.i.resources = "101"
+
+  i = i+1
+  DLLStem.i.Name      = "WEBEXURL.DLL"
+  DLLStem.i.path       = TCPIPDllPath
+  DLLStem.i.Resources = "101"
+
+  i = i+1
+  DLLStem.i.Name      = "WPTELNET.DLL"
+  DLLStem.i.path       = TCPIPDllPath
+  DLLStem.i.resources = "499"
+
+  i = i+1
+  DLLStem.i.Name      = "<!-- entering slot 438 -->WPTN3270.DLL"
+  DLLStem.i.path       = TCPIPDllPath
+  DLLStem.i.resources = "499"
+
+  i = i+1
+  DLLStem.i.Name      = "UMAILWPS.DLL"
+  DLLStem.i.path       = UMailDllPath
+  DLLStem.i.resources = "4000 4002 4004 4006 4008"
+
+  i = i+1
+  DLLStem.i.Name      = "UMBASE.DLL"
+  DLLStem.i.path       = UMailDllPath
+  DLLStem.i.resources = "3072"
+
+  DLLStem.0 = i
+RETURN
+
+/* ------------------------------------------------------------------ */
+UserAbort:
+  say ""
+  say "Program aborted by the user."
+exit 255
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="423_L2_Icons.html">[Back: Icons ...]</A> <BR>
+<A HREF="425_L3_GeticonsfromtheOS2IN.html">[Next: Get icons from the OS2.INI file]</A> 
+</BODY>
+</HTML>

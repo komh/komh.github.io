@@ -1,0 +1,204 @@
+<HTML>
+<HEAD>
+<TITLE>How do I use DosMon*() to stuff the kbd buf?</TITLE>
+</HEAD>
+<BODY>
+<H1>How do I use DosMon*() to stuff the kbd buf?</H1><!-- entering slot 118 -->
+<P>
+Here's a mini app (all error handling, comments, etc. removed.)
+<P>
+(also all this stuff to avoid compile warnings !!!!!). compile with: icc
+-Sm -Kabgioprx+ -Ss+ -W3 -Gs+ -Gf+ -O+ KEY.C
+<BR>
+start with: detach key
+<BR>
+stop with: F11 or CTRL-F10
+<BR>
+test envir: OS/2 2.0GA+SP, C-Set++ CSD 22.
+<BR>
+no other functionality.
+<BR>
+
+<P>
+orginal src part of my glorious DOS/OS2 1.x/OS2 2.0 keyboard roboter which
+inserts keys into the keyboard monitor queue controlled by an source file
+(mini language).
+<P>
+   (C) Mario Semo 1777,1832,1967-92.
+<P>
+========= TOP OF FILE KEY.C ================
+<PRE>#define INCL_DOS
+#define INCL_KBD
+#define INCL_NOPM
+
+#include&lt;os2.h&gt;
+#include&lt;stdio.h&gt;
+#include&lt;conio.h&gt;
+#include&lt;process.h&gt;
+#include&lt;stdlib.h&gt;
+#include&lt;string.h&gt;
+
+#define DosMonOpen  DOS16MONOPEN
+#define DosMonClose DOS16MONCLOSE
+#define DosMonReg   DOS16MONREG
+#define DosMonRead  DOS16MONREAD
+#define DosMonWrite DOS16MONWRITE
+
+#define MONITOR_DEFAULT 0x0000
+#define MONITOR_BEGIN   0x0001
+#define MONITOR_END     0x0002
+
+typedef SHANDLE HMONITOR;       /* hmon */
+typedef HMONITOR *PHMONITOR;
+
+#pragma pack(2)
+typedef struct _MONIN {         /* mnin */
+        USHORT cb;
+        BYTE abReserved[18];
+        BYTE abBuffer[108];
+} MONIN;
+typedef MONIN *PMONIN;
+
+#pragma pack(2)
+typedef struct _MONOUT {        /* mnout */
+        USHORT cb;
+        UCHAR buffer[18];
+        BYTE abBuf[108];
+} MONOUT;
+typedef MONOUT *PMONOUT;
+
+APIRET16 APIENTRY16 DosMonOpen(PSZ pszDevName, PHMONITOR phmon);
+APIRET16 APIENTRY16 DosMonClose(HMONITOR hmon);
+APIRET16 APIENTRY16 DosMonReg(HMONITOR hmon, PBYTE pbInBuf,
+             PBYTE pbOutBuf, USHORT fPosition, USHORT usIndex);
+APIRET16 APIENTRY16 DosMonRead(PBYTE pbInBuf, USHORT fWait,
+                               PBYTE pbDataBuf,
+                               PUSHORT pcbData);
+APIRET16 APIENTRY16 DosMonWrite(PBYTE pbOutBuf, PBYTE pbDataBuf,
+                                USHORT cbData);
+
+#define DosGetInfoSeg    DOS16GETINFOSEG
+APIRET16 APIENTRY16 DosGetInfoSeg(PSEL pselGlobal, PSEL pselLocal);
+
+#pragma pack(2)
+typedef struct _GINFOSEG { /* gis */
+        ULONG   time; ULONG   msecs; UCHAR   hour;
+        UCHAR   minutes; UCHAR   seconds; UCHAR   hundredths;
+        USHORT  timezone; USHORT cusecTimerInterval; UCHAR   day;
+        UCHAR   month; USHORT  year; UCHAR   weekday;
+        UCHAR   uchMajorVersion; UCHAR uchMinorVersion;
+        UCHAR   chRevisionLetter; UCHAR   sgCurrent;
+        UCHAR   sgMax; UCHAR   cHugeShift;
+        UCHAR   fProtectModeOnly; USHORT pidForeground;
+        UCHAR   fDynamicSched; UCHAR   csecMaxWait;
+        USHORT  cmsecMinSlice; USHORT  cmsecMaxSlice;
+        USHORT  bootdrive; UCHAR   amecRAS[32];
+        UCHAR   csgWindowableVioMax; UCHAR   csgPMMax;
+} GINFOSEG;
+typedef GINFOSEG *PGINFOSEG;
+
+static PGINFOSEG gdt;
+
+#define MAKEPGINFOSEG(sel)  ((PGINFOSEG)MAKEP(sel, 0))
+#define MAKEPLINFOSEG(sel)  ((PLINFOSEG)MAKEP(sel, 0))
+
+#pragma pack(2)
+typedef struct _keypacket
+  {
+   USHORT     mnflags;
+   KBDKEYINFO cp;
+   USHORT     ddflags;
+  } KEYPACKET;
+
+
+#define RELEASE     0x40
+#define CTL_F10_KEY 103
+#define F11_KEY     133
+
+#pragma stack16(8192)
+#pragma seg16(HKBD)
+#pragma seg16(MONIN)
+#pragma seg16(MONOUT)
+#pragma seg16(KEYPACKET)
+
+static HKBD KBDHandle = (HKBD)0;
+static PGINFOSEG _Seg16 gdt;
+static MONIN monInbuf = {0};
+static MONOUT <!-- entering slot 119 -->monOutbuf = {0};
+static HEV hevThreadDone = (HEV)0;
+
+static void _System keyboard_monitor(ULONG Dummy);
+
+int main(int argc, char *argv[], char *envp[])
+{
+ SEL gdt_descriptor, ldt_descriptor;
+ PID pidKeybrd;
+
+ monInbuf.cb  = sizeof(MONIN);
+ monOutbuf.cb = sizeof(MONOUT);
+
+ DosGetInfoSeg(&amp;gdt_descriptor, &amp;ldt_descriptor);
+
+ gdt = MAKEPGINFOSEG(gdt_descriptor);
+
+ DosMonOpen ( "KBD$", &amp;KBDHandle );
+
+ DosCreateEventSem(NULL, &amp;hevThreadDone,0,FALSE);
+
+ if (DosCreateThread(&amp;pidKeybrd, &amp;keyboard_monitor, 0L, 2L, 12000L))
+         DosExit(EXIT_PROCESS,0);
+
+ DosWaitEventSem(hevThreadDone, (ULONG)SEM_INDEFINITE_WAIT);
+ DosMonClose(KBDHandle);
+
+ DosBeep(100,100);
+
+ DosExit(EXIT_PROCESS,0);
+ return(0);
+}
+
+
+static void _System keyboard_monitor(ULONG Dummy)
+{
+ KEYPACKET keybuff;
+ USHORT count;
+
+ DosSetPrty(PRTYS_THREAD, PRTYC_TIMECRITICAL,0, 0);
+
+ DosMonReg( KBDHandle, (PBYTE)&amp;monInbuf, (PBYTE)&amp;monOutbuf,
+            MONITOR_BEGIN, gdt-&gt;sgCurrent);
+
+ DosSetPrty(PRTYS_THREAD, PRTYC_REGULAR,0, 0);
+
+ for(keybuff.cp.chChar = 0; ; )
+   {
+    count = sizeof(keybuff);
+    DosMonRead( (PBYTE)&amp;monInbuf, IO_WAIT, (PBYTE)&amp;keybuff, &amp;count);
+    if (!(keybuff.ddflags &amp; RELEASE))
+       {
+        if(keybuff.cp.chChar == 0)
+          {
+           switch (keybuff.cp.chScan)
+             {
+              case CTL_F10_KEY   :
+              case F11_KEY       :
+                 DosPostEventSem(hevThreadDone);
+                 DosExit(EXIT_THREAD,0);
+                 break;
+             }
+          }
+       }
+    DosMonWrite((PBYTE)&amp;monOutbuf,(PBYTE)&amp;keybuff,count);
+   }
+}
+</PRE>
+
+<P>
+Credit:  Mario Semo 
+
+<P><HR>
+
+<A HREF="099_L2_CanIredirectstdinand.html">[Back: Can I redirect stdin and stdout in a child process?]</A> <BR>
+<A HREF="101_L2_HowdoIdeterminewhatf.html">[Next: How do I determine what file system a drive uses?]</A> 
+</BODY>
+</HTML>

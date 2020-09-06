@@ -1,0 +1,188 @@
+<HTML>
+<HEAD>
+<TITLE>DDE System Example</TITLE>
+</HEAD>
+<BODY>
+<H1>DDE System Example</H1><!-- entering slot 1485 -->
+<P>
+DDE has many potential uses in real-time data acquisition applications.
+Consider the example of a DDE-based, real-time system for tracking portfolios.
+Two hypothetical PM applications cooperate in this example. One application,
+named the<I> collector</I>, is a specialized interface that draws data from
+an online data service. The other application is a spreadsheet. Both applications
+use the DDE protocol. The following figure shows the sample spreadsheet
+layout:
+<PRE>
+                   A           B           C          D
+
+          1      <U><I>Stock</I></U>       <U><I>Shares</I></U>     <U><I>Price</I></U>     <U><I>Extension</I></U>
+
+          2      ABCD        1000        148       148000
+
+          3      EFGH        2000        26        52000
+
+          4      IJKL        200         24        4800
+
+          5      MNOP        2000        93        186000
+
+          6                                        390800
+
+</PRE>
+
+<P>
+Without DDE, this spreadsheet could be updated by using the clipboard to
+manually copy numbers from the screen display of the collector application
+to the spreadsheet. This would require screen sharing or switching between
+applications. The user also would have to pay close attention to the price
+data, then undertake the data exchange personally whenever the price data
+changes.
+<P>
+With DDE, this system could be much more automatic, providing the spreadsheet
+with the current values for multiple data items, without user intervention.
+DDE enables the user to set up an exchange between the two applications
+that updates the spreadsheet whenever a change occurs in the value of specified
+stocks. After this connection is established, the cell values in the spreadsheet
+always reflect the most current data available from the collector. This
+system facilitates the timely analysis of real-time data.
+<P>
+The usefulness of the DDE protocol is not restricted to specialized real-time
+data-acquisition applications. Productivity software, in general, can benefit
+significantly from the protocol. For example, a monthly report is prepared
+using word processor, and the report includes graphs generated in a separate
+business-graphics package. Without DDE, someone must manually copy and paste
+each month's new graphs into each month's report. With DDE, the word processor
+can establish a permanent link to the graphics application so that any changes
+made to the graphs are reflected in the word-processing document, either
+automatically or on request.
+<P>
+The following diagram shows a detailed view of the workings of the DDE protocol
+and describes the collector and spreadsheet interaction and illustrates
+the forwarding of stock quotes from the collector application to the spreadsheet.
+For simplicity, this example is limited to the exchange of quotes for a
+single stock, ABCD.
+<PRE>
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³ Spreadsheet                                                        Collector ³
+³ (Client)                                                            (Server) ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+                                       .                     Start application
+                                       .
+ Start application                     .
+                                       .
+ Load stock-portfolio document         .
+                                       .
+ Calls WinDdeInitiate which            .
+ sends WM_DDE_INITIATE ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ.
+                                       .
+                                       .
+                                       .                     Accepts and calls
+                                       .                         WinDdeRespond
+                                       .                         with <!-- entering slot 1486 -->positive
+                                       .ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ WM_DDE_INITIATEACK
+                                       .
+                                       .
+ Calls WinDdePostMsg which             .
+ posts WM_ADVISE ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ.
+                                       .
+ Request to send info each time        .
+ data item ABCD changes; send          .
+ in format DDEFMT_TEXT                 .
+                                       .
+                                       .
+                                       .                    Records request in
+                                       .                    database and calls
+                                       .             WinDdePostMsg which posts
+                                       .ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ WM_DDE_ACK
+                                       .
+                                       .
+                                       .                 Whenever data changes
+                                       .                  for item ABCD, calls
+                                       .             WinDdePostMsg which posts
+                                       .ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ WM_DDE_DATA
+                                       .
+ Retrieves information from            .
+ shared-memory object indicated        .
+ by pointer in WM_DDE_DATA             .
+                                       .
+ Updates value of ABCD in              .
+ spreadsheet                           .
+                                       .
+ When ready to end updates,            .
+ calls WinDdePostMsg which posts       .
+ WM_DDE_UNADVISE ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ.
+                                       .
+                                       .                  Removes request from
+                                       .                    database and calls
+                                       .             WinDdePostMsg which posts
+                                       .ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ WM_DDE_ACK
+                                       .
+ To end DDE transaction,               .
+ calls WinDdePostMsg which posts       .
+ WM_DDE_TERMINATE ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ.
+                                       .
+                                       .                   Responds by calling
+                                       .             WinDdePostMsg which posts
+                                       .ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ WM_DDE_TERMINATE
+
+</PRE>
+</PRE>
+
+<P>
+The collector DDE server application is started first. Typically, applications
+designed to operate as dedicated DDE servers have a user interface for initialization,
+and then run minimized. As part of the initialization process, the collector
+DDE server application performs the necessary tasks (such as entering passwords
+and testing) to ensure that it can provide data to clients.
+<P>
+The spreadsheet is started next, and the stock-portfolio document is loaded.
+At this time, the spreadsheet calls WinDdeInitiate, which sends a WM_DDE_INITIATE
+message to all top-level frame windows, that is, frame windows that have
+HWND_DESKTOP as their parent. The WM_DDE_INITIATE message is a request to
+initiate an exchange with an application on a specified topic-in this case,
+STOCKS. An application can accept this message by responding with a positive
+WM_DDE_INITIATEACK message, or decline the message by passing the message
+on to WinDefWindowProc. If no application accepts the request, the spreadsheet
+assigns an error value to the external reference and its DDE activity concludes.
+
+<P>
+If the collector acknowledges the request, the spreadsheet can use the newly
+established exchange to request that the collector provide continuous updates
+on a specified data item. To make this request, the spreadsheet posts a
+WM_DDE_ADVISE message to the collector (actually, to a window within the
+collector that acts as the message recipient for DDE messages), indicating
+that updates must be sent every time there is a new value available for
+the data item, ABCD, and that the updates should be in a particular format-for
+example, DDEFMT_TEXT.
+<P>
+Upon receiving this message, the collector application records the request
+in its database and posts a WM_DDE_ACK message to the spreadsheet. From
+then on, whenever the collector receives a new ABCD stock quote, it posts
+a WM_DDE_DATA message to the window in the spreadsheet that initiated the
+exchange. Each of these messages carries a pointer to a shared-memory object
+that contains the data, rendered in the requested format. When the spreadsheet
+receives such a message, it retrieves the data from the referenced memory
+object and uses the data to update the value of the cell containing the
+external reference.
+<P>
+The periodic updates continue until the spreadsheet document is closed.
+At that point, the spreadsheet application posts a WM_DDE_UNADVISE message
+to the collector application, indicating that further updating is unnecessary.
+Upon receipt of this message, the collector application removes the corresponding
+data request from its database and posts a positive WM_DDE_ACK message back
+to the spreadsheet.
+<P>
+Finally, unless the spreadsheet initiates other data exchanges under this
+same topic, it posts a WM_DDE_TERMINATE message to the collector application,
+indicating the end of the DDE transaction. The collector application responds
+with a WM_DDE_TERMINATE message.
+<P>
+<B>Note: </B> At any time during the transaction, both the spreadsheet and
+collector are free to post a WM_DDE_TERMINATE message to the other application.
+
+
+<P><HR>
+
+<A HREF="1456_L3_ClientandServerInter.html">[Back: Client and Server Interaction]</A> <BR>
+<A HREF="1458_L3_ApplicationsTopicsan.html">[Next: Applications, Topics, and Items]</A> 
+</BODY>
+</HTML>

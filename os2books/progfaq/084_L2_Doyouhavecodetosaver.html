@@ -1,0 +1,322 @@
+<HTML>
+<HEAD>
+<TITLE>Do you have code to save/restore the clipboard?</TITLE>
+</HEAD>
+<BODY>
+<H1>Do you have code to save/restore the clipboard?</H1><!-- entering slot 100 -->
+<PRE> typedef struct _CLPBRDDATA // INFORMATION ABOUT A CLIPBOARD FORMAT
+ {
+    ULONG ulFormat; // The format type
+    PVOID pvData;   // Pointer to the data for this format
+ } CLPBRDDATA, *PCLPBRDDATA;
+
+ //***************
+ // Save formats
+ //***************
+ INT SaveClipboardData( HAB hab, PCLPBRDDATA *ppcd )
+ {
+    INT iFmtCount = 0;
+
+    if( WinOpenClipbrd( hab ) )
+    {
+       ULONG ulNextFmt, ulPrevFmt = 0;
+
+       ulNextFmt = WinEnumClipbrdFmts( hab, ulPrevFmt );
+       while( ulNextFmt )
+       {
+          iFmtCount++;
+          ulPrevFmt = ulNextFmt;
+          ulNextFmt = WinEnumClipbrdFmts( hab, ulPrevFmt );
+       }
+
+       if( iFmtCount )
+       {
+          *ppcd = (PCLPBRDDATA) malloc( sizeof( CLPBRDDATA ) * iFmtCount );
+          if( *ppcd )
+          {
+             memset( *ppcd, 0, sizeof( CLPBRDDATA ) * iFmtCount );
+              if( !GetClipboardFmts( hab, *ppcd ) )
+                 iFmtCount = 0;
+          }
+          else
+          {
+             iFmtCount = 0;
+             Msg( "Out of memory in SaveClipboardData" );
+          }
+       }
+       WinCloseClipbrd( hab );
+    }
+    else
+       Msg( "SaveClipboardData could not open the clipboard" );
+
+    return iFmtCount;
+ }
+
+ BOOL GetClipboardFmts( HAB hab, PCLPBRDDATA pcd )
+ {
+    BOOL  fSuccess = TRUE;
+    ULONG ulNextFmt, ulPrevFmt = 0;
+
+    ulNextFmt = WinEnumClipbrdFmts( hab, ulPrevFmt );
+    while( ulNextFmt )
+    {
+       pcd-&gt;ulFormat = ulNextFmt;
+       switch( ulNextFmt )
+       {
+          case CF_TEXT:
+             StoreClipboardText( hab, pcd );
+             break;
+          case CF_BITMAP:
+             StoreClipboardBmp( hab, pcd );
+             break;
+          case CF_METAFILE:
+             StoreClipboardMeta( hab, pcd );
+             break;
+          default:
+             break;
+       }
+
+       pcd++;
+       ulPrevFmt = ulNextFmt;
+       ulNextFmt = WinEnumClipbrdFmts( hab, ulPrevFmt );
+    }
+    return fSuccess;
+ }
+
+ VOID StoreClipboardText( HAB hab, PCLPBRDDATA pcd )
+ {
+    PSZ szClipText = (PSZ) WinQueryClipbrdData( hab, CF_TEXT );
+    if( szClipText )
+    {
+       pcd-&gt;pvData = malloc( strlen( szClipText ) + 1 );
+       if( pcd-&gt;pvData )
+          strcpy( pcd-&gt;pvData, szClipText );
+       else
+          Msg( "Out of memory in StoreClipboardText" );
+    }
+    else
+       Msg( "StoreClipboardText found no TEXT in the clipboard" );
+ }
+
+ VOID StoreClipboardBmp( HAB hab, PCLPBRDDATA pcd )
+ {
+    HBITMAP hbmClip = WinQueryClipbrdData( hab, CF_BITMAP );
+    if( hbmClip )
+       pcd-&gt;pvData = (PVOID) CopyBitmap( hab, hbmClip );
+    else
+       Msg( "StoreClipboardBmp found no BITMAP in the clipboard" );
+ }
+
+ VOID StoreClipboardMeta( HAB hab, PCLPBRDDATA pcd )
+ {
+    HMF hmfClip = WinQueryClipbrdData( hab, CF_METAFILE );
+    if( hmfClip )
+    {
+       HMF hmfNew = GpiCopyMetaFile( hmfClip );
+       if( hmfNew == GPI_ERROR )
+          Msg( "StoreClipboardMeta GpiCopyMetaFile RC = %x",
+          (USHORT) WinGetLastError( hab ) );
+       else
+          pcd-&gt;pvData = (PVOID) hmfNew;
+    }
+    else
+       Msg( "StoreClipboardMeta found no METAFILE in the clipboard" );
+ }
+
+ //******************
+ // Restore formats
+ //******************
+ VOID RestClipboardData( HAB hab, INT iFmtCount, PCLPBRDDATA pcd )
+ {
+    PCLPBRDDATA pcdSave = pcd;
+    INT  i;
+    BOOL fFormatsExist = FALSE;
+
+    for( i = 0; i &lt; iFmtCount; i++, pcd++ )
+    {
+       if( pcd-&gt;ulFormat &amp;&amp; pcd-&gt;pvData )
+       {
+          fFormatsExist = TRUE;
+          break;
+       }
+    }
+
+    pcd = pcdSave;
+    if( fFormatsExist )
+       if( WinOpenClipbrd( hab ) )
+       {
+          WinEmptyClipbrd( hab );
+          for( i = 0; i &lt; iFmtCount; i++, pcd++ )
+          {
+             switch( pcd-&gt;ulFormat )
+             {
+                case 0:
+                   break;
+                case CF_TEXT:
+                   if( pcd-&gt;pvData )
+                   {
+                      RestClipboardText( hab, pcd-&gt;pvData );
+                      free( pcd-&gt;pvData );
+                   }
+                   break;
+                case CF_BITMAP:
+                   if( pcd-&gt;pvData )
+                   RestClipboardBmp( hab, (HBITMAP) pcd-&gt;pvData );
+                   break;
+                case CF_METAFILE:
+                   if( pcd-&gt;pvData )
+                      RestClipboardMeta( hab, (HMF) pcd-&gt;pvData );
+                   break;
+                default:
+                   break;
+             }
+          }
+          WinCloseClipbrd( hab );
+       }
+       else
+          Msg( "RestClipboardData could not open the clipboard" );
+    free( pcdSave );
+ }
+
+ VOID RestClipboardText( HAB hab, PSZ szTextIn )
+ {
+    PSZ szTextOut = NULL;
+    ULONG ulRC =
+    DosAllocSharedMem( (PVOID) &amp;szTextOut, NULL,
+                       strlen( szTextIn ) + 1,
+                       PAG_WRITE | PAG_COMMIT | OBJ_GIVEABLE );
+    if( !ulRC )
+    {
+       strcpy( szTextOut, szTextIn );
+       if( !WinSetClipbrdData( hab, (ULONG) szTextOut, CF_TEXT,
+                               CFI_POINTER ) )
+          Msg( "RestClipboardText WinSetClipbrdData failed" );
+    }
+    else
+       Msg( "RestClipboardText DosAllocSharedMem RC: %u", ulRC );
+ }
+
+ VOID RestClipboardBmp( HAB hab, HBITMAP hbm )
+ {
+  if( !WinSetClipbrdData( hab, (ULONG) hbm, CF_BITMAP, CFI_HANDLE ) )
+     Msg( "RestClipboardBmp WinSetClipbrdData failed" );
+ }
+
+ VOID RestClipboardMeta( HAB hab, HMF hmf )
+ {
+  if( !WinSetClipbrdData( hab, (ULONG) hmf, CF_METAFILE, CFI_HANDLE ) )
+     Msg( "RestClipboardMeta WinSetClipbrdData failed" );
+ }
+
+ HBITMAP CopyBitmap( HAB hab, HBITMAP hbmIn )
+ {
+    BITMAPINFOHEADER2 bmih;
+    HBITMAP           hbmOut = NULLHANDLE;
+    HDC               hdcIn = NULLHANDLE, hdcOut = NULLHANDLE;
+    HPS               hpsIn = NULLHANDLE, hpsOut = NULLHANDLE;
+    POINTL            aptl[ 3 ];
+    SIZEL             sizel = {0,0};
+
+    hdcIn = DevOpenDC( hab, OD_MEMORY, "*", 0, NULL, NULLHANDLE );
+    if( !hdcIn )
+    {
+       Msg( "CopyBitmap DevOpenDC for hdcIn RC = %x",
+            (USHORT) WinGetLastError( hab ) );
+       goto BYEBYE;
+    }
+
+    hdcOut = DevOpenDC( hab, OD_MEMORY, "*", 0, NULL, NULLHANDLE );
+    if( !hdcOut )
+    {
+       Msg( "CopyBitmap DevOpenDC for hdcOut RC = %x",
+            (USHORT) WinGetLastError( hab ) );
+       goto BYEBYE;
+    }
+
+    hpsIn  = GpiCreatePS( hab, hdcIn, &amp;sizel,PU_PELS |
+                          GPIF_DEFAULT | GPIT_MICRO | GPIA_ASSOC );
+    if( !hpsIn )
+    {
+       Msg( "CopyBitmap GpiCreatePS for hpsIn RC = %x",
+            (USHORT) WinGetLastError( hab ) );
+       goto BYEBYE;
+    }
+
+    hpsOut = GpiCreatePS( hab, hdcOut, &amp;sizel,PU_PELS |
+                          GPIF_DEFAULT | GPIT_MICRO | GPIA_ASSOC );
+    if( !hpsOut )
+    {
+       Msg( "CopyBitmap GpiCreatePS for hpsOut RC = %x",
+            (USHORT) WinGetLastError( hab ) );
+       goto BYEBYE;
+    }
+
+    bmih.cbFix = sizeof( BITMAPINFOHEADER2 );
+    if( !GpiQueryBitmapInfoHeader( hbmIn, &amp;bmih ) )
+    {
+       Msg( "CopyBitmap GpiQueryBitmapInfoHeader for hbmIn RC = %x",
+            (USHORT) WinGetLastError( hab ) );
+       goto BYEBYE;
+    }
+
+    hbmOut = GpiCreateBitmap( hpsOut, &amp;bmih, 0, NULL, NULL );
+    if( hbmOut )
+    {
+       if( HBM_ERROR == GpiSetBitmap( hpsIn, hbmIn ) )
+       {
+          Msg( "CopyBitmap GpiSetBitmap for hpsIn RC = %x",
+               (USHORT) WinGetLastError( hab ) );
+          hbmOut = NULLHANDLE;
+          goto BYEBYE;
+       }
+
+       if( HBM_ERROR == GpiSetBitmap( hpsOut, hbmOut ) )
+       {
+          Msg( "CopyBitmap GpiSetBitmap for hpsOut RC = %x",
+               (USHORT) WinGetLastError( hab ) );
+          hbmOut = NULLHANDLE;
+          goto BYEBYE;
+       }
+
+       aptl[ 0 ].x = 0;
+       aptl[ 0 ].y = 0;
+       aptl[ 1 ].x = bmih.cx;
+       aptl[ 1 ].y = bmih.cy;
+       aptl[ 2 ].x = 0;
+       aptl[ 2 ].y = 0;
+
+       if( GPI_ERROR == GpiBitBlt( hpsOut, hpsIn, 3, aptl, ROP_SRCCOPY,
+                                   BBO_IGNORE ) )
+       {
+          Msg( "CopyBitmap GpiBitBlt for hpsOut RC = %x",
+               (USHORT) WinGetLastError( hab ) );
+          hbmOut = NULLHANDLE;
+       }
+    }
+    else
+       Msg( "CopyBitmap GpiCreateBitmap for hbmOut RC = %x",
+            (USHORT) WinGetLastError( hab ) );
+
+ BYEBYE:
+
+    if( hpsIn )
+       GpiDestroyPS( hpsIn );
+    if( hpsOut )
+       GpiDestroyPS( hpsOut );
+    if( hdcIn )
+       DevCloseDC( hdcIn );
+    if( hdcOut )
+       DevCloseDC( hdcOut );
+    return hbmOut;
+ }
+</PRE>
+
+<P>
+Credit:  Rick Fishman 
+
+<P><HR>
+
+<A HREF="083_L2_HowdoIgeterrorinfoaf.html">[Back: How do I get error info after using WinGetLastError()?]</A> <BR>
+<A HREF="085_L2_HowdoIknowwhatitemwa.html">[Next: How do I know what item was selected in a Combo box?]</A> 
+</BODY>
+</HTML>

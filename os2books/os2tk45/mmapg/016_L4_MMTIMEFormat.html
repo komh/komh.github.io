@@ -1,0 +1,186 @@
+<HTML>
+<HEAD>
+<TITLE>MMTIME Format</TITLE>
+</HEAD>
+<BODY>
+<H1>MMTIME Format</H1><!-- entering slot 20 -->
+<P>
+MMTIME is a standard time and media position format supported by the media
+control interface. This time unit is 1/3000 second, or 333 microseconds.
+Conversion macros are provided for convenient conversion of other popular
+time formats to and from this format.  MMTIME values are passed as long
+(32-bit) integer values.
+<P>
+To use MMTIME on command messages, send the MCI_SET message specifying the
+MCI_SET_TIME_FORMAT flag. Use MCI_FORMAT_MMTIME in the<I> ulTimeFormat</I> field
+of the MCI_SET_PARMS structure.
+<P>
+The macros shown in the following figure are available for conversion to
+and from the MMTIME format.
+<P>
+
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Conversion to MMTIME          ³Conversion to Other Formats   ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³REDBOOKTOMM (ULONG)           ³REDBOOKFROMMM (ULONG)         ³
+³FPS24TOMM (ULONG)             ³FPS24FROMMM (ULONG)           ³
+³FPS25TOMM (ULONG)             ³FPS25FROMMM (ULONG)           ³
+³FPS30TOMM (ULONG)             ³FPS30FROMMM (ULONG)           ³
+³MSECTOMM (ULONG)              ³MSECFROMMM (ULONG)            ³
+³HMSTOMM (ULONG)               ³HMSFROMMM (ULONG)             ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+<B>Packed Time Formats</B>
+<P>
+The packed time formats described in the following sections require that
+the application format the ULONG value passed in command message parameter
+structures. When these values are passed in string commands, any value containing
+a colon (:) is assumed to be a field-oriented value. For example, if the
+time format for a CD audio device is set to TMSF, and the value 4:10:00:00
+is specified, this value is interpreted as track 4, 10 minutes, 0 seconds,
+and 0 frames. However, if the value 4100000 is specified, the integer is
+passed directly, and the assignment to byte fields is quite different.
+<P>
+It is not required that a field-oriented value contain specifications for
+all fields.  For example, the following are equivalent specifications for
+track 4:
+<PRE>4:00:00:00
+4:00:00
+4:00:
+4:00
+4:
+4
+</PRE>
+
+<P>
+The interpretation of field-oriented values is left-justified with respect
+to the placement of colons.  Values not specified default to zero. If a
+value has a colon, it is subject to field-oriented interpretation, regardless
+of the time format currently set for the device.
+<P>
+
+<BR>
+HMSF (SMPTE) Packed Time Format
+<P>
+The HMSF packed time format represents elapsed hours, minutes, seconds,
+and frames from any specified point. This time format is packed into a 32-bit
+ULONG value as follows:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³High-Order Byte³Low-Order Byte ³High-Order Byte³Low-Order Byte ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Frames         ³Seconds        ³Minutes        ³Hours          ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<BR>
+MSF Packed Time Format
+<P>
+The CD-DA MSF time format, also referred to as the Red Book time format,
+is based on the 75-frame-per-second CD digital audio standard.  Media position
+values in this format are packed into a 32-bit ULONG value as follows:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³High-Order Byte³Low-Order Byte ³High-Order Byte³Low-Order Byte ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Reserved       ³Frames         ³Seconds        ³Minutes        ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+The following macros aid in extracting information in packed MSF format:
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B>Macro</B><!-- lm: 0x2 25 -->
+<UL><B> Description</B><!-- lm: 0x2 1 -->
+</UL>MSF_MINUTE(time)<!-- lm: 0x2 25 -->
+<UL> Gets the number of minutes.
+<!-- lm: 0x2 1 -->
+</UL>MSF_SECOND(time)<!-- lm: 0x2 25 -->
+<UL> Gets the number of seconds.
+<!-- lm: 0x2 1 -->
+</UL>MSF_FRAME(time)<!-- lm: 0x2 25 -->
+<UL> Gets the number of frames.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+For example, the following code fragment sets the time in<I> ulTime</I> to
+6 minutes and 30 seconds (06:30:00).
+<PRE>ULONG ulTime;.
+.
+.
+MSF_MINUTE(ulTime) = 6
+MSF_SECOND(ulTime) = 30;
+MSF_FRAME(ulTime) = 0;
+</PRE>
+
+<P>
+
+<BR>
+TMSF Packed Time Format
+<P>
+The CD-DA TMSF time format is based on the 75-frame-per-second CD digital
+audio standard.  Media position values in this format are packed into a
+32-bit ULONG value as follows:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³High-Order Byte³Low-Order Byte ³High-Order Byte³Low-Order Byte ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Frames         ³Seconds        ³Minutes        ³Track          ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+The following macros aid in extracting information in packed TMSF format:
+<!-- lm: 0x2 1 -->
+<P>
+<B>Macro</B><!-- lm: 0x2 25 -->
+<UL><B> Description</B><!-- lm: 0x2 1 -->
+</UL>TMSF_TRACK(time)<!-- lm: 0x2 25 -->
+<UL> Gets the number of tracks.
+<!-- lm: 0x2 1 -->
+</UL>TMSF_MINUTE(time)<!-- lm: 0x2 25 -->
+<UL> Gets the number of minutes.
+<!-- lm: 0x2 1 -->
+</UL>TMSF_SECOND(time)<!-- lm: 0x2 25 -->
+<UL> Gets the number of seconds.
+<!-- lm: 0x2 1 -->
+</UL>TMSF_FRAME(time)<!-- lm: 0x2 25 -->
+<UL> Gets the number of frames.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+For example, the following code fragment sets the time in<I> ulTime</I> to
+2 minutes into track 2 (02:02:00:00).
+<PRE>ULONG ulTime;.
+.
+.
+TMSF_TRACK(ulTime) = 2;
+TMSF_MINUTE(ulTime) = 2;
+TMSF_SECOND(ulTime) = 0;
+TMSF_FRAME(ulTime) = 0;
+</PRE>
+
+<P>
+<B>Note: </B> MSF and TMSF macros can be found in the MCIOS2.H file.<!-- lm: 0x2 1 -->
+<P>
+
+<BR>
+HMS Packed Time Format
+<P>
+The HMS packed time format, representing hours, minutes, and seconds, is
+packed into a 32-bit ULONG value as follows:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³High-Order Byte³Low-Order Byte ³High-Order Byte³Low-Order Byte ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Reserved       ³Seconds        ³Minutes        ³Hours          ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+
+<P><HR>
+
+<A HREF="015_L3_TimeFormatsforDevice.html">[Back: Time Formats for Device Commands]</A> <BR>
+<A HREF="017_L2_OpeningaMediaDevice.html">[Next: Opening a Media Device]</A> 
+</BODY>
+</HTML>

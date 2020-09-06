@@ -1,0 +1,162 @@
+<HTML>
+<HEAD>
+<TITLE>Comparison, Search, ...</TITLE>
+</HEAD>
+<BODY>
+<H1>Comparison, Search, ...</H1><!-- entering slot 54 --><!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Comparison
+<P>
+There are two types of comparison function:<!-- lm: 0x2 7 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 11 -->Determine if two strings are either equal or
+unequal with each other.<!-- lm: 0x2 7 -->
+<P>
+ <LI><LI><!-- lm: 0x2 11 -->Determine which of the two strings is higher-ordered
+or lower-ordered than the other.<!-- lm: 0x2 6 -->
+</UL> In this section,
+only (1) is described.  In the case of (2), refer to <A HREF="052_L2_Ordering.html">Ordering</A>.
+
+<P>
+Alphanumeric and special character are contained in DBCS code pages as well
+as in SBCS code pages.  Currently most products treat DBCS alphanumeric
+and special characters differently from those of SBCS.  The treatment depends
+on the characteristics of your product.
+<P>
+For example, in a text retrieval function, an option to treat DBCS alphanumeric
+characters the same as SBCS is desired like SBCS users want an option to
+ignore upper or lowercase of alphabetic characters.
+<P>
+If you are going to support this option, see <A HREF="024_L4_DBCSAlphanumericChar.html">DBCS
+Alphanumeric Characters</A><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>Search
+
+<P>
+When handling SBCS/DBCS mixed strings, care must be taken to find a matching
+string in a target. It is important to recognize characters, not just byte
+comparisons, because some byte values may occur as either an SBCS character
+or as the second byte of a DBCS character. This can be handled by doing
+character (one or two byte) comparisons aligned on character boundaries.
+
+<P>
+See also Comparison for handling of DBCS alphanumeric and special characters.
+<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->Wild Card Character (or Global Search Character)
+
+<P>
+Suppose your program supports two global search characters, '*' and '?':
+ to represent any number of SBCS characters, '?' to represent any single
+SBCS character.  If an entry field accepts both DBCS and SBCS characters,
+use the '*' to represent a string of any SBCS or DBCS characters.  Use the
+'?' to represent any single DBCS or SBCS character in that position.  However,
+if users can only type DBCS characters into an entry field, the DBCS '*'
+represents any string of any DBCS character.  The DBCS '?' represents any
+single DBCS character in that position.
+<PRE>Example
+
+    search argument      target        result
+
+       /D1*D2/           D1DjD2        matched
+                         D1ssD2        matched
+                         D1sD2         matched
+                         D1D2          matched
+
+
+       /D1?D2/           D1DjD2        matched
+                         D1ssD2        unmatched
+                         D1sD2         matched
+                         D1D2          unmatched
+
+where
+'*' and '?' denotes SBCS wild card character.
+</PRE>
+
+<P>
+<B>Note: </B><!-- lm: 0x2 12 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 16 -->In OS/2 commands (such as<B> DIR</B>), two global
+file name characters, '?' (SBCS question mark) and '*' (SBCS asterisk) are
+supported, and handle DBCS as described above in OS/2 Version 2.0.  DBCS
+question mark or DBCS asterisk cannot be used as global file name characters.
+<!-- lm: 0x2 12 -->
+<P>
+ <LI><LI><!-- lm: 0x2 16 -->DBCS handling in<B> LIKE</B> predicate of Database
+Manager is different from the above but is consistent with that of the host
+relational database products (DB2 and SQL/DS) whose DBCS supports are<!-- lm: 0x2 11 --><!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>Parsing
+
+<P>
+A Parser scans a given string, performs syntax checks and decomposes the
+strings following a well-defined format or set of rules.  The fundamental
+requirement is to ensure that character comparisons are done rather than
+byte comparisons.  This requires that all checks for syntactically significant
+characters observe character boundaries and character sizes in all cases.
+
+<P>
+For example, when a parser searches for a single byte delimiter, it must
+be careful to ignore bytes which occur<!-- entering slot 55 --> within two
+byte characters.
+<PRE>CHANGE |DjDiDj|DjDjDj|
+
+where  | = 7CH
+      Di = 817CH
+</PRE>
+
+<P>
+The second byte of Di must not be considered as a delimiter.  It is part
+of a character and must retain its identity as such.<!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>Substitution
+
+<P>
+A program sometimes needs to change portions of a text string at execution
+time.  A changeable portion is defined in a string by a<I> substitutable
+variable</I> and replaced with a real value at execution time.  A substitution
+operation can be considered as a combination of search, deletion and insertion
+operations.  See Search and <A HREF="049_L2_InsertionandAppendin.html">Insertion</A>.
+
+<P>
+Messages are a good example of variable substitution.  Messages often contain
+information regarding what data is wrong during execution.  Variable substitution
+can also occur in the literal portion or the text portion of panels.
+<PRE>Example of Variable Substitution in a Message
+
+- Message Format = STRING &amp;VAR FOUND
+  ('&amp;' is prefixed to substitution variables.)
+
+- IF &amp;VAR = ABC THEN "STRING ABC FOUND"         SBCS substitution
+
+- IF &amp;VAR = D1D2 THEN "STRING D1D2 FOUND"       DBCS substitution
+</PRE>
+<!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL>Change
+<P>
+CHANGE operation for SBCS/DBCS mixed strings requires no special consideration
+beyond that of searching for the original string and substituting the new
+string.  Both these operations have already been covered.
+<PRE>Original            Change             Result
+
+abcde         abcde   to  lmnop       lmnop
+abcde         bcd     to  D1          aD1e
+abcde         abcde   to  D1D2        D1D2
+D1D2D3        D1D2D3  to  abcde       abcde
+D1D2D3        D2      to  DX          D1DXD3
+D1D2D3        D2      to  a           D1aD3
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="049_L2_InsertionandAppendin.html">[Back: Insertion and Appending]</A> <BR>
+<A HREF="051_L2_ReplacingOverwriting.html">[Next: Replacing/Overwriting Characters]</A> 
+</BODY>
+</HTML>

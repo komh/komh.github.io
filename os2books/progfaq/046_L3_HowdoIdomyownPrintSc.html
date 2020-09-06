@@ -1,0 +1,461 @@
+<HTML>
+<HEAD>
+<TITLE>How do I do my own Print Screen?</TITLE>
+</HEAD>
+<BODY>
+<H1>How do I do my own Print Screen?</H1><!-- entering slot 54 -->
+<P>
+The following code segments are drawn from a much larger system that I manage
+at work.  The intent is to show how to provide a graphical print screen
+capability in a PM program.  We install a hook to watch for the print screen
+key and then take a bit map snapshot of the screen.  This bit map is then
+sent to the printer. Forgive me if I don't go into all the details about
+the non-related data structures -- it's late and my mind is a bit foggy.
+
+<P>
+Feel free to use anything here.  Please add some kind of acknowledgement,
+if you use them as is, like:
+<P>
+  "Print routines (c) 1990, 1991 Applied Signal Technology, Inc." Comment,
+questions, ridicule should be directed to:
+<BR>
+
+<BR>
+  Jeff Hitchcock
+<BR>
+  CompuServe 71601,260
+<BR>
+
+<BR>
+  or U.S. Mail to
+<BR>
+
+<BR>
+  Applied Signal Technology, Inc.
+<BR>
+  470 Spring Park Place, Suite 700
+<BR>
+  Herndon, VA 22070
+<BR>
+
+<BR>
+  or phone to
+<BR>
+
+<BR>
+  703/478-5619
+<BR>
+
+<P>
+/*****************************************************************************/
+
+<P>
+1.  During the WM_CREATE message processing, add the following:
+<PRE>   // Set the print screen hook
+
+   WinSetHook (hab, HMQ_CURRENT, HK_INPUT, (PFN) PrintScreenHook,
+               (HMODULE) NULL);
+</PRE>
+
+<P>
+/*****************************************************************************/
+
+<P>
+2.  Somewhere, have this function:
+<PRE>BOOL CALLBACK PrintScreenHook (HAB hab, PQMSG pQmsg, USHORT fs)
+{
+   if ( pQmsg-&gt;msg == WM_CHAR )
+      if ( ( SHORT1FROMMP(pQmsg-&gt;mp1) &amp; KC_KEYUP) &amp;&amp;
+           ( SHORT1FROMMP(pQmsg-&gt;mp1) &amp; KC_VIRTUALKEY ) &amp;&amp;
+           ( SHORT2FROMMP(pQmsg-&gt;mp2) == VK_PRINTSCRN) )
+             PrintScreen (hab);
+   return FALSE;
+}
+</PRE>
+
+<P>
+/*****************************************************************************/
+
+<P>
+3.  Here's the "driver:"
+<PRE>VOID EXPENTRY PrintScreen (HAB hab)
+{
+    HBITMAP	 hbm;
+
+    hbm = ScreenToBitmap (hab);
+    PrintBitMap(hbm);
+}
+</PRE>
+
+<P>
+/*****************************************************************************/
+
+<P>
+4.  Here's a general print-related structure we use.  We often have many
+print threads running concurrently, but we only allow one to "run" at a
+time.  We use a semaphore to show availability of the printer (so to speak),
+and only one thread at a time gets it.	If we didn't do this, and more than
+a few print threads are running (especially graphical prints), even a 486/33
+with 16 MB of RAM begins to C-R-A-W-L.  So, for what it's worth, these are
+the structures that we use:
+<PRE>/**************************************************************
+*                                                             *
+*   PRINTTHREADPARAMS structure                               *
+*                                                             *
+*   Parameters that are used to manage separate print threads *
+*                                                             *
+*   Item             Contents/<!-- entering slot 55 -->Use                             *
+*   --------------   ---------------------------------------- *
+*                                                             *
+*   sJobNumber       Print job number, used for cancelling    *
+*   aiThreadStack    Thread's stack                           *
+*   hwndNotify       Window to which notif. msgs are sent     *
+*   tidPrint         System task id                           *
+*   hssmPrinter...   Semaphore for printer available          *
+*   fSemSet          TRUE if semaphore was made and cleared   *
+*   szSummary        Print summary (e.g., fax printout)       *
+*   fStart           Can't start until TRUE (default FALSE)   *
+*   fContinue        Quit if FALSE (default is TRUE)          *
+*   fHold            Hold if TRUE (default is FALSE)          *
+*   sStartingPage    For multipage, start here                *
+*   sEndingPage      For multipage, end here                  *
+*   usParam          Module-dependent USHORT                  *
+*   ulParam          Module-dependent ULONG                   *
+*   pPrintData       PVOID to the print data                  *
+*                                                             *
+*   PAGESETUP structure                                       *
+*                                                             *
+*   Parameters used to describe the appearance                *
+*                                                             *
+*   Item             Contents/Use                             *
+*   --------------   ---------------------------------------- *
+*                                                             *
+*   szFont           The name of the font to use              *
+*   sLinesPerPage    Used to scale font                       *
+*   sCharsPerLine    Used to scale font                       *
+*   sLeft            Used to position on page, in chars       *
+*   sRight           Used to position on page, in char        *
+*   sTop             Used to position on page, in lines       *
+*   sBottom          Used to position on page, in lines       *
+*   szHeader         Text to place on top of each page        *
+*   fIncludeSummary  If TRUE, include SRI summary on page 1   *
+*   fHeaderEveryPage TRUE for every page, false for pg 1      *
+*   fHeaderUnderline TRUE for underline                       *
+*   szFooter         Text to place at bottom of each page     *
+*   fFooterEveryPage TRUE for every page, false for pg 1      *
+*   fOverlineFooter  TRUE for overline                        *
+*                                                             *
+*   HEADER AND FOOTER OPTIONS:                                *
+*                                                             *
+*   Special Flags that should be supported in each module:    *
+*                                                             *
+*           &amp;l  Left justify                                  *
+*           &amp;c  Center                                        *
+*           &amp;r  Right justify                                 *
+*           &amp;d  Date                                          *
+*           &amp;t  Time                                          *
+*           &amp;p  Page number                                   *
+*                                                            *
+**************************************************************/
+
+typedef struct
+    {
+    CHAR       szFont[FACESIZE] ;
+    SHORT      sLinesPerPage ;
+    SHORT      sCharsPerLine ;
+    SHORT      sLeft ;
+    SHORT      sRight ;
+    SHORT      sTop ;
+    SHORT      sBottom ;
+    BOOL       fIncludeSummary ;
+    CHAR       szHeader[HEADERFOOTERLENGTH] ;
+    BOOL       fHeaderEveryPage ;
+    BOOL       fUnderlineHeader ;
+    CHAR       szFooter[HEADERFOOTERLENGTH] ;
+    BOOL       fFooterEveryPage ;
+    BOOL       fOverlineFooter ;
+    }
+    PAGESETUP ;
+
+typedef PAGESETUP FAR *PPAGESETUP ;
+
+typedef struct
+    {
+    SHORT        sJobNumber ;
+    int          aiThreadStack[STACKSIZE / sizeof (int)] ;
+    HWND         hwndNotify ;
+    HSYSSEM      hssmPrinterAvailable ;
+    BOOL         fSemSet ;
+    CHAR         szSummary[HEADERFOOTERLENGTH] ;
+    BOOL         fStart ;
+    BOOL         fRunning ;
+    BOOL         fContinue ;
+    BOOL         fHold ;
+    SHORT        sStartingPage ;
+    SHORT        sEndingPage ;
+    PAGESETUP    page ;
+    USHORT       usParam ;
+    ULONG        ulParam ;
+    VOID huge    *pPrintData ;
+    }
+    PRINTTHREADPARAMS ;
+
+typedef PRINTTHREADPARAMS FAR *PPRINTTHREADPARAMS ;
+</PRE>
+
+<P>
+/*****************************************************************************/
+
+<P>
+5.  This function saves the screen display to a bitmap.
+<PRE>HBITMAP ScreenToBitmap (HAB hab)
+{
+     BITMAPINFOHEADER bmp ;
+     HBITMAP          hbm ;
+     HDC              hdcMemory ;
+     HPS              hpsScreen, hpsMemory ;
+     LONG             alBitmapFormats [2] ;
+     POINTL           aptl[3] ;
+     SIZEL            sizl ;
+     SHORT            cxScreen;
+     SHORT            cyScreen;
+     BOOL             fMonochrome = FALSE;
+                      // Create memory DC and PS
+
+     cxScreen = (SHORT) WinQuerySysValue (HWND_DESKTOP, SV_CXSCREEN);
+     cyScreen = (SHORT) WinQuerySysValue (HWND_DESKTOP, SV_CYSCREEN);
+
+     hdcMemory = DevOpenDC (hab, OD_MEMORY, "*", 0L, NULL, NULL) ;
+
+     sizl.cx = sizl.cy = 0 ;
+     hpsMemory = GpiCreatePS (hab, hdcMemory, &amp;sizl,
+                              PU_PELS | <!-- entering slot 56 -->GPIF_DEFAULT |
+                              GPIT_MICRO | GPIA_ASSOC) ;
+
+                              // Create bitmap for destination
+
+     bmp.cbFix = sizeof bmp ;
+
+     if (fMonochrome)
+     {
+        bmp.cPlanes = 1 ;
+        bmp.cBitCount = 1 ;
+     }
+     else
+     {
+        GpiQueryDeviceBitmapFormats (hpsMemory, 2L, alBitmapFormats) ;
+
+        bmp.cPlanes = (USHORT) alBitmapFormats[0] ;
+        bmp.cBitCount = (USHORT) alBitmapFormats[1] ;
+     }
+
+     bmp.cx = cxScreen ;
+     bmp.cy = cyScreen ;
+
+     hbm = GpiCreateBitmap (hpsMemory, &amp;bmp, 0L, NULL, NULL) ;
+
+                              // Copy from screen to bitmap
+
+     if (hbm != NULL)
+     {
+        GpiSetBitmap (hpsMemory, hbm) ;
+        hpsScreen = WinGetScreenPS (HWND_DESKTOP) ;
+
+        aptl[0].x = 0 ;
+        aptl[0].y = 0 ;
+        aptl[1].x = cxScreen ;
+        aptl[1].y = cyScreen ;
+        aptl[2].x = 0 ;
+        aptl[2].y = 0 ;
+
+        WinLockVisRegions (HWND_DESKTOP, TRUE) ;
+
+        GpiBitBlt (hpsMemory, hpsScreen, 3L, aptl,
+                   fMonochrome ? ROP_NOTSRCCOPY : ROP_SRCCOPY, BBO_IGNORE) ;
+
+        WinLockVisRegions (HWND_DESKTOP, FALSE) ;
+
+        WinReleasePS (hpsScreen) ;
+        GpiDestroyPS (hpsMemory) ;
+        DevCloseDC (hdcMemory) ;
+     }
+
+     return hbm ;
+}
+</PRE>
+
+<P>
+/*****************************************************************************
+
+<P>
+6.  The "core" function:
+<P>
+This function prints a bitmap to the printer.  The bitmap is scaled according
+to the size of the printer.  No distortion is allowed of the bitmap image.
+<!-- lm: 0x2 0 -->
+<P>
+Returns False : if an error occurrs<!-- lm: 0x2 0 -->
+<BR>
+Returns True : no Error occurred<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+Known bug(s):
+<P>
+Areas on the screen that have a black foreground and a gray background are
+completely black when printed.  For example, when a window does not have
+the focus, it's title bar becomes black lettering on a gray background.
+ When this window is printed, the entire title bar is black and no title
+can be read.  This is using the Hewlett Packard LaserJet Series II printer.
+
+<P>
+According to MicroSoft online help this is a known bug with the printer
+device driver.	To fix the bug you must go to the control panel and change
+the colors of the inactive window.
+<P>
+
+<PRE>************************************************************************/
+SHORT  sBitmapToPrinter(PPRINTTHREADPARAMS pptp,
+HPS   hpsPrinter,
+HDC   hdcPrinter,
+HAB   habPrinter,
+SIZEL *psizlPage,
+SIZEL *psizlChar)
+{
+    HDC    hdcPrinterMemory;
+    HPS    hpsPrinterMemory;
+    POINTL ptl;
+    SHORT  sPage = 1;
+    RECTL  rcl;     // Coordinates of region
+
+    long  lCapsHRes;
+    long  lCapsVRes;
+    float fYAspectRatio;
+    float fXAspectRatio;
+    SIZEL sizl;
+
+    HBITMAP hbm;
+    POINTL  aptl [4] ;
+    SHORT   cxScreen;
+    SHORT   cyScreen;
+    float   fltScale;
+
+    // Skip down top margin, ...
+
+    ptl.x = pptp-&gt;page.sLeft * psizlChar-&gt;cx ;
+    ptl.y = psizlPage-&gt;cy - (pptp-&gt;page.sTop * psizlChar-&gt;cy) ;
+
+    // Print header, if requested
+
+    if (pptp-&gt;page.szHeader[0] != '\0')
+    {
+       PrintHeaderFooter (hpsPrinter, &amp;ptl, pptp,
+                          psizlPage, psizlChar,
+                          pptp-&gt;page.szHeader,
+                          sPage, PRINT_HEADER) ;
+    }
+
+    hbm = pptp-&gt;pPrintData;
+
+    // Find the aspect ratio of the printer
+
+    DevQueryCaps(hdcPrinter,CAPS_HORIZONTAL_RESOLUTION,1L,&amp;lCapsHRes);
+    DevQueryCaps(hdcPrinter,CAPS_VERTICAL_RESOLUTION,1L,&amp;lCapsVRes);
+
+    if ( (lCapsVRes == 0) || (lCapsHRes == 0) ) {
+       fXAspectRatio = (float) 1;
+       fYAspectRatio = (float) 1;
+    }
+    else {
+       fXAspectRatio = (float) ((float) lCapsVRes / (float) lCapsHRes);
+       fYAspectRatio = (float) ((float) lCapsHRes / (float) lCapsVRes);
+    }
+
+    // determine coordinates to print on printer
+
+    rcl.xLeft =  pptp-&gt;page.sLeft * psizlChar-&gt;cx; // Printer left
+
+    rcl.xRight = psizlPage-&gt;cx -
+                 (pptp-&gt;page.sRight * psizlChar-&gt;cx); // Printer right
+
+    rcl.yBottom = (pptp-&gt;page.<!-- entering slot 57 -->sBottom + 1) * psizlChar-&gt;cy; // Printer bottom
+
+    rcl.yTop = psizlPage-&gt;cy -
+              ( (pptp-&gt;page.sTop + 1) * psizlChar-&gt;cy);     // Printer top
+
+    cxScreen = (SHORT) WinQuerySysValue (HWND_DESKTOP, SV_CXSCREEN);
+    cyScreen = (SHORT) WinQuerySysValue (HWND_DESKTOP, SV_CYSCREEN);
+
+    ScaleToWindowSize ((SHORT) (rcl.xRight - rcl.xLeft),   // sXtarget
+                       (SHORT) (rcl.yTop - rcl.yBottom),   // sYTarget
+                       cxScreen,                           // sXSource
+                       cyScreen,                           // sYSource
+                       &amp;fltScale) ;
+
+    // Create a memory device context
+    // Memory device contexts are used to contain bitmaps
+
+    hdcPrinterMemory = DevOpenDC (habPrinter, OD_MEMORY, "*", 0L,
+                                  NULL, hdcPrinter);
+
+    if ( hdcPrinterMemory == DEV_ERROR ) return FALSE;
+
+    sizl.cx = 0;
+    sizl.cy = 0;
+
+    // Create a presentation space and associate it the memory device context
+
+    hpsPrinterMemory = GpiCreatePS (habPrinter, hdcPrinterMemory, &amp;sizl,
+                                    PU_PELS | GPIF_DEFAULT |
+                                    GPIT_NORMAL | GPIA_ASSOC);
+
+    if( ! hpsPrinterMemory) {
+       DevCloseDC (hdcPrinterMemory);
+       return FALSE;
+    }
+
+    GpiSetBitmap(hpsPrinterMemory,hbm);
+
+    aptl [0].x = rcl.xRight - (long) ((float) cxScreen * fltScale);
+    aptl [0].y = rcl.yTop - (long) ((float) cyScreen * fltScale *
+                 fYAspectRatio);
+    aptl [1].x = rcl.xRight;
+    aptl [1].y = rcl.yTop;
+    aptl [2].x = 0;
+    aptl [2].y = 0;
+    aptl [3].x = cxScreen;
+    aptl [3].y = cyScreen;
+
+    GpiBitBlt(hpsPrinter,hpsPrinterMemory,4L,aptl,ROP_SRCCOPY,BBO_IGNORE);
+
+    GpiAssociate   (hpsPrinterMemory, NULL) ;
+    GpiDestroyPS   (hpsPrinterMemory);
+    DevCloseDC     (hdcPrinterMemory);
+
+    // If a footer is defined, ...
+
+    if (pptp-&gt;page.szFooter[0] != '\0')
+    {
+       // ... compute its position ...
+
+       ptl.x = pptp-&gt;page.sLeft * psizlChar-&gt;cx ;
+       ptl.y = pptp-&gt;page.sBottom * psizlChar-&gt;cy ;
+
+       // ... and print it.
+
+       PrintHeaderFooter (hpsPrinter, &amp;ptl, pptp,
+                          psizlPage, psizlChar,
+                          pptp-&gt;page.szFooter,
+                         sPage, PRINT_FOOTER) ;
+   }
+   return( TRUE);
+}
+</PRE>
+ 
+
+<P><HR>
+
+<A HREF="045_L3_HowdoIprintabitmap.html">[Back: How do I print a bitmap?]</A> <BR>
+<A HREF="047_L2_Menus.html">[Next: Menus]</A> 
+</BODY>
+</HTML>

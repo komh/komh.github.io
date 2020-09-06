@@ -1,0 +1,259 @@
+<HTML>
+<HEAD>
+<TITLE>Processing a GETNEXT Request</TITLE>
+</HEAD>
+<BODY>
+<H1>Processing a GETNEXT Request</H1><!-- entering slot 87 -->
+<P>
+When a DPI packet is parsed, the snmp_dpi_hdr structure shows in the packet_type
+that this is a SNMP_DPI_GETNEXT packet, and so the packet_body contains
+a pointer to a GETNEXT-varBind, which is represented in an snmp_dpi_next_packet
+structure:
+<PRE>struct dpi_next_packet {
+  char                   *object_p;    /* ptr to OIDstring    */
+  char                   *group_p;     /* ptr to sub-tree     */
+  char                   *instance_p;  /* ptr to rest of OID  */
+  struct dpi_next_packet *next_p;      /* ptr to next in chain*/
+};
+typedef struct dpi_next_packet      snmp_dpi_next_packet;
+#define snmp_dpi_next_packet_NULL_p ((snmp_dpi_next_packet *)0)
+</PRE>
+
+<P>
+In the interest of simplicity and easier understanding we will discuss the
+GETNEXT for a scalar object, which only has one instance. For columnar objects,
+which may have multiple instances, the process is more complex. However,
+the DPI subagent programmer should be able to handle that once the basics
+of GETNEXT processing in a DPI subagent is understood.
+<P>
+Assuming we have registered example sub-tree dpiSimpleMIB and a GETNEXT
+arrives for one variable, dpiSimpleInteger.0, so that is object 1 instance
+0 in our sub-tree, the fields in the snmp_dpi_get_packet structure would
+have pointers to:
+<PRE>object_p    -&gt;  "1.3.6.1.4.1.2.2.1.5.1.0"
+group_p     -&gt;  "1.3.6.1.4.1.2.2.1.5."
+instance_p  -&gt;  "1.0"
+next_p      -&gt;  snmp_dpi_next_packet_NULL_p
+</PRE>
+
+<P>
+If there are multiple varBinds in a GETNEXT request, each one is represented
+in a snmp_dpi_get_packet structure and all the snmp_dpi_get_packet structures
+are chained via the next pointer.  As long as the next pointer is not the
+snmp_dpi_next_packet_NULL_p pointer, there are more varBinds in the list.
+
+<P>
+Now we can analyze the varBind structure for whatever checking we want to
+do.  We must find out which OID is the one that lexicographically follows
+the one in the request.  It is that OID with its value that we must return
+as a response.  Therefore, we must now also set the proper OID in the response.
+ Once we are ready to make a response that contains the new OID and the
+value of that variable, we must prepare a SET-varBind which is represented
+in an snmp_dpi_set_packet:
+<PRE>struct dpi_set_packet {
+  char                   *object_p;   /* ptr to OIDstring     */
+  char                   *group_p;    /* ptr to sub-tree      */
+  char                   *instance_p; /* ptr to rest of OID   */
+  unsigned char           value_type; /* SNMP_TYPE_xxxx       */
+  unsigned short          value_len;  /* value length         */
+  char                   *value_p;    /* ptr to value itself  */
+  struct dpi_set_packet  *next_p;     /* ptr to next in chain */
+};
+typedef struct dpi_set_packet        snmp_dpi_set_packet;
+#define snmp_dpi_set_packet_NULL_p   ((snmp_dpi_set_packet *)0)
+</PRE>
+
+<P>
+We can use the mkDPIset() function to prepare such a structure. This function
+expects the following parameters:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->A pointer to an existing snmp_dpi_set_packet structure
+if the new varBind must be added to an existing chain of varBinds.  If this
+is the first or only varBind in the chain, we pass the snmp_dpi_set_packet_NULL_p
+pointer to indicate this.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A pointer to the sub-tree that we registered.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A pointer to the rest of the OID, in other words the
+piece that follows the sub-tree.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The value type of the value to be bound to the variable
+name.  This is must be one of the SNMP_TYPE_xxxx values as defined in the
+snmp_dpi.h include file.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The length of the value for integer type values.  This
+must be a length of 4.  So we always work with 32-bit signed or unsigned
+integers except for the Counter64 type.  For Counter 64 type, we must point
+to a snmp_dpi_u64 structure and pass the length of that structure.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A pointer to the value.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Memory for the varBind is dynamically allocated and the data itself is copied.
+ Upon return, we can dispose of our own pointers and allocated memory as
+we please.  If the call is successful, a pointer is returned as follows:
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->A new snmp_dpi_set_packet if it is the first or only
+varBind.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The existing snmp_dpi_set_packet that we passed on
+the call.  In this case, the new packed has been chained to the end of the
+varBind list.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+If the mkDPIset() call fails, a NULL pointer is returned.
+<P>
+Once we have prepared the SET-varBind data, we can create a DPI RESPONSE
+packet using the mkDPIresponse() function, which expects these parameters:
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->A pointer to an snmp_dpi_hdr.  We should use the<!-- entering slot 88 --> header
+of the parsed incoming packet.  It is used to copy the packet_id from the
+request into the response, such that the agent can correlate the response
+to a request.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A return code which is an SNMP error code.  If successful,
+this should be SNMP_ERROR_noError (value zero).  If failure, it must be
+one of the SNMP_ERROR_xxxx values as defined in the snmp_dpi.h include file.
+
+<P>
+A request for a non-existing object or instance is not considered an error.
+ Instead, we must pass the OID and value of the first OID that lexicographically
+follows the non-existing object and/or instance.
+<P>
+Reaching the end of our sub-tree is not considered an error.  For example,
+if there is no NEXT OID, this is not an error.  In this situation we must
+return the original OID as received in the request and a value_type of SNMP_TYPE_endOfMibView.
+ This value_type has an implicit value of NULL, so we can pass a zero length
+and a NULL pointer for the value.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The index of the first varBind in error starts counting
+at 1.  Pass zero if no error occurred, or pass the proper index of the first
+varBind for which an error was detected.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A pointer to a chain of snmp_dpi_set_packet(s) (varBinds)
+to be returned as response to the GETNEXT request.  If an error was detected,
+an snmp_dpi_set_packet_NULL_p pointer may be passed.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following code example returns a response.  We assume that there are
+no errors in the request, but proper code should do the checking for that.
+ We do proper checking for lexicographic next object, but we do no checking
+for ULONG_MAX, or making sure that the instance ID is indeed valid (digits
+and dots).  If we get to the end of our dpiSimpleMIB, we must return an
+endOfMibView as defined by the SNMP Version 2 rules.
+<PRE>static int do_next(snmp_dpi_hdr *hdr_p,                   snmp_dpi_next_packet *pack_p)
+{
+  unsigned char       *packet_p;
+  int                  rc;
+  unsigned long        subid;        /* subid is unsigned     */
+  unsigned long        instance;     /* same with instance    */
+  char                *cp;
+  snmp_dpi_set_packet *varBind_p;
+
+  varBind_p =                        /* init the varBind chain*/
+     snmp_dpi_set_packet_NULL_p;     /* to a NULL pointer     */
+
+  if (pack_p-&gt;instance_p) {          /* we have an instance ID*/
+     cp = pack_p-&gt;instance_p;        /* pick up ptr           */
+     subid = strtoul(cp, &amp;cp, 10);   /* convert subid (object)*/
+     if (*cp == '.') {               /* followed by a dot ?   */
+        cp++;                        /* point after it if yes */
+        instance=strtoul(cp,&amp;cp,10); /* convert real instance */
+                                     /* not that we need it,we*/
+        subid++;                     /* only have instance 0, */
+                                     /* so NEXT is next object*/
+        instance = 0;                /* and always instance 0 */
+     } else {                        /* no real instance      */
+        instance = 0;                /* passed, so we use 0   */
+        if (subid == 0) subid++;     /* if object 0, subid 1  */
+     } /* endif */
+  } else {                           /* no instance ID passed */
+     subid = 1;                      /* so do first object    */
+     instance = 0;                   /* 0 is all we have      */
+  } /* endif */
+
+  /* we have set subid and instance such that we can basically*/
+  /* process the request as a GET now. Actually, we don't even*/
+  /* need instance, because all out object instances are zero.*/
+
+  if (instance != 0) printf("Strange instance: %lu\n",instance);
+
+  switch (subid) {
+  case 1:
+    varBind_p = mkDPIset(            /* Make DPI set packet   */
+                varBind_p,           /* ptr to varBind chain  */
+                pack_p-&gt;group_p,     /* ptr to sub-tree       */
+                DPI_SIMPLE_INTEGER,  /* ptr to rest of OID    */
+                SNMP_TYPE_Integer32, /* value type Integer 32 */
+                sizeof(value1),      /* length of value       */
+                &amp;value1);            /* ptr to value          */
+    break;
+  case 2:
+    varBind_p = mkDPIset(               /* Make DPI set packet*/
+                varBind_p,              /* ptr to varBindchain*/
+                pack_p-&gt;group_p,        /* ptr to sub-tree    */
+                DPI_SIMPLE_STRING,      /* ptr to rest of OID */
+                SNMP_TYPE_DisplayString,/* value type         */
+                strlen(value2_p),       /* length of value    */
+                value2_p);              /* ptr to value       */
+    break;
+  case 3:
+    varBind_p = mkDPIset(               /* Make DPI set packet*/
+                varBind_p,              /* ptr to varBindchain*/
+                pack_p-&gt;group_p,        /* ptr to sub-tree    */
+                DPI_SIMPLE_COUNTER32,   /* ptr to rest of OID */
+                SNMP_TYPE_Counter32,    /* value type         */
+                sizeof(<!-- entering slot 89 -->value3),         /* length of value    */
+                &amp;value3);               /* ptr to value       */
+    break;
+  case 4:                               /*                *Apr23*/
+    varBind_p = mkDPIset(               /* Make DPI set packet  */
+                varBind_p,              /* ptr to varBind chain */
+                pack_p-&gt;group_p,        /* ptr to sub-tree      */
+                DPI_SIMPLE_COUNTER64,   /* ptr to rest of OID   */
+                SNMP_TYPE_Counter64,    /* value type           */
+                sizeof(value4),         /* length of value      */
+                &amp;value4);               /* ptr to value         */
+    break;                              /*                *Apr23*/
+  default:
+    varBind_p = mkDPIset(               /* Make DPI set packet*/
+                varBind_p,              /* ptr to varBindchain*/
+                pack_p-&gt;group_p,        /* ptr to sub-tree    */
+                pack_p-&gt;instance_p,     /* ptr to rest of OID */
+                SNMP_TYPE_endOfMibView, /* value type         */
+                0L,                     /* length of value    */
+                (unsigned char *)0);    /* ptr to value       */
+    break;
+  } /* endswitch */
+
+  if (!varBind_p) return(-1);        /* If it failed, return  */
+
+  packet_p = mkDPIresponse(          /* Make DPIresponse pack */
+               hdr_p,                /* ptr parsed request    */
+               SNMP_ERROR_noError,   /* all is OK, no error   */
+               0L,                   /* index zero, no error  */
+               varBind_p);           /* varBind response data */
+
+  if (!packet_p) return(-1);         /* If it failed, return  */
+
+  rc  = DPIsend_packet_to_agent(     /* send RESPONSE packet  */
+           handle,                   /* on this connection    */
+           packet_p,                 /* this is the packet    */
+           DPI_PACKET_LEN(packet_p));/* and this is its length*/
+
+  return(rc);                        /* return retcode        */
+} /* end of do_next() */
+</PRE>
+
+
+<P><HR>
+
+<A HREF="081_L2_ProcessingaGETReques.html">[Back: Processing a GET Request]</A> <BR>
+<A HREF="083_L2_ProcessingaSETCOMMIT.html">[Next: Processing a SET/COMMIT/UNDO Request]</A> 
+</BODY>
+</HTML>

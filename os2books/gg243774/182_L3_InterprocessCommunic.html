@@ -1,0 +1,175 @@
+<HTML>
+<HEAD>
+<TITLE>Interprocess Communication and Synchronization</TITLE>
+</HEAD>
+<BODY>
+<H1>Interprocess Communication and Synchronization</H1><!-- entering slot 189 -->
+<P>
+Since OS/2 provides support for concurrent execution of multiple processes,
+with memory protection between these processes, it must also provide mechanisms
+to facilitate synchronization and communication between different processes
+and threads executing in the system, which may wish to share data and control
+information.  OS/2 provides a number of such mechanisms, as follows:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Shared memory<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Queues<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Pipes (both named and anonymous)<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Presentation Manager messages<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->Semaphores.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+These mechanisms allow application developers to implement applications
+using multiple processes or threads, while retaining the ability to communicate
+data and control information in a controlled manner, and to achieve synchronization
+between various components of an application.
+<P>
+<B>Shared Memory</B>
+<P>
+The OS/2 memory management architecture utilizes the protect mode of the
+Intel 80386 processor to achieve memory isolation between processes.  A
+process has addressability only to its own memory objects.  However, in
+certain circumstances processes may wish to communicate and pass data to
+each other; OS/2 allows this by the use of<I> shared memory objects</I>.
+ Shared memory objects are dynamically requested from the operating system
+by the application during execution, and are flagged as shareable by OS/2.
+ It is the responsibility of the applications concerned however, to correctly
+synchronize the flow of data between processes.  OS/2 provides a number
+of mechanisms by which this synchronization may be achieved.  Shared memory
+and its usage is discussed in the<I> IBM OS/2 Version 2.0 Application Design
+Guide</I>.
+<P>
+<B>Queues</B>
+<P>
+Queueing system calls are implemented by a system service routine that uses
+shared memory and semaphores (see below) for serialization.  A queue is
+created by a process that then becomes the owner of that queue;<I> only
+</I>the owner may read from the queue.  Other processes may write to the
+queue, but only the owner may look at elements on the queue, remove elements
+from the queue, purge or delete the queue.  Queues may be specified with
+FIFO (first-in, first-out) or LIFO (last-in, first-out) dispatching priority.
+
+<P>
+A queue has a name, similar to a file name, by which it is known to both
+processes and by which it is referred to when the queue is first accessed
+by a particular process.  A series of operating system functions is provided
+by OS/2 to create and access queues.  Queues are discussed in detail in
+the<I> IBM OS/2 Version 2.0 Application Design Guide</I>.
+<P>
+<B>Pipes</B>
+<P>
+A pipe is a FIFO data structure that permits two processes to communicate
+using file system I/O calls.  The first process writes data into the pipe
+and the second process reads the data from the pipe.  However, the data
+is never actually written to an external file, but is held in a shared area
+in memory.
+<P>
+A pipe may be<I> named</I>, in which case it has a name similar to a file
+name which is known by both processes, or it may be<I> anonymous</I> in
+which case read and write handles to the pipe are returned by the operating
+system when the pipe is created.  It is then the responsibility of the creating
+process to communicate these handles to other threads or processes.
+<P>
+The creation of pipes is achieved using a number of OS/2 function calls;
+once created, pipes are then accessed using file system I/O functions. Pipes
+and their manipulation are discussed in the<I> IBM OS/2 Version 2.0 Application
+Design Guide</I>.
+<P>
+<B>Presentation Manager Messages</B>
+<P>
+In the OS/2 Presentation Manager programming environment, application routines
+known as window procedures communicate by receiving messages from one another
+and from Presentation Manager itself.  Messages may be passed between window
+procedures executing in the same thread, between different threads in a
+process, or between processes.
+<P>
+Messages may be used to pass data between routines executing in different
+threads or processes, or to communicate events in order to achieve synchronization
+between threads and/or processes.  Presentation Manager messages may be
+used to invoke processing routines in either a synchronous or asynchronous
+manner.  The Presentation Manager messaging model conforms closely to object-oriented
+programming practices, and is described further in <A HREF="205_L1_ThePresentationManag.html">The
+Presentation Manager Application Model</A>.
+<P>
+<B><!-- entering slot 190 -->Atoms</B>
+<P>
+Where character strings must be passed between threads, it is relatively
+simple to pass a pointer to the character string, since all threads within
+a process share access to memory objects.  Where strings must be passed
+between processes however, more complex methods such as shared memory must
+normally be used.  OS/2 provides a way to simplify the passing of strings
+between processes, using<B> atoms</B>.
+<P>
+An atom is effectively a "handle" to a string that is stored in an area
+of shared memory known as an<B> atom table</B>.  Atom tables are maintained
+by the operating system, and may be private to a particular process or shared
+by all processes in the system.  OS/2 creates a system atom table at system
+initialization time, which is accessible by all processes in the system.
+
+<P>
+A process may add a string to an atom table, and obtain an atom that may
+subsequently be used to access the string.  Atoms that reference strings
+in the system atom table may be passed between processes using any of the
+methods described in the foregoing sections, and used by another process
+to obtain the contents of the string.
+<P>
+<B>Semaphores</B>
+<P>
+OS/2 applications may be implemented using multiple threads within one or
+more processes.  Within a single process, the OS/2 memory management architecture
+provides no memory protection for different threads, and hence multiple
+threads may have addressability to the same data areas.  It is important
+that the integrity of resources such as common data areas or files, shared
+between threads, be protected at all times.  Such resources must be accessed
+in a serialized fashion.  Although OS/2 provides no automatic protection
+for data resources between threads within a process, OS/2 allows an application
+to achieve this serialization of access by using semaphores.
+<P>
+A semaphore is a data structure that may be "owned" by only one thread at
+any time. Semaphores may be used as flags by an application, to indicate
+that a data resource is being accessed.  A thread may request ownership
+of the semaphore; if the semaphore is already owned by another thread, the
+requesting thread is blocked until the first thread releases it.
+<P>
+OS/2 Version 2.0 provides a number of different types of semaphores, to
+be used in different circumstances:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><A HREF="628_L2_Mutexsemaphore.html"><B>Mutex</B></A> semaphores
+provide mutually exclusive access to a particular resource such as a shared
+memory object.  These semaphores offer a useful means of synchronizing access
+to such resources between different threads or processes.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><A HREF="563_L2_eventsemaphore.html"><B>Event</B></A> semaphores
+are used to signal system or application events. These semaphores provide
+a means of signalling events to other threads or processes, allowing such
+threads to suspend their execution and "wait" for a particular event to
+occur.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><A HREF="629_L2_MuxWaitsemaphore.html"><B>MuxWait
+</B></A>semaphores may be used when waiting for multiple events to occur
+or multiple mutex semaphores to clear.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+Within these semaphore types, OS/2 Version 2.0 provides both <A HREF="678_L2_semaphore.html"><B>private
+</B>and<B> shared</B></A> semaphores.  The<I> system semaphores</I> and
+<I>RAM semaphores</I> provided by previous versions of OS/2 are also supported,
+retaining compatibility with applications developed for previous versions
+of the operating system.  Each process in the system may have up to 65535
+private semaphores, and there may be up to 65535 shared semaphores in the
+system.
+<P>
+OS/2 Version 2.0 provides a number of operating system functions allowing
+the creation and manipulation of semaphores.  Semaphores are discussed in
+the<I> IBM OS/2 Version 2.0 Application Design Guide</I>.
+
+<P><HR>
+
+<A HREF="181_L3_ProcessesandThreads.html">[Back: Processes and Threads]</A> <BR>
+<A HREF="183_L2_DOSApplicationSuppor.html">[Next: DOS Application Support]</A> 
+</BODY>
+</HTML>

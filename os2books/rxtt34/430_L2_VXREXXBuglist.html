@@ -1,0 +1,263 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>VX/REXX Buglist</TITLE>
+</HEAD>
+<BODY>
+<H1>VX/REXX Buglist</H1><!-- entering slot 445 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<P>
+This section is written &amp; Copyright by Bastian Maerkisch (see <A HREF="955_L2H_EMailaddressesM.html">EMail
+Addresses</A>) Please send any comments or additions to Bastian.
+<P>
+<!--0xfb-->---------- * ----------
+<BR>
+
+<P>
+<B>Inofficial VX/REXX buglist (1.08.2001)</B>
+<P>
+<!--0xfb-->---------- * ----------
+<BR>
+
+<P>
+<B>ComboBox / DropDownComboBox object:</B>
+<P>
+these objects don't handle the LM_INSERTMULTITEMS PM messages (unlike 'ordinary'
+PM combo boxes)
+<P>
+<B>fix:</B> send this message to child with id 0x instead
+<P>
+<!--0xfb-->---------- * ----------
+<BR>
+
+<P>
+<B>ComboBox object:</B>
+<P>
+combo boxes no longer accept input from keyboard if they have a 'KeyPress'
+event routine assigned
+<P>
+<B>fix:</B> [if you know any, please submit!]
+<P>
+<!--0xfb-->---------- * ----------
+<BR>
+
+<P>
+<B>Accelerators: [feature ;)]</B>
+<P>
+accelerators of windows with the 'Visible' property set to '0' don't have
+their accelerators deactivated.
+<P>
+<B>fix:</B> [if you know any, please submit!]
+<P>
+<!--0xfb-->---------- * ----------
+<BR>
+
+<P>
+<B>KeyString property:</B>
+<P>
+[at least on german keyboards] the comma on the numeric key block is always
+assigned '{Del}' independent from current NumLock setting
+<P>
+<B>fix:</B> [if you know any, please submit!]
+<P>
+<!--0xfb-->---------- * ----------
+<BR>
+
+<P>
+<B>PostEvent method: [undocumented bahaviour]</B>
+<P>
+'FocusObject' parameter is defined for retrieval by VRInfo [not documented]
+[there might be even more - not checked]
+<P>
+<!--0xfb-->---------- * ----------
+<BR>
+
+<P>
+<B>Button / Verify Event: [feature]</B>
+<P>
+if a button has 'NoPointerFocus' set to '1' this disables the generation
+of 'Verify' events when the button is activated
+<P>
+<B>fix:</B> you might consider to fix this behaviour by adding the following
+code to the button's 'Click' event routine
+<PRE> 
+AnyButton_click: procedure         /* important: only local signal handler */
+    object = VRInfo( "Object" )
+    verified = VRInfo( "Verified" )      /* object of previous verify, if any */
+    focus  = VRMethod( "Screen", "GetFocusWindow", "Object" )
+                                        /* get real focus object */
+
+    if VRGet( object, "NoPointerFocus" ) &amp; \         /* handle verifies ? */
+       (verified \= focus) &amp; \                       /* verified it before ? */
+       (focus \= '') then do                   /* is there a focus object ? */
+
+      signal on syntax name AnyButton_Syntax
+      verify = VRGet( focus, "Verify" )
+      signal off syntax
+                      /* rude way to determine if object has a verify event, */
+                      /* could have used 'ListProperties' method instead     */
+
+      if verify \= '' then do             /* does object have verify event ? */
+        ok = VRMethod( focus,  "PostEvent", "Verify" )
+                                        /* post verify event to focus object */
+        ok = VRMethod( object, "PostEvent", "Click", "Verified", focus_window )
+                              /* re-post click event to button  and give     */
+                              /* the verify event routine a chance to cancel */
+        return
+      end
+    end
+  AnyButton_Syntax:
+
+    /* go on with the real work */
+    /* ... */
+  return
+</PRE>
+
+<P>
+
+<P>
+<!--0xfb-->---------- * ----------
+<BR>
+
+<P>
+<B>VRLoadSecondary function:</B>
+<P>
+standard 'VRLoadSecondary' in section 'Main' generates NoValue exceptions
+
+<P>
+<B>fix:</B> replace VRLoadSecondary in Main section with the following code
+
+<PRE> 
+VRLoadSecondary:
+      __vrlsWait = abbrev( 'WAIT', translate(arg(2)), 1 )
+      if __vrlsWait then
+          call VRFlush
+      if arg(3,"Exists") then
+          __vrlsParent = arg(3)
+      else
+          __vrlsParent = VRWindow()
+      /*    __vrlsParent = VRInfo( 'Window' ) */
+      __vrlsHWnd = VRLoad( __vrlsParent, VRWindowPath(), arg(1) )
+      if __vrlsHWnd = '' then signal __vrlsDone
+      if \ __vrlsWait    then signal __vrlsDone
+      call VRSet __vrlsHWnd, 'WindowMode', 'Modal'
+      if( symbol('__vrlsWindows.0') \== 'VAR' ) then
+          __vrlsTmp = 1
+      else
+          __vrlsTmp = __vrlsWindows.0 + 1
+      __vrlsWindows.__vrlsTmp = VRWindow( __vrlsHWnd )
+      __vrlsWindows.0 = __vrlsTmp
+      do <!-- entering slot 446 -->while( VRIsValidObject( VRWindow() ))
+          __vrlsEvent = VREvent()
+        interpret __vrlsEvent
+      end
+      __vrlsTmp = __vrlsWindows.0
+      __vrlsWindows.0 = __vrlsTmp - 1
+      call VRWindow __vrlsWindows.__vrlsTmp
+      __vrlsHWnd = ''
+  __vrlsDone:
+  return __vrlsHWnd
+</PRE>
+
+<P>
+
+<P>
+<!--0xfb-->---------- * ----------
+<BR>
+
+<P>
+<B>VX/REXX IDE and ObjectRexx:</B>
+<P>
+VX/REXX's routine to retrieve error information from a program 'VRERRTXT'
+crashes on line  3, no error information
+<P>
+<!--0xfb-->---------- * ----------
+<BR>
+
+<P>
+<B>C/S edition bugs</B>
+<P>
+<!--0xfb-->---------- * ----------
+<BR>
+
+<P>
+<B>Query object: [severe]</B> the 'RowData' method does not check if there
+actually is data available; if not calling 'RowData' might cause system
+hangs!
+<P>
+<B>fix:</B> check for data first (e.g. with 'MoveFirst')
+<P>
+<!--0xfb-->---------- * ----------
+<BR>
+
+<P>
+<B>Query object and QueryManager:</B>
+<P>
+the 'Search' method and QueryManager interpret all colons in SQLStatement
+as references to variables even if they are inside strings
+<P>
+<B>fix:</B> [not known]
+<P>
+<!--0xfb-->---------- * ----------
+<BR>
+
+<P>
+<B>QueryManager:</B>
+<P>
+query manager can't properly handle references to stem variables in 'SQLStatement'
+
+<P>
+<B>fix:</B> just ignore it - the 'Query' object can handle them
+<P>
+<!--0xfb-->---------- * ----------
+<BR>
+
+<P>
+<B>Query object: Bound variables</B> 
+<P>
+only numeric fields are properly supported by the 'BindVar' method, since
+no string delimiters are placed around the value. This leads to errors when
+interpreting the generated events.
+<P>
+<B>fix:</B> no general fix - don't use it, use 'RowData' method instead
+
+<P>
+If you really need to use it you might consider the following: Use a specific
+naming convention for bound variables: e.g. 'BoundVar'xxxx Insert the following
+code into the main loop in 'Main' section:
+<PRE> 
+      ...
+      do while( \ VRGet( _VREPrimaryWindow, "Shutdown" ) )
+        _VREEvent = VREvent()
+
+        /* hack for bound vars */
+        if abbrev(_VREEvent,'BoundVar',8) then do
+          parse var _VREEvent __FixVar__ '=' __FixValue__
+          _VREEvent = __FixVar__  "= '" || strip(__FixValue__,'L') || "'"
+        end
+
+        interpret _VREEvent
+      end
+      ...
+</PRE>
+
+<P>
+
+<P>
+[btw.: Does anybody know why it was implemented using events in the first
+place?]
+<P>
+<!--0xfb-->---------- * ----------
+<BR>
+
+<P>
+Please send any comments/additions to bmaerkisch AT web.de 
+
+<P><HR>
+
+<A HREF="429_L2_VXREXXODK.html">[Back: VX/REXX ODK]</A> <BR>
+<A HREF="431_L1_Samplesourcecode.html">[Next: Sample source code]</A> 
+</BODY>
+</HTML>

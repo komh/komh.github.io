@@ -1,0 +1,1152 @@
+<HTML>
+<HEAD>
+<TITLE>Source Code for Stack</TITLE>
+</HEAD>
+<BODY>
+<H1>Source Code for Stack</H1><!-- entering slot 174 -->
+<P>
+The following sample illustrates the source code (C):
+<PRE>
+<PRE>// Description...... M_Stack, Stack
+//
+//     SOMObject
+//       ÀÄÄÄWPObject
+//             ÀÄÄÄWPAbstract
+//                   ÀÄÄÄStack
+//
+// This class implements a persistent stack whose data is saved in the
+// OS2.INI file by inheritance from WPAbstract.
+//
+// Instance Methods..........
+//
+//                  InsertStackPage             introduced
+//                  Lock                        introduced
+//                  Pop                         introduced
+//                  Push                        introduced
+//                  Unlock                      introduced
+//                  wpAddSettingsPages          override
+//                  wpFree                      override
+//                  wpInitData                  override
+//                  wpObjectReady               override
+//                  wpRestoreState              override
+//                  wpSaveState                 override
+//                  wpSetup                     override
+//                  wpSetupOnce                 override
+//                  wpUnInitData                override
+//
+// Class Methods..........
+//
+//                  clsDecObjectCount           introduced
+//                  clsIncObjectCount           introduced
+//                  clsQueryModuleHandle        introduced
+//                  clsQueryObjectCount         introduced
+//                  wpclsInitData               override
+//                  wpclsQueryDefaultHelp       override
+//                  wpclsQueryDefaultView       override
+//                  wpclsQueryIconData          override
+//
+// Non-Method Functions.......
+//
+//                  DialogProc
+//
+// *******************************************************************
+
+#ifndef SOM_Module_wpstack_Source
+#define SOM_Module_wpstack_Source
+#endif
+#define Stack_Class_Source
+#define M_Stack_Class_Source
+
+#include "stdlib.h"
+#include "string.h"
+#define  INCL_PM
+#define  INCL_DOS
+#define  INCL_DOSERRORS
+#define  INCL_DEV
+#define  INCL_WPCLASS
+#define  INCL_WINWORKPLACE
+#include "os2.h"
+#include "wpstack.rch"
+#include "wpstack.ih"
+
+//
+// Forward procedure declarations
+//
+MRESULT EXPENTRY DialogProc(HWND, ULONG, MPARAM, MPARAM);
+
+//
+// Global variables
+//
+PSZ vpszClassName   = "Stack";
+PSZ vpszHelpLibrary = "wpstack.hlp";
+
+// *********************************************************************
+//
+// METHOD NAME: stk_InsertStackPage
+//
+// FUNCTION: Inserts the new page into the Settings notebook.
+//           This method exists so that subclassers can remove
+//           or replace this page.
+//
+//**********************************************************************
+SOM_Scope ULONG SOMLINK stk_InsertStackPage(
+   Stack *somSelf,  // In - pointer to the object
+   HWND hwndDlg)    // In - notebook window handle
+
+// Method return value out - 0 = error, otherwise new page ID
+{
+   PAGEINFO  pi;
+   // StackData *somThis = StackGetData(somSelf);
+   StackMethodDebug("Stack","stk_InsertStackPage");
+
+   memset((PCH) &amp;pi, 0, sizeof(PAGEINFO));
+   pi.cb                  = sizeof(PAGEINFO);
+   pi.hwndPage            = NULLHANDLE;
+   pi.usPageStyleFlags    = BKA_MAJOR;
+   pi.usPageInsertFlags   = BKA_FIRST;
+   pi.pfnwp               = DialogProc;
+   pi.resid               = _clsQueryModuleHandle(_Stack);
+   pi.dlgid               = DLG_STYLE;
+   pi.pszName             = "~Stack";
+   pi.pCreateParams       = somSelf;
+   pi.pszHelpLibraryName  = vpszHelpLibrary;
+   return(_wpInsertSettingsPage(somSelf, hwndDlg, &amp;pi));
+
+}  // End stk_InsertStackPage
+
+// *********************************************************************
+//
+// METHOD NAME: stk_Lock
+//
+// FUNCTION: Locks the stack using a mutex semaphore so it does not
+//           have to worry about multiple threads messing up the
+//           linked list.
+//
+//**********************************************************************
+SOM_Scope BOOL SOMLINK stk_Lock(
+   Stack *somSelf) // In - pointer to the object
+
+// Method return value out - TRUE = successful, False = error
+{
+   ULONG rc;
+   QMSG   qmsg;
+   MQINFO mqinfo;
+   StackData *somThis = StackGetData(somSelf);
+   StackMethodDebug("Stack","stk_Lock");
+
+   if (!_hmtxStack)
+   {
+      rc = DosCreateMutexSem(NULL, &amp;_hmtxStack, 0, TRUE);
+   }
+   else
+   {
+      rc = DosRequestMutexSem(_hmtxStack,100);
+      if (rc)
+      {
+
+         if (WinQueryQueueInfo(HMQ_CURRENT,&amp;mqinfo,sizeof(MQINFO)))
+         {  //
+            // For a PM process/thread, do a fake WinMsgSemWait
+            //
+            while (rc)
+            {
+               if (rc==ERROR_TIMEOUT)
+               {
+                  WinPeekMsg(WinQueryAnchorBlock(HWND_DESKTOP),
+                             &amp;qmsg,
+                             NULLHANDLE,
+                             0,0,
+                             PM_NOREMOVE);  /* For example,         */
+                                            /* fake a WinMsgSemWait */
+               } /* Endthen */
+
+               else
+               {
+                  break;
+               } /* Endif */
+               rc = DosRequestMutexSem(_hmtxStack, 100);
+            } /* Endwhile */
+         } /* Endthen */
+
+         else
+         {  //
+            // For a non PM process/thread, <!-- entering slot 175 -->just block on the semaphore
+            //
+            rc = DosRequestMutexSem(_hmtxStack, SEM_INDEFINITE_WAIT);
+         } /* Endif */
+      } /* Endif */
+   } /* Endif */
+   return(!rc);
+
+}  // End stk_Lock
+
+// *********************************************************************
+//
+// METHOD NAME: stk_Pop
+//
+// FUNCTION:  Pops an item from the stack.
+//
+//**********************************************************************
+SOM_Scope BOOL SOMLINK stk_Pop(
+   Stack  *somSelf,   // In    - pointer to the object
+   PVOID  pBuffer,    // In    - pointer to the buffer for popped item.
+                      //         NULL means return the buffer's size
+   PULONG pcbBuffer)  // InOut - size in bytes of the pop buffer (in),
+                      //         size actually returned (out)
+
+// Method return value out - TRUE = successful, FALSE = error
+{
+   BOOL        bSem;
+   PSTACKENTRY pNextEntry;
+   BOOL        bStatus = FALSE;
+   StackData *somThis = StackGetData(somSelf);
+   StackMethodDebug("Stack","stk_Pop");
+
+   /*
+    * pStackTop is an instance variable, initialized to NULL,
+    * which points to the top (first) entry
+    * on the stack (list).
+    */
+   bSem = _Lock(somSelf);  // Semaphore that protects the stack chain
+   if (_pStackTop)
+   {
+      if (pBuffer)
+      {
+
+         if (*pcbBuffer &gt;= _pStackTop-&gt;cbEntry)
+         {
+            memcpy(pBuffer, _pStackTop-&gt;Entry, _pStackTop-&gt;cbEntry);
+            *pcbBuffer = _pStackTop-&gt;cbEntry;
+            pNextEntry = _pStackTop-&gt;Next;
+            bStatus    = _wpFreeMem(somSelf, (PBYTE)_pStackTop);
+            if (bStatus)
+            {
+               _pStackTop = pNextEntry;
+            } /* Endif */
+         } /* Endif */
+      } /* Endthen */
+
+      else
+      {
+         *pcbBuffer = _pStackTop-&gt;cbEntry;
+         bStatus    = TRUE;
+      } /* Endif */
+   } /* Endif */
+   if (bSem) _Unlock(somSelf);
+   return(bStatus);
+
+} // End stk_Pop
+
+// *********************************************************************
+//
+// METHOD NAME: stk_Push
+//
+// FUNCTION: Pushes an item onto the stack.
+//
+//**********************************************************************
+SOM_Scope BOOL  SOMLINK stk_Push(
+   Stack *somSelf,     // In - pointer to the object
+   PVOID pNewItem,     // In - pointer to the item to push
+   ULONG cbNewItem)    // In - size in bytes of item to push
+
+// Method return value out - TRUE = successful, FALSE = error
+{
+   BOOL        bSem;
+   PSTACKENTRY pNewEntry;
+   BOOL        bStatus  = FALSE;
+   StackData   *somThis = StackGetData(somSelf);
+   StackMethodDebug("Stack","stk_Push");
+
+   pNewEntry = (PSTACKENTRY)_wpAllocMem(somSelf,
+                cbNewItem +
+                sizeof(STACKENTRY) -
+                sizeof(BYTE),
+                NULL);
+
+   if (pNewEntry)
+   {
+      /*
+       * pStackTop is an instance variable, initialized to NULL,
+       * which points to the top (first) entry
+       * on the stack (list)
+       */
+      memset(pNewEntry, 0, sizeof(STACKENTRY));
+      bSem = _Lock(somSelf);  // Semaphore protect the stack chain.
+      pNewEntry-&gt;Next = _pStackTop;
+      _pStackTop = pNewEntry;
+
+      if (pNewItem &amp;&amp; cbNewItem)
+      {
+         pNewEntry-&gt;cbEntry = cbNewItem;
+         memcpy(pNewEntry-&gt;Entry, pNewItem, cbNewItem);
+      } /* Endif */
+      if (bSem) _Unlock(somSelf);
+      bStatus = TRUE;
+   } /* Endif */
+   return(bStatus);
+} /* End stk_Push */
+
+// *********************************************************************
+//
+// METHOD NAME: stk_Unlock
+//
+// FUNCTION: Unlocks the stack, releasing the mutex semaphore.
+//
+//**********************************************************************
+SOM_Scope BOOL SOMLINK stk_Unlock(
+   Stack *somSelf) // In - pointer to the object
+
+// Method return value out - TRUE = successful, False = error.
+{
+   ULONG rc = 0;
+   StackData *somThis = StackGetData(somSelf);
+   StackMethodDebug("Stack","stk_Unlock");
+
+   if (_hmtxStack)
+   {
+      rc = DosReleaseMutexSem(_hmtxStack);
+   } /* Endif */
+   return(!rc);
+
+}  // End stk_Unlock
+
+// *********************************************************************
+//
+// METHOD NAME: stk_wpAddSettingsPages
+//
+// FUNCTION:
+//
+//   Adds the new stack page by calling InsertStackPage().  This page
+//   shows the contents of the stack and allows pushing and popping
+//   entries.  It is added on top of existing pages.
+//
+//***********************************************************************
+
+SOM_Scope BOOL SOMLINK stk_wpAddSettingsPages(
+   Stack *somSelf,    // In - pointer to the object
+   HWND hwndNotebook) // In - Settings notebook window handle
+
+// Method return value out - TRUE = successful, FALSE = error
+{
+    // StackData *somThis = StackGetData(somSelf);
+    StackMethodDebug("Stack","stk_wpAddSettingsPages");
+
+    parent_wpAddSettingsPages(somSelf, hwndNotebook);
+    return(_InsertStackPage(somSelf, hwndNotebook) != 0);
+
+} // End stk_wpAddSettingsPages
+
+// *********************************************************************
+//
+// METHOD NAME: stk_wpFree
+//
+// FUNCTION:
+//
+//   wpFree is generally overridden by storage classes such as
+//   WPFileSystem and WPAbstract, which provide for the permanent
+//   storage of an object's instance data.  In addition, if you
+//   are trying to destroy an object, call wpDelete rather than wpFree
+//   since it provides a user confirmation capability.
+//
+//   In this example, wpFree is overridden so that a count of stack
+//   object instances can be maintained.  It is important that the
+//   somSelf pointer for the object not be used again following the
+//   call to parent_wpFree.
+//
+//**********************************************************************
+SOM_Scope BOOL SOMLINK stk_wpFree(
+   Stack *somSelf)  // In - pointer to the object
+
+// Method return value out - TRUE = successful, FALSE = error
+{
+   BOOL      bStatus;
+   SOMClass  *Class;
+   // StackData *somThis = StackGetData(somSelf);
+   StackMethodDebug("Stack","stk_wpFree");
+
+   Class   = _somGetClass(somSelf);
+   bStatus = parent_wpFree(somSelf);
+   if (bStatus)
+   {
+      _clsDecObjectCount(Class, STK_PERSISTENTCOUNT);
+   } /* Endif */
+   return(bStatus);
+
+}  // End stk_wpFree
+
+// *********************************************************************
+//
+// METHOD NAME:  stk_wpInitData
+//
+// FUNCTION:
+//
+//   Initializes the stack's instance data.  Zero initialization is
+//   statisfactory for the stack top pointer (pStackTop), so there is
+//   nothing to do with respect to the instance data.  However, I will take
+//   this opportunity to increment the awake stack instance count being
+//   maintained by the class because I want to decrement it in wpUnInitData.
+//   There are three additional items to note when overriding wpInitData.
+
+//   <!-- entering slot 176 -->First, wpInitData is invoked prior to the determination or restoration
+//   of an object's state.  It is therefore necessary to be extremely
+//   careful about what other instance methods are called.  It is best to
+//   call none unless you wrote them.
+//
+//   Second, it is safest to call the parent's wpInitData method before
+//   doing your own initialization.
+//
+//   Third, if it is possible for this class to be a common ancestor in a
+//   multiple inheritance scenario, then this method needs to be written
+//   such that multiple invocations are handled.  For example, if a class
+//   named Stack23 was derived from classes Stack2 and Stack3 which in
+//   turn were subclasses of Stack, that situation would exist.  Not
+//   all Workplace Shell classes (WP*.)  currently take this precaution.
+//   Therefore, it is advisable not to inherit from more than one
+//   Workplace Shell class.  Using SOM initializers and destructors is
+//   an alternative to overriding wpInitData in the multiple
+//   inheritance situation.
+//
+//***********************************************************************
+
+SOM_Scope void SOMLINK stk_wpInitData(
+   Stack *somSelf)  // In - pointer to the object
+{
+    StackData *somThis = StackGetData(somSelf);
+    StackMethodDebug("Stack","stk_wpInitData");
+
+    parent_wpInitData(somSelf);
+    if (!(_bInitialized))
+    {
+       _bInitialized = TRUE;
+       _clsIncObjectCount(_somGetClass(somSelf), STK_AWAKECOUNT);
+    } /* Endif */
+    return;
+
+}  // End stk_wpInitData
+
+// *********************************************************************
+//
+// METHOD NAME:  stk_wpObjectReady
+//
+// FUNCTION:
+//
+//   Notifies that the object's creation/awakening is complete.
+//   This example uses this method to increment the persistent
+//   object count.
+//
+//**********************************************************************
+
+SOM_Scope void SOMLINK stk_wpObjectReady(
+   Stack    *somSelf,    // In - pointer to the object
+   ULONG    ulCode,      // In - type of operation completed
+   WPObject *refObject)  // In - pointer to the source object
+                         //      if an object's
+                         //      copy/shadow is created
+
+{
+    // StackData *somThis = StackGetData(somSelf);
+    StackMethodDebug("Stack","stk_wpObjectReady");
+
+    parent_wpObjectReady(somSelf, ulCode, refObject);
+    if (!(ulCode &amp; OR_AWAKE))
+    {
+       _clsIncObjectCount(_somGetClass(somSelf), STK_PERSISTENTCOUNT);
+    } /* Endif */
+    return;
+
+} // End stk_wpObjectReady
+
+// *********************************************************************
+//
+// METHOD NAME:  stk_wpRestoreState
+//
+// FUNCTION:
+//
+//   Restores the stack items from the persistent INI file storage
+//   into the memory resident linked list pointed to by the
+//   pStackTop instance variable.
+//
+//**********************************************************************
+
+SOM_Scope BOOL  SOMLINK stk_wpRestoreState(
+   Stack *somSelf,    // In - pointer to the object
+   ULONG ulReserved)
+
+{
+   ULONG       i;
+   ULONG       ulItemCount;
+   ULONG       cbItem;
+   PBYTE       pItem;
+   PSTACKENTRY pPrevItem = NULL;
+   BOOL        bStatus;
+   StackData *somThis = StackGetData(somSelf);
+   StackMethodDebug("Stack","stk_wpRestoreState");
+
+   bStatus = _wpRestoreLong(somSelf, vpszClassName, 0, &amp;ulItemCount);
+   for (i=1; (i&lt;=ulItemCount) &amp;&amp; bStatus; i++)
+   {
+      bStatus = _wpRestoreData(somSelf, vpszClassName, i, NULL, &amp;cbItem);
+      if (bStatus)
+      {
+         pItem = _wpAllocMem(somSelf, cbItem, NULL);
+
+         if (pItem)
+         {
+            bStatus = _wpRestoreData(somSelf, vpszClassName, i, pItem, &amp;cbItem);
+            if (bStatus)
+            {
+               if (pPrevItem)
+               {
+                  pPrevItem-&gt;Next = (PSTACKENTRY)pItem;
+               } /* Endthen */
+
+               else
+               {
+                  _pStackTop = (PSTACKENTRY)pItem;
+               } /* Endif */
+               pPrevItem = (PSTACKENTRY)pItem;
+            } /* Endthen */
+
+            else
+            {
+               _wpFreeMem(somSelf, pItem);
+            } /* Endif */
+         } /* Endif */
+      } /* Endif */
+   } /* Endfor */
+   return (parent_wpRestoreState(somSelf, ulReserved));
+
+} // End stk_wpRestoreState
+
+// *********************************************************************
+//
+// METHOD NAME: stk_wpSaveState
+//
+// FUNCTION:
+//
+//   Saves the memory resident linked list to a buffer, which will be
+//   written to a permanent INI file storage by the WPAbstract class.
+//   The memory resident linked list is pointed to by the
+//   pStackTop instance variable.
+//
+//**********************************************************************
+
+SOM_Scope BOOL  SOMLINK stk_wpSaveState(
+   Stack *somSelf)    // In - pointer to the object
+
+{
+   BOOL        bSem;
+   ULONG       i;
+   ULONG       ulItemCount = 0;
+   ULONG       cbItem;
+   PSTACKENTRY pItem;
+   BOOL        bStatus;
+   StackData *somThis = StackGetData(somSelf);
+   StackMethodDebug("Stack","stk_wpSaveState");
+
+   bSem = _Lock(somSelf);  // Semaphore that protects the stack chain
+   for (pItem = _pStackTop; pItem; pItem = pItem-&gt;Next, ulItemCount++){;};
+   bStatus = _wpSaveLong(somSelf, vpszClassName, 0, ulItemCount);
+   for (pItem = _pStackTop, i = 1; bStatus &amp;&amp; pItem; pItem = pItem-&gt;Next, i++)
+   {
+      cbItem  = sizeof(STACKENTRY) + pItem-&gt;cbEntry - 1;
+      bStatus = _wpSaveData(somSelf, vpszClassName, i, (PBYTE)pItem, cbItem);
+   } /* Endfor */
+   if (bSem) _Unlock(somSelf);
+   return(parent_wpSaveState(somSelf));
+
+} // End stk_wpSaveState
+
+// *********************************************************************
+//
+// METHOD NAME:  stk_wpSetup
+//
+// FUNCTION:
+//
+//   Two new keywords, PUSHITEM and POPITEM, have <!-- entering slot 177 -->been defined for this
+//   class to push and pop items from the stack.  This method is invoked
+//   when an object is created and when WinSetObjectData() is called.
+//   wpIsObjectInitialized and wpSaveDeferred are used to write
+//   the persistent image to the INI file, if they are called as a result
+//   of WinSetObjectData.
+//
+//**********************************************************************
+
+SOM_Scope BOOL  SOMLINK stk_wpSetup(
+   Stack *somSelf,    // In - pointer to the object
+   PSZ   pszSetupString)
+
+// Method return value out - TRUE = successful, FALSE = error
+{
+   BOOL  bSaveObject = FALSE;
+   BOOL  bStatus;
+   ULONG cbValue;
+   PSZ   pszValue;
+
+   // StackData *somThis = StackGetData(somSelf);
+   StackMethodDebug("Stack","stk_wpSetup");
+
+   bStatus = parent_wpSetup(somSelf, pszSetupString);
+   if (bStatus &amp;&amp; pszSetupString &amp;&amp; *pszSetupString)
+
+   {  //
+      // Process PUSHITEM
+      //
+      if (_wpScanSetupString(somSelf,
+                             pszSetupString,
+                             "PUSHITEM",
+                             NULL,
+                             &amp;cbValue))
+      {
+         pszValue = (PSZ)_wpAllocMem(somSelf, cbValue, NULL);
+         bStatus  = FALSE;
+
+         if (pszValue)
+         {
+            bStatus = _wpScanSetupString(somSelf,
+                                         pszSetupString,
+                                         "PUSHITEM",
+                                         pszValue,
+                                         &amp;cbValue);
+
+            if (bStatus)
+            {
+               bStatus     = _Push(somSelf, pszValue, cbValue);
+               bSaveObject = bStatus;
+            } /* Endif */
+            _wpFreeMem(somSelf, (PBYTE)pszValue);
+         } /* Endif */
+      } /* Endif */
+
+      //
+      // Process POPITEM
+      //
+      if (bStatus &amp;&amp;
+          _wpScanSetupString(somSelf,
+                             pszSetupString,
+                             "POPITEM",
+                             NULL,
+                             &amp;cbValue))
+      {
+         bStatus = FALSE;
+
+         if (_Pop(somSelf, NULL, &amp;cbValue))
+         {
+            pszValue = (PSZ)_wpAllocMem(somSelf, cbValue, NULL);
+            if (pszValue)
+            {
+               bStatus     = _Pop(somSelf, pszValue, &amp;cbValue);
+               bSaveObject =  bStatus;
+               _wpFreeMem(somSelf, (PBYTE)pszValue);
+            } /* Endif */
+         } /* Endif */
+      } /* Endif */
+
+      if (bSaveObject &amp;&amp; _wpIsObjectInitialized(somSelf))
+      {  //
+         // Save the object to the INI file.
+         //
+         _wpSaveDeferred(somSelf);
+      } /* Endif */
+   } /* Endif */
+   return(bStatus);
+
+} // End stk_wpSetup
+
+// *********************************************************************
+//
+// METHOD NAME:  stk_wpSetupOnce
+//
+// FUNCTION:
+//
+//   This method is called once during the creation of an object.
+//   One item is pushed onto the stack.  Unless popped by the
+//   setup string, every newly created stack will have this item.
+//
+//**********************************************************************
+
+SOM_Scope BOOL  SOMLINK stk_wpSetupOnce(
+   Stack *somSelf,    // In - pointer to the object
+   PSZ   pszSetupString)
+
+// Method return value out - TRUE = successful, FALSE = error
+{
+    PSZ pszStackItem = "***** BOTTOM OF STACK *****";
+    // StackData *somThis = StackGetData(somSelf);
+    StackMethodDebug("Stack","stk_wpSetupOnce");
+
+    _Push(somSelf, pszStackItem, strlen(pszStackItem) + 1);
+    return (parent_wpSetupOnce(somSelf, pszSetupString));
+
+} // End stk_wpSetupOnce
+
+// *********************************************************************
+//
+// METHOD NAME:  stk_wpUnInitData
+//
+// FUNCTION:
+//
+//    This method is executed just prior to the deallocation of the
+//    object's memory, during the process of making the object dormant
+//    or its permanent destruction.  All memory and other resources allocated
+//    during the instantiation of the object will be deallocated.  Memory
+//    allocated by wpAllocMem() will be freed automatically by one of the
+//    Workplace Shell ancestors, so there is no need to do this here.  As in
+//    the wpInitData() override, the multiple inheritance issue should be
+//    addressed here as well.
+//
+//**********************************************************************
+
+SOM_Scope void  SOMLINK stk_wpUnInitData(
+   Stack *somSelf)    // In - pointer to the object
+{
+   StackData *somThis = StackGetData(somSelf);
+   StackMethodDebug("Stack","stk_wpUnInitData");
+
+   if (_bInitialized)
+   {
+      _bInitialized = FALSE;
+      _clsDecObjectCount(_somGetClass(somSelf), STK_AWAKECOUNT);
+   } /* Endif */
+   parent_wpUnInitData(somSelf);
+
+} // End stk_wpUnInitData
+
+// *********************************************************************
+//
+// METHOD NAME:  stkM_clsDecObjectCount
+//
+// FUNCTION:
+//
+//    Decrements the "awake" or "persistent" object instance count
+//    for the class.
+//
+//**********************************************************************
+
+SOM_Scope ULONG SOMLINK stkM_clsDecObjectCount(
+   M_Stack *somSelf,  // In - pointer to the class object
+   ULONG ulCountType) // In - STK_AWAKECOUNT,
+                      //      STK_PERSISTENTCOUNT
+
+// Method return value out - new count value
+{
+   ULONG ulCount = 0;
+
+   M_StackData *somThis = M_StackGetData(somSelf);
+   M_StackMethodDebug("M_Stack","stkM_clsDecObjectCount");
+
+   switch (ulCountType)
+   {
+      case STK_AWAKECOUNT:
+         ulCount = --_ulAwakeCount;
+         break;
+
+      case STK_PERSISTENTCOUNT:
+         ulCount = --_ulPersistentCount;
+         //
+         // Write this value to the INI file
+         //
+         PrfWriteProfileData(HINI_USERPROFILE,
+                             STK_APPLICATION,
+                             STK_PERSISTENTCOUNTKEY,
+                             &amp;_ulPersistentCount,
+                             sizeof(ULONG));
+         break;
+
+      default:
+         break;
+   } /* Endswitch */
+   return(ulCount);
+
+}  // stkM_clsDecObjectCount
+
+// *********************************************************************
+//
+// METHOD NAME:  stkM_clsIncObjectCount
+//
+// FUNCTION:
+//
+//    Increments the "awake" or "persistent" object instance count
+//    for the class.
+//
+//**********************************************************************
+
+SOM_Scope ULONG somlink stkM_clsIncObjectCount(
+   M_Stack *somSelf,  // In - pointer to the class object
+   ULONG ulCountType) // In - STK_AWAKECOUNT,
+                      //      STK_PERSISTENTCOUNT
+
+// Method return value out - new count value
+{
+   ULONG ulCount = 0;
+
+   M_StackData *somThis = M_StackGetData(somSelf);
+   M_StackMethodDebug("M_Stack","stkM_clsIncObjectCount");
+
+   switch (ulCountType)
+   {
+      case STK_AWAKECOUNT:
+         ulCount = ++_ulAwakeCount;
+         break;
+
+      case STK_PERSISTENTCOUNT:
+         ulCount = ++_ulPersistentCount;
+         //
+         // Need to write this value to the INI file
+         //
+         PrfWriteProfileData(HINI_USERPROFILE,
+                             STK_APPLICATION,
+                             STK_PERSISTENTCOUNTKEY,
+                             &amp;_ulPersistentCount,
+                             sizeof(ULONG));
+         break;
+
+      default:
+         break;
+   } /* Endswitch */
+   return(ulCount);
+
+} // stkM_clsIncObjectCount
+
+// *********************************************************************
+//
+// METHOD NAME:  stkM_clsQueryModuleHandle
+//
+// FUNCTION:
+//
+//    Returns the resource file module handle which was obtained
+//    by wpclsInitData during the initialization process.
+//
+//**********************************************************************
+
+SOM_Scope HMODULE somlink stkM_clsQueryModuleHandle(
+   M_Stack *somSelf)  // In - pointer to the class object
+
+// Method return value out - resouce module handle
+{
+   M_StackData *somThis = M_StackGetData(somSelf);
+   M_StackMethodDebug("M_Stack","stkM_clsQueryModuleHandle");
+
+   return(_hmod);
+
+} // End stkM_clsQueryModuleHandle
+
+// *********************************************************************
+//
+// METHOD NAME:  stkM_clsQueryObjectCount
+//
+// FUNCTION:
+//
+//    Returns the "awake" or "persistent" object instance count
+//    for the class.
+//
+//**********************************************************************
+
+SOM_Scope ULONG somlink stkM_clsQueryObjectCount(
+   M_Stack *somSelf,  // In - pointer to the class object
+   ULONG ulCountType) // In - STK_AWAKECOUNT,
+                      //      STK_PERSISTENTCOUNT
+
+// Method return value out - current count value
+{
+   ULONG ulCount = 0;
+
+   M_StackData *somThis = M_StackGetData(somSelf);
+   M_StackMethodDebug("M_Stack","stkM_clsQueryObjectCount");
+
+   switch (ulCountType)
+   {
+      case STK_AWAKECOUNT:
+         ulCount = _ulAwakeCount;
+         break;
+
+      case STK_PERSISTENTCOUNT:
+         ulCount = _ulPersistentCount;
+         break;
+
+      default:
+         break;
+   } /* Endswitch */
+   return(ulCount);
+
+} // End stkM_clsQueryObjectCount
+
+// *********************************************************************
+//
+// METHOD NAME:  stkM_wpclsInitData
+//
+// FUNCTION:
+//
+//    Initializes the class data (resource file module handle).
+//    In this case, the resouce file is linked with the code
+//    (WPSTACK.DLL).  The parent initialization is usually done first so
+//    that some ancestor methods can be called.
+//
+//**********************************************************************
+
+SOM_Scope void somlink stkM_wpclsInitData(
+   M_Stack *somSelf)  // In - pointer to the class object
+{
+   PSZ         psz;
+   somId       <!-- entering slot 178 -->stackId;
+   ULONG       cbValue  = sizeof(ULONG);
+   M_StackData *somThis = M_StackGetData(somSelf);
+   M_StackMethodDebug("M_Stack","stkM_wpclsInitData");
+
+   parent_wpclsInitData(somSelf);
+   stackId = somIdFromString("Stack");
+   psz = _somLocateClassFile(SOMClassMgrObject,
+                             stackId,
+                             Stack_MajorVersion,
+                             Stack_MinorVersion);
+   SOMFree(stackId);
+
+   if (psz != NULL)
+   {
+      DosQueryModuleHandle(psz, &amp;_hmod);
+   } /* Endif */
+
+   //
+   // Get the persistent object count from the INI file
+   //
+   PrfQueryProfileData(HINI_USERPROFILE,
+                       STK_APPLICATION,
+                       STK_PERSISTENTCOUNTKEY,
+                       &amp;_ulPersistentCount,
+                       &amp;cbValue);
+   return;
+
+} // End stkM_wpclsInitData
+
+// *********************************************************************
+//
+// METHOD NAME:  stkM_wpclsQueryDefaultHelp
+//
+// FUNCTION:
+//
+//    Returns the help panel DLL and ID.
+//
+//**********************************************************************
+
+SOM_Scope BOOL somlink stkM_wpclsQueryDefaultHelp(
+   M_Stack *somSelf,       // In - pointer to the class object
+   PULONG  pHelpPanelId,
+   PSZ     pszHelpLibrary)
+
+// Method return value out - TRUE = successful, FALSE = error
+{
+    // M_StackData *somThis = M_StackGetData(somSelf);
+    M_StackMethodDebug("M_Stack","stkM_wpclsQueryDefaultHelp");
+
+    if (pHelpPanelId)
+    {
+       *pHelpPanelId = ID_HELP_STACK;
+    } /* Endif */
+
+    if (pszHelpLibrary)
+    {
+       strcpy(pszHelpLibrary, vpszHelpLibrary);
+    } /* Endif */
+    return(TRUE);
+
+} // End stkM_wpclsQueryDefaultHelp
+
+// *********************************************************************
+//
+// METHOD NAME:  stkM_wpclsQueryDefaultView
+//
+// FUNCTION:
+//
+//    Opens the Settings view as the default.
+//
+//**********************************************************************
+
+SOM_Scope ULONG somlink stkM_wpclsQueryDefaultView(
+   M_Stack *somSelf)  // In - pointer to the class object
+{
+   // M_StackData *somThis = M_StackGetData(somSelf);
+   M_StackMethodDebug("M_Stack","stkM_wpclsQueryDefaultView");
+
+   return OPEN_SETTINGS;
+
+}  // End stkM_wpclsQueryDefaultView
+
+// *********************************************************************
+//
+// METHOD NAME:  stkM_wpclsQueryIconData
+//
+// FUNCTION:
+//
+//    This method is overridden so that the class' objects has
+//    a unique icon.
+//
+//**********************************************************************
+
+SOM_Scope ULONG SOMLINK stkM_wpclsQueryIconData(
+   M_Stack   *somSelf,   // In - pointer to the class object
+   PICONINFO pIconInfo ) // In - buffer for the icon data
+
+// Method return value out - size of data returned
+{
+    // M_StackData *somThis = M_StackGetData(somSelf);
+    M_StackMethodDebug("M_Stack","stkM_wpclsQueryIcon");
+
+   if (pIconInfo)
+   {
+      pIconInfo-&gt;fFormat = ICON_RESOURCE;
+      pIconInfo-&gt;hmod    = _clsQueryModuleHandle(somSelf);
+      pIconInfo-&gt;resid   = ID_OBJECTICON;
+   }
+   return sizeof(ICONINFO);
+
+} // End stkM_wpclsQueryIconData
+
+// *********************************************************************
+//
+// PROCEDURE NAME:  DialogProc
+//
+// FUNCTION:
+//
+//   This is the dialog procedure for the new Settings notebook page.
+//
+//**********************************************************************
+
+MRESULT EXPENTRY DialogProc(HWND hwndDlg,
+                            ULONG msg,
+                            MPARAM mp1,
+                            MPARAM mp2)
+
+{
+   typedef struct _WINDATA
+   {
+      SOMAny     *somSelf;
+      StackData  *somThis;
+   }  WINDATA, *PWINDATA;
+
+   MRESULT     mresultWpRtnCd = MRFALSE;
+   PWINDATA    pwin = (PWINDATA) WinQueryWindowPtr(hwndDlg, QWL_USER);
+   CHAR        szNewItem[CCHMAXPATH];
+   ULONG       cbNewItem;
+   PSTACKENTRY pItem;
+   BOOL        bSem;
+
+   switch( msg )
+   {
+      case WM_INITDLG:
+      {
+         pwin = (PWINDATA) _wpAllocMem((SOMAny *) mp2,
+                                       sizeof(WINDATA), NULL);
+         WinSetWindowPtr(hwndDlg, QWL_USER, pwin);
+
+         //
+         // Initialize WINDATA structure
+         //
+         pwin-&gt;somSelf     = (SOMAny *) mp2;
+         pwin-&gt;somThis     = StackGetData(pwin-&gt;somSelf);
+
+         //
+         // Display the stack object count statistics
+         //
+         _ltoa(_clsQueryObjectCount(_somGetClass(pwin-&gt;somSelf),
+                                    STK_AWAKECOUNT),
+               szNewItem, 10);
+         WinSetDlgItemText(hwndDlg, DLG_AWAKECOUNT, szNewItem);
+         _ltoa(_clsQueryObjectCount(_somGetClass(pwin-&gt;somSelf),
+                                    STK_PERSISTENTCOUNT),
+               szNewItem, 10);
+         WinSetDlgItemText(hwndDlg, DLG_PERSISTENTCOUNT, szNewItem);
+
+         //
+         // Insert stack items into the list box
+         //
+         bSem = _Lock(pwin-&gt;somSelf);
+         for (pItem = pwin-&gt;somThis-&gt;pStackTop; pItem; pItem = pItem-&gt;Next)
+         {
+            WinInsertLboxItem(WinWindowFromID(hwndDlg, DLG_ITEMLIST),
+                              LIT_END, pItem-&gt;Entry);
+         } /* Endfor */
+         if (bSem) _Unlock(pwin-&gt;somSelf);
+
+         //
+         // Return TRUE to tell PM that we changed focus
+         //
+         mresultWpRtnCd = (MRESULT) TRUE;
+         break;
+      }  /* End of case WM_INITDLG */
+
+      case WM_COMMAND:
+      {
+         switch(SHORT1FROMMP(mp1))
+         {
+            case DLG_PUSH:    /* Push pushbutton  */
+            {
+               szNewItem[0] = '\0';
+               cbNewItem = WinQueryDlgItemText(hwndDlg,
+                                               DLG_NEWITEM,
+                                               sizeof(szNewItem),
+                                               szNewItem);
+
+               if (_Push(pwin-&gt;somSelf, szNewItem, cbNewItem+1))
+               {
+                  WinInsertLboxItem(WinWindowFromID(hwndDlg, DLG_ITEMLIST),
+                                    0, szNewItem);
+                  _wpSaveDeferred(pwin-&gt;somSelf);  // Save state to INI file
+               } /* Endif */
+               break;
+            }
+
+            case DLG_POP:   /* Pop pushbutton */
+            {
+               szNewItem[0] = '\0';
+               cbNewItem = sizeof(szNewItem);
+
+               if (_Pop(pwin-&gt;somSelf, szNewItem, &amp;cbNewItem))
+               {
+                  cbNewItem = cbNewItem ? cbNewItem : 1;
+                  WinSetDlgItemText(hwndDlg, DLG_NEWITEM, szNewItem);
+                  WinDeleteLboxItem(WinWindowFromID
+                                    (hwndDlg, DLG_ITEMLIST), 0);
+                  _wpSaveDeferred(pwin-&gt;somSelf);  // Save state to INI file
+               } /* Endif */
+               break;
+            }
+
+            case DLG_HELP:    /* Help push button  */
+            {
+               _wpDisplayHelp(pwin-&gt;somSelf, ID_HELP_STACK, vpszHelpLibrary);
+               break;
+            }
+
+            default:
+               break;
+         }
+         break;
+      }  /* End of case WM_COMMAND */
+
+      case WM_DESTROY:
+      {
+         _wpFreeMem(pwin-&gt;somSelf, (PBYTE)pwin);
+         mresultWpRtnCd = WinDefDlgProc(hwndDlg, msg, mp1, mp2);
+         break;
+      }  /* End of case WM_DESTROY */
+
+      default:
+      {
+         mresultWpRtnCd = WinDefDlgProc(hwndDlg, msg, mp1, mp2);
+         break;
+      } // End of default:
+   }
+   return mresultWpRtnCd;
+\}
+#<!-- entering slot 179 -->pragma info(nouse)
+
+</PRE>
+</PRE>
+
+
+<P><HR>
+
+<A HREF="164_L4_ClassDefinitionFilef.html">[Back: Class Definition File for Stack]</A> <BR>
+<A HREF="166_L4_ResourceHeaderFilefo.html">[Next: Resource Header File for Stack]</A> 
+</BODY>
+</HTML>

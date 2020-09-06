@@ -1,0 +1,76 @@
+<HTML>
+<HEAD>
+<TITLE>LSOF.C - List Open Files (Example)</TITLE>
+</HEAD>
+<BODY>
+<H1>LSOF.C - List Open Files (Example)</H1><!-- entering slot 13 --><!-- lm: 0x2 1 -->
+<UL>
+<PRE>#include &lt;os2.h&gt;
+
+#include &lt;ctype.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+
+#include "dosqss.h"
+
+extern APIRET APIENTRY DosQuerySysState (ULONG func,
+                                ULONG par1, ULONG pid, ULONG _reserved_,
+                                PVOID buf,
+                                ULONG bufsz);
+
+static void dump_files(PQTOPLEVEL);
+
+extern void main ( void )
+{
+        APIRET rc;
+
+#define BUFSIZE 128000l
+#define RESERVED 0
+        char *buf = malloc(BUFSIZE);
+        memset(buf,0,BUFSIZE);
+
+        rc = DosQuerySysState(0x1f, RESERVED, RESERVED, RESERVED, (PCHAR)buf, BUFSIZE);
+
+        if (!rc) {
+                PQTOPLEVEL top = (PQTOPLEVEL)buf;
+                dump_files(top);
+        }
+}
+
+static void dump_files(PQTOPLEVEL top)
+{
+        PQFILE f = (PQFILE)top-&gt;filedata;
+        PQFDS fd;
+
+        printf("SFN   Opncnt  Flags   Accmode    Size   Volhnd Attrib Name\n");
+        printf("----- ------ -------- -------- -------- ------ ------ ----------------\n");
+
+        while (f   f-&gt;rectype == 8) {
+                fd = f-&gt;filedata;
+                printf("%5x %6d %08x %08x %8d %05x ",
+                        fd-&gt;sfn,
+                        f-&gt;opencnt,
+                        fd-&gt;flags,
+                        fd-&gt;accmode,
+                        fd-&gt;filesize,
+                        fd-&gt;volhnd);
+                putchar((fd-&gt;attrib   0x20) ? 'A' : '-');
+                putchar((fd-&gt;attrib   0x10) ? 'D' : '-');
+                putchar((fd-&gt;attrib   0x08) ? 'L' : '-');
+                putchar((fd-&gt;attrib   0x04) ? 'S' : '-');
+                putchar((fd-&gt;attrib   0x02) ? 'H' : '-');
+                putchar((fd-&gt;attrib   0x01) ? 'R' : '-');
+                printf(" %s\n",f-&gt;name);
+                f = f-&gt;next;
+        }
+}
+</PRE>
+<!-- lm: 0x2 1 --> 
+
+<P><HR>
+
+<A HREF="010_L2_DOSQCQueryProcessesE.html">[Back: DOSQ.C - Query Processes (Example)]</A> <BR>
+<A HREF="012_L1_DosReplaceModule.html">[Next: DosReplaceModule]</A> 
+</BODY>
+</HTML>

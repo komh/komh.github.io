@@ -1,0 +1,689 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Source code of TEMPLATE.CMD - part 2</TITLE>
+</HEAD>
+<BODY>
+<H1>Source code of TEMPLATE.CMD - part 2</H1><!-- entering slot 577 -->
+<PRE> 
+
+/***       Start of Part 2 of the source code of TEMPLATE.CMD       ***/
+
+/*************** DO NOT CHANGE THE FOLLOWING LINES ********************/
+
+                        /* names of the global variables, which all   */
+                        /* procedures must know                       */
+  exposeList = 'prog. screen. I!. global. exposeList ' exposeList
+
+                        /* check the type of the base message number  */
+  if datatype( global.__BaseMsgNo, 'W' ) &lt;&gt; 1 then
+    global.__BaseMsgNo = 1000
+
+                        /* init internal variables                    */
+  I!. = ''
+                        /* save default STDOUT and STDERR             */
+  if symbol( 'prog.__STDOUT' ) = 'VAR' then
+    I!.__2 = prog.__STDOUT
+  if symbol( 'prog.__STDERR' ) = 'VAR' then
+    I!.__3 = prog.__STDERR
+
+                        /* init the stems prog. &amp; screen.             */
+  parse value '' with prog. screen.
+
+                        /* reset the timer                            */
+  call time 'R'
+
+                        /* restore default STDOUT and STDERR          */
+  prog.__STDOUT = I!.__2;    prog.__STDERR = I!.__3
+
+                        /* get the number of the first line with      */
+                        /* user code                                  */
+  call I!.__GetUserCode
+
+/* ------------------------------------------------------------------ */
+/* install the error handler                                          */
+
+                        /* break errors (CTRL-C)                      */
+  CALL ON HALT        NAME I!.__UserAbort
+                        /* syntax errors                              */
+  SIGNAL ON SYNTAX    NAME I!.__ErrorAbort
+                        /* using of not initialisized variables       */
+  SIGNAL ON NOVALUE   NAME I!.__ErrorAbort
+                        /* failure condition                          */
+  SIGNAL ON FAILURE   NAME I!.__ErrorAbort
+                        /* error condition                            */
+  SIGNAL ON ERROR     NAME I!.__ErrorAbort
+                        /* disk not ready condition                   */
+  SIGNAL ON NOTREADY  NAME I!.__ErrorAbort
+
+/* ------------------------------------------------------------------ */
+/* init the variables                                                 */
+
+                        /* get &amp; save the parameter                   */
+  parse arg I!.__RealParam 1 prog.__Param
+
+                        /* init the variables                         */
+
+                        /* define exit code values                    */
+  global.__ErrorExitCode = 255
+     global.__OKExitCode = 0
+
+                        /* init the compound variable prog.           */
+  call I!.__InitProgStem
+
+                        /* define the variables for CID programs      */
+  call I!.__InitCIDVars
+
+                        /* init the program exit code                 */
+  prog.__ExitCode = global.__OKExitCode
+
+                        /* check the parameter and env. variables     */
+                        /* This must run before I!.__InitColorVars!   */
+  call I!.__chkPandE
+
+                        /* define the color variables                 */
+  call I!.__InitColorVars
+
+                        /* check if there is a logfile parameter      */
+  call I!.__SetLogVars
+
+/* ------------------------------------------------------------------ */
+/* show program start message                                         */
+
+  call I!.__SignMsg
+
+/* ------------------------------------------------------------------ */
+/* check if there is a patched version of this program                */
+
+  call I!.__CheckPatch
+
+/* ------------------------------------------------------------------ */
+
+                        /* check for a help parameter                 */
+  if pos( translate( word( prog.__Param,1 ) ), ,
+          '/?/H/HELP-?-H-HELP' ) &lt;&gt; 0 then
+  do
+    prog.__exitCode = 253
+
+    call I!.__CallUserProc 1, 'ShowUsage'
+
+    SIGNAL I!.__programEnd
+
+  end /* pos( translate( ... */
+
+/* ------------------------------------------------------------------ */
+
+                        /* call the main procedure                    */
+  call I!.__CallUserProc 2, 'main' strip( prog.__Param )
+
+                        /* use the return code of 'main' as exitcode  */
+                        /* if a returncode was returned               */
+  if symbol( 'I!.__UserProcRC' ) == 'VAR' then
+    prog.__ExitCode = I!.__UserProcRC
+
+/* ------------------------------------------------------------------ */
+/* house keeping                                                      */
+
+I!.__ProgramEnd:
+
+                                /* call the exit routines             */
+  do while prog.__exitRoutines &lt;&gt; ''
+
+                        /* delete the name of the routine from the    */
+                        /* list to avoid endless loops!               */
+    parse var prog.__ExitRoutines I!.__cer prog.__ExitRoutines
+
+    call I!.__CallUserProc 1, I!.__cer
+
+  end /* do while prog.__ExitRoutines &lt;&gt; '' */
+
+                                /* restore the current directory      */
+  if symbol( 'prog.__CurDir' ) == 'VAR' then
+    call directory prog.__CurDir
+
+                                /* show sign off message              */
+  call I!.__SignMsg 'E'
+
+EXIT prog.__ExitCode
+
+/* ------------------------------------------------------------------ */
+/* function: show the sign on or sign off message                     */
+/*                                                                    */
+/* call:     I!.__SignMsg which                                       */
+/*                                                                    */
+/* where:    which - 'E' - show the sign off message                  */
+/*                         else show the sign on message              */
+/*                                                                    */
+/* returns:  nothing                                                  */
+/*                                                                    */
+I!.__SignMsg: PROCEDURE expose (exposeList)
+  if global.__SignOnMsg &lt;&gt; 1 then
+    RETURN
+
+                        /* default: program start message             */
+  i = 12
+
+  if arg(1) = 'E' then
+  do
+    i = 13
+                        /* program end message                        */
+    i!.__rc1 = prog.__ExitCode
+
+                                /* check if the exit code is decimal  */
+                                /* and convert it to hexadecimal if   */
+                                /* possible                           */
+    if dataType( prog.__ExitCode, 'W' ) then
+    do
+      if prog.__ExitCode &lt; 0 then
+        prog.__ExitCode = 65536 + prog.__ExitCode
+      i!.__rc2 = D2X( prog.__ExitCode )
+    end /* if .. */
+
+  end /* if arg(1) = 'E' then */
+
+  screen.__CurColor = screen.__SignOnColor
+  call Log I!.__GetMsg( i, prog.__Name, global.__Version, date(),,
+                        time(), i!.__rc1, i!.__rc2 )
+  screen.__CurColor = screen.__NormalColor
+RETURN
+
+/* ------------------------------------------------------------------ */
+/* function: call a user defined routine                              */
+/*           (avoid errors if the routine is not defined)             */
+/*                                                                    */
+/* call:     I!.__CallUserProc errorAction, procName {procParameter}  */
+/*                                                                    */
+/* where:    errorAction - <!-- entering slot 578 -->action, if procName is not defined         */
+/*                         0: do nothing (only set the RC)            */
+/*                         1: show a warning and set the RC           */
+/*                         2: abort the program                       */
+/*           procName - name of the procedure                         */
+/*           procParameter - parameter for the procedure              */
+/*                                                                    */
+/* returns:  1 - ok                                                   */
+/*           0 - procname not found                                   */
+/*                                                                    */
+/* output:   I!.__UserProcRC - Returncode of the called procedure     */
+/*                             (dropped if the proedure don't         */
+/*                             return a value)                        */
+/*                                                                    */
+I!.__CallUserProc: PROCEDURE expose (exposeList) result rc sigl
+  parse arg I!.__ErrorAction , I!.__ProcN I!.__ProcP
+
+  I!.__thisRC = 0
+  drop I!.__UserProcRC
+
+  iLine = 'call ' I!.__ProcN
+  if prog.__Trace = 1 &amp; I!.__ProcN = 'main' then
+    iLine = 'trace ?a;'|| iLine
+
+/** DO NOT CHANGE, ADD OR DELETE ONE OF THE FOLLOWING SEVEN LINES!!! **/
+  I!.__ICmdLine = GetLineNo()+2+(I!.__ProcP &lt;&gt; '')*2               /*!*/
+  if I!.__ProcP = '' then                                          /*!*/
+    interpret iLine                                                /*!*/
+  else                                                             /*!*/
+    interpret iLine "I!.__ProcP"                                   /*!*/
+/** DO NOT CHANGE, ADD OR DELETE ONE OF THE PRECEEDING SEVEN LINES!! **/
+
+/* Caution: The CALL statement changes the variable RESULT!           */
+  I!.__0 = trace( 'off' )
+
+  I!.__thisRC = 1
+  if symbol( 'RESULT' ) == 'VAR' then
+    I!.__UserProcRC = value( 'RESULT' )
+
+                    /* this label is used if the interpret command    */
+                    /* ends with an error                             */
+I!.__CallUserProc2:
+
+  if I!.__ThisRC = 0 then
+  do
+    if I!.__ErrorAction = 2 then
+      call ShowError global.__ErrorExitCode , ,
+                   I!.__GetMsg( 1, I!.__ProcN )
+
+    if I!.__ErrorAction = 1 then
+      call ShowWarning I!.__GetMsg( 1 , I!.__ProcN )
+  end /* if I!.__thisRC = 0 then */
+
+RETURN I!.__thisRC
+
+/* ------------------------------------------------------------------ */
+/* function: set the variables for the logfile handling               */
+/*                                                                    */
+/* call:     I!.__SetLogVars                                          */
+/*                                                                    */
+/* input:    prog.__Param - parameter for the program                 */
+/*                                                                    */
+/* output:   prog.__LogFile     - name of the logfile (or NUL)        */
+/*           prog.__LogSTDERR   - string to direct STDERR into the    */
+/*                                logfile                             */
+/*           prog.__LogSTDOUT   - string to direct STDOUT into the    */
+/*                                logfile                             */
+/*           prog.__LogAll      - string to direct STDOUT and STDERR  */
+/*                                into the logfile                    */
+/*           prog.__LogFileParm - string to inherit the logfile       */
+/*                                parameter to a child CMD            */
+/*           prog.__Param       - program parameter without the       */
+/*                                logfile parameter                   */
+/*                                                                    */
+/* returns:  nothing                                                  */
+/*                                                                    */
+I!.__SetLogVars: PROCEDURE expose (exposeList)
+
+  parse var prog.__Param prog.__param '/L:' logFileName ' ' rest
+  if left( logFileName,1 ) = '"' then                        /* v3.07 */
+    parse value logFileName rest with '"' logFilename '"' rest
+
+  prog.__param = prog.__Param rest
+
+                        /* avoid an error if the drive is not ready   */
+  SIGNAL OFF NOTREADY
+
+                        /* default log device is the NUL device       */
+  prog.__LogFile = 'NUL'
+
+  if logFileName &lt;&gt; '' then
+  do
+                        /* check if we can write to the logfile       */
+    logStatus = stream( logFileName, 'c', 'OPEN WRITE')
+    if logStatus &lt;&gt; 'READY:' then
+    do
+      prog.__LogFileParm = ''
+
+      call ShowWarning I!.__GetMsg( 2, logFileName, logStatus )
+
+    end /* if logStatus &lt;&gt; 'READY:' then */
+    else
+    do
+                        /* close the logfile                          */
+      call stream logFileName, 'c', 'CLOSE'
+
+                        /* get the fully qualified name of the        */
+                        /* logfile                                    */
+                        /*                                      v3.04 */
+      parse upper value stream( logFileName, 'c', 'QUERY EXIST' ) WITH prog.__LogFile
+
+      prog.__LogFileParm = '/L:"' || prog.__LogFile || '"'
+
+    end /* else */
+  end /* if prog.__LogFile &lt;&gt; '' then */
+
+  fn = ConvertNameToOS( prog.__LogFile )
+
+                        /* variable to direct STDOUT of an OS/2       */
+                        /* program into the logfile                   */
+  prog.__LogSTDOUT = ' 1&gt;&gt;' || fn
+
+                        /* variable to direct STDERR of an OS/2       */
+                        /* program into the logfile                   */
+  prog.__LogSTDERR = ' 2&gt;&gt;' || fn
+
+                        /* variable to direct STDOUT and STDERR of    */
+                        /* an OS/2 program into the log file          */
+  prog.__LogALL = prog.__LogSTDERR '1&gt;&gt;&amp;2'
+
+RETURN
+
+/* ------------------------------------------------------------------ */
+/* function: check the parameter and the environment variables for    */
+/*           the runtime system                                       */
+/*                                                                    */
+/* call:     I!.__chkPandE                                            */
+/*                                                                    */
+/* input:    prog.__Param - parameter for the program                 */
+/*           prog.__env - name of the environment                     */
+/*                                                                    */
+/* output:   prog.__QuietMode - 1 if parameter '/Silent' found        */
+/*                              or environment variable SILENT set    */
+/*           prog.__NoSound   - 1 if parameter '/NoSound' found       */
+/*                              or environment variable SOUND set     */
+/*           screen.          - "" if parameter '/NoANSI' found       */
+/*                              or environment variable ANSI set      */
+/*           prog.__Param     - remaining parameter for the procedure */
+/*                              MAIN.                                 */
+/*           prog.__Trace     - 1 if parameter '/Trace' found         */
+/*                              or if the environment variable        */
+/*                              RXTTRACE is set to MAIN               */
+/*                                                                    */
+/* returns:  nothing                                                  */
+/*                                                                    */
+I!.__chkPandE: PROCEDURE expose (exposeList)
+
+  global.__verbose = value( 'VERBOSE' ,, prog.__env )
+
+  o!.0 = 4                              /* no. of known parameters    */
+                                        /* and environment variables  */
+
+  o!.1.parm = '/SILENT'                 /* parameter name             */
+  o!.1.env  = 'SILENT'                  /* name of the env. var       */
+  o!.1.vals = 'ON 1'                    /* possible values for the    */
+                                        /* environment variable       */
+  o!.1.stmt = 'prog.__QuietMode=1'      /* statement to execute       */
+                                        /* if this parameter was      */
+                                        /* entered or the environment */
+                                        /* variable is set            */
+
+  o!.2.parm = '/NOSOUND'                /* turn sound off             */
+  o!.2.env  = 'SOUND'
+  o!.2.vals = 'OFF 0'
+  o!.2.stmt = 'prog.__NoSound=1'
+
+  o!.3.parm = '/NOANSI'                 /* turn ANSI support off      */
+  o!.3.env  = 'ANSI'
+  o!.3.vals = 'OFF 0'
+  o!.3.stmt = 'global.__NeedColors=0'
+
+  o!.4.parm = '/TRACE'          /* exeucte MAIN <!-- entering slot 579 -->in single step mode   */
+  o!.4.env  = 'RXTTRACE'
+  o!.4.vals = 'MAIN'
+  o!.4.stmt = 'prog.__Trace=1'
+
+  do i = 1 to o!.0
+                        /* check the parameter                        */
+    j = wordPos( o!.i.parm, translate( prog.__Param ) )
+    if j = 0 then       /* no parameter found, check the env. var     */
+      j = wordPos( translate( value( o!.i.env ,, prog.__env ) ) ,,
+                    o!.i.vals )
+    else                /* parameter found, delete the parameter      */
+      prog.__Param = strip( delWord( prog.__Param, j,1 ) )
+
+                        /* if j is not zero either the parameter was  */
+                        /* found or the environment variable is set   */
+    if j &lt;&gt; 0 then
+      interpret o!.i.stmt
+  end /* do i = 1 to o!.0 */
+
+RETURN
+
+/* ------------------------------------------------------------------ */
+/* function:  convert a file or directory name to OS conventions      */
+/*            by adding a leading and trailing double quote           */
+/*                                                                    */
+/* call:      convertNameToOS dir_or_file_name                        */
+/*                                                                    */
+/* where:     dir_or_file_name = name to convert                      */
+/*                                                                    */
+/* returns:   converted file or directory name                        */
+/*                                                                    */
+ConvertNameToOS: PROCEDURE expose (exposeList)
+  parse arg fn
+
+  if left( fn,1 ) = '-' then                                 /* v3.07 */
+    fn = '.\' || fn                                          /* v3.07 */
+
+RETURN '"' || fn || '"'                                      /* v3.06 */
+
+/* ------------------------------------------------------------------ */
+/* function: flush the default REXX queue                             */
+/*                                                                    */
+/* call:     FlushQueue                                               */
+/*                                                                    */
+/* returns:  ''                                                       */
+/*                                                                    */
+FlushQueue: /* PROCEDURE expose (exposeList) */
+  do while QUEUED() &lt;&gt; 0
+    parse pull
+  end /* do while QUEUED() &lt;&gt; 0 */
+RETURN ' '                                                   /* v3.03 */
+
+/* ------------------------------------------------------------------ */
+/* function: include a file if it exists                              */
+/*                                                                    */
+/* call:     TryInclude( IncludeFile )                                */
+/*                                                                    */
+/* where:    IncludeFile = name of the file to include                */
+/*                                                                    */
+/* output:   prog.__rc = 0 - include file executed                    */
+/*           else: file not found                                     */
+/*                                                                    */
+/* returns:  ''                                                       */
+/*                                                                    */
+TryInclude:
+  parse upper arg I!.__IncFileName
+  prog.__rc = 1
+
+  if I!.__IncFileName = '' then
+    RETURN ' '                                               /* v3.03 */
+
+  if stream( I!.__IncFileName,'c','QUERY EXIST' ) = '' then
+    RETURN ' '                                               /* v3.03 */
+
+  prog.__rc = 0
+
+  /* execute INCLUDE */
+
+/* ------------------------------------------------------------------ */
+/* function: include a file                                           */
+/*                                                                    */
+/* call:     Include( IncludeFile )                                   */
+/*                                                                    */
+/* where:    IncludeFile = name of the file to include                */
+/*                                                                    */
+/* returns:  ''                                                       */
+/*                                                                    */
+Include:
+  parse upper arg I!.__IncFileName
+
+                        /* check if the include file exists           */
+  if stream( I!.__IncFileName, 'c', 'QUERY EXIST' ) == '' then
+    call ShowError global.__ErrorExitCode, ,
+                   I!.__GetMsg( 3, I!.__IncFileName )
+
+                        /* read and interpret the include file        */
+  do I!.__IncLineNO = 1 while lines( I!.__IncFileName ) &lt;&gt; 0
+    I!.__IncCurLine = ''
+                        /* save the absolute position of the start of */
+                        /* this line for the error handler            */
+    I!.__IncCurLinePos = stream(I!.__IncFileName,'c','SEEK +0')
+
+                        /* handle multi line statements               */
+    do forever
+      I!.__IncCurLine = I!.__IncCurLine ,
+                        strip( lineIn( I!.__IncFileName ) )
+
+      if right( I!.__IncCurLine,1 ) &lt;&gt; ',' then
+        leave
+
+                        /* statement continues on the next line       */
+      if lines( I!.__IncFileName ) == 0 then
+        call ShowError global.__ErrorExitCode ,,
+             I!.__GetMsg( 4, I!.__IncFileName )
+
+                        /* the next lines is only executed if the IF */
+                        /* statement above is FALSE                  */
+      I!.__IncCurLine = substr( I!.__IncCurLine,1, ,
+                                length( I!.__IncCurLine )-1 )
+
+    end /* do forever */
+
+    I!.__IncActive = 1
+    interpret I!.__IncCurLine
+    I!.__IncActive = 0
+
+  end /* do I!.__IncLineNO = 1 while lines( I!.__IncFileName ) &lt;&gt; 0 ) */
+
+                        /* close the include file!                    */
+  call stream I!.__IncFileName, 'c', 'CLOSE'
+
+                    /* do NOT return a NULL string ('')!        v3.03 */
+                    /* Due to a bug in the CMD.EXE this will    v3.03 */
+                    /* cause the error SYS0008 after the 32nd   v3.03 */
+                    /* call of this function!                   v3.03 */
+RETURN ' '
+
+/* ------------------------------------------------------------------ */
+/* function: init color variables                                     */
+/*                                                                    */
+/* call:     I!.__InitColorVars                                       */
+/*                                                                    */
+/* returns:  nothing                                                  */
+/*                                                                    */
+I!.__InitColorVars: /* PROCEDURE expose (exposeList) */
+
+  if 1 == global.__NeedColors then
+  do
+    escC = '1B'x || '['                                      /* v3.04 */
+
+    t1 = 'SAVEPOS RESTPOS ATTROFF' ,                         /* v3.05 */
+         'HIGHLIGHT NORMAL BLINK INVERS INVISIBLE'           /* v3.05 */
+
+    t2 = 's u 0;m 1;m 2;m 5;m 7;m 8;m'                       /* v3.05 */
+
+    screen.__DELEOL = escC || 'K'                            /* v3.05 */
+
+    do i = 1 to 8                                            /* v3.05 */
+
+      call value 'SCREEN.__' || word( t1, i ) ,,             /* v3.05 */
+                 escC || word( t2,i )                        /* v3.05 */
+
+                                                             /* v3.05 */
+      s = word( 'BLACK RED GREEN YELLOW BLUE MAGNENTA CYAN WHITE', i )
+      call value 'SCREEN.__FG' || s,,                        /* v3.05 */
+                 escC || 29+i || ';m'                        /* v3.05 */
+      call value 'SCREEN.__BG' || s,,                        /* v3.05 */
+                 escC || 39+i || ';m'                        /* v3.05 */
+    end /* do i = 1 to 8 */                                  /* v3.05 */
+
+    drop t1 t2 s i                                           /* v3.05 */
+
+/* --------------------------- */
+                        /* define color variables                     */
+    screen.__ErrorColor  = screen.__AttrOff || screen.__Highlight || ,
+                           screen.__FGYellow || screen.__bgRed
+
+    screen.__NormalColor = screen.__AttrOff ||                       ,
+                           screen.__fgWhite || screen.__<!-- entering slot 580 -->bgBlack
+
+    screen.__DebugColor  = screen.__AttrOff || screen.__Highlight || ,
+                           screen.__fgBlue || screen.__bgWhite
+
+    screen.__PromptColor = screen.__AttrOff || screen.__Highlight || ,
+                           screen.__fgYellow || screen.__bgMagnenta
+
+/* +++++++++++++++ DO NOT USE THE FOLLOWING COLORS! +++++++++++++++++ */
+    screen.__SignOnColor = screen.__AttrOff || screen.__Highlight || ,
+                           screen.__fggreen || screen.__bgBlack
+
+    screen.__PatchColor  = screen.__AttrOff || screen.__Highlight || ,
+                           screen.__fgcyan || screen.__bgRed
+/* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
+
+                            /* set the default color                  */
+    screen.__CurColor    = screen.__NormalColor
+
+                            /* turn ANSI word wrapping on             */
+    if prog.__QuietMode &lt;&gt; 1 then
+      call CharOut prog.__STDOUT, '1B'x || '[7h'
+
+  end /* if 1 == global.__NeedColors then */
+
+RETURN
+
+/* ------------------------------------------------------------------ */
+/* function: init the stem prog.                                      */
+/*                                                                    */
+/* call:     I!.__InitProgStem                                        */
+/*                                                                    */
+/* returns:  nothing                                                  */
+/*                                                                    */
+/* Note:     DO NOT ADD ANY CODE TO THIS ROUTINE!                     */
+/*                                                                    */
+I!.__InitProgStem: /* PROCEDURE expose (exposeList) */
+  prog.__Defparms = ' {/L:logfile} {/H} {/Silent} {/NoAnsi} {/NoSound} {/Trace}'
+
+                        /* get drive, path and name of this program   */
+  parse upper source . . prog.__FullName
+        prog.__Drive = filespec( 'D', prog.__FullName )
+         prog.__Path = filespec( 'P',  prog.__FullName )
+         prog.__Name = filespec( 'N',  prog.__FullName )
+      prog.__progDir = prog.__Drive || prog.__Path           /* v3.08 */
+
+                                                             /* v3.05 */
+ parse upper value 'V3.08 1 80 25 OS2ENVIRONMENT' directory() with ,
+             prog.__Version ,         /* version of template    v3.05 */
+             prog.__UserAbort ,       /* allow useraborts       v3.05 */
+             prog.__ScreenCols ,      /* def. screen cols       v3.05 */
+             prog.__ScreenRows ,      /* def. screen rows       v3.05 */
+             prog.__env ,             /* def. environment       v3.05 */
+             prog.__CurDir            /* current directory      v3.05 */
+
+                                /* install a local error handler      */
+  SIGNAL ON SYNTAX Name I!.__InitProgStem1
+                                /* try to call SysTextScreenSize()    */
+  parse value SysTextScreenSize() with prog.__ScreenRows prog.__ScreenCols
+
+I!.__InitProgStem1:
+
+RETURN
+
+/* ------------------------------------------------------------------ */
+/* function: init the variables for CID programs (only if the value   */
+/*           of the variable global.__NeedCID is 1)                   */
+/*                                                                    */
+/* call:     I!.__InitCIDVars                                         */
+/*                                                                    */
+/* returns:  nothing                                                  */
+/*                                                                    */
+/* Note:     DO NOT ADD ANY CODE TO THIS ROUTINE!                     */
+/*           Returncodes as defined by LCU 2.0                        */
+/*                                                                    */
+I!.__InitCIDVars: /* PROCEDURE expose (exposeList) exposeList CIDRC. */
+
+  if 1 == global.__NeedCID then
+  do
+
+    I!.__cidRCValues = ,                                     /* v3.05 */
+      '0000'x 'SUCCESSFUL_PROGRAM_TERMINATION',              /* v3.05 */
+      '0004'x 'SUCCESSFUL_LOG_WARNING_MESSAGE',              /* v3.05 */
+      '0008'x 'SUCCESSFUL_LOG_ERROR_MESSAGE',                /* v3.05 */
+      '0012'x 'SUCCESSFUL_LOG_SEVERE_ERROR',                 /* v3.05 */
+      '0800'x 'DATA_RESOURCE_NOT_FOUND',                     /* v3.05 */
+      '0804'x 'DATA_RESOURCE_ALREADY_IN_USE',                /* v3.05 */
+      '0808'x 'DATA_RESOURCE_NOAUTHORIZATION',               /* v3.05 */
+      '0812'x 'DATA_PATH_NOT_FOUND',                         /* v3.05 */
+      '0816'x 'PRODUCT_NOT_CONFIGURED',                      /* v3.05 */
+      '1200'x 'STORAGE_MEDIUM_EXCEPTION',                    /* v3.05 */
+      '1204'x 'DEVICE_NOT_READY',                            /* v3.05 */
+      '1208'x 'NOT_ENOUGH_DISKSPACE',                        /* v3.05 */
+      '1600'x 'INCORRECT_PROGRAM_INVOCATION',                /* v3.05 */
+      '1604'x 'UNEXPECTED_CONDITION',                        /* v3.05 */
+      'FE00'x 'SUCCESSFULL_REBOOT',                          /* v3.05 */
+      'FE04'x 'SUCCESSFULL_REBOOT_WITH_WARNING',             /* v3.05 */
+      'FE08'x 'SUCCESSFULL_REBOOT_WITH_ERRMSG',              /* v3.05 */
+      'FE12'x 'SUCCESSFULL_REBOOT_WITH_SERVER_ERRMSG',       /* v3.05 */
+                                                             /* v3.05 */
+    do i = 1 to words( I!.__cidRCValues ) by 2               /* v3.05 */
+      call value 'CIDRC.__' || word( I!.__cidRCValues,i+1 ),,
+                 c2d( word( I!.__cidRCValues,i ),2 )         /* v3.05 */
+                                                             /* v3.05 */
+    end /* do i = 1 to words( I!.__cidRCValues ) by 2 */     /* v3.05 */
+                                                             /* v3.05 */
+    drop I!.__cidRCValues                                    /* v3.05 */
+
+
+                        /* xx = next state of the program             */
+/*    CIDRC.__successfull_reboot_with_callback = C2D('FFxx'x, 2);     */
+
+                        /* define exit code values                    */
+    global.__<!-- entering slot 581 -->ErrorExitCode = CIDRC.__unexpected_condition
+       global.__OKExitCode = CIDRC.__successful_program_termination
+
+                        /* add the stem CIDRC. to the exposeList      */
+    exposeList = exposeList 'CIDRC. '
+  end /* if 1 == global.__NeedCID then */
+
+RETURN
+
+
+/***        End of Part 2 of the source code of TEMPLATE.CMD        ***/
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="544_L3_SourcecodeofTEMPLATE.html">[Back: Source code of TEMPLATE.CMD - part 1]</A> <BR>
+<A HREF="546_L3_SourcecodeofTEMPLATE.html">[Next: Source code of TEMPLATE.CMD - part 3]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,156 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Simple parameter parsing routine</TITLE>
+</HEAD>
+<BODY>
+<H1>Simple parameter parsing routine</H1><!-- entering slot 559 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/*                                                                    */
+/* sample REXX routine to split a parameter string into               */
+/* keyword / keyvalue pairs.                                          */
+/* This routine also handles parameter in quotes or double quotes     */
+/* (see also <A HREF="862_L3_GetOptUNIXlikeparame.html">GetOpt - UNIX like parameter handling</A>                    */
+/* and <A HREF="175_L3_ParametersforaREXXpr.html">Parameter for a REXX program</A>                                   */
+/*                                                                    */
+
+                    /* install an error handler for CTRL-C            */
+  signal on halt name UserAbort
+
+  do forever
+    say 'Testing the parameter handling routine'
+                    /* get the user input                             */
+    say 'Enter the separator char (CTRL-C to abort): '
+    separator = strip( lineIn() )
+    say 'Enter the parameter string for testing (CTRL-C to abort):'
+    thisParms = lineIN()
+
+                    /* call the routine                               */
+    if separator &lt;&gt; '' then
+    do
+      say 'Now Calling "SplitParameter 'thisParms','separator''
+      call SplitParameter thisParms, Separator
+    end /* if */
+    else
+    do
+      say 'Now Calling "call SplitParameter 'thisParms
+      call SplitParameter thisParms
+    end /* else */
+
+                    /* show the results                               */
+    say 'Result:'
+    say 'Argv.0 is 'argv.0
+    do i = 1 to argv.0
+      say 'Argv.i.__Keyword is "'  || argv.i.__keyWord  || '"'
+      say 'Argv.i.__KeyValue is "' || argv.i.__keyValue || '"'
+      say  Argv.i.__original is "' || argv.n.__original || '"'
+    end /* do i = 1 to argv.0 */
+
+  end /* do forever */
+exit 0
+
+UserAbort:
+  say 'Program aborted by the user!'
+exit 1
+
+/* ------------------------------------------------------------------ */
+/* function: split a string into separate arguments                   */
+/*                                                                    */
+/* call:     call SplitParameter Parameter_string {, separator }      */
+/*                                                                    */
+/* where:    parameter_string - string to split                       */
+/*           separator - separator character to split a parameter     */
+/*                       into keyword and keyvalue                    */
+/*                       (Def.: Don't split the parameter into        */
+/*                              keyword and keyvalue)                 */
+/*                                                                    */
+/* returns:  the number of arguments                                  */
+/*           The arguments are returned in the stem argv.:            */
+/*                                                                    */
+/*             argv.0 = number of arguments                           */
+/*                                                                    */
+/*             argv.n.__keyword = keyword                             */
+/*             argv.n.__keyValue = keyValue                           */
+/*             argv.n.__original = original_parameter                 */
+/*                                                                    */
+/*           The variables 'argv.n.__keyvalue' are only used if       */
+/*           the parameter 'separator' is not omitted.                */
+/*                                                                    */
+/* note:     This routine handles arguments in quotes and double      */
+/*           quotes also. You can use either the format               */
+/*                                                                    */
+/*             keyword:'k e y v a l u e'                              */
+/*                                                                    */
+/*           or                                                       */
+/*                                                                    */
+/*             'keyword:k e y v a l u e'                              */
+/*                                                                    */
+/*           (':' is the separator in this example).                  */
+/*                                                                    */
+SplitParameter: PROCEDURE EXPOSE (exposeList) argv.
+
+                    /* get the parameter                              */
+  parse arg thisArgs, thisSeparator
+
+                    /* init the result stem                           */
+  argv. = ''
+  argv.0 = 0
+
+  do while thisargs &lt;&gt; ''
+
+    parse value strip( thisArgs, "B" ) with curArg thisArgs
+
+    parse var curArg tc1 +1 .
+    if tc1 = '"' | tc1 = "'" then
+      parse value curArg thisArgs with (tc1) curArg (tc1) ThisArgs
+
+    if thisSeparator &lt;&gt; '' then
+    do
+                    /* split the parameter into keyword and keyvalue  */
+      parse var curArg argType (thisSeparator) argValue
+
+      parse var argValue tc2 +1 .
+      if tc2 = '"' | tc2 = "'" then
+        parse value argValue thisArgs with (tc2) argValue (tc2) ThisArgs
+
+      if tc1 &lt;&gt; '"' &amp; tc1 &lt;&gt; "'" &amp; tc2 &lt;&gt; '"' &amp; tc2 &lt;&gt; "'" then
+      do
+        argtype  = strip( argType  )
+        argValue = strip( argValue )
+      end /* if */
+      else                                                   /* v3.20 */
+         if argValue &lt;&gt; '' then                              /* v3.20 */
+           curArg = argtype || thisSeparator || argValue     /* v3.20 */
+
+      i = argv.0 + 1
+      argv.i.__keyword = translate( argType )
+      argv.i.__KeyValue = argValue
+      argv.i.__original = strip( curArg )                    /* v3.20 */
+      argv.0 = i
+
+   end /* if thisSeparator &lt;&gt; '' then */
+   else
+   do
+     i = argv.0 + 1
+     argv.i.__keyword = strip( curArg )
+     argv.i.__original = strip( curArg )                     /* v3.20 */
+     argv.0 = i
+   end /* else */
+
+  end /* do while thisArgs &lt;&gt; '' */
+
+RETURN argv.0
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="533_L3_Soundexroutines.html">[Back: Soundex routine(s)]</A> <BR>
+<A HREF="535_L3_UsingtheCLOCK$device.html">[Next: Using the CLOCK$ device]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,202 @@
+<HTML>
+<HEAD>
+<TITLE>Starting a Service</TITLE>
+</HEAD>
+<BODY>
+<H1>Starting a Service</H1><!-- entering slot 468 -->
+<P>
+After a service is started on a computer, the service must:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Verify any command-line parameters passed to
+the service by the calling process.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Register a signal handler to interpret opcodes
+passed by requesting applications. For more information, see <A HREF="357_L3_Differencesin16Bitan.html">Differences
+in 16-Bit and 32-bit Services</A>.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Set its state to SERVICE_INSTALL_PENDING, by
+calling the NetServiceStatus API, to notify any requesting applications
+that it is not ready for use.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Complete any other initialization procedures
+previously defined by the service.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Notify the LAN Server software that installation
+is complete by calling the NetServiceStatus API and setting its state to
+INSTALLED.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The NetServiceInstall API processes the executable file specified in the
+IBMLAN.INI component of the service by calling the OS/2 DosExecPgm API and
+passing the string of parameters made up of IBMLAN.INI parameters and information
+passed to the<I> cmdargs</I> parameter of the NetServiceInstall API.
+<P>
+The DosExecPgm API runs the service in detached mode, preventing handles
+from being passed to child processes and preventing screen- and keyboard-oriented
+calls except through pop-up functions. A service inherits the environment
+of the parent process, the NetServiceInstall API.
+<P>
+If a service includes more than one process, the process that the DosExecPgm
+API initially runs (referred to as the main service process) is the only
+process that receives standard signals from the NetServiceControl API.  The
+main service process is the only one that can issue calls to the NetServiceStatus
+API.  A service can transfer the responsibilities of the main service process
+to another process by setting the PID component of the<I> service_status
+</I>data structure (passed to the NetServiceStatus API) to the process identification
+number (PID) of the main service process candidate.
+<P>
+After receiving control from the DosExecPgm API, a service validates the
+parameters passed from the IBMLAN.INI file.  If the parameters are not valid,
+a service notifies the LAN Server software by calling the NetServiceStatus
+API and ending execution.  Otherwise, the service installation continues.
+
+<P>
+After verifying parameters, a service must start a signal handler that communicates
+with the NetServiceControl API.  Using the signal handler, a service specifies
+its current state (such as INSTALL_PENDING or INSTALLED) so that the LAN
+Server software can enable other applications to use the service properly.
+ The signal handler must register a function for the FlagA signal, the SERVICE_REC_SIG_FLAG
+opcode, by calling the DosSetSigHandler API.
+<P>
+After a service specifies its current state as INSTALLED, another application
+can change or query the state of the service by calling the NetServiceControl
+API.  With this function, an application can pass an opcode specifying one
+of four actions to take. The actions are defined in the SERVICE.H header
+file, as follows: ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³SYMBOLICCONSTANT
+   ³VALUE³MEANING                 ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ SERVICE_CTRL_INTERROGATE  ³  0  ³ Request for general information.   
+³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ SERVICE_CTRL_PAUSE     ³  1  ³ Pause the service.            ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ SERVICE_CTRL_CONTINUE   ³  2  ³ Continue a paused service.        ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ SERVICE_CTRL_UNINSTALL   ³  3  ³ Shut down a service.           ³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+
+<P>
+A service can define its own set of valid opcodes.  Opcodes that are not
+valid should default to another opcode such as SERVICE_CTRL_INTERROGATE.
+ The LAN Server software defines the following limits:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->A service that does not accept the SERVICE_UNINSTALL
+opcode cannot be removed at any time.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->While in the SERVICE_INSTALL_PENDING state, a service
+can receive only the SERVICE_UNINSTALL opcode.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+In the following pseudocode, an application and a service communicate by
+means of a signal handler and the LAN Server software: <B> Application 
+   LANServer      Service</B>
+<BR>
+ ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ    ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ    ÄÄÄÄÄÄÄÄÄÄÄÄ
+<BR>
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+<BR>
+³ Application calls ³
+<BR>
+³ NetServiceControl,³
+<BR>
+³ specifying an   ³
+<BR>
+³ opcode to<!-- entering slot 469 --> perform ³
+<BR>
+³ a particular task.³
+<BR>
+ÀÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+     ³      ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+<BR>
+     ³      ³ Opcode is sent  ³
+<BR>
+     ÀÄÄÄÄÄÄÄÄÄ³ to the specified ³
+<BR>
+          ³ service.     ³
+<BR>
+          ÀÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÙ
+<BR>
+               ³     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+<BR>
+               ÀÄÄÄÄÄÄÄÄ³  Signal handler    ³
+<BR>
+                    ³  interprets opcode.  ³
+<BR>
+                    ÀÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+                          
+<BR>
+                    ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+<BR>
+                    ³Performs the task   ³
+<BR>
+                    ³defined by the opcode.³
+<BR>
+                    ÀÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+                          
+<BR>
+                   ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+<BR>
+                   ³Calls NetServiceStatus  ³
+<BR>
+                   ³to clear the control   ³
+<BR>
+                   ³semaphore and, if    ³
+<BR>
+                   ³required, change the   ³
+<BR>
+                   ³state of the service.  ³
+<BR>
+                   ÀÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+          ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿     ³
+<BR>
+          ³Updates service    ³     ³
+<BR>
+          ³information table   ³ÄÄÄÄÄÄÄÄÄÙ
+<BR>
+          ³according to current ³
+<BR>
+          ³state of the service.³
+<BR>
+          ÀÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+ ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿   ³
+<BR>
+ ³NetServiceControl    ³   ³
+<BR>
+ ³returns with the    ³   ³
+<BR>
+ ³appropriate information³ÄÄÄÄÙ
+<BR>
+ ³about the service's   ³
+<BR>
+ ³current state.     ³
+<BR>
+ ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+
+<P>
+If performing the task takes a long time (more than a few seconds), the
+service should make intermediate calls to the NetServiceStatus API.
+
+<P><HR>
+
+<A HREF="359_L4_32bitServices.html">[Back: 32-bit Services]</A> <BR>
+<A HREF="361_L3_StoppingaService.html">[Next: Stopping a Service]</A> 
+</BODY>
+</HTML>

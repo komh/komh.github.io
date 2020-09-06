@@ -1,0 +1,130 @@
+<HTML>
+<HEAD>
+<TITLE>Involuntary Suspension</TITLE>
+</HEAD>
+<BODY>
+<H1>Involuntary Suspension</H1><!-- entering slot 209 -->
+<P>
+In this section we discuss the mechanisms involved when a thread involuntarily
+gives up CPU processing time. That is, another thread independently causes
+a thread not to receive or to give up its time-slice.
+<P>
+The mechanisms available that cause suspension are:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Pre-emption<!-- lm: 0x2 23 -->
+<UL> Another thread of a high priority becomes
+ready.
+<P>
+The suspended thread becomes ready and the pre-empting thread runs.
+<P>
+<B>Note: </B>
+<P>
+Pre-emption is not possible when running in kernel-mode (specifically when
+<B>InDos</B> is non-zero, which is set shortly after entry to the kernel).
+Within the kernel co-operative multi-tasking operates: threads must yield
+explicitly (call the scheduler) to give up the processor.  This applies
+equally to device drivers and file system drivers, which also run in kernel
+mode. Physical Device Drivers may use<B> DevHlp_Yield</B> and<B> DevHlp_TCYield
+</B> to give up the processor to other threads.<!-- lm: 0x2 23 --><!-- lm: 0x2 1 -->
+</UL> Critical
+Section<!-- lm: 0x2 23 -->
+<UL> Another thread in the same process enters
+critical section.
+<P>
+The critical section thread runs and none of the other threads will run
+except if a signal 'fires'. If another ready thead in the same process is
+selected by the dispatcher for running it is held on a temporary queue with
+its status set to<B> crt</B>.
+<P>
+<B>Note: </B>
+<P>
+The Critical Section thread has<B> run</B> status.<!-- lm: 0x2 23 --><!-- lm: 0x2 1 -->
+</UL> DosSuspendThread
+<!-- lm: 0x2 23 -->
+<UL>Another thread in the same process has issued DosSuspendThread.
+
+<P>
+The suspending thread runs and the suspended thread enters<B> frz</B> state.
+<!-- lm: 0x2 1 -->
+</UL>Freeze Process<!-- lm: 0x2 23 -->
+<UL> Either a
+Session Manager switch is in progress, a new process has been created suspended,
+ a Virtual Device Driver has called the VDHFreezeVDM helper routine or the
+DosDebug DBG_C_Freeze command has been executed against a debugee process.
+
+<P>
+The frozen process has a state of<B> frz</B> in all its threads.<!-- lm: 0x2 1 -->
+</UL> 
+<P>
+Voluntary suspension is indicated by the<B> blk</B> state.
+<P>
+When a thread is suspended involuntarily it will normally be in one of the
+following states:<!-- lm: 0x2 1 -->
+<P>
+rdy<!-- lm: 0x2 11 -->
+<UL> Ready and waiting to run.<!-- lm: 0x2 1 -->
+</UL> crt
+<!-- lm: 0x2 11 -->
+<UL>Ready but prohibited from dispatch by a critical
+section thread.<!-- lm: 0x2 1 -->
+</UL> frz<!-- lm: 0x2 11 -->
+<UL> Frozen
+or Suspended by freeze-process or DosSuspendThread.<!-- lm: 0x2 1 -->
+</UL> 
+<P>
+The remaining six thread states related to transient system processing on
+behalf of a thread. These are:<!-- lm: 0x2 1 -->
+<P>
+dly<!-- lm: 0x2 11 -->
+<UL> Delayed wake-up. Multiple threads have been
+woken from a blocked state because they were all waiting on the same BlockId
+and a multiple wake-up was specified to ProcRun.  Each delayed thread is
+queued pending scheduling where priority recalculation and the thread's
+ring 0 stack is checked for presence in memory. If all is well then the
+thread is placed on the ready queue pending dispatch. If not, then the thread
+is placed on the TSD Daemon's queue for paging in the thread's TSD (ring
+0 stack).<!-- lm: 0x2 1 -->
+</UL> tsd<!-- lm: 0x2 11 -->
+<UL> The thread
+is on the TSD Daemon's queue waiting for ring 0 stack page-in. The Daemon
+runs as an internal thread, which is labelled *tsd by the<B> .P</B> command.
+This thread is responsible for calling the page manager to page in a thread's
+TSD. Because a paging operation involves I/O and is therefore relatively
+slow, this operation is performed under the control of a separate thread.
+This allows other threads to be processed<!-- entering slot 210 --> while
+the paging operation takes place.<!-- lm: 0x2 1 -->
+</UL> gsk<!-- lm: 0x2 11 -->
+<UL> Get
+Stack request in progress. The TSD Daemon is waiting for the Page Manager
+to signal completion of the paging I/O operation. Effectively a thread in
+this state is blocked waiting for completion of a TSD paging I/O request.
+<!-- lm: 0x2 1 -->
+</UL>bst<!-- lm: 0x2 11 -->
+<UL> Boosted Ready State.
+ When the TSD page-in completes successfully, the thread is placed on the
+dispatchers ready queue with a priority boost.  This condition is indicated
+by the boosted ready state. Strictly speaking this is not an independent
+state since no operation is required to take the thread from<B> bst</B> to
+<B>rdy</B>.<!-- lm: 0x2 1 -->
+</UL> bad<!-- lm: 0x2 11 -->
+<UL> TSD page-in
+request has failed. This is a serious and terminal condition, which is not
+expected to occur. It is possible that an I/O error has occurred during
+the TSD page-in request.<!-- lm: 0x2 1 -->
+</UL> ---<!-- lm: 0x2 11 -->
+<UL> The
+null state occurs very fleetingly during thread creation and termination.
+It signifies that the thread's environment is incomplete.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The complete set of scheduler states for a finite state machine, which is
+illustrated in the following diagram.<!-- Unable to decode bitmap format --><IMG SRC="161_L4_InvoluntarySuspensio_11.gif" WIDTH=640 HEIGHT=480>
+
+
+<P><HR>
+
+<A HREF="160_L6_PMSEMGRESEM.html">[Back: PMSEM/GRESEM]</A> <BR>
+<A HREF="162_L5_PreemptionandPriorit.html">[Next: Pre-emption and Priority Calculation]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,177 @@
+<HTML>
+<HEAD>
+<TITLE>Creating Buttons with Icons and Icon/Text Combinations</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating Buttons with Icons and Icon/Text Combinations</H1><!-- entering slot 1274 -->
+<P>
+The following styles generate buttons containing images or icons:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->BS_ICON<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->BS_MINIICON<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->BS_BITMAP<!-- lm: 0x2 1 -->
+</UL>The image or icon is activated by specifying the image ID in the button
+text string.  For example, to load an icon (#define ICON_ID 300) and display
+it with the button, the button text string is set to "#300".
+<P>
+Where text is to be combined with an image, BS_TEXT is selected. To display
+an icon (#define ICON_ID 300) with the words "My button", the button text
+string is set to "#300\tMy button".  Notice that "\t" is used to separate
+text from the image ID.
+<P>
+The following code example creates a customized button with text.
+<PRE>// presparm.c  -- demonstrates presentation parameters//                creates a button as a child window
+//                and sets its text color
+
+#define  INCL_WIN
+#define  INCL_GPI
+#include &lt;os2.h&gt;
+#include &lt;string.h&gt;
+#include "presparm.h"
+#include "migrate.h"
+
+int main ( int argc, char *argv[]);
+
+// Internal function prototypes
+
+
+MRESULT EXPENTRY MyWindowProc( HWND hwnd, MSGID msg
+                               , MPARAM mp1, MPARAM mp2 );
+int main ( int argc, char *argv[]);
+
+// global variables
+
+    HAB  hab;                           // Anchor block handle
+
+int main ( int argc, char *argv[])
+{
+    HMQ  hmq;                           // Message queue handle
+    HWND hwndFrame;                     // Frame window handle
+    HWND hwndClient;                    // Client window handle
+    QMSG qmsg;                          // Message from message queue
+    ULONG flCreate;                     // Window creation control flags
+    hab = WinInitialize( 0 );
+    hmq = WinCreateMsgQueue( hab, 0 );
+
+    WinRegisterClass( hab, "presparm", MyWindowProc, 0L,  0 );
+
+    flCreate = FCF_SYSMENU | FCF_SIZEBORDER | FCF_TITLEBAR |
+               FCF_MINMAX | FCF_SHELLPOSITION | FCF_TASKLIST;
+
+    hwndFrame = WinCreateStdWindow( HWND_DESKTOP, WS_VISIBLE, &amp;flCreate,
+        "presparm", "", 0L, 0, ID_WINDOW, &amp;hwndClient );
+
+    while( WinGetMsg( hab, &amp;qmsg, 0, 0, 0 ) )
+      WinDispatchMsg( hab, &amp;qmsg );
+
+    WinDestroyWindow( hwndFrame );
+
+   WinDestroyMsgQueue( hmq );
+    WinTerminate( hab );
+    return 0;
+}
+
+//
+MRESULT EXPENTRY MyWindowProc( HWND hwnd, MSGID msg
+                               , MPARAM mp1, MPARAM mp2 )
+{
+    HPS     hps;                            // PS handle
+    BTNCDATA btn;
+
+    typedef struct _FORECOLORPARAM
+    {
+        ULONG   id;
+        ULONG   cb;
+
+        ULONG   ulColor;
+    } FORECOLORPARAM;
+
+    typedef struct _FONTPARAM
+    {
+        ULONG   id;
+        ULONG   cb;
+        CHAR    szFontNameSize[20];
+    } FONTPARAM;
+
+    struct  _PRES                           // pres. params
+    {
+        ULONG   cb;                         // length
+        FORECOLORPARAM fcparam;             // foreground color
+        FONTPARAM      fntparam;            // font name &amp; size
+    }   pres;
+   static  HWND    hwndButton;              // button window handle
+    static  POINTL  pt;                     // window size
+
+    switch( msg )
+    {
+        case WM_CLOSE:
+            WinPostMsg( hwnd, WM_QUIT, 0L, 0L );
+            return ( (MRESULT) 0 );
+
+    case WM_CREATE:
+
+          // set the foreground color to CLR_RED in
+          // the button's presentation parameters
+            pres.fcparam.id = PP_FOREGROUNDCOLORINDEX;
+            pres.fcparam.cb = sizeof ( pres.fcparam.ulColor );
+
+          pres.fcparam.ulColor = CLR_RED;
+
+          // set the font used by the button to 12 point Courier
+            pres.fntparam.id = PP_FONTNAMESIZE;
+            pres.fntparam.cb = 20;
+            strcpy ( pres.fntparam.szFontNameSize, "24.Helv" );
+
+            pres.cb = sizeof ( pres.fcparam ) + sizeof ( pres.fntparam )
+            hwndButton = WinCreateWindow ( hwnd     // parent
+                            , WC_BUTTON             // class
+                            , "#300\tNumber One"    // window text
+                            , BS_PUSHBUTTON  |
+                              BS_ICON | BS_TEXT     // style
+                            , 100, 100              // x, y
+                            , 400, 400              // cx, cy
+                            , hwnd                  // owner
+                            , HWND_TOP              // sibling
+                            , 255                   // ID
+                            , NULL                  // ctrl <!-- entering slot 1275 -->data
+                            , &amp;pres );          // pres. params
+                                                    // pmassert
+            ( hwndButton, hab );
+            return (MRESULT)FALSE;
+
+
+        case WM_SIZE:
+            pt.x = (LONG) SHORT1FROMMP ( mp2 );
+            pt.y = (LONG) SHORT2FROMMP ( mp2 );
+            WinSetWindowPos ( hwndButton, HWND_TOP
+                            , (SHORT)pt.x / 3
+                            , (SHORT)pt.y / 2
+                            , (SHORT)pt.x / 2
+                             , (SHORT)pt.y / 3
+                             , SWP_SIZE | SWP_MOVE  | SWP_SHOW );
+             return (MRESULT)0;
+
+
+         case WM_PAINT:
+             hps = WinBeginPaint ( hwnd , 0 , NULL );
+             GpiErase ( hps );
+             WinEndPaint ( hps );
+             return ( (MRESULT) 0 );
+
+         default:
+             return ( WinDefWindowProc( hwnd, msg, mp1, mp2 ) );
+     }
+     return ( WinDefWindowProc( hwnd, msg, mp1, mp2 ) );
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1253_L3_UsingButtonsinaClien.html">[Back: Using Buttons in a Client Window]</A> <BR>
+<A HREF="1255_L1_Clipboards.html">[Next: Clipboards]</A> 
+</BODY>
+</HTML>

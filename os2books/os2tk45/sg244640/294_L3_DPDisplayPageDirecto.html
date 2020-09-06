@@ -1,0 +1,192 @@
+<HTML>
+<HEAD>
+<TITLE>DP - Display Page Directory and Table Entries</TITLE>
+</HEAD>
+<BODY>
+<H1>DP - Display Page Directory and Table Entries</H1><!-- entering slot 423 --><!-- Unable to decode bitmap format --><IMG SRC="294_L3_DPDisplayPageDirecto_75.gif" WIDTH=32 HEIGHT=32><!-- Unable to decode bitmap format --><IMG SRC="294_L3_DPDisplayPageDirecto_76.gif" WIDTH=32 HEIGHT=32>
+<P>
+Display entries from the page tables of the default <A HREF="3320_L0_.html">thread
+slot.</A> See the <A HREF="386_L3_SSetorDisplayDefault.html">.S command
+</A>for information on changing the default thread slot.
+<P>
+<U><I>Syntax:</I></U>
+<PRE>ÄÄÄÂÄ  DP   ÄÄÂÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     ÀÄ  DPD  ÄÄÙ  ÀÄ addr ÄÂÄÄÄÄÄÄÂÄÙ
+         DPA                ÀÄ Ln ÄÙ
+
+
+</PRE>
+
+<P>
+<U><I>Parameters:</I></U><!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B>A</B><!-- lm: 0x11 11 -->
+<UL> Display both page table and page directory
+entries. This is the default.<!-- lm: 0x2 1 -->
+</UL><B> D</B><!-- lm: 0x11 11 -->
+<UL> Display
+only page directory entries.<!-- lm: 0x2 1 -->
+</UL><B><I> addr</B></I><!-- lm: 0x11 11 -->
+<UL> The
+<A HREF="427_L4_AddressSpecification.html">linear or virtual address</A> whose
+page directory and table entries are to be displayed. If not specified<B> DP
+</B>displays the entire page directory and its page tables.
+<P>
+An <A HREF="270_L4_AddressSeparatorsand.html">address expression</A> may
+be specified.<!-- lm: 0x2 1 -->
+</UL><B> L</B><B><I>n</B></I><!-- lm: 0x11 11 -->
+<UL> The
+number of page table entries to display starting with the entry for<B><I> addr</B></I>.
+The default is to display the all page table entries from this entry assigned
+to<B><I> addr</B></I>.
+<P>
+<B>Note: </B> Due to a bug in some versions of the Kernel Debugger an extra
+zero is required for this parameter.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL> 
+<P>
+<U><I>Results &amp; Notes:</I></U>
+<P>
+One or more page and directory table entries are displayed. An example display
+follows:
+<PRE>ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄDP %90000 L50
+
+ linaddr   frame   pteframe  state res Dc Au CD WT Us rW Pn state
+%00090000* 012f3  frame=012f3  2    0  D  A        U  W  P  resident
+%00090000         vp id=00a76  0    0  c  u        U  W  n  pageable
+%000a0000  000b8  vp id=000b8  1    0  D  u        U  W  n  uvirt
+%000b0000  00888  frame=00888  0    0  D  A        U  W  P  pageable
+%000c0000         vp id=00b8f  0    0  c  u        U  W  n  pageable
+%000d0000         vp id=00b92  0    0  c  u        U  W  n  pageable
+##
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+</PRE>
+
+<P>
+Output from the<B> DP</B> command is presented in tabular form. Each of
+the columns shown is described as follows:<!-- lm: 0x2 1 -->
+<P>
+<B>linaddr</B><!-- lm: 0x11 11 -->
+<UL> Linear address of virtual memory
+whose page directory and table entries are being formatted. Those lines
+corresponding to directory entries have an<B> *</B> flag suffixed to the
+linear address. Page table entries for a given directory entry are formatted
+following the directory entry.
+<P>
+In the example above linear address<B> %90000</B> has its page table located
+in physical frame<B> 12f3</B>, that is at physical<B> %%12f3000</B>. The
+page table entry corresponding to virtual memory at<B> %90000</B> is described
+in the second line. Each of the following lines are consecutive entries
+from page table<B> 12f3</B>. <!-- lm: 0x2 1 -->
+</UL><B> frame</B><!-- lm: 0x11 11 -->
+<UL> The
+real storage frame number that contains either the page table (<B>*</B> suffix
+to<B> linaddr</B>) or page frame corresponding to the<B> linaddr</B>. If
+this field is blank then the frame has been discarded. If it contains a
+frame number then the contents are still valid even though the page table
+entry no longer points to a page frame. See<B> pteframe</B> field for further
+discussion.<!-- lm: 0x2 1 -->
+</UL><B> pteframe</B><!-- lm: 0x11 11 -->
+<UL> For
+table entries with the present bit set the this field shows the page frame
+number pointed to by this table entry. This is shown as<B> frame=</B><B><I>fffff</B></I>.
+Use the frame number with the <A HREF="367_L3_MPFormatMemoryPageFr.html">.MP
+command</A> to obtain information on  allocation and ownsership of this
+this frame of real storage.
+<P>
+For decommitted pages the table entry contains the <A HREF="3329_L0_.html">Virtual
+Page</A> ID. This is shown as<B> vp id=</B><B><I>vvvvv</B></I>. Use the
+<A HREF="372_L3_MVFormatMemoryVirtua.html">.MV command</A> with the virtual
+page Id to obtain information on allocation and ownership of this memory.
+
+<P>
+<B>Notes </B>
+<P>
+The<B><I> vp id</B></I> is not valid to use with<B> .MV</B> if the<B> state
+</B>of the table entry is <A HREF="3328_L0_.html">uvirt</A>.
+<P>
+If the frame has been decommitted but the<B> frame</B> field still shows
+a frame number then the frame contents are still valid for reclaiming without
+a page-in operation from the swap file. The corresponding virtual page will
+be queued from the idle list. See <A HREF="372_L3_MVFormatMemoryVirtua.html">.MV
+</A>and <A HREF="367_L3_MPFormatMemoryPageFr.html">.MP</A> commands for
+more information on page management.<!-- lm: 0x2 1 -->
+</UL><B> state</B><!-- lm: 0x11 11 -->
+<UL> State
+information is stored in the<B> available</B><!-- entering slot 424 --> bits
+(9 - 11) of the page table entry. These are interpreted on the right-hand
+end of the display. The following values may appear:
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³<I>State</I>     ³<I>Value</I>³<I>Description</I>              ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³pageable  ³0    ³Storage may be paged-out ³
+³          ³     ³to the swap file         ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³<A HREF="3328_L0_.html">uvirt</A>     ³1    ³Physical to virtual      ³
+³          ³     ³mapping reservation only.³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³resident  ³2    ³Non-pageable fixed       ³
+³          ³     ³storage                  ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³uvirt     ³3    ³Physical to virtual      ³
+³          ³     ³mapping reservation only.³
+ÀÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL><B>Res</B><!-- lm: 0x11 11 -->
+<UL> Reserved page
+table entry bits. Should always be zero<!-- lm: 0x2 1 -->
+</UL><B> Dc</B><!-- lm: 0x11 11 -->
+<UL> Set
+to<B> D</B> is the page is dirty, otherwise<B> c</B> (clean).<!-- lm: 0x2 1 -->
+</UL><B> Au
+</B><!-- lm: 0x11 11 -->
+<UL>Set to<B> A</B> if the page has been accessed,
+otherwise<B> u</B> (unaccessed).<!-- lm: 0x2 1 -->
+</UL><B> CD</B><!-- lm: 0x11 11 -->
+<UL> Set
+to<B> CD</B> is the TLB cache-disable bit is set, else blank.<!-- lm: 0x2 1 -->
+</UL><B> WT
+</B><!-- lm: 0x11 11 -->
+<UL>Set to<B> WT</B> is the TLB cache write-transparent
+bit is set, else blank.<!-- lm: 0x2 1 -->
+</UL><B> Us</B><!-- lm: 0x11 11 -->
+<UL> Set
+to<B> U</B> if the page is for user storage, otherwise<B> s</B> (supervisor).
+<!-- lm: 0x2 1 -->
+</UL><B>rW</B><!-- lm: 0x11 11 -->
+<UL> Set to<B> r</B> is
+the page is read-only, otherwise<B> W</B> (writeable).<!-- lm: 0x2 1 -->
+</UL><B> Pn
+</B><!-- lm: 0x11 11 -->
+<UL>Set to<B> P</B> if the page is present, otherwise
+<B>n</B> (not present).<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Note: </B>
+<P>
+The Dump Formatter does not format page directory entries correctly. For
+page directory entries only the<B> frame</B> field is correct. The remaining
+fields are taken from the first PTE of the page table associated with the
+page diretory. This problem has been fixed from fix pack 36 for Warp 3.0
+and fix pack 7 for Warp 4.0.<!-- lm: 0x2 1 -->
+<P>
+
+<P>
+Refer to the following for more information on page and memory management:
+<!-- lm: 0x2 6 -->
+<UL>
+<P>
+<A HREF="339_L3_MFormatMemoryStructu.html"><LI>M family of Kernel Debugger
+and Dump Formatter commands</A>.<!-- lm: 0x2 6 -->
+<P>
+<B>Intel Pentium User's Guide</B> and<B> Intel x86 Programmer's Reference.
+</B><!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="293_L3_DLDisplaytheCurrentL.html">[Back: DL - Display the Current Local Descriptor Table]</A> <BR>
+<A HREF="295_L3_DTDisplayaTaskStateS.html">[Next: DT - Display a Task State Segment]</A> 
+</BODY>
+</HTML>

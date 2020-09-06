@@ -1,0 +1,72 @@
+<HTML>
+<HEAD>
+<TITLE>General Considerations</TITLE>
+</HEAD>
+<BODY>
+<H1>General Considerations</H1><!-- entering slot 745 -->
+<P>
+The debug engine initiates all transactions with the kernel debugger, normally
+by sending a command while the kernel debugger is waiting to receive one.
+ In this case, the kernel debugger expects to receive a CVK_HDR_DATA packet
+and will discard any CVK_HDR_ACK or CVK_HDR_NACK packets it receives.  (The
+kernel debugger also discards a packet if its header cannot be unbitstuffed
+or has a bad checksum.  The kernel issues a CVK_HDR_NACK packet containing
+the sequence number and index number from the original CVK_HDR_DATA packet
+if the packet's body cannot be unbitstuffed or has a bad checksum.)
+<P>
+Once the kernel receives a valid CVK_HDR_DATA packet, it extracts the sequence
+number and index number and uses them to construct a CVK_HDR_ACK packet,
+which it returns to the debug engine.  (The<B> flast</B> flag in the CVK_HDR_DATA
+packet is ignored.)  The kernel debugger then performs the action requested
+by the command and returns the result.
+<P>
+In general, the result is returned in a single CVK_HDR_DATA packet whose
+sequence number matches the sequence number contained in the debug engine's
+original command packet, whose index number is zero, and whose<B> flast
+</B>flag is FALSE.  After the result is transmitted, the kernel debugger
+waits for a response from the debug engine.  The kernel is expecting either
+a CVK_HDR_ACK packet whose sequence number and index number match those
+sent in the result _or_ a CVK_HDR_DATA packet (containing the next command).
+ If the kernel debugger receives any other response, it resends the CVK_HDR_DATA
+packet containing the result.
+<P>
+If the debug engine sends a KDP break character while the victim machine
+is running, either to initiate a transaction or to regain control after
+the victim machine has resumed execution, the kernel debugger responds with
+a CVK_HDR_DATA packet whose sequence number matches the sequence number
+from the CVK_HDR_DATA packet that caused the system to resume.  There is
+no such packet when the kernel debugger responds to the first KDP break
+sent by the debug engine. The sequence number in that case contains garbage.
+
+<P>
+The kernel debugger does not generate replies for some commands, such as
+reboot, and the replies to commands that cause the victim machine to resume
+execution, such as resume or step, are not sent until an event such as a
+breakpoint, module load, or break signal from the debug engine, has caused
+the victim machine to quiesce.
+<P>
+The kernel debugger responds somewhat differently to the CVK_CMD_RAW command,
+which is used to issue arbitrary kernel debugger commands while in packet
+mode.  Each line in the response is returned in a separate CVK_HDR_DATA
+packet whose sequence number matches the sequence number in the CVK_CMD_RAW
+command's header.  The index number in the first reply packet is 0; the
+index number increases by 1 in each successive reply packet (and wraps from
+63 to 0).  The debug engine should return a CVK_HDR_ACK packet with the
+appropriate sqeuence number and index number after each reply packet is
+received.
+<P>
+The kernel debugger does not manipulate or increment sequence numbers and
+uses them only to generate ACKs and NACKs and to match ACKs with replies.
+ A debug engine could use the same sequence number for every request, but
+this is not recommended.
+<P>
+
+<P>
+
+
+<P><HR>
+
+<A HREF="731_L3_MaximumPacketSize.html">[Back: Maximum Packet Size]</A> <BR>
+<A HREF="733_L2_KernelDebuggerPacket.html">[Next: Kernel Debugger Packet Responses]</A> 
+</BODY>
+</HTML>

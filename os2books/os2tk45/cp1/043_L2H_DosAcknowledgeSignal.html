@@ -1,0 +1,80 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosAcknowledgeSignalException - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosAcknowledgeSignalException - Example Code</H1><!-- entering slot 46 -->
+<P>
+This program demonstrate how to acknowledge a signal exception.
+<PRE>#define INCL_DOSPROCESS       /* DOS process values (for DosSleep) */
+#define INCL_DOSEXCEPTIONS    /* DOS exception values */
+#define INCL_ERRORS           /* DOS error values     */
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+
+ULONG _System MyTermHandler( PEXCEPTIONREPORTRECORD       p1,
+                             PEXCEPTIONREGISTRATIONRECORD p2,
+                             PCONTEXTRECORD               p3,
+                             PVOID                        pv );
+
+int main (VOID)
+{
+  EXCEPTIONREGISTRATIONRECORD  RegRec  = {0};
+  APIRET                       rc      = NO_ERROR;   /* Return code */
+
+  /* Add MyTermHandler to this thread's chain of exception handlers */
+
+  RegRec.ExceptionHandler = (ERR)MyTermHandler;
+  rc = DosSetExceptionHandler( &amp;RegRec );
+  if (rc != NO_ERROR) {
+     printf("DosSetExceptionHandler error: return code = %u\n",rc);
+     return 1;
+  }
+
+  printf("Stop this program using Ctrl-C or Ctrl-Break.\n");
+
+  rc = DosSleep(10000L);   /* Give user 10 seconds... */
+
+  rc = DosUnsetExceptionHandler( &amp;RegRec );
+  if (rc != NO_ERROR) {
+     printf("DosUnsetExceptionHandler error: return code = %u\n",rc);
+     return 1;
+  }
+
+  printf("Program ends.\n");
+  return NO_ERROR;
+}
+
+/**********************************************************************/
+ULONG _System MyTermHandler( PEXCEPTIONREPORTRECORD       p1,
+                             PEXCEPTIONREGISTRATIONRECORD p2,
+                             PCONTEXTRECORD               p3,
+                             PVOID                        pv )
+{
+  APIRET   rc  = NO_ERROR;   /* Return code */
+
+  printf("*** MyTermHandler entered ***\n");
+
+  if (p1-&gt;ExceptionNum == XCPT_SIGNAL) {
+        rc = DosAcknowledgeSignalException ( XCPT_SIGNAL_BREAK );
+        if (rc != NO_ERROR) {
+          printf("DosAcknowledgeSignalException error:
+                  return code = %u\n", rc);
+          return 1;
+        } else {
+          printf("DosAcknowledgeSignalException done. Program resumes.\n");
+          return XCPT_CONTINUE_EXECUTION;  /* Continue execution */
+        } /* endif */
+  }
+
+  return XCPT_CONTINUE_SEARCH;       /* Exception not resolved. */
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="042_L2H_DosAcknowledgeSignal.html">[Back: DosAcknowledgeSignalException - Related Functions]</A> <BR>
+<A HREF="044_L2H_DosAcknowledgeSignal.html">[Next: DosAcknowledgeSignalException - Topics]</A> 
+</BODY>
+</HTML>

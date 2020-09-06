@@ -1,0 +1,138 @@
+<HTMLHIDDEN>
+<HEAD>
+<TITLE>DosMuxSemWait</TITLE>
+</HEAD>
+<BODY>
+<H1>DosMuxSemWait</H1><!-- entering slot 307 -->
+<PRE>typedef struct _MUXSEMLIST {   /* mxsl */
+ 
+  USHORT  cmxs;                /* count of MuxSem structures */
+  MUXSEM  amxs[16];            /* MuxSem structure */
+ 
+} MUXSEMLIST;
+
+typedef struct _MUXSEM {    /* mxs */
+ 
+  USHORT zero;              /* zero */
+  HSEM   hsem;              /* semaphore handle */
+ 
+} MUXSEM;
+
+#define INCL_DOSSEMAPHORES
+
+USHORT  rc = DosMuxSemWait(IndexNbr, ListAddr, Timeout);
+
+PUSHORT          IndexNbr;      /* Index number of event (returned) */
+PVOID            ListAddr;      /* Semaphore list */
+LONG             Timeout;       /* Timeout (in milliseconds) */
+
+USHORT           rc;            /* return code */
+</PRE>
+
+<P>
+<B>Example</B>
+<P>
+The following example illustrates notification of events between threads
+of the same process. The main thread sets two RAM semaphores and invokes
+two threads, each of which clears one of the semaphores.  Meanwhile, the
+main thread waits for either of the two semaphores to clear, and then resumes
+execution, indicating the thread that notified first.
+<PRE>#define INCL_DOSPROCESS
+#define INCL_DOSSEMAPHORES
+
+#include&lt;os2.h&gt;
+#include&lt;stdio.h&gt;
+
+#define NUM_SEMS         2       /* Number of semaphores to wait on */
+#define TIMEOUT          2000L   /* Timeout period */
+#define SLEEPTIME        1000L   /* Sleep period for Thread_1 */
+#define RETURN_CODE      0       /* Return Code for thread termination */
+
+ULONG       RamSem1 = 0L;        /* Allocation and initialization of   */
+ULONG       RamSem2 = 0L;        /*  two RAM semaphores                */
+ULONG far   *RamSem1Handle = &amp;RamSem1;  /* Semaphore handles */
+ULONG far   *RamSem2Handle = &amp;RamSem2;
+TID         ThreadID[2];         /* Thread Identification */
+BYTE        ThreadStack1[4000];  /* Thread Stack Area */
+BYTE        ThreadStack2[4000];
+MUXSEMLIST  SemList;             /* Semaphore list structure */
+USHORT      IndexNbr;            /* Index number for DosMuxSemWait */
+USHORT      rc;                  /* Return Code */
+
+VOID APIENTRY Thread_1()
+{
+  USHORT r;
+
+  printf("Begin Thread_1. It will sleep for 1 second. \n");
+
+  /* Give Thread_2 a chance to execute */
+  DosSleep(SLEEPTIME);                 /* Sleep Interval */
+  if(!(r=DosSemClear(RamSem1Handle)))  /* Semaphore handle */
+    printf("RamSem1 cleared. \n");
+  DosExit(EXIT_THREAD,                 /* Action Code */
+          RETURN_CODE);                /* Result Code */
+}
+
+VOID APIENTRY Thread_2()
+{
+  USHORT r;
+
+  printf("Begin Thread_2. It will try to clear RamSem2 now. \n");
+  if(!(r=DosSemClear(RamSem2Handle)))  /* Semaphore Handle */
+    printf("RamSem2 cleared. \n");
+  DosExit(EXIT_THREAD,                 /* Action Code */
+          RETURN_CODE);                /* Result Code */
+}
+</PRE>
+
+<PRE>main()
+{
+  USHORT  rc;                          /* Return Code */
+
+  /* Set both semaphores */
+  if(!(rc=DosSemSet(RamSem1Handle)))   /* Semaphore Handle */
+    printf("RamSem1 set. \n");
+  if(!(rc=DosSemSet(RamSem2Handle)))   /* Semaphore Handle */
+    printf("RamSem2 set. \n");
+
+  /* Initialize Semaphore list structure */
+  SemList.cmxs = NUM_SEMS;             /* Number of semaphores */
+  SemList.amxs[0].zero = 0;            /* This field must be 0 */
+  SemList.amxs[1].zero = 0;            /* This field must be 0 */
+  SemList.amxs[0].hsem = RamSem1Handle;  /* Semaphore handle */
+  SemList.amxs[1].hsem = RamSem2Handle;  /* Semaphore handle */
+
+  /* Start the two threads */
+  if(!(DosCreateThread((PFNTHREAD) Thread_1,   /* Thread address */
+                       &amp;ThreadID[0],           /* Thread ID
+                                                                 (returned) */
+                       &amp;ThreadStack1[3999])))  /* End of thread
+                                                                 stack */
+    printf("Thread_1 created. \n");
+  if(!(DosCreateThread((PFNTHREAD) Thread_2,   /* Thread address */
+                       &amp;ThreadID[1],           /* Thread ID
+                                                                 (returned) */
+                       &amp;ThreadStack2[3999])))  /* End of thread
+                                                                 stack */
+    printf("Thread_2 created. \n");
+
+  /* Wait for either semaphore to clear; then, indicate which */
+  /*   thread notified first.                                 */
+
+  if(!(DosMuxSemWait(&amp;IndexNbr,    /* Index of semaphore   */
+                                   /*   cleared (returned) */
+                     &amp;SemList,     /* Address of sem. list structure */
+                     TIMEOUT)))    /* Timeout period */
+    printf("Back to main thread; semaphore cleared by Thread%d.\n",
+           IndexNbr + 1);
+  }
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="263_L2H_DosMove.html">[Back: DosMove]</A> <BR>
+<A HREF="265_L2H_DosNewSize.html">[Next: DosNewSize]</A> 
+</BODY>
+</HTML>

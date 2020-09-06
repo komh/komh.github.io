@@ -1,0 +1,125 @@
+<HTML>
+<HEAD>
+<TITLE>Creating Sessions</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating Sessions</H1><!-- entering slot 89 -->
+<P>
+A process creates a new session by using<A><!-- external link: 1D FB C3 FC --> DosStartSession</A>.
+<A><!-- external link: 1D FB C3 49 -->DosStartSession</A> enables an application
+to start another session and to specify the name of the application to be
+started in that session.
+<P>
+<A><!-- external link: 1D FB C3 49 -->DosStartSession</A> also specifies
+which of the five session types is to be started:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Full screen, protect mode<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Text windowed, protect mode<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Presentation Manager (PM)<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Full screen DOS Session<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Windowed DOS Session<!-- lm: 0x2 1 -->
+</UL>Protect mode applications run in full screen and text windowed sessions,
+PM and AVIO applications run in PM windows, and DOS applications run in
+full screen DOS Sessions and windowed DOS Sessions.
+<P>
+OS/2 applications running in any of the OS/2 session types-full screen,
+text windowed, and PM-can start sessions of any other type, including DOS
+Sessions. DOS Session applications cannot start other sessions.
+<P>
+An application can start another process in a separate session when the
+application will not manage any I/O done by the process. For example, an
+application that starts an unrelated application could start it in a separate
+session.
+<P>
+A session can be started as a related or an unrelated session. A related
+session is called a<I> child session</I>, and the session starting the child
+session is called the<I> parent session</I>. An application can control
+its child sessions by using the session identifier returned by<A><!-- external link: 1D FB C3 49 --> DosStartSession
+</A>with the<A><!-- external link: 1D F6 C3 FC --> DosSetSession</A>,<A><!-- external link: 1D E1 C3 FC --> DosSelectSession</A>,
+and<A><!-- external link: 1D FD C3 FC --> DosStopSession</A>. If an application
+starts an<I> unrelated session</I>, the new session cannot be controlled
+by the application. The Related field in the<A><!-- external link: 1D D2 C4 BB --> STARTDATA
+</A>structure specifies whether the new session is related to the session
+calling<A><!-- external link: 1D FB C3 FC --> DosStartSession</A>.
+<P>
+After a process has started a child session, no other process in its session
+can start a child session until all dependent sessions started by this process
+have ended.
+<P>
+When a session is created, the title specified in the function call (or
+the application name if no title is specified) is added to the Window List.
+
+<P>
+<A><!-- external link: 1D FB C3 49 -->DosStartSession</A> can be used to
+start either a foreground or a background session, but a new session can
+be started in the foreground only when the caller's session, or one of the
+caller's descendant sessions, is currently executing in the foreground.
+The foreground session for windowed applications is the session of the application
+that owns the window focus.
+<P>
+<B>Termination Queues</B> The parent session must create a<I> termination
+queue</I> prior to specifying the queue name in a call to<A><!-- external link: 1D FB C3 FC --> DosStartSession</A>.
+OS/2 will continue to notify the parent session through the specified queue
+as long as the session calling<A><!-- external link: 1D FB C3 49 --> DosStartSession
+</A>remains a parent session. In other words, when all the child sessions
+for a particular parent session end, the termination queue is closed by
+OS/2. An existing queue name must be specified on the next<A><!-- external link: 1D FB C3 49 --> DosStartSession
+</A>call if the caller wants to continue receiving termination notification
+messages.
+<P>
+OS/2 writes a data element to the specified queue when any child session
+ends. The queue is posted regardless or who ends the child session (the
+child, the parent, or the user) and whether the termination is normal or
+abnormal.
+<P>
+A parent session calls<A><!-- external link: 1D D8 C3 46 --> DosReadQueue
+</A>to receive notification when a child session has ended. The word that
+contains the request parameter, returned by<A><!-- external link: 1D D8 C3 FC --> DosReadQueue</A>,
+will be 0. The data element has the following format:
+<P>
+<B>Termination Queue Element Format</B>
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Size      ³Description                                       ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³WORD      ³Session ID of the child session that ended        ³
+ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³WORD      ³Result code                                       ³
+ÀÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+The process that originally called the<A><!-- external link: 1D FB C3 49 --> DosStartSession
+</A>request should call<A><!-- external link: 1D D8 C3 FC --> DosReadQueue</A>,
+with the NOWAIT parameter set to 0. This is the only process that has addressability
+to the notification data element. After reading and processing the data
+element, the caller must free the segment containing the data element by
+calling DosFreeMem.
+<P>
+When a child session ends, the result code returned in the termination queue's
+data element is the result code of the program specified in the<A><!-- external link: 1D FB C3 49 --> DosStartSession
+</A>call, providing either one of the following is true:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->The program was run directly, with no intermediate
+secondary command processor<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The program is run indirectly through a secondary
+command processor, and the /C parameter is specified<!-- lm: 0x2 1 -->
+</UL>
+<P>
+When a child session is running in the foreground at the time it ends, the
+parent session becomes the new foreground session. When a parent session
+ends, any child sessions are ended. When an unrelated session ends in the
+foreground, OS/2 selects the next foreground session.
+
+<P><HR>
+
+<A HREF="084_L3_Sessions.html">[Back: Sessions]</A> <BR>
+<A HREF="086_L4_ChildSessionControl.html">[Next: Child Session Control]</A> 
+</BODY>
+</HTML>

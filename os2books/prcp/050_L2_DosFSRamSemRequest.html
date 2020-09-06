@@ -1,0 +1,128 @@
+<HTML>
+<HEAD>
+<TITLE>DosFSRamSemRequest</TITLE>
+</HEAD>
+<BODY>
+<H1>DosFSRamSemRequest</H1><!-- entering slot 62 -->Bindings:  <A HREF="225_L2H_DosFSRamSemRequest.html">C</A>,
+<A HREF="400_L2H_DosFSRamSemRequest.html">MASM</A>
+<BR>
+
+<P>
+This call obtains a Fast-Safe (FS) RAM semaphore and records the current
+owner for potential cleanup by a <A HREF="036_L2_DosExitList.html">DosExitList
+</A>routine.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+DosFSRamSemRequest<!-- lm: 0x2 24 -->
+<UL> (FSRamSemStructure, Timeout)
+<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+<B>FSRamSemStructure</B> (PDOSFSRSEM) - input<!-- lm: 0x11 4 -->
+<UL> Address
+of the FS RAM Semaphore data structure. The content of this structure is:
+<!-- lm: 0x2 4 -->
+<P>
+<B>fs_Length</B> (USHORT)<!-- lm: 0x11 7 -->
+<UL> Length in bytes of the
+FSRamSemStructure; 14 is the only valid value.<!-- lm: 0x2 4 -->
+</UL><B> fs_ProcID
+</B>(PID)<!-- lm: 0x11 7 -->
+<UL> Owning process ID; 0 means the semaphore
+is not owned.<!-- lm: 0x2 4 -->
+</UL><B> fs_ThrdID</B> (TID)<!-- lm: 0x11 7 -->
+<UL> Owning
+thread ID; 0 means the semaphore is not owned.<!-- lm: 0x2 4 -->
+</UL><B> fs_UseCount
+</B>(USHORT)<!-- lm: 0x11 7 -->
+<UL> Use count.  The number of times the
+owning thread has issued DosFSRamSemRequest without issuing a corresponding
+<A HREF="049_L2_DosFSRamSemClear.html">DosFSRamSemClear</A>.<!-- lm: 0x2 4 -->
+</UL><B> fs_Client
+</B>(USHORT)<!-- lm: 0x11 7 -->
+<UL> Is a 16-bit pattern used by the owner
+of a semaphore to record maintenance information about the resource managed
+by the semaphore.<!-- lm: 0x2 4 -->
+</UL><B> fs_RAMSem</B> (ULONG)<!-- lm: 0x11 7 -->
+<UL> The
+RAM semaphore data structure used in this request.
+<P>
+Before the initial call to DosFSRamSemRequest, this entire structure must
+be initialized to zero and its length set to 14. Other than fs_Client, the
+caller should not modify any fields in this structure.<!-- lm: 0x2 1 -->
+</UL><B> Timeout
+</B>(LONG) - input<!-- lm: 0x11 4 -->
+<UL> The number of milliseconds to
+wait for the semaphore to be cleared before resuming execution. The meaning
+of the specified values are:<!-- lm: 0x2 4 -->
+<P>
+Value<!-- lm: 0x2 14 -->
+<UL> Definition<!-- lm: 0x2 4 -->
+</UL> -1<!-- lm: 0x2 14 -->
+<UL> The requestor waits indefinitely when the
+semaphore is owned. There is no time out.<!-- lm: 0x2 4 -->
+</UL>  0<!-- lm: 0x2 14 -->
+<UL> There is an immediate return if the semaphore
+is owned.<!-- lm: 0x2 4 -->
+</UL>&gt;0<!-- lm: 0x2 14 -->
+<UL> The value is the number of milliseconds
+to wait, if the semaphore is owned.<!-- lm: 0x2 1 -->
+</UL><B> rc</B> (USHORT)
+- return<!-- lm: 0x11 4 -->
+<UL> Return code descriptions are:<!-- lm: 0x2 4 -->
+<P>
+<LI><!-- lm: 0x2 14 -->NO_ERROR<!-- lm: 0x2 4 --> 121<!-- lm: 0x2 14 -->
+<UL> ERROR_SEM_TIMEOUT
+<!-- lm: 0x2 1 -->
+</UL><B>Remarks</B>
+<P>
+When DosFSRamSemRequest is called, it checks the status of the semaphore.
+ If it is unowned, then DosFSRamSemRequest sets it owned, increments fs_UseCount,
+and returns immediately to the caller.
+<P>
+If the semaphore is owned, the caller has the option to block until the
+semaphore is no longer owned. The unblocking of a DosFSRamSemRequest is
+"level triggered" because it does not actually return unless the semaphore
+remains clear until the affected thread can be redispatched to claim it
+successfully. The Timeout parameter can be used to place an upper bound
+on the amount of time to block before returning, even though the semaphore
+remains owned.
+<P>
+When the thread is done with the protected resource, it calls <A HREF="049_L2_DosFSRamSemClear.html">DosFSRamSemClear</A>.
+ <A HREF="049_L2_DosFSRamSemClear.html">DosFSRamSemClear</A> decrements
+fs_UseCount. Recursive requests for FS RAM semaphores are supported by the
+use count, which keeps track of the number of times the owner has issued
+a DosFSRamSemRequest without a corresponding <A HREF="049_L2_DosFSRamSemClear.html">DosFSRamSemClear</A>.
+If the call to <A HREF="049_L2_DosFSRamSemClear.html">DosFSRamSemClear</A> decrements
+the use count to zero, the semaphore is set unowned, and any threads that
+were blocked waiting for the semaphore resume execution.
+<P>
+The 16-bit field fs_Client is not interpreted by the FS RAM semaphore calls.
+ Instead, it provides the caller with a means of identifying the resource
+being accessed by the owner of the semaphore.  This field is initialized
+to zero when a FS RAM semaphore is first acquired.  The owner may place
+values into this field that describe the resource. These values can be used
+by an exit list handler to determine the appropriate cleanup action.
+<P>
+When a process terminates while owning a FS RAM semaphore, any routines
+in the exit list maintained by <A HREF="036_L2_DosExitList.html">DosExitList
+</A>are given control. These routines take appropriate steps to guarantee
+the integrity of resources owned by the process. To clean up a resource
+protected by a FS RAM semaphore, DosFSRamSemRequest is called to gain ownership
+of the semaphore.  When issued during exit list processing<!-- entering slot 63 --> ,
+DosFSRamSemRequest examines the semaphore to determine if the semaphore
+is owned by the active process. It then forces the owning thread ID to be
+equal to the current thread ID and sets
+<BR>
+fs_Count = 1.  This allows the exit list routine to be programmed without
+any FS RAM semaphore handling instructions.  When the exit list routine
+has completed its operations, it restores the resource for use by others
+by issuing <A HREF="049_L2_DosFSRamSemClear.html">DosFSRamSemClear</A>.
+
+
+<P><HR>
+
+<A HREF="049_L2_DosFSRamSemClear.html">[Back: DosFSRamSemClear]</A> <BR>
+<A HREF="051_L2_DosGetCollate.html">[Next: DosGetCollate]</A> 
+</BODY>
+</HTML>

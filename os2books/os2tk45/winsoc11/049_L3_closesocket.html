@@ -1,0 +1,112 @@
+<HTML>
+<HEAD>
+<TITLE>closesocket()</TITLE>
+</HEAD>
+<BODY>
+<H1>closesocket()</H1><!-- entering slot 52 -->
+<P>
+<B>Description</B>
+<P>
+Close a socket.
+<P>
+
+<PRE>#include &lt;winsock.h&gt;</PRE>
+ 
+<P>
+<B>int FAR PASCAL closesocket ( SOCKET</B><I> s</I><B>);</B><!-- lm: 0x2 1 -->
+<UL>
+<P>
+<I>s</I><!-- lm: 0x11 3 -->
+<UL> A descriptor identifying a socket.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Remarks</B>
+<P>
+This function closes a socket.  More precisely, it releases the socket descriptor
+<I>s</I>, so that further references to<I> s</I> will fail with the error
+WSAENOTSOCK.  If this is the last reference to the underlying socket, the
+associated naming information and queued data are discarded.
+<P>
+The semantics of<B> closesocket</B>() are affected by the socket options
+SO_LINGER and SO_DONTLINGER as follows: 
+<PRE><B>Option               Interval        Type of close           Wait for close?</B>--------------- --------------- ----------------------- ----------------
+SO_DONTLINGER   Don't care      Graceful                No
+
+SO_LINGER       Zero            Hard                    No
+
+SO_LINGER       Non-zero        Graceful                Yes
+</PRE>
+
+<P>
+If SO_LINGER is set (i.e. the<I> l_onoff</I> field of the linger structure
+is non-zero; see <A HREF="019_L2_SocketOptions.html">Socket Options</A>,
+<A HREF="053_L3_getsockopt.html">getsockopt()</A> and <A HREF="067_L3_setsockopt.html">setsockopt()</A>)
+with a zero timeout interval (<I>l_linger</I> is zero),<B> closesocket()
+</B>is not blocked even if queued data has not yet been sent or acknowledged.
+ This is called a "hard" close, because the socket is closed immediately,
+and any unsent data is lost.  Any <A HREF="062_L3_recv.html">recv()</A> call
+on the remote side of the circuit can fail with WSAECONNRESET.
+<P>
+If SO_LINGER is set with a non-zero timeout interval, the<B> closesocket()
+</B>call blocks until the remaining data has been sent or until the timeout
+expires.  This is called a graceful disconnect.  Note that if the socket
+is set to non-blocking and SO_LINGER is set to a non-zero timeout, the call
+to<B> closesocket()</B> will fail with an error of WSAEWOULDBLOCK. If SO_DONTLINGER
+is set on a stream socket (i.e. the<I> l_onoff</I> field of the linger structure
+is zero; see <A HREF="019_L2_SocketOptions.html">Socket Options</A>, <A HREF="053_L3_getsockopt.html">getsockopt()
+</A>and <A HREF="067_L3_setsockopt.html">setsockopt()</A>), the<B> closesocket()
+</B>call will return immediately.  However, any data queued for transmission
+will be sent if possible before the underlying socket is closed.  This is
+also called a graceful disconnect.  Note that in this case the Windows Sockets
+implementation may not release the socket and other resources for an arbitrary
+period, which may affect applications which expect to use all available
+sockets.
+<P>
+<B>Return Value</B>
+<P>
+If no error occurs,<B> closesocket()</B> returns 0. Otherwise, a value of
+SOCKET_ERROR is returned, and a specific error code may be retrieved by
+calling <A HREF="089_L3_WSAGetLastError.html">WSAGetLastError()</A>
+<P>
+<B>Error Codes</B>
+<P>
+<!-- lm: 0x2 1 -->
+<P>
+WSANOTINITIALISED<!-- lm: 0x11 11 -->
+<UL> A successful <A HREF="093_L3_WSAStartup.html">WSAStartup()
+</A>must occur before using this API.<!-- lm: 0x2 1 -->
+</UL> WSAENETDOWN
+<!-- lm: 0x11 11 -->
+<UL>The Windows Sockets implementation has detected
+that the network subsystem has failed.<!-- lm: 0x2 1 -->
+</UL> WSAENOTSOCK
+<!-- lm: 0x11 11 -->
+<UL>The descriptor is not a socket.<!-- lm: 0x2 1 -->
+</UL> WSAEINPROGRESS
+<!-- lm: 0x11 11 -->
+<UL>A blocking Windows Sockets call is in progress.
+<!-- lm: 0x2 1 -->
+</UL>WSAEINTR<!-- lm: 0x11 11 -->
+<UL> The (blocking)
+call was canceled via <A HREF="087_L3_WSACancelBlockingCal.html">WSACancelBlockingCall()
+</A><!-- lm: 0x2 1 -->
+</UL>WSAEWOULDBLOCK<!-- lm: 0x11 11 -->
+<UL> The
+socket is marked as nonblocking and SO_LINGER is set to a nonzero timeout
+value.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>See Also</B>
+<P>
+<A HREF="047_L3_accept.html">accept()</A><B>,</B> <A HREF="069_L3_socket.html">socket()</A><B>,
+</B><A HREF="058_L3_ioctlsocket.html">ioctlsocket()</A><B>,</B> <A HREF="067_L3_setsockopt.html">setsockopt()</A><B>,
+</B><A HREF="085_L3_WSAAsyncSelect.html">WSAAsyncSelect()</A>
+<P>
+
+
+<P><HR>
+
+<A HREF="048_L3_bind.html">[Back: bind()]</A> <BR>
+<A HREF="050_L3_connect.html">[Next: connect()]</A> 
+</BODY>
+</HTML>

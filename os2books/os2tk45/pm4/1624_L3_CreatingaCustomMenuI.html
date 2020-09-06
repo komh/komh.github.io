@@ -1,0 +1,133 @@
+<HTML>
+<HEAD>
+<TITLE>Creating a Custom Menu Item</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating a Custom Menu Item</H1><!-- entering slot 1660 -->
+<P>
+Applications can customize the appearance of an individual menu item by
+setting the MIS_OWNERDRAW style bit for the item.  The operating system
+sends two different messages to an application that include owner-drawn
+menu items:  WM_MEASUREITEM and WM_DRAWITEM.  Both messages include a pointer
+to an OWNERITEM data structure.
+<P>
+WM_MEASUREITEM is sent only once for each owner-drawn item when the menu
+is initialized.  The message is sent to the owner of the menu (typically,
+a frame window), which forwards the message to its client window.  Typically,
+the client window procedure processes WM_MEASUREITEM by filling in the<I> yTop
+</I>and<I> Right</I> fields of the RECTL structure, specified by the<I> rclItem
+</I>field of this OWNERITEM structure; this specifies the size of the rectangle
+needed to enclose the item when it is drawn. The following code fragment
+responds to a WM_MEASUREITEM message.
+<P>
+
+<PRE>    case WM_MEASUREITEM:
+        ((POWNERITEM) mp2)-&gt;rclItem.xRight = 26;
+        ((POWNERITEM) mp2)-&gt;rclItem.yTop = 10;
+        return 0;
+
+</PRE>
+
+<P>
+If a menu item has the MIS_OWNERDRAW style, the owner window receives a
+WM_DRAWITEM message every time the menu item needs to be drawn.  You process
+this message by using the<I> hps</I> and<I> rclItem</I> fields of the OWNERITEM
+structure to draw the item.  There are two situations in which the owner
+window receives a WM_DRAWITEM message:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->When the item must be redrawn completely<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->When the item must be highlighted or have its highlight
+removed<!-- lm: 0x2 1 -->
+</UL>
+<P>
+You can choose to handle one or both of these situations.  Typically, you
+handle the drawing of the item.  You may not want to handle the second situation,
+however, since the system-default behavior (inverting the bits in the item
+rectangle) often is acceptable. The two situations in which a WM_DRAWITEM
+message is received are detected by comparing the values of the<I> fsState
+</I>and<I> fsStateOld</I> fields of the OWNERITEM structure that is sent
+as part of the message.  If the two fields are the same, draw the item.
+ Before drawing the item, however, check its attributes to see whether it
+has the attributes MIA_CHECKED, MIA_FRAMED, or MIA_DISABLED.  Then draw
+the item according to the attributes.
+<P>
+For example, when the checked attribute of an owner-drawn menu item changes,
+the system sends a WM_DRAWITEM message to the item so that it can redraw
+itself and either draw or remove the check mark.  If you want the system-default
+check mark, simply draw the item and leave the<I> fsAttribute</I> and<I> fsAttributeOld
+</I>fields unchanged; the system draws the check mark if necessary.  If
+you draw the check mark yourself, clear the MIA_CHECKED bit in both<I> fsAttribute
+</I>and<I> fsAttributeOld</I> so that the system does not attempt to draw
+a check mark.
+<P>
+In the same example, if<I> fsAttribute</I> and<I> fsAttributeOld</I> are
+not equal, the highlight showing that an item is selected needs to change.
+ The MIA_HILITED bit of the<I> fsAttribute</I> field is set if the item
+needs to be highlighted and is not set if the highlight needs to be removed.
+ If you do not want to provide your own highlighting, you should ignore
+any WM_DRAWITEM message in which<I> fsAttribute</I> and<I> fsAttributeOld
+</I>are not equal.  If you do not alter these two fields, the system performs
+its default highlighting operation.  If you want to provide your own visual
+cue that an item is selected, respond to a WM_DRAWITEM message in which
+the<I> fsAttribute</I> and<I> fsAttributeOld</I> fields are not equal by
+providing the cue and clearing the MIA_HILITED bit of both fields before
+returning from the message.
+<P>
+Likewise, the MIA_CHECKED and MIA_FRAMED bits of<I> fsAttribute</I> and
+<I>fsAttributeOld</I> either can be used to perform the corresponding action
+or passed on, unchanged, so that the system performs the action. The following
+code fragment shows how to respond to a WM_DRAWITEM message when you want
+to draw the item and also be responsible for its highlighted state.
+<PRE>    case WM_DRAWITEM:
+        {
+        POWNERITEM poi;
+        RECTL      rcl;
+        MPARAM     mp2;
+
+        poi = (POWNERITEM) mp2;
+
+        /*
+         * If the new attribute equals the old attribute,
+         * redraw the entire item.
+         */
+
+        if (poi-&gt;fsAttribute == poi-&gt;fsAttributeOld) {
+
+            /*
+             * Draw the item in poi-&gt;hps and poi-&gt;rclItem, and check the
+             * attributes for check marks. If you produce your own check marks,
+             * <!-- entering slot 1661 -->use this line of code:
+             *
+             *     poi-&gt;fsAttributeOld = (poi-&gt;fsAttribute &amp;= ~MIA_CHECKED;
+             */
+
+        }
+
+        /* Else highlight the item or remove its highlight. */
+
+        else if ((poi-&gt;fsAttribute &amp; MIA_HILITED) !=
+                (poi-&gt;fsAttributeOld &amp; MIA_HILITED)) {
+
+            /*
+             * Set bits the same so that the menu window does not highlight
+             * the item or remove its highlight.
+             */
+
+            poi-&gt;fsAttributeOld = (poi-&gt;fsAttribute &amp;= ~MIA_HILITED);
+        }
+        return TRUE; /* TRUE means the item is drawn. */
+        } /* endcase */
+
+</PRE>
+
+<P>
+Responding to WM_DRAWITEM Message
+
+<P><HR>
+
+<A HREF="1623_L3_AddingandDeletingMen.html">[Back: Adding and Deleting Menu Items]</A> <BR>
+<A HREF="1625_L1_MessagesandMessageQu.html">[Next: Messages and Message Queues]</A> 
+</BODY>
+</HTML>

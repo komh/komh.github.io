@@ -1,0 +1,99 @@
+<HTML>
+<HEAD>
+<TITLE>Using Error Handling Methods</TITLE>
+</HEAD>
+<BODY>
+<H1>Using Error Handling Methods</H1><!-- entering slot 127 -->
+<P>
+This section describes, via sample code fragments, how you can use the error
+handling methods. Specifically the first sample code shows how wpQueryError
+retrieves the error identity that was set on an object. The second code
+fragment shows how to design your own error handling system by overriding
+wpSetError.
+<P>
+The following sample code shows how wpQueryError retrieves the error identity
+that was set on an object:
+<PRE>
+<PRE>// METHOD: my_wpDrop
+//
+// DESCRIPTION:
+//   SOMObject
+//     ÀÄÄÄWPObject
+//           ÀÄÄÄWPFileSystem
+//                ÀÄÄÄWPFolder
+//                       ÀÄÄÄMyFolder
+//
+//   When an object is dropped on a folder,
+//   this method is called on the target folder.
+//
+//   This sample code shows how wpQueryError retrieves
+//   the error identity that was set on an object.
+//
+SOM_Scope MRESULT SOMLINK my_wpDrop(MyFolder *self,
+                                    HWND      hwndCnr,
+                                    PDRAGINFO pDragInfo,
+                                    PDRAGITEM pDragItem)
+{
+  MRESULT       mr;        // Return value
+  ULONG         ulError;   // Error code set on folder
+
+  // Clear existing error code
+  _wpSetError(self, NO_ERROR);
+  // Call the parent to handle the drop
+  mr = parent_wpDrop(self, hwndCnr, pDragInfo, pDragItem);
+
+  // If parent returns an error, check to see if the disk is full
+  if (mr == (MRESULT)RC_DROP_ERROR)
+  {
+    // Query the error code set on the folder
+    ulError = _wpQueryError(self);
+    // If the disk is full, display a message to the user
+    if (ulError == ERROR_DISK_FULL)
+    {
+      WinMessageBox(HWND_DESKTOP,
+                    NULLHANDLE,             // Owner Window
+                    "Error Disk Full",      // Body of the message
+                    "Unsuccessful Drop",    // Title of the message
+                    0,                      // Message box id
+                    MB_ERROR | MB_OK);      // Icon and button flags
+    }
+  }
+  return mr;
+}
+
+</PRE>
+</PRE>
+
+<P>
+The following sample code shows shows how to design your own error handling
+system by overriding wpSetError:
+<PRE>// METHOD: my_wpSetError
+//
+// DESCRIPTION:
+//   Sets the error on an object.
+//   User-defined errors can be handled here.
+//
+//   This sample code shows how to design your own
+//   error handling system by overriding wpSetError.
+
+SOM_Scope BOOL SOMLINK my_wpSetError(MyFolder *self,
+                                     ULONG ulErrorId)
+{
+  // Check to see if this is a user-defined error
+  if (ulErrorId &gt; WPERR_USER)
+  {
+    // Handle user-defined errors here
+  }
+  // Call the parent to set the error
+  return (parent_wpSetError(self, ulErrorId));
+}
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="118_L2_AboutErrorHandlingMe.html">[Back: About Error Handling Methods]</A> <BR>
+<A HREF="120_L1_ObjectInformationSet.html">[Next: Object Information: Set/Query Methods]</A> 
+</BODY>
+</HTML>

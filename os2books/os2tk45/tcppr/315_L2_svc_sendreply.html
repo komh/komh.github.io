@@ -1,0 +1,106 @@
+<HTML>
+<HEAD>
+<TITLE>svc_sendreply()</TITLE>
+</HEAD>
+<BODY>
+<H1>svc_sendreply()</H1><!-- entering slot 353 -->
+<P>
+The svc_sendreply() call sends the results of an RPC to the caller.
+<P>
+<B>Syntax</B>
+<PRE>#include &lt;rpc\rpc.h&gt;
+
+bool_t
+svc_sendreply(<I>xprt</I>, <I>outproc</I>, <I>out</I>)
+SVCXPRT *<I>xprt</I>;
+xdrproc_t <I>outproc</I>;
+char *<I>out</I>;
+</PRE>
+
+<P>
+<B>Parameters</B><!-- lm: 0x2 0 -->
+<P>
+<I>xprt</I><!-- lm: 0x11 2 -->
+<UL> Pointer to the caller's transport handle.
+<!-- lm: 0x2 0 -->
+</UL><I>outproc</I><!-- lm: 0x11 2 -->
+<UL> XDR procedure
+that encodes the results.<!-- lm: 0x2 0 -->
+</UL><I> out</I><!-- lm: 0x11 2 -->
+<UL> Pointer
+to the results.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>Description</B>
+<P>
+The service dispatch routine calls the svc_sendreply() call to send the
+results of the call to the caller.
+<P>
+<B>Return Values</B>
+<P>
+The value 1 indicates success; the value 0 indicates an error.
+<P>
+<B>Examples</B>
+<PRE>#define RMTPROGNUM   (u_long)0x3fffffffL#define RMTPROGVER   (u_long)0x1L
+
+...
+
+SVCXPRT *transp;
+
+transp = svcudp_create(RPC_ANYSOCK);
+if (transp == NULL)
+   {
+    fprintf(stderr, "can't create an RPC server transport\n");
+    exit(-1);
+   }
+pmap_unset(RMTPROGNUM, RMTPROGVER);
+if (!svc_register(transp, RMTPROGNUM, RMTPROGVER, rmtprog, IPPROTO_UDP))
+   {
+    fprintf(stderr, "can't register rmtprog() service\n");
+    exit(-1);
+   }
+printf("rmtprog() service registered.\n");
+
+svc_run();
+
+printf("Error:svc_run should never reach this point \n");
+exit(1);
+...
+</PRE>
+ 
+<PRE>
+rmtprog(rqstp, transp)
+struct svc_req *rqstp;
+SVCXPRT *transp;
+{
+
+    int intrecv;
+    int replysend;
+    switch((int)rqstp-&gt;rq_proc)
+     {
+        case PROCNUM0:
+           svc_getargs(transp, xdr_int, &amp;intrecv);
+                      ...
+           /* process intrecv parameter */
+           replysend = ( intrecv * 1000) + 100;
+           /*  send reply to client */
+           if (!svc_sendreply(transp, xdr_int, &amp;replysend))
+              {
+               fprintf(stderr,"can't reply to RPC call\n");
+               exit(-1);
+              }
+           return;
+        case PROCNUM1:
+           ...
+     }
+...
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="314_L2_svc_run.html">[Back: svc_run()]</A> <BR>
+<A HREF="316_L2_svc_socks.html">[Next: svc_socks[ ]]</A> 
+</BODY>
+</HTML>

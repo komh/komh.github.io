@@ -1,0 +1,383 @@
+<HTML>
+<HEAD>
+<TITLE>MIDI Mapper Stream Handler</TITLE>
+</HEAD>
+<BODY>
+<H1>MIDI Mapper Stream Handler</H1><!-- entering slot 202 -->
+<P>
+The MIDI Mapper Stream Handler is used to map MIDI data. This stream handler
+does not interface with an audio device driver directly but is basically
+a "filter" stream handler that filters the MIDI data.  The Audio Stream
+Handler is used to interface to the audio device drivers.
+<P>
+This module is implemented as an OS/2 DLL running at ring 3.
+<P>
+<B>Flushing a Filter Stream Group</B>
+<P>
+A filter stream group requires some extra steps to properly erase its contents.
+ Stop flushes must be sent separately to each stream.  An example stream
+group of one master stream connected through a filter handler to a slave
+stream would need a stop flush sent first to the master stream.  When the
+master stop event is received, the second stop flush must then be sent to
+the slave stream.  Refer to the SHC_STOP command message in the<I> OS/2
+Multimedia Programming Reference</I>.
+<P>
+<B>Application and Media Driver Capabilities</B>
+<P>
+For optimum performance, each application and media driver should have the
+following capabilities:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+SEEK<!-- lm: 0x2 28 -->
+<UL> Seeks the source stream and then the target
+streams.  (The stream time will not be correct if you use another other
+method.)<!-- lm: 0x2 1 -->
+</UL> STOP DISCARD<!-- lm: 0x2 28 -->
+<UL> Stops
+the target streams and waits for all stop events.  Next, it stops the source
+stream and waits for the event.  If a stream is at EOS, an error stream
+that is already stopped will be returned.  Failure to wait for events on
+the source stream will deadlock.<!-- lm: 0x2 1 -->
+</UL> STOP FLUSH<!-- lm: 0x2 28 -->
+<UL> Stops
+the source stream and waits for the stop event.  Next, it stops the target
+streams and waits for the stop events.  Failure to wait for events on the
+source stream will cause deadlock.<!-- lm: 0x2 1 -->
+</UL> STOP PAUSE<!-- lm: 0x2 28 -->
+<UL> Always
+pauses all streams at the same time.  Pausing one stream while leaving another
+running can cause deadlock.<!-- lm: 0x2 1 -->
+</UL> START<!-- lm: 0x2 28 -->
+<UL> Starts
+the source stream and then starts the target streams.  Small MIDI files
+will produce a quick EOS on the source stream.  Do not attempt to START
+or START PREROLL a target stream without first starting the source stream.
+ An attempt to do this will deadlock.<!-- lm: 0x2 1 -->
+</UL> START PREROLL
+<!-- lm: 0x2 28 -->
+<UL>Starts (nonpreroll) the source stream and then starts
+preroll target streams.  If you attempt to START PREROLL all streams, you
+will deadlock.<!-- lm: 0x2 1 -->
+</UL> DESTROY<!-- lm: 0x2 28 -->
+<UL> Destroys
+all streams at the same time.  Do not try to destroy one stream and then
+continue to use another stream.<!-- lm: 0x2 1 -->
+</UL> CREATE and ASSOCIATE
+<!-- lm: 0x2 28 -->
+<UL>All streams must be created and associated before
+any streams can accept commands.  Do not attempt to add another stream later
+on.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+
+<P>
+<B>External Interface Description</B>
+<P>
+The description for the MIDI Mapper Stream Handler external interface follows:
+<!-- lm: 0x2 1 -->
+<P>
+File Name<!-- lm: 0x2 25 -->
+<UL> MISH.DLL<!-- lm: 0x2 1 -->
+</UL> Handler
+Name<!-- lm: 0x2 25 -->
+<UL> MISH<!-- lm: 0x2 1 -->
+</UL> Handler Class
+<!-- lm: 0x2 25 -->
+<UL>MIDISYS<!-- lm: 0x2 1 -->
+</UL> PDD/DLL<!-- lm: 0x2 25 -->
+<UL> DLL
+<!-- lm: 0x2 1 -->
+</UL>Source and Target<!-- lm: 0x2 25 -->
+<UL> This stream
+handler is a filter.  Therefore, it is both a source and a target stream
+handler at the same time.  It consumes MIDI data from the source stream
+and produces mapped MIDI data that goes into the target stream or streams.
+The MIDI Mapper Stream Handler can have one source stream (the master stream).
+
+<P>
+This stream handler does not generate or receive sync pulses, but it can
+be included in a sync group. In fact, MIDI mapping is done by grouping the
+input stream (master stream) with the output streams (slave streams) to
+create a sync group. A stream will be created for each output port. The
+MIDI sync group can be started, stopped, and seeked as a group by using
+the "slaves" flag with each of these calls.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Device Control Blocks</B>
+<P>
+The MIDI Mapper Stream Handler does not support a device control block.
+
+<P>
+<B>Associate Control Blocks</B>
+<P>
+The MIDI Mapper Stream Handler supports the following associate control
+blocks shown in the following figure.
+<PRE>  /******************************************************  *<!-- entering slot 203 --> MISH - MIDI stream handler port-stream table ACB
+  ******************************************************/
+  #define ACBTYPE_MISH       0x0005L   /* MIDI port-stream table        */
+  typedef struct _acb_MISH     /* acbmish - MIDI Assoc. Control Block   */
+     {
+     ULONG     ulACBLen;               /* Length of structure           */
+     ULONG     ulObjType;              /* ACB_MISH                      */
+     HSTREAM   hstreamDefault;         /* Default hstream to use when   */
+                                       /*  mapper is turned off.        */
+     ULONG     ulReserved1;
+     ULONG     ulReserved2;
+     ULONG     ulNumInStreams;
+     HSTREAM   hstreamInMAX[_PORTS];   /* Array of Input streams        */
+     ULONG     ulNumOutStreams;
+     HSTREAM   hstreamOut[MAX_PORTS];  /* Array of Output streams       */
+                                       /* The index into the array is   */
+                                       /*  the source channel for that  */
+                                       /*  stream.                      */
+     } ACB_MISH;
+
+
+ /******************************************************
+  * MISH - MIDI stream handler SET ACB
+  ******************************************************/
+  #define ACBTYPE_SET       0x0006L    /* MIDI set function             */
+  typedef struct _acb_set      /* acbset - Set Assoc. Control Block     */
+     {
+     ULONG     ulACBLen;               /* Length of structure           */
+     ULONG     ulObjType;              /* ACB_SET                       */
+     ULONG     ulFlag;                 /* Set flag                      */
+     ULONG     ulTempo;                /* Not used.                     */
+     } ACB_SET;
+
+  /* ulFlag defines:   */
+  #define MIDI_MAP_ON        0x0000L   /* turn mapping function on      */
+  #define MIDI_MAP_OFF       0x0001L   /* turn mapping function off     */
+</PRE>
+
+<P>
+
+<P>
+<B>Implicit Events (EVENT_IMPLICIT_TYPE) Supported</B>
+<P>
+The following implicit (EVENT_IMPLICIT_TYPE) events for the MIDI Mapper
+Stream Handler are supported:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->EVENT_ERROR
+<P>
+The<I> ulStatus</I> field will contain the error code.  The possible error
+codes that can be generated and returned by this stream handler are:<!-- lm: 0x2 8 -->
+<UL>
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_BUFFER_RETURNED<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_DEVICE_OVERRUN<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_STREAM_STOP_PENDING<!-- lm: 0x2 6 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Explicit Events Supported</B>
+<P>
+No explicit events are supported for the MIDI Mapper Stream Handler.
+<P>
+<B>Stream Handler Commands Supported</B>
+<P>
+The following stream handler commands (SHC) are supported.  Refer to the
+<I>OS/2 Multimedia Programming Reference</I> for a description of these
+SHC commands and the error return codes.<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->SHC_ASSOCIATE
+<P>
+Possible Return Codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->NO_ERROR<!-- lm: 0x2 8 --> -<!-- lm: 0x2 11 -->
+<UL>ERROR_INVALID_FUNCTION
+<!-- lm: 0x2 8 -->
+</UL>-<!-- lm: 0x2 11 -->
+<UL>ERROR_INVALID_STREAM (invalid<I> hstream</I> or
+<I>hid</I>-or both-passed)<!-- lm: 0x2 8 -->
+</UL>-<!-- lm: 0x2 11 -->
+<UL>ERROR_INVALID_OBJTYPE (only ACBTYPE_MMIO is
+supported)<!-- lm: 0x2 8 -->
+</UL>-<!-- lm: 0x2 11 -->
+<UL>ERROR_INVALID_BUFFER_SIZE (<I>ulAcbLen</I> is
+smaller than needed)<!-- lm: 0x2 8 -->
+</UL>-<!-- lm: 0x2 11 -->
+<UL>ERROR_STREAM_NOT_STOP (stream must be stopped
+to associate)<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_CLOSE
+
+<P>
+Possible Return Codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->NO_ERROR<!-- lm: 0x2 8 --> -<!-- lm: 0x2 11 -->
+<UL>ERROR_INVALID_FUNCTION
+<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL>SHC_CREATE
+
+<P>
+Possible Return Codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->NO_ERROR<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_FUNCTION<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_STREAM_CREATION<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_STREAM<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_DEVICE_NOT_FOUND<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_BLOCK<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_SPCBKEY<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_ALLOC_RESOURCES<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_DESTROY
+
+<P>
+Possible Return Codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->NO_ERROR<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_FUNCTION<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_STREAM<!-- lm: 0x2 6 -->
+</UL> Possible
+Return Codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->NO_ERROR<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_FUNCTION<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_ENUMERATE_PROTOCOLS
+
+<P>
+Possible Return Codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->NO_ERROR<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_FUNCTION<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_INSUFF_BUFFER<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_GET_PROTOCOL
+
+<P>
+Possible Return Codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->NO_ERROR<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_FUNCTION<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_SPCBKEY<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_INSTALL_PROTOCOL
+
+<P>
+Possible Return Codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->NO_ERROR<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_FUNCTION<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_SPCBKEY<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_ALLOC_RESOURCES<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_NEGOTIATE_RESULT
+
+<P>
+Possible Return Codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->NO_ERROR<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_FUNCTION<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_STREAM (invalid<I> hstream</I> or<I> hid</I>-or
+both-passed)<!-- lm: 0x2 6 -->
+</UL><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_SEEK
+
+<P>
+Possible Return Codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->NO_ERROR<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_FUNCTION<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_STREAM_NOT_SEEKABLE<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_DATA_ITEM_NOT_SEEKABLE<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_STREAM (invalid<I> hstream</I> or<I> hstream
+</I>and<I> hid</I> passed)<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_NOT_SEEKABLE_BY_TIME<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_STREAM_NOT_STOP<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL> <!-- lm: 0x2 6 -->
+<UL>SHC_START
+
+<P>
+Possible Return Codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->NO_ERROR<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_FUNCTION<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_STREAM (invalid<I> hstream</I> or<I> hstream
+</I>and<I> hid</I> passed)<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_DATA_ITEM_NOT_SPECIFIED (stream must be associated)
+<!-- lm: 0x2 6 --><!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL>SHC_STOP
+
+<P>
+Possible Return Codes:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->NO_ERROR<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_FUNCTION<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_INVALID_STREAM (invalid<I> hstream</I> or<I> hstream
+</I>and<I> hid</I> passed)<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->ERROR_STREAM_NOT_STARTED<!-- lm: 0x2 6 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Base Stream Protocol Control Blocks Supported</B>
+<P>
+The MIDI Mapper Stream Handler supports the following stream protocol control
+blocks (SPCBs).<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->DATATYPE_MIDI<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Stream Handler Limits</B>
+<P>
+Limited by system memory.
+<P>
+
+
+<P><HR>
+
+<A HREF="157_L2_AudioStreamHandler.html">[Back: Audio Stream Handler]</A> <BR>
+<A HREF="159_L2_FileSystemStreamHand.html">[Next: File System Stream Handler]</A> 
+</BODY>
+</HTML>

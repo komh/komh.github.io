@@ -1,0 +1,231 @@
+<HTML>
+<HEAD>
+<TITLE>The mkDPIset() Function</TITLE>
+</HEAD>
+<BODY>
+<H1>The mkDPIset() Function</H1><!-- entering slot 42 -->
+<P>
+<B>Syntax</B>
+<PRE>#include &lt;snmp_dpi.h&gt;
+
+snmp_dpi_set_packet *mkDPIset(    /* Make DPI set packet tree */
+  snmp_dpi_set_packet *packet_p,  /* ptr to SET structure     */
+  char                *group_p,   /* ptr to group ID(sub-tree)*/
+  char                *instance_p,/* ptr to instance OIDstring*/
+  int                  value_type,/* value type: SNMP_TYPE_xxx*/
+  int                  value_len, /* length of value          */
+  void                *value_p);  /* ptr to value             */
+</PRE>
+
+<P>
+<B>Parameters</B><!-- lm: 0x2 1 -->
+<UL>
+<P>
+packet_p<!-- lm: 0x11 3 -->
+<UL> A pointer to a chain of snmp_dpi_set_packet
+structures.  Pass a NULL pointer if this is the first structure to be created.
+<!-- lm: 0x2 1 -->
+</UL>group_p<!-- lm: 0x11 3 -->
+<UL> A pointer to a NULL
+terminated character string that represents the registered sub-tree that
+caused this GET request to be passed to this DPI subagent.  The sub-tree
+must have a trailing dot.<!-- lm: 0x2 1 -->
+</UL> instance_p<!-- lm: 0x11 3 -->
+<UL> A
+pointer to a NULL terminated character string that represents the rest,
+which is the piece following the sub-tree part, of the OBJECT IDENTIFIER
+of the variable instance being accessed.  Use of the term<I> instance_p
+</I>here should not be confused with an OBJECT instance because this string
+may consist of a piece of the OBJECT IDENTIFIER plus the INSTANCE IDENTIFIER.
+<!-- lm: 0x2 1 -->
+</UL>value_type<!-- lm: 0x11 3 -->
+<UL> The type of the
+value.
+<P>
+See <A HREF="069_L2_DPISNMPValueTypes.html">DPI SNMP Value Types</A> for
+a list of currently defined value types.<!-- lm: 0x2 1 -->
+</UL> value_len
+<!-- lm: 0x11 3 -->
+<UL>This is the value that specifies the length in octets
+of the value pointed to by the<I> value</I> field.  The length may be zero
+if the value is of type SNMP_TYPE_NULL.
+<P>
+The maximum value is 64K -1.  However, the implementation often makes the
+length significantly less.  The OS/2 implementation limit is 4K.  The SNMP_DPI_BUFFSIZE
+in the snmp_dpi.h include file defines the limit for OS/2.<!-- lm: 0x2 1 -->
+</UL> value_p
+<!-- lm: 0x11 3 -->
+<UL>A pointer to the actual value.  This field may contain
+a NULL pointer if the value is of implicit or explicit type SNMP_TYPE_NULL.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Return Values</B><!-- lm: 0x2 6 -->
+<UL>
+<P>
+If successful and a chain of one or more packets was passed in the<I> packet_p
+</I>parameter, the same pointer that was passed in<I> packet_p</I> is returned.
+ A new dynamically allocated structure has then been added to the end of
+that chain of snmp_dpi_get_packet structures.<!-- lm: 0x2 6 -->
+<P>
+If successful and a NULL pointer was passed in the<I> packet_p</I> parameter,
+a pointer to a new dynamically allocated structure is returned.<!-- lm: 0x2 6 -->
+<P>
+If failure, a NULL pointer is returned.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Description</B>
+<P>
+The mkDPIset() function is used at the subagent side to prepare a chain
+of one or more snmp_dpi_set_packet structures.  This chain is used to create
+a DPI RESPONSE packet by a call to mkDPIresponse() which can be sent to
+the DPI peer, which is normally a DPI capable SNMP agent.
+<P>
+The chain of snmp_dpi_set_packet structures can also be used to create a
+DPI TRAP packet that includes varBinds as explained in <A HREF="041_L2_ThemkDPItrapFunction.html">The
+mkDPItrap() Function</A>.
+<P>
+For the value_len, the maximum value is 64K -1.  However, the implementation
+often makes the length significantly less.  For example the SNMP PDU size
+may be limited to 484 bytes at the SNMP manager or agent side.  In this
+case, the total response packet cannot exceed 484 bytes, so a value_len
+is limited by that.  You can send the DPI packet to the agent, but the manager
+will never see it.
+<P>
+<B>Examples</B>
+<PRE>  #include &lt;snmp_dpi.h&gt;  unsigned char       *pack_p;
+  snmp_dpi_hdr        *hdr_p;
+  snmp_dpi_set_packet *set_p;
+  long int             num;
+
+  hdr_p = pDPIpacket(pack_p)      /* parse incoming packet */
+                                  /* assume it's in pack_p */
+  if (hdr_p) {
+     /* analyze packet, assume GET, no error */
+     set_p = mkDPIset(snmp_dpi_set_packet_NULL_p,
+                      "1.3.6.1.2.3.4.5.", "1.0",
+                      SNMP_TYPE_Integer32,
+                      sizeof(num), &amp;num);
+     if (set_p) {
+        pack_p = mkDPIresponse(hdr_p,
+                      SNMP_ERROR_noError,
+                      0L, set_p);
+        if (pack_p)
+           /* send packet to subagent */
+        } /* endif */
+     } /* endif */
+  } /* endif */
+</PRE>
+
+<P>
+The mkDPIset() function is used at the agent side to prepare a chain of
+one or more snmp_dpi_set_packet structures.  This chain is normally anchored
+in an snmp_dpi_hdr structure that has<!-- entering slot 43 --> its<I> packet_type
+</I>field set to SNMP_DPI_SET, SNMP_DPI_COMMIT or SNMP_DPI_UNDO.  When all
+varBinds have been prepared into snmp_dpi_set_packet structures, a call
+can be made to mkDPIpacket() which will serialize the DPI parse tree into
+a DPI packet that can be sent to the DPI peer, which is normally a subagent.
+
+<P>
+<B>Examples</B>
+<PRE>  #include &lt;snmp_dpi.h&gt;
+  unsigned char       *pack_p;
+  snmp_dpi_hdr        *hdr_p;
+  long int             num;
+
+  hdr_p = mkDPIhdr(SNMP_DPI_SET);
+  if (hdr_p) {
+     hdr_p-&gt;data_u.set_p =
+            mkDPIset(snmp_dpi_set_packet_NULL_p,
+                     "1.3.6.1.2.3.4.5.", "1.0",
+                     SNMP_TYPE_Integer32,
+                     sizeof(num), &amp;num);
+     if (hdr_p-&gt;data_u.set_p) {
+        pack_p = mkDPIpacket(hdr_p);
+        if (pack_p)
+           /* send packet to subagent */
+        } /* endif */
+     } /* endif */
+  } /* endif */
+</PRE>
+
+<P>
+If you must chain many snmp_dpi_set_packet structures, be sure to note that
+the packets are chained only by forward pointers.  It is recommended that
+you use the last structure in the existing chain as the<I> packet_p</I> parameter.
+ Then, the underlying code does not have to scan through a possibly long
+chain of structures in order to chain the new structure at the end.
+<P>
+In the next example let's assume that we want to chain 20 snmp_dpi_set_packet
+structures as a response to a GETBULK.
+<P>
+<B>Examples</B>
+<PRE>  #include &lt;snmp_dpi.h&gt;
+  unsigned char       *pack_p;
+  snmp_dpi_hdr        *hdr_p;
+  snmp_dpi_set_packet *first_p;
+  snmp_dpi_set_packet *set_p;
+  long int             num[20];
+  int                  i;
+
+  hdr_p = pDPIpacket(pack_p);    /* parse incoming packet    */
+                                 /* assume it's in pack_p    */
+  if (hdr_p) {
+     /* analyze packet, assume GETBULK, no error. In this    */
+     /* example we do not check max_repetitions as we should */
+     set_p   = snmp_dpi_set_packet_NULL_p;
+     first_p = snmp_dpi_set_packet_NULL_p;
+     for (i=0; i&lt;20; i++) {
+         char instance[5];
+
+         sprintf(instance, "%1.%d", i+1);
+         set_p = mkDPIset(set_p,
+                      "1.3.6.1.2.3.4.5.", instance,
+                      SNMP_TYPE_Integer32,
+                      sizeof(num), &amp;num[i]);
+         if (set_p) {
+            if (first_p) continue; /* OK, iterate for loop  */
+            first_p = set_p;       /* remember first one    */
+         } else if (first_p) {     /* failed to mkDPIset    */
+            fDPIset(first_p)       /* free allocated memory */
+            first_p = snmp_dpi_set_packet_NULL_p; /* reset  */
+         } /* endif */
+     } /* endfor */
+     if (first_p) {
+        pack_p = mkDPIresponse(hdr_p,
+                      SNMP_ERROR_noError,
+                      0L, first_p);
+        if (pack_p)
+           /* send packet to subagent */
+        } /* endif */
+     } /* endif */
+  } /* endif */
+</PRE>
+
+<P>
+<B>Related Information</B><!-- lm: 0x2 6 -->
+<UL>
+<P>
+<A HREF="043_L2_ThepDPIpacketFunctio.html">The pDPIpacket() Function</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="039_L2_ThemkDPIresponseFunc.html">The mkDPIresponse() Function
+</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="041_L2_ThemkDPItrapFunction.html">The mkDPItrap() Function</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="057_L2_Thesnmp_dpi_hdrStruc.html">The snmp_dpi_hdr Structure</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="060_L2_Thesnmp_dpi_set_pack.html">The snmp_dpi_set_packet Structure
+</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="069_L2_DPISNMPValueTypes.html">DPI SNMP Value Types</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="070_L2_ValueRepresentation.html">Value Representation</A><!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="039_L2_ThemkDPIresponseFunc.html">[Back: The mkDPIresponse() Function]</A> <BR>
+<A HREF="041_L2_ThemkDPItrapFunction.html">[Next: The mkDPItrap() Function]</A> 
+</BODY>
+</HTML>

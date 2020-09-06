@@ -1,0 +1,96 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>The REXX API functions</TITLE>
+</HEAD>
+<BODY>
+<H1>The REXX API functions</H1><!-- entering slot 235 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+If the function RxFuncAdd</A> returns 0 this only means that the new function
+is registered. It does<B> not</B> mean that you can use this function! The
+same is true for the function RxFuncQuery</A>.
+<P>
+Example:
+<PRE> 
+
+  say rxFuncAdd( "TestFunc1", "REXXUTIL", "TestFunc1" )
+                        /* result is 0 (= function registered!)       */
+  say rxFuncQuery( "TestFunc1" )
+                        /* result is 0 (= function registered!)       */
+  call TestFunc1
+                        /* error: Function not found!                 */
+</PRE>
+
+<P>
+
+<P>
+To use a DLL which does<B> not</B> exist in one of the directoies in the
+LIBPATH</A> you can use a fully qualified path for the name of the DLL
+containing the functions. But be aware that functions like SysLoadFuncs
+</A>will<B> not</B> work in this case because they expect the DLL to be
+in the LIBPATH</A>. You have to register all needed functions from the
+DLL manually using RxFuncAdd</A> (see <A HREF="239_L3_RxFuncAdd.html">RxFuncAdd
+</A>for a restriction). This is true for REXXUTIL and mostly all DLLs exporting
+a function to register the other DLL functions. (Source: Documentation for
+the <A HREF="847_L3_REXXDosStartSessionT.html">REXX DosStartSessionTool</A>)
+
+<P>
+A name for an external function (the first parameter for the function<B> RxFuncAdd</B>)
+can only be registered once. So, if you want to reRegister a name you must
+first deRegister it using RxFuncDrop</A> before registering it (or use
+another REXX name, see <A HREF="223_L2_LoadingmorethanoneDL.html">Loading
+more than one DLL with the same function names</A>)
+<P>
+The conclusion from the statements above: To register a function you should
+use a routine like the following:
+<PRE> 
+LoadMyDll:
+                        /* install a temporary error handler          */
+                        /* note: the previous error handler is auto-  */
+                        /*       maticly restored a the end of the    */
+                        /*       routine                              */
+  SIGNAL ON SYNTAX NAME InitDllError
+
+                        /* set a marker                               */
+  dllInitOK = 0
+
+                        /* first deregister the function              */
+  call rxFuncDrop "InitMyDll"
+
+                        /* load the function                          */
+  dummy = rxFuncAdd( "InitMyDll", "MYDLL", "InitMyDLL" )
+
+                        /* call the init function                     */
+  call InitMyDll
+  dllInitOK = 1         /* set the marker, this statement is not      */
+                        /* executed if the previous statement fails!  */
+
+InitDllError:
+                        /* deRegister the name if the init call       */
+                        /* failed                                     */
+  if dllInitOK = 0 then
+    call rxFuncDrop "InitMyDll"
+
+                        /* returns: 1 - dll init ok                   */
+                        /*          0 - dll init error                */
+RETURN dllInitOK
+</PRE>
+
+<P>
+ 
+<P>
+<B>Note: </B> see also <A HREF="295_L2_DLLloadingfailed.html">DLL loading
+failed</A>, <A HREF="223_L2_LoadingmorethanoneDL.html">Loading more than
+one DLL with the same function names</A> and <A HREF="240_L3_ThefunctionRxFuncDro.html">RxFuncDrop
+</A><!-- lm: 0x2 1 -->
+<UL>
+<P>
+ 
+
+<P><HR>
+
+<A HREF="237_L3_ThefunctionLINES.html">[Back: The function LINES()]</A> <BR>
+<A HREF="239_L3_RxFuncAdd.html">[Next: RxFuncAdd]</A> 
+</BODY>
+</HTML>

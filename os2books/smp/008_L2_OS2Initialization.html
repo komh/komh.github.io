@@ -1,0 +1,103 @@
+<HTML>
+<HEAD>
+<TITLE>OS/2 Initialization</TITLE>
+</HEAD>
+<BODY>
+<H1>OS/2 Initialization</H1><!-- entering slot 9 -->
+<P>
+OS/2 requires a PSD for system initialization. The system will display an
+error message if a valid PSD for the current platform cannot be installed.
+
+<P>
+The following is a list of steps, in the order in which they occur, that
+are executed after a PSD is installed. If any step does not complete successfully,
+the system initialization process will stop, and a fatal error message will
+be displayed.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->After a PSD is successfully installed, its Init
+function is invoked. This function is used to allocate and initialize any
+resources that the PSD may require, as well as initializing the state of
+the hardware.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The kernel determines the number of usable processors
+on the current platform by using the PSD_GET_NUM_OF_PROCS function.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The kernel allocates all resources required to
+support the additional processors. This step determines what to allocate
+based on the results of the previous step.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The PSD's processor initialization function is
+invoked on the current processor (CPU0).<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->An MP daemon is created for CPU0. An MP daemon
+is a thread that never goes away, which is used for MP operations by a specific
+processor.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->An MP daemon is created for the next logical
+processor.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The PSD's start processor call is invoked to
+start the next logical processor. The PSD should only start the specified
+processor, and then return (see the PSD_START_PROC function for more detail).
+The started processor will spin in a tight loop waiting for a variable to
+be cleared. This variable is referred to as the processor initialization
+real mode spinlock.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Upon return from the PSD's start processor call,
+the processor initialization real mode spinlock is cleared.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->CPU0 will spin in a tight loop waiting for a
+variable to be cleared. This variable is referred to as the CPU0 spinlock.
+<!-- lm: 0x2 0 -->
+<P>
+10.<!-- lm: 0x2 4 -->
+<UL>The started processor continues execution of the
+kernel's real mode processor initialization code now that processor's initialization
+real mode spinlock has been cleared.<!-- lm: 0x2 0 -->
+</UL> 11.<!-- lm: 0x2 4 -->
+<UL>The
+started processor sets up all protect mode and paging information, and switches
+into protect mode with paging enabled.<!-- lm: 0x2 0 -->
+</UL> 12.<!-- lm: 0x2 4 -->
+<UL>Up
+to this point, the started processor has been running on a small processor
+initialization stack (It has not been running as an OS/2 thread). The current
+context is switched to that of this processors MP daemon.<!-- lm: 0x2 0 -->
+</UL> 13.<!-- lm: 0x2 4 -->
+<UL>OS/2
+calls the PSD's processor initialization function for the current processor.
+<!-- lm: 0x2 0 -->
+</UL>14.<!-- lm: 0x2 4 -->
+<UL>The PSD indicates that
+the processor has been initialized.<!-- lm: 0x2 0 -->
+</UL> 15.<!-- lm: 0x2 4 -->
+<UL>The
+started processor will spin in a tight loop waiting for a variable to be
+cleared. This variable is referred to as the processor initialization protect
+mode spinlock.<!-- lm: 0x2 0 -->
+</UL> 16.<!-- lm: 0x2 4 -->
+<UL>The CPU0
+spinlock is cleared.<!-- lm: 0x2 0 -->
+</UL> 17.<!-- lm: 0x2 4 -->
+<UL>System
+initialization continues on CPU0 now that its spinlock has been cleared.
+<!-- lm: 0x2 0 -->
+</UL>18.<!-- lm: 0x2 4 -->
+<UL>Steps 6, through 17 are
+repeated until all processors have been started.<!-- lm: 0x2 0 -->
+</UL> 19.<!-- lm: 0x2 4 -->
+<UL>The
+rest of system initialization continues normally, on CPU0.<!-- lm: 0x2 0 -->
+</UL> 20.<!-- lm: 0x2 4 -->
+<UL>After
+the system is fully initialized, the processor initialization protect mode
+spinlock is cleared. This allows CPU1 through CPU-N to start executing code.
+<!-- lm: 0x2 0 -->
+</UL>
+
+<P><HR>
+
+<A HREF="007_L2_PlatformSpecificDriv.html">[Back: Platform Specific Driver Architecture and Structure]</A> <BR>
+<A HREF="009_L2_PSDFunctionGlossary.html">[Next: PSD Function Glossary]</A> 
+</BODY>
+</HTML>

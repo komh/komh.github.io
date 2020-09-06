@@ -1,0 +1,78 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>SHC_STOP - Remarks</TITLE>
+</HEAD>
+<BODY>
+<H1>SHC_STOP - Remarks</H1><!-- entering slot 838 -->
+<P>
+Commands the stream handler to stop streaming data.  The flags will indicate
+the type of stop (discard, flush, pause) initiated through SPI.  The<I> pause
+stop</I> immediately pauses the stream by sending an SHC_STOP message to
+both the source and target stream handlers.  Both stream handlers must shut
+down and not request any more buffers from the Sync/Stream Manager.  The
+Sync/Stream Manager fails any<I> get buffer</I> requests, so that a stream
+handler cannot continue to stream.  All stream data remains valid.  The
+stream can be restarted by issuing <A HREF="547_L2_SpiStartStream.html">SpiStartStream</A>.
+
+<P>
+The<I> discard stop</I> immediately stops the stream by sending an SHC_STOP
+message to both the source and target stream handlers.  Both stream handlers
+must shut down and not request any more buffers from the Sync/Stream Manager.
+ But they must return all buffers to the Sync/Stream Manager.  The Sync/Stream
+Manager fails any<I> get buffer</I> requests, so that a stream handler cannot
+continue to stream.  All stream data is discarded.  The stream can be restarted,
+but the data in the discarded buffers is lost.
+<P>
+The<I> flush stop</I> sends an SHC_STOP message to both the source and target
+stream handlers.  The stream does not stop, however.  The source stream
+handler must shut down and not request any more buffers from the Sync/Stream
+Manager.  It must return any buffers to the Sync/Stream Manager.  The Sync/Stream
+Manager fails any<I> get buffer</I> requests from the source stream handler,
+so that it cannot continue to fill buffers.  The target stream handler continues
+to stream data until all buffers are empty.  The stream can be restarted
+with no loss of data.
+<P>
+For discard and flush stops, the Sync/Stream Manager detects when the stream
+handlers have stopped and returned all buffers.  At this point, the Sync/Stream
+Manager notifies the application media control device with an EVENT_STREAM_STOPPED
+message.  Also, both stream handlers must return all owned buffers to the
+Sync/Stream Manager before the stream EVENT_STREAM_STOPPED message is sent
+to the application media control device.
+<P>
+If a stream is paused and the application issues a discard stop, the stream
+buffers is discarded and the stream is put in a stopped state.  If a stream
+is paused and a flush stop is issued, the remaining stream buffers is transferred
+to the target stream handler.  In other words, the stream begins<I> playing
+</I>again.
+<P>
+Slave streams can be stopped independently of the master stream.  When a
+slave stream stops, the synchronized relationship is not broken, but the
+slave stream is quiesced.  The master stream and any other slaves continue
+to stream.  If the stopped slave stream is restarted, a new master-to-slave
+time offset is established which the slave stream maintains until it is
+either stopped again, or the master is stopped.  This enables slave streams
+to regain synchronization at any asynchronous point in time, for example,
+in response to another stream event from the master.  Slave stream time
+and master-stream time are not always identical.  Once a slave stream is
+stopped, the master stream time can continue to increment.  When the slave
+stream is restarted, its stream time increments at the same rate as the
+master stream.  Any slave in a synchronized relationship can be arbitrarily
+started or stopped without affecting the activity of the master stream or
+any other slave stream.  When the SPI_STOP_SLAVES flag is set, the master
+streams, as well as the slave streams stop.
+<P>
+<B>Note: </B> Typically, data streaming continues until the end of the stream.
+ Then the Sync/Stream Manager sends an EVENT_EOS message to the application
+media control device's event routine.  The Sync/Stream Manager detects EVENT_EOS
+and EVENT_STREAM_STOPPED and notifies the application.  Therefore, the stream
+handler does not report these events to the Sync/Stream Manager.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+
+<P><HR>
+
+<A HREF="836_L2H_SHC_STOPDescription.html">[Back: SHC_STOP - Description]</A> <BR>
+<A HREF="838_L2H_SHC_STOPRelatedMessa.html">[Next: SHC_STOP - Related Messages]</A> 
+</BODY>
+</HTML>

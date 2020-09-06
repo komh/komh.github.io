@@ -1,0 +1,312 @@
+<HTML>
+<HEAD>
+<TITLE>Using Communication Windows</TITLE>
+</HEAD>
+<BODY>
+<H1>Using Communication Windows</H1><!-- entering slot 273 -->
+<P>
+To position windows or graphics within an application-controlled window,
+the IPF communication object requires a communication object window. For
+example, an application-controlled window can be used to represent the workplace,
+with an interactive, simulated application window positioned on the workplace.
+However, because IPF sizes and positions the application-controlled window
+after returning from the call to a communication object, the communication
+object cannot size and position the simulated application window until after
+it has created the window and returned control to IPF.
+<P>
+The dilemma is resolved because the communication object can receive HM_INFORM
+messages after<B> :acviewport.</B> has been processed by IPF and the communication
+object has created an active communication object window. Upon receiving
+the HM_INFORM message from IPF, the window procedure can then create the
+simulated application window and position it within the application-controlled
+window.
+<P>
+The following C-language source code contains the communication object ComWindow
+that creates a communication window and processes messages from IPF.
+<PRE>#define INCL_WIN
+#define INCL_DOS
+
+#include &lt;os2.h&gt;
+
+/* Define ID used with reftype = inform attribute in the link tag */
+/* in tagged source for help information */
+
+#define SIMULATE_APPWINDOW 1000
+
+MRESULT EXPENTRY ComWindowProc (HWND hwnd, USHORT msg, MPARAM mp1, MPARAM mp2);
+MRESULT EXPENTRY SimWindowProc (HWND hwnd, USHORT msg, MPARAM mp1, MPARAM mp2);
+
+HWND hComWindow = NULL;
+HWND hSimWindow = NULL;
+HWND hComClientWindow;
+HWND hSimClientWindow;
+HWND PreviousComWindow;
+HWND PreviousHwnd;
+
+USHORT EXPENTRY ComWindow (pACVP, ObjectInfo)
+
+PACVP pACVP;
+PCH   ObjectInfo;
+{
+
+ULONG FrameFlags=0L;
+
+/* Register class for communication window */
+
+   WinRegisterClass (pACVP-&gt;hAB,
+                     "CLASS_COMM",
+                     (PFNWP)ComWindowProc,
+                     CS_SYNCPAINT | CS_SIZEREDRAW | CS_MOVENOTIFY, 8);
+
+/* Register class for simulated application window */
+
+   WinRegisterClass (pACVP-&gt;hAB,
+                     "CLASS_APPSIM",
+                     (PFNWP)SimWindowProc,
+                     CS_SYNCPAINT | CS_SIZEREDRAW | CS_MOVENOTIFY, 4);
+
+/* Create the communication window */
+
+hComWindow = WinCreateStdWindow (pACVP-&gt;hWndParent,
+                                 0L,
+                                 &amp;FrameFlags,
+                                 (PSZ)"CLASS_COMM",
+                                 NULL,
+                                 0L,
+                                 (HMODULE)NULL,
+                                 0L,
+                                 (PHWND)&amp;amphComClientWindow);
+</PRE>
+
+<PRE>/* Return handle of Communication frame window to IPF */
+
+pACVP-&gt;hWndACVP=hComWindow;
+
+/* Send a message to IPF indicating that it should talk to our */
+/* communication window */
+
+PreviousComWindow = WinSendMsg (pACVP-&gt;hWndParent,
+                                HM_SET_OBJCOM_WINDOW,
+                                (MPARAM)hComWindow,
+                                (MPARAM)hComWindow);
+
+/* Save handle of IPF's communication window in window word of the */
+/* communication window */
+
+WinSetWindowULong (hComClientWindow, 0L, (ULONG)PreviousComWindow);
+
+return FALSE;
+}
+MRESULT EXPENTRY ComWindowProc (HWND hwnd, USHORT msg, MPARAM mp1, MPARAM mp2)
+{
+    HPS      hps;
+    RECTL    Rect;
+
+    ULONG FrameFlags = FCF_TITLEBAR   | FCF_SYSMENU |
+                       FCF_SIZEBORDER | FCF_MINMAX  ;
+    switch (msg)
+    {
+
+        case HM_INFORM:
+
+            switch ((USHORT)mp1)
+            {
+
+                case SIMULATE_APPWINDOW:
+
+                    /* create the application window */
+
+                    hSimWindow = WinCreateStdWindow (hwnd,
+                                                     WS_VISIBLE,
+                                                     &amp;FrameFlags,
+                                                     (PSZ)"CLASS_APPSIM",
+                                                     NULL,
+                                                     0L,
+                                                     (HMODULE)NULL,
+                                                     0L,
+                                                     (PHWND)&amp;hSimClientWindow);
+</PRE>
+
+<PRE>                    WinSetWindowText (hSimWindow, "Application X");
+
+                    WinSendMsg (hSimWindow,
+                                WM_SETICON,
+                                WinQuerySysPointer (HWND_DESKTOP, SPTR_APPICON,
+                                FALSE),  NULL);
+
+                    /* get the size of the communication client window */
+
+                    WinQueryWindowRect (hwnd, &amp;Rect);
+
+                    /* adjust the size of the application window within the  */
+                    /* communication client window                           */
+
+                    Rect.xLeft = Rect.xRight / 12;
+                    Rect.yBottom = Rect.yTop / 5;
+                    Rect.xRight = Rect.xLeft * 10;
+                    Rect.yTop = Rect.yBottom * 3;
+
+                    /* position the application window within the */
+                    /* communication client window                */
+
+                    WinSetWindowPos (hSimWindow, HWND_TOP,
+                                     (SHORT)Rect.xLeft,
+                                     (SHORT)Rect.yBottom,
+                                     (SHORT)Rect.xRight,
+                                     (SHORT)Rect.yTop,
+                                     (SWP_SHOW | SWP_SIZE |
+                                      SWP_MOVE | SWP_ACTIVATE));
+
+                    return (MRESULT)TRUE;
+            }
+
+        case WM_PAINT:
+
+            hps = WinBeginPaint (hwnd, (HPS)NULL, (PRECTL)NULL);
+            WinQueryWindowRect (hwnd, &amp;Rect);
+            WinFillRect (hps, &amp;Rect, CLR_RED);
+            WinEndPaint (hps);
+            break;
+
+        case WM_CLOSE:
+
+            WinDestroyWindow (<!-- entering slot 274 -->WinQueryWindow (hwnd, QW_PARENT));
+            return (MRESULT)TRUE;
+</PRE>
+
+<PRE>        case WM_DESTROY:
+
+            PreviousHwnd = (HWND)WinQueryWindowULong (hwnd, 0L);
+            WinSendMsg (WinQueryWindow (hwnd, QW_PARENT),
+                        HM_SET_OBJCOM_WINDOW,
+                        PreviousHwnd,
+                        NULL);
+            break;
+    }
+
+    return (WinDefWindowProc (hwnd, msg, mp1, mp2));
+}
+
+/* Create the simulated frame window */
+
+MRESULT EXPENTRY SimWindowProc(HWND hwnd, USHORT msg, MPARAM mp1, MPARAM mp2)
+{
+    HPS      hps;
+    RECTL    Rect;
+
+    switch (msg)
+    {
+
+        case WM_PAINT:
+
+            hps = WinBeginPaint (hwnd, (HPS)NULL, (PRECTL)NULL);
+            WinQueryWindowRect (hwnd, &amp;Rect);
+            WinFillRect (hps, &amp;Rect, CLR_WHITE);
+            WinEndPaint (hps);
+            break;
+
+        case WM_CLOSE:
+
+            WinDestroyWindow (WinQueryWindow (hwnd, QW_PARENT));
+            return (MRESULT)TRUE;
+
+        case WM_DESTROY:
+
+            PreviousHwnd = (HWND)WinQueryWindowULong (hwnd, 0L);
+            WinSendMsg (WinQueryWindow (hwnd, QW_PARENT),
+                        HM_SET_OBJCOM_WINDOW,
+                        PreviousHwnd,
+                        NULL);
+            break;
+    }
+
+    return (WinDefWindowProc (hwnd, msg, mp1, mp2));
+}
+</PRE>
+
+<P>
+
+<P>
+The following shows the tagging that communicates with the communication
+object through the<B> reftype=inform</B> attribute of<B> :link.</B>. The
+contents of the right window are defined by IPF.  The contents of the left
+window are defined and controlled by the communication object<B> ComWindow
+</B>and resides in<B> INFORM.DLL</B>.
+<PRE><B>:userdoc.</B>
+<B>:docprof ctrlarea=none.</B>
+<B>:h1 id=</B>examp5 <B>scroll=</B>none
+    <B>x=left y=bottom width=</B>100% <B>height=</B>100%.
+Interacting with Application Windows on the Workplace
+.*
+<B>:link reftype=hd refid=</B>mytxt5
+      <B>vpx=</B>left <B>vpy=</B>bottom <B>vpcx=</B>50% <B>vpcy=</B>100%
+      <B>titlebar=none scroll=none auto split.</B>
+.*
+<B>:acviewport dll='</B>inform<B>'</B>
+            <B>objectname='</B>ComWindow<B>'</B>
+            <B>objectid=</B>1
+            <B>objectinfo='</B>optional<B>'</B>
+            <B>vpx=</B>right <B>vpy=</B>bottom
+            <B>vpcx=</B>50% <B>vpcy=</B>100%.
+.*
+.*
+<B>:link reftype=inform res=</B>1000 <B>auto</B>.
+<B>:h1 hide id=</B>mytxt5.My text
+<B>:p.</B>
+This window could contain an explanation of how to interact with
+the application-controlled window displayed on the right.
+<B>:euserdoc.</B>
+</PRE>
+
+<P>
+In the previous example, IPF processes<B> :acviewport.</B> as follows:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->It loads INFORM.DLL and calls the procedure ComWindow.
+<!-- lm: 0x2 2 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 6 -->ComWindow passes the value of<B> objectid=</B> and
+<B>objectinfo=</B>.  These attributes are place holders for this example.
+<!-- lm: 0x2 2 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 6 -->ComWindow creates a communication window that
+will receive the HM_INFORM messages from IPF when it processes the<B> reftype=inform
+</B>attribute of<B> :link.</B>.
+<P>
+When the HM_INFORM message is sent to IPF, IPF creates and displays the
+simulated application window.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following figure displays the windows from the previous tagging example.
+
+<P>
+<!-- Unable to decode bitmap format --><IMG SRC="258_L3_UsingCommunicationWi_36.gif" WIDTH=586 HEIGHT=380>
+<P>
+An Application-Controlled Window.  The communication object window is a
+functioning frame window.
+<P>
+
+<P>
+Communication windows also are useful when the same communication object
+is used to support multiple application-controlled windows in help information.
+ For example, you can use the same IPF communication object to represent
+different simulated application windows from one window to another.  Using
+the previous examples, this is accomplished in two steps.<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Add another<B> :h1.</B> window definition to the tagged
+source for the help information.  A different number is specified in the
+<B>res=</B> attribute for the<B> :link.</B> tag that has the<B> reftype=inform
+</B>attribute<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Add the corresponding<B> res=</B> number as another
+possible value of the parameter to the HM_INFORM message. It is processed
+accordingly by the communication object window procedure<!-- lm: 0x2 1 -->
+</UL> 
+
+<P><HR>
+
+<A HREF="257_L2_WritingtheCommunicat.html">[Back: Writing the Communication Object Code]</A> <BR>
+<A HREF="259_L1_ChangingHelpInformat.html">[Next: Changing Help Information at Run Time (DDF)]</A> 
+</BODY>
+</HTML>

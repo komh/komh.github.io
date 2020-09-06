@@ -1,0 +1,90 @@
+<HTML>
+<HEAD>
+<TITLE>Inference Rules</TITLE>
+</HEAD>
+<BODY>
+<H1>Inference Rules</H1><!-- entering slot 25 -->
+<P>
+Inference rules allow you to define rules that can be used for more than
+one file. When NMAKE32 encounters a target/dependency statement with no
+commands, it looks for an inference rule that specifies how to create the
+targets based on the defined .SUFFIXES extensions, the defined inference
+rules, and the target/dependent base file names.
+<P>
+In order for an inference rule to be applied, three conditions must be met:
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->The extensions of the target file and the dependent
+file must be defined in the .SUFFIXES: target<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->There must be a valid inference rule with correct
+path specification defined.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The target and dependent must have the same base file
+name.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+A valid  inference rule, with local directory path specification, starts
+in the first column of the description file, and consists of the dependent
+extension, followed by the target extension and a colon. The command block
+starts on the following line, and must be preceded by at least one space.
+
+<PRE>   .extension1.extension2:       [command..]
+</PRE>
+
+<P>
+Given a target/dependent statement, with the same base file name, and valid
+file extensions in the .SUFFIXES: target, NMAKE32 will search for a defined
+inference rule, and execute the rule if available. If the target and all
+dependents exist, and a rule cannot be inferred, the target is assumed to
+be "up to date".
+<P>
+<B>Example:</B>
+<PRE>  .c.obj:
+     icc -c -Fo$@  $&lt;
+
+  hello.obj : hello.c
+</PRE>
+
+<P>
+Similarly, given a target without a dependent or a command block, NMAKE32
+will infer a dependent file from the targets base file name and all inference
+rules defined with the target's file extension. The inference rules are
+searched in the order that they are defined in the .SUFFIXES target.
+<P>
+<B>Example:</B>
+<PRE>  .SUFFIXES: .c .asm .obj .exe
+
+  .obj.exe:
+     icc -fe$@ $&lt;
+
+  .c.obj:
+     icc -c -f$@ $&lt;
+
+  .asm.obj:
+       masm $&lt;;
+
+  target.exe: header.h
+  target.obj:
+</PRE>
+
+<P>
+In the preceding example, NMAKE32 will search for an inference rule that
+builds a .exe file, it will locate the .exe.obj rule, using the target filename
+and the source extension, target.obj will be inferred as a dependent. It
+will then check to see if it can locate an up-to-date target.obj on disk,
+or can build one.  When NMAKE32 locates target.obj as a target defined in
+the description file, it will try to build it. In order to build this file
+it will use the same inference rule process to infer the dependent target.c
+(searching extensions in the order given by .SUFFIXES). If target.c did
+not exist on disk or could be built from the description file, the next
+inference rule evaluated would be .asm.obj:, and the next inferred dependent
+would be target.asm.
+
+<P><HR>
+
+<A HREF="023_L3_ExplicitCommandProce.html">[Back: Explicit Command Processing]</A> <BR>
+<A HREF="025_L3_DefaultInferenceRule.html">[Next: Default Inference Rules]</A> 
+</BODY>
+</HTML>

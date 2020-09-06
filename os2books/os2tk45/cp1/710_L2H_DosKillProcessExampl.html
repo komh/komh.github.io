@@ -1,0 +1,63 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosKillProcess - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosKillProcess - Example Code</H1><!-- entering slot 718 -->
+<P>
+This example uses DosKillProc to kill itself. It creates and opens a queue
+as a way of getting the PID for the process. In the end, it sleeps for up
+to 45 seconds, to ensure that the process was killed by this API.
+<PRE>#define INCL_DOSQUEUES   /* DOS Queue values */
+#define INCL_DOSPROCESS  /* DOS thread and process values */
+#define INCL_DOSERRORS   /* DOS error values */
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+int main(USHORT argc, PCHAR argv[]) {
+
+   PSZ         szQueueName  = "\\QUEUES\\OF\\DATA\\WAITING\\FOR\\SERVICE";
+   HQUEUE      hqSpecialQue = NULLHANDLE; /* Queue handle                   */
+   REQUESTDATA Request      = {0};        /* Reques */
+   PID         pidOwner     = 0;
+   APIRET      rc           = NO_ERROR;   /* Return code                    */
+
+   rc = DosCreateQueue(&amp;hqSpecialQue,    /* Queue handle                    */
+             QUE_FIFO |                  /* First-In First-Out order        */
+             QUE_CONVERT_ADDRESS,        /* Convert 16-bit addresses to 32  */
+             szQueueName);               /* Name of the queue to create     */
+
+   if (rc!= NO_ERROR) {
+      printf ("DosCreateQueue error: return code = %u\n", rc);
+      return 1;       }
+
+   rc = DosOpenQueue (&amp;pidOwner,         /* PID of queue owner              */
+                      &amp;hqSpecialQue,     /* Handle for created queue        */
+                      szQueueName);      /* Name of the queue to open       */
+
+   if (rc!= NO_ERROR) {
+      printf ("DosOpenQueue error: return code = %u\n", rc);
+      return 1;       }
+
+           /* Kill the queue owner (which is us) */
+
+   rc = DosKillProcess(0, pidOwner);
+   if (rc != NO_ERROR) {
+      printf("DosKillProcess error: return code = %u\n", rc);
+      return 1;
+   }
+
+   rc = DosSleep(45000L);    /* Dead code */
+
+   return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="709_L2H_DosKillProcessRelate.html">[Back: DosKillProcess - Related Functions]</A> <BR>
+<A HREF="711_L2H_DosKillProcessTopics.html">[Next: DosKillProcess - Topics]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,210 @@
+<HTML>
+<HEAD>
+<TITLE>Processing a SET/COMMIT/UNDO Request</TITLE>
+</HEAD>
+<BODY>
+<H1>Processing a SET/COMMIT/UNDO Request</H1><!-- entering slot 90 -->
+<P>
+These three requests can come in one of these sequences:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->SET, COMMIT<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->SET, UNDO<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->SET, COMMIT, UNDO<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The normal sequence is SET and then COMMIT.  When we receive a SET request,
+we must make preparations to accept the new value.  For example, check that
+it is for an existing object and instance, check the value type and contents
+to be valid, allocate memory, but we must not yet make the change.
+<P>
+If there are no SET errors, the next request we receive will be a COMMIT
+request.  It is then that we must make the change, but we must also keep
+enough information such that we can UNDO the change later if we get a subsequent
+UNDO request.  The latter may happen if the agent discovers any errors with
+other subagents while processing requests that belong to the same original
+SNMP SET packet.  All the varBinds in the same SNMP request PDU must be
+processed "as if atomic".
+<P>
+When the DPI packet is parsed, the snmp_dpi_hdr structure shows in the<I> packet_type
+</I>that this is an SNMP_DPI_SET, SNMP_DPI_COMMIT, or SNMP_DPI_UNDO packet.
+ In that case, the packet_body contains a pointer to a SET-varBind, represented
+in an snmp_dpi_get_packet structure.  COMMIT and UNDO have same varBind
+data as SET upon which they follow:
+<PRE>struct dpi_set_packet {  char                   *object_p;   /* ptr to OIDstring     */
+  char                   *group_p;    /* ptr to sub-tree      */
+  char                   *instance_p; /* ptr to rest of OID   */
+  unsigned char           value_type; /* SNMP_TYPE_xxxx       */
+  unsigned short          value_len;  /* value length         */
+  char                   *value_p;    /* ptr to value itself  */
+  struct dpi_set_packet  *next_p;     /* ptr to next in chain */
+};
+typedef struct dpi_set_packet        snmp_dpi_set_packet;
+#define snmp_dpi_set_packet_NULL_p   ((snmp_dpi_set_packet *)0)
+</PRE>
+
+<P>
+Assuming we have registered example sub-tree dpiSimpleMIB and a GET request
+comes in for one variable dpiSimpleString.0 so that is object 1 instance
+0 in our sub-tree, and also assuming that the agent knows about our compiled
+dpiSimpleMIB so that it knows this is a DisplayString as opposed to just
+an arbitrary OCTET_STRING, the pointers in the snmp_dpi_set_packet structure
+would have pointers and values like:
+<PRE>object_p    -&gt;  "1.3.6.1.4.1.2.2.1.5.2.0"
+group_p     -&gt;  "1.3.6.1.4.1.2.2.1.5."
+instance_p  -&gt;  "2.0"
+value_type  -&gt;  SNMP_TYPE_DisplayString
+value_len   -&gt;  8
+value_p     -&gt;  pointer to the value to be set
+next_p      -&gt;  snmp_dpi_get_packet_NULL_p
+</PRE>
+
+<P>
+If there are multiple varBinds in a SET request, each one is represented
+in a snmp_dpi_set_packet structure and all the snmp_dpi_set_packet structures
+are chained via the next pointer.  As long as the next pointer is not the
+snmp_dpi_set_packet_NULL_p pointer, there are more varBinds in the list.
+
+<P>
+Now we can analyze the varBind structure for whatever checking we want to
+do.  Once we are ready to make a response that contains the value of the
+variable, we may prepare a new SET-varBind.  However, by definition, the
+response to a successful SET is exactly the same as the SET request.  So
+there is no need to return any varBinds. A response with SNMP_ERROR_noError
+and an index of zero will do.  If there is an error, a response with the
+SNMP_ERROR_xxxx error code and an index pointing to the varBind in error
+(counting starts at 1) will do.
+<P>
+The following code example returns a response.  We assume that there are
+no errors in the request, but proper code should do the checking for that.
+ We also do not check if the varBind in the COMMIT and/or UNDO is the same
+as that in the SET request.  A proper agent would make sure that is the
+case, but a proper subagent may want to verify that for itself.  We only
+do one check that this is dpiSimpleString.0, and if it is not, we return
+a noCreation.  This may not be correct, the mainline<!-- entering slot 91 --> does
+not even return a response.
+<PRE>static int do_set(snmp_dpi_hdr *hdr_p, snmp_dpi_set_packet *pack_p)
+{
+       unsigned char       *packet_p;
+       int                  rc;
+       int                  index       = 0;
+       int                  error       = SNMP_ERROR_noError;
+       snmp_dpi_set_packet *varBind_p;
+
+       varBind_p =                        /* init the varBind chain  */
+          snmp_dpi_set_packet_NULL_p;     /* to a NULL pointer       */
+
+       if (!pack_p-&gt;instance_p ||
+           (strcmp(pack_p-&gt;instance_p,"2.0") != 0))
+       {
+
+          if (pack_p-&gt;instance_p &amp;&amp;
+             (strncmp(pack_p-&gt;instance_p,"1.",2) == 0))
+          {
+             error = SNMP_ERROR_notWritable;
+          } else if (pack_p-&gt;instance_p &amp;&amp;
+             (strncmp(pack_p-&gt;instance_p,"2.",2) == 0))
+          {
+             error = SNMP_ERROR_noCreation;
+          } else if (pack_p-&gt;instance_p &amp;&amp;
+             (strncmp(pack_p-&gt;instance_p,"3.",2) == 0))
+          {
+             error = SNMP_ERROR_notWritable;
+          } else {
+             error = SNMP_ERROR_noCreation;
+          } /* endif */
+
+          packet_p = mkDPIresponse(       /* Make DPIresponse packet */
+                    hdr_p,                /* ptr parsed request      */
+                    error,                /* all is OK, no error     */
+                    1,                    /* index is 1, 1st varBind */
+                    varBind_p);           /* varBind response data   */
+
+          if (!packet_p) return(-1);      /* If it failed, return    */
+
+          rc  = DPIsend_packet_to_agent(  /* send RESPONSE packet    */
+                handle,                   /* on this connection      */
+                packet_p,                 /* this is the packet      */
+                DPI_PACKET_LEN(packet_p));/* and this is its length  */
+
+          return(rc);                     /* return retcode          */
+       }
+
+       switch (hdr_p-&gt;packet_type) {
+       case SNMP_DPI_SET:
+         if ((pack_p-&gt;value_type != SNMP_TYPE_DisplayString) &amp;&amp;
+             (pack_p-&gt;value_type != SNMP_TYPE_OCTET_STRING))
+         {  /* check octet string in case agent has no compiled MIB  */
+            error = SNMP_ERROR_wrongType;
+            break;                        /* from switch             */
+         } /* endif */
+         if (new_val_p) free(new_val_p);  /* free these memory areas */
+         if (old_val_p) free(old_val_p);  /* if we allocated any     */
+         new_val_p   = (char *)0;
+         old_val_p   = (char *)0;
+         new_val_len = 0;
+         old_val_len = 0;
+
+         new_val_p =                      /* allocate memory for     */
+             malloc(pack_p-&gt;value_len);   /* new value to set        */
+         if (new_val_p) {                 /* If success, then also   */
+            memcpy(new_val_p,             /* copy new value to our   */
+                   pack_p-&gt;value_p,       /* own and newly allocated */
+                   pack_p-&gt;value_len);    /* memory area.            */
+            new_val_len = pack_p-&gt;value_len;
+         } else {                         /* Else failed to malloc,  */
+            error = SNMP_ERROR_genErr;    /* so that is a genErr     */
+            index = 1;                    /* at first varBind        */
+         } /* endif */
+         break;
+       case SNMP_DPI_COMMIT:
+         old_val_p = cur_val_p;           /* save old value for undo */
+         cur_val_p = new_val_p;           /* make new value current  */
+         new_val_p = (char *)0;           /* keep only 1 ptr around  */
+         old_val_len = cur_val_len;       /* and keep lengths correct*/
+         cur_val_len = new_val_len;
+         new_val_len = 0;
+         /* may need to convert from ASCII to native if OCTET_STRING */
+         break;
+       case SNMP_DPI_UNDO:
+         if (new_val_p) {                 /* free allocated memory   */
+            free(new_val_p);
+            new_val_p   = (char *)0;
+            new_val_len = 0;
+         } /* endif */
+         if (old_val_p) {
+            if (cur_val_p) free(cur_val_p);
+            cur_val_p   = old_val_p;      /* reset to old value      */
+            cur_val_len = old_val_len;
+            old_val_p   = (char *)0;
+            old_val_len = 0;
+         } /* endif */
+         break;
+       } /* endswitch */
+
+       packet_p = mkDPIresponse(          /* Make DPIresponse packet */
+                    hdr_p,                /* ptr parsed request      */
+                    error,                /* all is OK, no error     */
+                    index,                /* index is zero, no error */
+                    varBind_p);           /* varBind response data   */
+
+       if (!packet_p) return(-1);         /* If it failed, return    */
+
+       rc  = DPIsend_packet_to_agent(     /* send RESPONSE packet    */
+                handle,                   /* on this connection      */
+                packet_p,                 /* this is the packet      */
+                DPI_PACKET_LEN(packet_p));/* and this is its length  */
+
+       return(rc);                        /* return retcode          */
+} /* end of do_set() */
+</PRE>
+
+
+<P><HR>
+
+<A HREF="082_L2_ProcessingaGETNEXTRe.html">[Back: Processing a GETNEXT Request]</A> <BR>
+<A HREF="084_L2_ProcessinganUNREGIST.html">[Next: Processing an UNREGISTER Request]</A> 
+</BODY>
+</HTML>

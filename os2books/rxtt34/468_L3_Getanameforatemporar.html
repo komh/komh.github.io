@@ -1,0 +1,119 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Get a name for a temporary file</TITLE>
+</HEAD>
+<BODY>
+<H1>Get a name for a temporary file</H1><!-- entering slot 486 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* routine to get an unique name for a temporary file                 */
+
+                        /* example call                               */
+  tempFile = GetTempFile()
+  if tempFile &lt;&gt; "" then
+    say "The name of the temporary file is " || tempFile
+  else
+    say "Error: Cannot find a name for a temporary file!"
+
+                        /* close &amp; delete the temporary file          */
+  if tempFile &lt;&gt; "" then
+  do
+    call stream tempFile, "C", "CLOSE"
+    '@del "' || tempFile || '"2&gt;NUL 1&gt;NUL'
+  end /* if tempFile &lt;&gt; "" then */
+
+exit 0
+
+/* ------------------------------------------------------------------ */
+/* function: Get an unique name for a temporary file                  */
+/*                                                                    */
+/* call:     GetTempFile {noOfTrys} {,targetDir}                      */
+/*                                                                    */
+/* where:    noOfTrys - no. of trys                                   */
+/*                      (optional, def.: 999)                         */
+/*           targetDir - target dir for the file                      */
+/*                       The directory must exist                     */
+/*                       (optional, def.: use the environment         */
+/*                       variable TEMP, the environment variable      */
+/*                       TMP or the current directory [in this order])*/
+/*                                                                    */
+/* returns:  name of the file                                         */
+/*           or "" if no name was found                               */
+/*                                                                    */
+/* note:     If GetTempFile finds a name for a new temporary file,    */
+/*           it opens this file to prevent it from being used by      */
+/*           another process!                                         */
+/*           The name of the file is in the format $$nnn$$.TMP where  */
+/*           nnn is a number between 000 and 999.                     */
+/*                                                                    */
+/*           RXTT v2.90: Added parameter noOfTrys and tPath           */
+/*                                                                    */
+GetTempFile: PROCEDURE expose (exposeList)
+  parse arg noOfTrys, tPath                                  /* v2.90 */
+
+  if noOfTrys = '' | datatype( noOfTrys ) &lt;&gt; 'NUM' then      /* v2.90 */
+    noOfTrys = 999                                           /* v2.90 */
+
+  if tPath = '' then                                         /* v2.90 */
+  do
+                        /* get the path for the temporary file        */
+    tPath = value( "TEMP", , prog.__Env )
+    if tPath = "" then
+      tPath = value( "TMP", , prog.__Env )
+    if tPath = "" then
+      tPath = directory()
+
+    tPath = translate( tPath )                               /* v2.20 */
+  end /* if */
+
+  tName = ""
+                        /* save the current drive and directory       */
+  CurDir = directory()
+
+                        /* get the drive with the directory for the   */
+                        /* temporary files                            */
+  CurTDrive = filespec( "Drive", tPath )
+
+                        /* save the current directory of the drive    */
+                        /* with the directory for temporary files!    */
+  CurTDir = directory( curTDrive )
+
+  if directory( tPath ) = tPath then
+  do
+
+                        /* restore the current directory of the drive */
+                        /* with the directory for temporary files!    */
+    call directory CurTDir
+                        /* restore the current drive and directory    */
+    call directory CurDir
+
+    tPath = strip( tPath, "B", '"' )
+    if right( tPath, 1 ) &lt;&gt; "\" then
+      tPath = tPath || "\"
+
+    do i=0 to noOfTrys
+      tName = tPath || "$$" || right( "000" || i, 3 ) || "$$" || ".TMP"
+      if stream( tName, "C", "QUERY EXISTS" ) = "" then
+        if stream( tName, "C",,
+                   "OPEN WRITE" ) = "READY:" then            /* v2.20 */
+          leave i
+
+      tName = ""
+    end /* do i=1 to noOfTrys */
+  end /* if directory() = ... */
+
+RETURN tName
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="467_L3_Checkifafileexist.html">[Back: Check if a file exist]</A> <BR>
+<A HREF="469_L3_Searchafile.html">[Next: Search a file]</A> 
+</BODY>
+</HTML>

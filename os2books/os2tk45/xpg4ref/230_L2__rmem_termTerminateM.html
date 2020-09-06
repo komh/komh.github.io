@@ -1,0 +1,291 @@
+<HTML>
+<HEAD>
+<TITLE>_rmem_term - Terminate Memory Functions for Subsystem DLL</TITLE>
+</HEAD>
+<BODY>
+<H1>_rmem_term - Terminate Memory Functions for Subsystem DLL</H1><!-- entering slot 245 -->_rmem_term - Terminate Memory Functions for Subsystem
+DLL<!-- lm: 0x2 1 -->
+<UL>
+<P>
+Syntax
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<PRE>int _rmem_term(void);
+/* no header file - defined in run-time startup code */
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Description
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+<LI>rmem_term terminates the memory functions for subsystem DLLs.  It is
+only needed for DLLs where the run-time library is statically linked.
+<P>
+By default, all DLLs call<I> The Developer's Toolkit</I> _DLL_InitTerm function,
+which in turn calls _rmem_term for you. However, if you are writing your
+own _DLL_InitTerm function (for example, to perform actions other than memory
+initialization and termination), and your DLL statically links to the C
+run-time libraries, you need to call _rmem_term from your subsystem _DLL_InitTerm
+function. (For DLLs with a run-time environment, this termination is done
+by _CRT_term.)
+<P>
+If your DLL contains C++ code, you must also call __ctordtorTerm<B> before
+</B>you call _rmem_term to ensure that static constructors and destructors
+are terminated correctly. __ctordtorTerm is defined in the run-time startup
+code as:
+<PRE>   void __ctordtorTerm(void);
+</PRE>
+
+<P>
+Once you have called _rmem_term, you cannot call any other library functions.
+
+<P>
+If your DLL is dynamically linked, you cannot call library functions in
+the termination section of your _DLL_InitTerm function. If your termination
+routine requires calling library functions, you must register the termination
+routine with DosExitList. Note that all DosExitList routines are called
+before DLL termination routines.<!-- lm: 0x2 1 -->
+</UL> Returns
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+<LI>rmem_term returns 0 if the memory functions were successfully terminated.
+A return value of -1 indicates an error.<!-- lm: 0x2 1 -->
+</UL> Example
+Code
+<P>
+<!-- lm: 0x2 10 -->
+<UL>
+<P>
+The following example shows the _DLL_InitTerm function from<I> The Developer's
+Toolkit</I> sample program for building subsystem DLLs, which calls _rmem_term
+to terminate the library memory functions.
+<PRE>#pragma strings( readonly )
+/******************************************************************************/
+/*                                                                            */
+/* _DLL_InitTerm - Initialization/Termination function for the DLL that is    */
+/*                 invoked by the loader.                                     */
+/*                                                                            */
+/* DLLREGISTER  - Called by _DLL_InitTerm for each process that loads the     */
+/*                DLL.                                                        */
+/*                                                                            */
+/* DLLDEREGISTER- Called by _DLL_InitTerm for each process that frees the     */
+/*                DLL.                                                        */
+/*                                                                            */
+/******************************************************************************/
+
+#define  INCL_DOS
+#define  INCL_DOSERRORS
+#define  INCL_NOPMAPI
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+
+unsigned long _DLL_InitTerm( unsigned long hModule, unsigned long ulFlag );
+
+static unsigned long DLLREGISTER( void );
+static unsigned long DLLDEREGISTER( void );
+
+#define SHARED_SEMAPHORE_NAME "\\SEM32\\SAMPLE05\\DLL.LCK"
+
+/* The following data will be per-process data.  It will not be shared among  */
+/* different processes.                                                       */
+
+static HMTX  hmtxSharedSem;    /* Shared semaphore                            */
+static ULONG ulProcessTotal;   /* Total of increments for a process           */
+static PID   pidProcess;       /* Process identifier                          */
+
+/* This is the global data segment that is shared by every process.           */
+
+#pragma data_seg( GLOBAL_SEG )
+
+static ULONG ulProcessCount;                /* total number of processes      */
+
+/* _DLL_InitTerm() - called by the loader for DLL initialization/termination  */
+/* This function must return a non-zero value if successful and a zero value  */
+/* if unsuccessful.                                                           */
+unsigned long _DLL_InitTerm( unsigned long hModule, unsigned long ulFlag )
+   {
+   APIRET rc;
+</PRE>
+
+<PRE>
+   /* If ulFlag is zero then initialization is required:                      */
+   /*    If the shared memory pointer is NULL then the DLL is being loaded    */
+   /*    for the first time so acquire the named shared storage for the       */
+   /*    process control structures.  A linked list of process control        */
+   /*    structures will be maintained.  Each time a new process loads this   */
+   /*    DLL, a new process control structure is created and it is inserted   */
+   /*    <!-- entering slot 246 -->at the end of the list by calling DLLREGISTER.                       */
+   /*                                                                         */
+   /* If ulFlag is 1 then termination is required:                            */
+   /*    Call DLLDEREGISTER which will remove the process control structure   */
+   /*    and free the shared memory block from its virtual address space.     */
+
+   switch( ulFlag )
+      {
+   case 0:
+         if ( !ulProcessCount )
+            {
+            _rmem_init();
+            /* Create the shared mutex semaphore.                             */
+            if ( ( rc = DosCreateMutexSem( SHARED_SEMAPHORE_NAME,
+                                           &amp;hmtxSharedSem,
+                                           0,
+                                           FALSE ) ) != NO_ERROR )
+               {
+               printf( "DosCreateMutexSem rc = %lu\n", rc );
+               return 0;
+               }
+            }
+
+         /* Register the current process.                                     */
+         if ( DLLREGISTER( ) )
+            return 0;
+         break;
+
+      case 1:
+         /* De-register the current process.                                  */
+         if ( DLLDEREGISTER( ) )
+            return 0;
+
+         _rmem_term();
+         break;
+
+      default:
+         return 0;
+      }
+
+   /* Indicate success.  Non-zero means success!!!                            */
+
+   return 1;
+   }
+
+/* DLLREGISTER - Registers the current process so that it can use this        */
+/*               subsystem.  Called by _DLL_InitTerm when the DLL is first    */
+/*               loaded for the current process.                              */
+
+static unsigned long DLLREGISTER( void )
+   {
+   APIRET rc;
+   PTIB ptib;
+   PPIB ppib;
+</PRE>
+
+<PRE>
+   /* Get the address of the process and thread information blocks.           */
+   if ( ( rc = DosGetInfoBlocks( &amp;ptib, &amp;ppib ) ) != NO_ERROR )
+      {
+      printf( "DosGetInfoBlocks rc = %lu\n", rc );
+      return rc;
+      }
+
+   /* Open the shared mutex semaphore for this process.                       */
+   if ( ( rc = DosOpenMutexSem( SHARED_SEMAPHORE_NAME,
+                                &amp;hmtxSharedSem ) ) != NO_ERROR )
+      {
+      printf( "DosOpenMutexSem rc = %lu\n", rc );
+      return rc;
+      }
+
+   /* Acquire the shared mutex semaphore.                                     */
+   if ( ( rc = DosRequestMutexSem( hmtxSharedSem,
+                                   SEM_INDEFINITE_WAIT ) ) != NO_ERROR )
+      {
+      printf( "DosRequestMutexSem rc = %lu\n", rc );
+      DosCloseMutexSem( hmtxSharedSem );
+      return rc;
+      }
+
+   /* Increment the count of processes registered.                            */
+   ++ulProcessCount;
+
+   /* Initialize the per-process data.                                        */
+   ulProcessTotal = 0;
+   pidProcess = ppib-&gt;pib_ulpid;
+
+   /* Tell the user that the current process has been registered.             */
+   printf( "\nProcess %lu has been registered.\n\n", pidProcess );
+
+   /* Release the shared mutex semaphore.                                     */
+   if ( ( rc = DosReleaseMutexSem( hmtxSharedSem ) ) != NO_ERROR )
+      {
+      printf( "DosReleaseMutexSem rc = %lu\n", rc );
+      return rc;
+      }
+
+   return 0;
+   }
+</PRE>
+
+<PRE>
+/* DLLDEREGISTER - Deregisters the current process from this subsystem.       */
+/*                 Called by _DLL_InitTerm when the DLL is freed for the      */
+/*                 last time by the current process.                          */
+
+static unsigned long DLLDEREGISTER( void )
+   {
+   APIRET rc;
+
+   /* Acquire the shared mutex semaphore.                                     */
+   if ( ( rc = DosRequestMutexSem( hmtxSharedSem,
+                                   SEM_INDEFINITE_WAIT ) ) != NO_ERROR )
+      {
+      printf( "DosRequestMutexSem rc = %lu\n", rc );
+      return rc;
+      }
+
+   /* Decrement the count of processes registered.                            */
+   --ulProcessCount;
+
+   /* Tell the user that the current process has been deregistered.           */
+   printf( "\nProcess %lu has been deregistered.\n\n", pidProcess );
+
+   /* Release the shared mutex semaphore.                                     */
+   if ( ( rc = DosReleaseMutexSem( hmtxSharedSem ) ) != NO_ERROR )
+      {
+      printf( "DosReleaseMutexSem rc = %lu\n", rc );
+      return rc;
+      }
+
+   /* Close the shared mutex semaphore for this process.                      */
+   if ( ( rc = DosCloseMutexSem( hmtxSharedSem ) ) != NO_ERROR )
+      {
+      printf( "DosCloseMutexSem rc = %lu\n", rc );
+      return rc;
+      }
+
+   return 0;
+   }
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Related Information
+<P>
+<!-- lm: 0x2 10 -->
+<UL><!-- lm: 0x2 12 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 15 --><LI>Building Subsystem DLLs" in the<I> VisualAge
+C++ Programming Guide</I><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="090_L2__CRT_initInitializeD.html"><LI>CRT_init
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="091_L2__CRT_termTerminateDL.html"><LI>CRT_term
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="097_L2__DLL_InitTermInitial.html"><LI>DLL_InitTerm
+</A><!-- lm: 0x2 12 -->
+<BR>
+<LI><!-- lm: 0x2 15 --><A HREF="229_L2__rmem_initInitialize.html"><LI>rmem_init
+</A><!-- lm: 0x2 10 -->
+</UL>
+
+<P><HR>
+
+<A HREF="229_L2__rmem_initInitialize.html">[Back: _rmem_init - Initialize Memory Functions for Subsystem DLL]</A> <BR>
+<A HREF="231_L2__rmtmpRemoveTemporar.html">[Next: _rmtmp - Remove Temporary Files]</A> 
+</BODY>
+</HTML>

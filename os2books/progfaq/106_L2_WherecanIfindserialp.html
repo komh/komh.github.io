@@ -1,0 +1,262 @@
+<HTML>
+<HEAD>
+<TITLE>Where can I find serial port sample code?</TITLE>
+</HEAD>
+<BODY>
+<H1>Where can I find serial port sample code?</H1><!-- entering slot 125 -->
+<P>
+Q)  Does anyone have any C sample code showing how to use the serial port
+under OS/2 using DosOpen() and DosDevIoCtl()?
+<P>
+A) As a matter of fact, yes.  :-) 
+<PRE>-=-= extracted from a silly &amp; specialized program =-=-=-=-==-=-=
+
+/* dtp.c -- D-dial Terminal Program: the first hack */
+
+//-- an annoying detail
+
+#define INCL_BASE
+#define INCL_DOSDEVIOCTL  /* docs lie, this is NOT included by BASE */
+#include &lt;os2.h&gt;
+
+//-- initialization (in main() as written)
+
+    HFILE portFd;
+    ULONG action;
+
+    if (DosOpen("COM1", &amp;portFd, &amp;action, 0, FILE_NORMAL, FILE_OPEN,
+      OPEN_ACCESS_READWRITE | OPEN_SHARE_DENYREADWRITE, 0) != 0) {
+        fprintf(stderr, "Open of COM1 failed\n");
+        goto error0;
+    }
+
+    {	DCBINFO di;
+        ULONG dummy;
+
+        dummy = sizeof(di);
+        if (DosDevIOCtl(portFd, IOCTL_ASYNC, ASYNC_GETDCBINFO, 0, 0, 0,
+                        &amp;di, sizeof(di), &amp;dummy) != 0)
+            fprintf(stderr, "DosDevIOCtl failed\n");
+        else {
+            fprintf(stderr, "Timeouts: read = %u, write = %u\n",
+                    di.usWriteTimeout, di.usReadTimeout);
+            fprintf(stderr, "Flag bytes: %02x, %02x, %02x\n",
+                    di.fbCtlHndShake, di.fbFlowReplace, di.fbTimeout);
+        }
+        di.fbTimeout = (di.fbTimeout &amp; ~(3 &lt;&lt; 1)) | (2 &lt;&lt; 1);
+                                          /* rcv = wait-for-something */
+        di.usReadTimeout = 250;
+        dummy = sizeof(di);
+        if (DosDevIOCtl(portFd, IOCTL_ASYNC, ASYNC_SETDCBINFO,
+                        &amp;di, sizeof(di), &amp;dummy, 0, 0, 0) != 0)
+            fprintf(stderr, "DosDevIOCtl failed to set parameters!\a\n");
+    }
+
+    if (initSerialOutput(portFd) != 0)
+        goto error1;
+
+//-- the "running" variable is sort of a relic, I think
+
+    running = 1;
+    if (_beginthread(serialInputThread, 0, 8192, (void *)portFd) &lt; 0) {
+        fprintf(stderr, "can't start serial input thread\n");
+        goto error2;
+    }
+
+    if (_beginthread(serialOutputThread, 0, 8192, (void *)portFd) &lt; 0) {
+        fprintf(stderr, "can't start serial output thread\n");
+        goto error2;
+    }
+
+//-- wrapup code
+
+    shutdownSerialOutput();
+    DosClose(portFd);
+
+//-- the rest of this lives outside of main()...
+
+//-- input side: gory details omitted
+
+//-- the port has been setup in "wait for something" mode, so we can request
+//-- more than one character at a time without blocking until the buffer is
+//-- full.  At least, I *think* that's working now: this is used with 300 baud
+//-- systems, so it's hard to tell &lt;g&gt;.  At least it isn't blocking until the
+//-- buffer is filled...
+
+/*  serialInputThread -- reads port, writes to text window
+*
+*   arg is the port's handle for reading
+*/
+void serialInputThread(void *arg)
+{
+    HFILE inFd = (long)arg;
+    FILE *logFile;
+    UCHAR buf[10];
+
+    ParserState ps = {0};
+
+    logFile = fopen("dtp.log", "ab");
+
+    for ( ; ; )
+    {
+        ULONG n;
+        if (DosRead(inFd, buf, 10, &amp;n) == 0)
+        {
+            ULONG i;
+            for (i = 0; i &lt;n; ++i)
+            {
+                if (logFile != 0)
+                    putc(buf[i], logFile);
+                if (runParser(&amp;ps, buf[i]) != 0)
+                    postChar(buf[i]);
+            }
+        }
+    }
+}
+
+/* output side: I rather like this arrangement using queues
+   except that I'<!-- entering slot 126 -->d prefer an anonymous queue.
+   For this, having the queue named in the
+   filesystem's name space is at best a minor annoyance. */
+
+/* * * *    SerialOutput subsystem
+*/
+
+#define MAX_CHUNK_SIZE 50
+
+typedef struct
+{
+    USHORT nUsed;
+    UCHAR buf[MAX_CHUNK_SIZE];
+} SO_CHUNK;
+
+#define NUM_SO_CHUNKS 6
+
+
+HQUEUE soQueue, freeQueue;
+
+
+int initSerialOutput (HFILE outFd)
+{
+    (void) outFd;     /* reserved for more general version */
+
+    if (DosCreateQueue
+       (&amp;soQueue, QUE_FIFO, "\\queues\\dtp\\soQueue") != 0)
+    {
+        fprintf(stderr, "Failed to create serial output queue\n");
+        goto error0;
+    }
+    if (DosCreateQueue
+       (&amp;freeQueue, QUE_FIFO, "\\queues\\dtp\\freeQueue") != 0)
+    {
+        fprintf(stderr, "Failed to create serial free queue\n");
+        goto error1;
+    }
+    {   SO_CHUNK *p = malloc(sizeof(SO_CHUNK) * NUM_SO_CHUNKS);
+        int i;
+        if (p == 0)
+        {
+            fprintf(stderr,
+            "Failed to allocate memory for serial chunks\n");
+            goto error1;
+        }
+        for (i = NUM_SO_CHUNKS; 0 &lt; i; --i)
+            if (DosWriteQueue(freeQueue, 0, sizeof(SO_CHUNK), p++, 0)
+            != 0)
+            {
+                fprintf(stderr, "Failed to initialize free queue\n");
+                goto error1;
+            }
+    }
+
+    return 0;
+
+error1:
+    DosCloseQueue(soQueue);
+error0:
+    return -1;
+}
+
+
+void shutdownSerialOutput(void)
+{
+    DosCloseQueue(freeQueue);
+    DosCloseQueue(soQueue);
+}
+
+
+void writeSerial(UCHAR const *buf, USHORT n)
+{
+
+    while (0 &lt; n)
+    {
+        REQUESTDATA rd;
+        ULONG dataLength;
+        PVOID data;
+        BYTE priority;
+
+        if (DosReadQueue(freeQueue, &amp;rd, &amp;dataLength, &amp;data,
+                         0, DCWW_WAIT, &amp;priority, 0) == 0)
+        {
+            SO_CHUNK *sc = data;
+            USHORT m = MAX_CHUNK_SIZE;
+            if (n &lt; m)
+                m = n;
+            memcpy(sc-&gt;buf, buf, m);
+            sc-&gt;nUsed = m;
+            DosWriteQueue(soQueue, 0, sizeof(SO_CHUNK), sc, 0);
+            buf += m;
+            n -= m;
+        }
+    }
+}
+
+
+void writeSerialString(UCHAR const *buf)
+{
+    writeSerial(buf, strlen(buf));
+}
+
+
+void serialOutputThread(void *arg)
+{
+    HFILE outFd = (long)arg;
+    REQUESTDATA rd;
+    ULONG dataLength;
+    PVOID data;
+    BYTE priority;
+
+    for ( ; ; )
+    {
+        if (DosReadQueue(soQueue, &amp;rd, &amp;dataLength, &amp;data,
+                         0, DCWW_WAIT, &amp;priority, 0) == 0)
+        {
+            if (rd.ulData == 0) {     /* simple data block */
+                ULONG dummy;
+                SO_CHUNK *sc = data;
+                DosWrite(outFd, sc-&gt;buf, sc-&gt;nUsed, &amp;dummy);
+                DosWriteQueue(freeQueue, 0, sizeof(SO_CHUNK), sc, 0);
+            }
+            else
+                ;  /* anything else is a test, ignore it */
+        }
+    }
+}
+</PRE>
+
+<P>
+The intention was that control messages could be posted to the queue using
+null data packets (passing the actual message in the REQUESTDATA.ulData
+field); these would allow for controlling the port's baud rate and other
+settings.  This seems to work under 2.0, and even appears to be intended
+to work (Deitel &amp; Kogan's description), but I haven't done anything
+with it yet, as you can see.  Haven't needed the facility yet...
+<P>
+Credit:  Martin Maney 
+
+<P><HR>
+
+<A HREF="105_L2_Whatdoallthosekeywor.html">[Back: What do all those keywords mean when making a DLL?]</A> <BR>
+<A HREF="107_L2_HowdoIdisableCtrlAlt.html">[Next: How do I disable <Ctrl><Alt><Del>?]</A> 
+</BODY>
+</HTML>

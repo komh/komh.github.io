@@ -1,0 +1,123 @@
+<HTML>
+<HEAD>
+<TITLE>MMIOM_IDENTIFYFILE</TITLE>
+</HEAD>
+<BODY>
+<H1>MMIOM_IDENTIFYFILE</H1><!-- entering slot 142 -->
+<P>
+The IOProc determines how to handle this message.  All IOProcs must support
+this message because mmioOpen sends MMIOM_IDENTIFYFILE when it attempts
+to automatically identify a file.
+<P>
+For file format IOProcs, the header needs to be read and checked to see
+if it matches with what the IOProc expects.  The<I> lParm2</I> field contains
+the handle used for the mmioRead function.  In the following example, the
+header is a M-Motion file that is compared with the expected string defined
+in the IOProc.  If it compares correctly, the message returns TRUE; otherwise
+FALSE is returned.
+<PRE>case MMIOM_IDENTIFYFILE:
+    {
+    /************************************************************
+     * Declare local variables.
+     ************************************************************/
+    MMOTIONHEADER   mmotHeader;   /* M-Motion structure variable */
+    HMMIO           hmmioTemp;    /* MMIO File Handle            */
+    ULONG           ulWidth;
+    ULONG           ulHeight;
+    ULONG           ulRequiredFileLength;
+    ULONG           ulActualFileLength;
+    BOOL             fValidMMotionFile = FALSE;
+
+    ULONG           ulTempFlags = MMIO_READ | MMIO_DENYWRITE |
+MMIO_NOIDENTIFY;
+                                   /* Flags used for temp open  */
+                                   /* and close                 */
+
+    /************************************************************
+     * We need either a file name (lParam1) or file handle (lParam2)
+     ************************************************************/
+    if (!lParam1 &amp;&amp; !lParam2)
+        return (MMIO_ERROR);
+
+    /* Copy the file handle, assuming one was provided... */
+    hmmioTemp = (HMMIO)lParam2;
+
+    /************************************************************
+     * If no handle, then open the file using the string name
+     ************************************************************/
+    if (!hmmioTemp)
+       {
+       if (!(hmmioTemp = mmioOpen ((PSZ) lParam1,
+                                  NULL,
+                                  ulTempFlags)))
+           {
+           return (MMIO_ERROR);
+           }
+       }
+
+    /************************************************************
+     * Read in enough bytes to check out file.
+     ************************************************************/
+    if (sizeof (MMOTIONHEADER) !=
+                    mmioRead (hmmioTemp,
+                              (PVOID) &amp;mmotHeader,
+                              (ULONG) sizeof (MMOTIONHEADER)))
+        {
+        /********************************************************
+         * Fail so close file and then return.
+         ********************************************************/
+        if (!lParam2) /* Don't close handle if provided to us  */
+           mmioClose (hmmioTemp, 0);
+        return (MMIO_ERROR);
+        }
+
+    /************************************************************
+     * Close file before returning.
+     ************************************************************/
+    if (!lParam2) /* Don't close handle if provided to us  */
+       mmioClose (hmmioTemp, 0);
+
+    /************************************************************
+     * Check validity of file and return result.
+     ************************************************************/
+    if (memcmp (mmotHeader.mmID, "YUV12C", 6) == 0)
+        {
+        ulWidth = mmotHeader.mmXlen;
+        ulHeight = mmotHeader.mmYlen;
+
+        /* Calculate what the length of the file SHOULD be based on the */
+        /*   header contents                                            */
+        ulRequiredFileLength = (((ulWidth &gt;&gt; 2) * 6) * ulHeight) +
+                                               sizeof (MMOTIONHEADER);
+
+        /* Query what the ACTUAL length of the file is                  */
+        ulActualFileLength = (ULONG)mmioSeek (hmmioTemp, 0, SEEK_END);
+
+        /* If these don't match, then it isn't a VALID M-Motion file    */
+        /*     - regardless of what the header says.                    */
+        if (ulRequiredFileLength == ulActualFileLength)
+           fValidMMotionFile = TRUE;
+        else
+           fValidMMotionFile = FALSE;
+        }  /* end header check block */
+
+    /************************************************************
+     * Close file before returning.
+     ************************************************************/
+    if (!lParam2)  /* Don't close handle if provided to us      */
+       mmioClose (hmmioTemp, 0);
+
+    if (fValidMMotionFile)
+       return (MMIO_SUCCESS);
+    else
+       return (MMIO_ERROR);
+    } /* end case of MMIOM_IDENTIFYFILE */
+</PRE>
+
+
+<P><HR>
+
+<A HREF="111_L3_MMIOM_CLOSE.html">[Back: MMIOM_CLOSE]</A> <BR>
+<A HREF="113_L3_MMIOM_GETFORMATINFO.html">[Next: MMIOM_GETFORMATINFO]</A> 
+</BODY>
+</HTML>

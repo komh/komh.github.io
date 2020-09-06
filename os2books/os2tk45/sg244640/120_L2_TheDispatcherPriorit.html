@@ -1,0 +1,97 @@
+<HTML>
+<HEAD>
+<TITLE>The Dispatcher, Priorities, and Dispatching Classes</TITLE>
+</HEAD>
+<BODY>
+<H1>The Dispatcher, Priorities, and Dispatching Classes</H1><!-- entering slot 146 -->
+<P>
+The dispatcher's task is to give control to the proper thread. The definition
+of 'proper' thread can be difficult to state. My approach to this problem
+is to state the obvious cases, and then to focus on what is left. In a sense,
+this discussion parallels the logic in the dispatcher.<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Idle Class.<!-- lm: 0x2 1 -->
+</UL> No other
+class will be pre-empted in order to run an idle class thread. The notion
+of starved, and the MAXWAIT parameter do NOT apply to Idle Class threads.
+ OS/2 by design will not execute a ready Idle Class thread as long as threads
+in other classes are ready.<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Regular Class.<!-- lm: 0x2 1 -->
+</UL> Most threads
+are expected to be in this class.  All dispatching options and parameters
+apply to scheduling this thread.<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Time-Critical Class.<!-- lm: 0x2 1 -->
+</UL> As
+long as any thread in this class is ready, OS/2 will give control to it.
+By design, this may prevent threads in other classes from running. You cannot
+use priority as a serialization method.
+<P>
+For example, a page fault will result in temporarily blocking this priority
+thread.<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Fixed-High, or Server Class.<!-- lm: 0x2 1 -->
+</UL> The
+threads in this class are at a somewhat higher priority than those in the
+regular class which do not have the focus, but below time-critical.<!-- lm: 0x2 1 -->
+<BR>
+<!-- lm: 0x2 6 -->
+<UL>
+<P>
+<B>Note: </B> The numbers above are what the programmer specifies in DosSetPriority,
+or the 16-bit API DosSetPrty, and are what is returned by DosGetPriority.
+OS/2 processes these class numbers to create an internal dispatching priority.
+There are 32 priority levels in each class, which range from 00 to 1F. The
+priority levels, or deltas, stay the same as the programmer specified initially,
+if PRIORITY=ABSOLUTE is specified.
+<P>
+The internal priorities have a range from 01 to 08, with 01 usually used
+for idle-class threads, and 08 usually used for time-critical threads. If
+PRIORITY=DYNAMIC was specified or defaulted, there are priority boosts given
+for the following reasons:
+<BR>
+Being the foreground process; and for owning the keyboard;
+<BR>
+Yielding the processor before the end of the time slice
+<BR>
+IO completion
+<BR>
+Being 'starved', that is, ready status and not dispatched for MAXWAIT seconds.
+
+<P>
+Dispatching is the process of finding the correct ready thread, and then
+giving control to it.  Within each class, the priority delta is used to
+choose which thread should have control.  When several ready threads have
+the same priority, control is given in turn to each of them, based on the
+TIMESLICE parameter. The minimum value of this parameter is the duration
+of the priority boosts which may be applied. The maximum value is the longest
+a thread can execute before being pre-empted for other threads which have
+the same internal dispatching priority.
+<P>
+As long as a group of threads at some priority use all the processor, control
+is not given to lower priority threads. What happens is that the other waiting
+threads become 'starved' after MAXWAIT seconds have elapsed, and their priority
+increases until they receive at least a minimum timeslice.
+<P>
+Idle-class threads are never starved, and so will not receive this boost.
+
+<P>
+<B>Note: </B>
+<P>
+When running in the kernel and device drivers, pre-emption can not occur.
+ Threads must explicitly give up their time-slice to give other threads
+an opportunity to run.<!-- lm: 0x2 6 -->
+<P>
+
+
+<P><HR>
+
+<A HREF="119_L2_DispatchingPrioritie.html">[Back: Dispatching Priorities]</A> <BR>
+<A HREF="121_L3_HowtoDisplayDispatch.html">[Next: How to Display Dispatching Priority]</A> 
+</BODY>
+</HTML>

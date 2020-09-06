@@ -1,0 +1,81 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosPeekQueue - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>DosPeekQueue - Example Code</H1><!-- entering slot 861 -->
+<P>
+This example creates and opens a named queue. It writes a message to it,
+peeks the message, and finally closes it.
+<PRE>#define INCL_DOSQUEUES   /* DOS Queue values */
+#define INCL_DOSPROCESS  /* DOS thread and process values */
+#define INCL_DOSERRORS   /* DOS error values */
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+int main(VOID) {
+
+   PSZ         szQueueName  = "\\QUEUES\\AnyQueueNameHere";
+   HQUEUE      hqAnyQueue   = NULLHANDLE; /* Queue handle                   */
+   PSZ         DataBuffer   = "";         /* Data buffer for queue data     */
+   REQUESTDATA Request      = {0};        /* Request                        */
+   ULONG       ulDataLen    = 0,          /* Length of data returned        */
+               ulElemCode   = 0;          /* Element code (input/output)    */
+   BYTE        ElemPrty     = 0;          /* Priority of element (returned) */
+   APIRET      rc           = NO_ERROR;   /* Return code                    */
+   rc = DosCreateQueue(&amp;hqAnyQueue,      /* Queue handle                    */
+             QUE_FIFO |                  /* First-In First-Out order        */
+             QUE_CONVERT_ADDRESS,        /* Convert 16-bit addresses to 32  */
+             szQueueName);               /* Name of the queue to create     */
+   if (rc!= NO_ERROR) {
+      printf ("DosCreateQueue error: return code = %u\n", rc);
+      return 1;
+   }
+
+   DataBuffer = "Start of the data... Middle of data...  Data ends.";
+   rc = DosWriteQueue (hqAnyQueue,          /* Queue to write to           */
+                       87654321L,           /* Request data                */
+                       strlen(DataBuffer),  /* Length of data to write     */
+                       DataBuffer,          /* Pointer to data             */
+                       0L);              /* Priority (not applicable here) */
+   if (rc!= NO_ERROR) {
+      printf ("DosWriteQueue error: return code = %u\n", rc);
+      return 1;
+   }
+
+   DataBuffer = "";                          /* Clear the DataBuffer        */
+   rc = DosPeekQueue (hqAnyQueue,            /* Handle of queue             */
+                      &amp;Request,              /* Request data for element    */
+                      &amp;ulDataLen,            /* Length of data returned     */
+                      (PVOID) &amp;DataBuffer,   /* Data returned               */
+                      &amp;ulElemCode,           /* Input: 0 reads next element
+                                                Output:  peeked element id  */
+                      DCWW_WAIT,             /* Wait for data               */
+                      &amp;ElemPrty,             /* Priority of element         */
+                      0L);                   /* Semaphore (not used here)   */
+  if (rc != NO_ERROR) {
+     printf ("DosPeekQueue error : return code = %u\n", rc);
+     return 1;
+  } else {
+     printf ("DosPeekQueue returns: '%s'\n", DataBuffer);
+     printf ("  (Request data = %u)\n", Request.ulData);
+  }
+
+  rc = DosCloseQueue(hqAnyQueue);         /* Close the queue */
+  if (rc!= NO_ERROR) {
+     printf ("DosCloseQueue error: return code = %u\n", rc);
+     return 1;
+  }
+
+  return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="848_L2H_DosPeekQueueRelatedF.html">[Back: DosPeekQueue - Related Functions]</A> <BR>
+<A HREF="850_L2H_DosPeekQueueTopics.html">[Next: DosPeekQueue - Topics]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,201 @@
+<HTML>
+<HEAD>
+<TITLE>Example: Writing a persistent object server</TITLE>
+</HEAD>
+<BODY>
+<H1>Example: Writing a persistent object server</H1><!-- entering slot 290 -->
+<P>
+This section shows an example of how to provide a server class implementation
+for persistent SOM objects. (The Persistence Framework of the full-capability
+SOMobjects Developer Toolkit can be used to write a persistent object s
+erver; an example of that type is given in the<I> SOMobjects Developer Toolkit
+Users Guide.)</I>  All of the persistent object management is contained
+in the server class; this class can be used with the DSOM "generic" server
+program, somdsvr.
+<P>
+The following example describes a user-supplied server class "MyPServer"
+that is derived from<B> SOMDServer.</B> The "MyPServer" class introduces
+five new methods:<B><!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->isPObj<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->assignRefDataToPObj<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->deletePObj<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->getRefDataFromPObj<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->activatePObjFromRefData</B><!-- lm: 0x2 1 -->
+</UL>
+<P>
+and overrides four<B> SOMDServer</B> methods:<B><!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->somdCreateObj<!-- lm: 0x2 3 --> <!-- lm: 0x2 6 -->
+<UL>somdDeleteObj
+<!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL>somdRefFromSOMObj<!-- lm: 0x2 3 -->
+</UL><!-- lm: 0x2 6 -->
+<UL>somdSOMObjFromRef.</B><!-- lm: 0x2 1 -->
+</UL>
+<P>
+The example shows how a server class might use and manage<B> Reference Data
+</B>in object references to find and activate persistent objects.
+<P>
+The IDL specification for "MyPServer" follows:
+<PRE>interface MyPServer : SOMDServer {
+    boolean isPObj (in SOMObject obj);
+    void assignRefDataToPObj(in SOMObject pobj);
+    void deletePObj(in SOMObject pobj);
+    ReferenceData getRefDataFromPObj(in SOMObject pobj);
+    SOMObject activatePObjFromRefData(in ReferenceData rd);
+  #ifdef __SOMIDL__
+    implementation {
+        somdCreateObj     : override;
+        somdDeleteObj     : override;
+        somdRefFromSOMObj : override;
+        somdSOMObjFromRef : override:
+    };
+  #endif
+};
+</PRE>
+
+<P>
+The "isPObj" method returns TRUE if the object passed to it is a persistent
+object. It is implemented as follows:
+<PRE>SOM_Scope boolean SOMLINK
+isPObj(MyPServer somSelf, Environment *ev, SOMObject obj) {
+    return(obj &amp;&amp; _somIsA(obj, MyPersistentObjectNewClass(0, 0));
+}
+</PRE>
+
+<P>
+The following two procedures override<B> SOMDServer's</B> implementations
+of<B> somdCreateObj</B> and<B> somdDeleteObj.</B>
+<PRE>SOM_Scope SOMObject SOMLINK
+              somdCreateObj(MyPServer somSelf, Environment *ev,
+                            Identifier objclass, string hints)
+{
+   /* create the object as usual */
+   SOMObject obj =
+      parent_somdCreateObj(somSelf, ev, objclass, hints);
+   /* if obj is persistent, assign Ref Data to it */
+   if (_<B>isPObj</B>(somSelf, ev, obj))) {<B>
+      _assignRefDataToPObj</B>(somSelf, ev, obj)
+   }
+   return(obj);
+}
+
+</PRE>
+The implementation of<B> somdCreateObj</B> first creates the object as usual
+by employing the implementation of<B> SOMDServer</B>  (MyPServer's parent).
+If the newly created object is persistent, the job of "assignRefDataToPObj"
+is to associate with the object a piece of data that (1) identifies the
+object, (2) is retrievable from the object, and (3) can be coerced into
+<B>ReferenceData</B> so that it can be used to create a<B> SOMDObject</B> (an
+object reference).
+<PRE>SOM_Scope void SOMLINK
+    somdDeleteObj(MyPServer somSelf, Environment *ev, SOMObject obj)
+{
+   /* is obj persistent, have the persistence framework delete it */
+   if (_<B>isPObj</B>(somSelf, ev, obj)) {<B>
+   _deletePObj</B>(somSelf, ev, obj);
+   } else /* obj is not persistent, so delete as usual */
+       parent_somdDeleteObj(somSelf, ev, obj);
+}
+</PRE>
+
+<P>
+The<B> somdDeleteObj</B> implementation, when the object to be deleted is
+persistent, invokes "deletePObj" to delete the object. When the object is
+not persistent, the<B> SOMDServer</B> implementation of<B> somdDeleteObj
+</B>deletes the object.
+<P>
+The following two procedures override<B> SOMDServer's</B> implementations
+of the methods<B> somdRefFromSOMObj</B> and<B> somdSOMObjFromRef:</B>
+<PRE>SOM_Scope SOMDObject SOMLINK
+              somdRefFromSOMObj(MyPServer somSelf, Environment *ev,
+              SOMObject obj)
+{
+  SOMDObject objref;
+
+  /* is obj persistent */
+  if <B>(_isPObj</B>(somSelf, ev, obj {
+    /* Create an object reference based on identifying data. */
+    ReferenceData rd =<B> _getRefDataFromPObj</B>(somSelf, ev, obj);
+    InterfaceDef intf =
+       _lookup_id(SOM_InterfaceRepository,ev,somGetClassName(obj));
+    objref =<B> _create_constant</B>(SOMD_SOMOAObject, ev, &amp;rd, intf
+                               SOMD_ImplDefObject);
+    _somFree(intf);
+    SOMFree(rd._buffer);
+  } else /* obj is not persistent, so get Ref in usual way */
+     objref = parent_somdRefFromSOMObj(somSelf, ev, obj);
+  return(objref);
+}
+
+</PRE>
+
+<P>
+Method<B> somdRefFromSOMObj</B> is responsible for producing a<B> SOMDObject
+</B>(the"Ref" in<B> somdRefFromSOMObj)</B> from a<B> SOMObject.</B> As mentioned
+earlier,<B> SOMOA</B> exports two methods for creating<B> SOMDObjects: create
+</B>and<B> create_constant.</B> This implementation uses<B> create_constant
+</B>because it does not want to store the<B> ReferenceData</B> in the ReferenceData
+Table. If it did use<B> create</B> and store the<B> ReferenceData</B> in
+the persistent table, the server object would either (1) have to keep a
+persistent table that maps<B> SOMObjects</B> to<B> SOMDObjects</B> so that
+it didn't call<B> create</B> twice with the same arguments (recall that
+<B>create</B> always returns a new<B> SOMDObject</B> even when called twice
+with the same arguments), or (2) fill up the ReferenceData table with<B> SOMDObjects
+</B>that contain the same<B> ReferenceData.</B>
+<P>
+The prerequisites for asking<B> SOMOA</B> to create a<B> SOMDObject</B> are
+(1)<!-- entering slot 291 --> some<B> ReferenceData</B> to be associated
+with the<B> SOMDObject</B>, (2) an<B> InterfaceDef</B> that describes the
+interface of the  object, and (3) an<B> ImplementationDef</B> that describes
+te object's implementation. The<B> InterfaceDef</B> is retrieved from the
+SOM Interface Repository using the object's class name as key. The<B> ImplementationDef
+</B>is held in the variable<B> SOMD_ImplDefObject</B> that is set when the
+server process is initialized. The "MyPServer" method "getRefDataFromPObj"
+is used to retrieve the identifying data from the object and coerce it into
+<B>ReferenceData.</B> With these three arguments,<B> SOMOA's create_constant
+</B>is called to create the<B> SOMDObject.</B>
+<PRE>SOM_Scope SOMObject SOMLINK
+              somdSOMObjFromRef(MyPServer somSelf, Environment *ev,
+              SOMDObject objref)
+{  SOMObject obj;
+
+   /* test if objref is mine */
+   if (<B>_is_constant</B>(objref, ev)) {
+      /* objref was mine, activate persistent object myself */
+      ReferenceData rd =<B> _get_id</B>(SOMD_SOMOAObject, ev, objref)
+      obj =<B> _activatePObjFromRefData</B>(somSelf, ev, &amp;rd);
+      SOMFree(rd._buffer);
+   } else
+     /* it's not one of mine, let parent activate object */
+     obj = parent_somdSOMObjFromRef(somSelf, ev, objref);
+   return obj;
+}
+
+</PRE>
+This implementation of<B> somdSOMObjFromRef</B> is a little different from
+the others in that the server object must determine whether the<B> SOMDObject
+</B>is one that it created (that is, one that represents a persistent object),
+or is just a<B> SOMDObject</B> that was created by the<B> SOMDServer</B> code
+(its parent). This is done by asking the<B> SOMDObject</B> if it is a "constant"
+object reference (that is, one created by<B> create_constant).</B> If the
+<B>SOMDObject</B> says that it is a "constant", then the "MyPServer" may
+safely assume that the<B> SOMDObject</B> represents a persisten object that
+it created. If the<B> SOMDObject</B> is determined to represent a persistent
+object, then its <B> ReferenceData</B> is used to locate/activate the object
+it represents (via the method "activatePObjFromRefData").
+
+<P><HR>
+
+<A HREF="252_L4_Dispatchingamethod.html">[Back: Dispatching a method]</A> <BR>
+<A HREF="254_L3_Identifyingthesource.html">[Next: Identifying the source of a request]</A> 
+</BODY>
+</HTML>

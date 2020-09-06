@@ -1,0 +1,257 @@
+<HTML>
+<HEAD>
+<TITLE>Inserting Pages in the Multimedia Setup Notebook</TITLE>
+</HEAD>
+<BODY>
+<H1>Inserting Pages in the Multimedia Setup Notebook</H1><!-- entering slot 70 -->
+<P>
+This section explains how to insert settings pages in the Multimedia Setup
+notebook-a program which provides a user interface to the properties of
+multimedia devices that are registered with the Media Device Manager (MDM).
+
+<P>
+There are two approaches to insert settings pages in the Multimedia Setup
+notebook.  The following discussion focuses on the first approach, which
+illustrates how to use the MCI_DEVICESETTINGS message to insert a page for
+a particular MCD.  The second approach is discussed in <A HREF="138_L4_DefiningChangestoOth.html">Defining
+Changes to Other INI Files</A> in <A HREF="127_L1_InstallationRequirem.html">Installation
+Requirements</A>.  This approach addresses a registration mechanism for
+Multimedia Setup to insert settings pages based on device type (not MCD).
+ For example, pages that apply to the system or to all media control interface
+devices of a particular class.
+<P>
+<B>Note: </B>
+<P>
+The MMSYSTEM.H header file defines data structures used in inserting a page
+in the Multimedia Setup notebook for a device object.
+<P>
+Refer to the<I> OS/2 PM Reference</I> for additional information on notebook
+control window processing.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+You can insert a notebook page in the Multimedia Setup program if device-specific
+properties exist for a particular device.  When the Multimedia Setup program
+is creating a notebook window, it checks the MCI_SYSINFO_DEVICESETTINGS
+style bit in the<I> ulDeviceFlag</I> field of the MCI_SYSINFO_LOGDEVICE
+data structure.  This data structure (as shown in the following example
+contains information about a logical device that is installed in the system.
+ The MCI_SYSINFO_DEVICESETTINGS style bit indicates that the MCD has custom
+device settings pages.
+<PRE>typedef struct _MCI_SYSINFO_LOGDEVICE {
+  CHAR    szInstallName[MAX_DEVICE_NAME];      /* Device install name            */
+  USHORT  usDeviceType;                        /* Device type number             */
+  ULONG   ulDeviceFlag;                        /* Flag indicating whether device */
+                                               /*  device is controllable or not */
+  CHAR    szVersionNumber[MAX_VERSION_NUMBER]; /* INI file version number        */
+  CHAR    szProductInfo[MAX_PRODINFO];         /* Textual product description    */
+  CHAR    szMCDDriver[MAX_DEVICE_NAME];        /* MCI driver DLL name            */
+  CHAR    szVSDDriver[MAX_DEVICE_NAME];        /* VSD DLL name                   */
+  CHAR    szPDDName[MAX_PDD_NAME];             /* Device PDD name                */
+  CHAR    szMCDTable[MAX_DEVICE_NAME];         /* Device-type command table      */
+  CHAR    szVSDTable[MAX_DEVICE_NAME];         /* Device-specific command table  */
+  USHORT  usShareType;                         /* Device sharing mode            */
+  CHAR    szResourceName[MAX_DEVICE_NAME];     /* Resource name                  */
+  USHORT  usResourceUnits;                     /* Total resource units available */
+                                               /*  for this device               */
+  USHORT  usResourceClasses;                   /* Number of resource classes for */
+                                               /*  this device                   */
+  USHORT  ausClassArray[MAX_CLASSES];          /* Maximum number of resource     */
+                                               /*  units for each class          */
+  USHORT
+ausValidClassArray[MAX_CLASSES][MAX_CLASSES];/* Valid class combination */
+} MCI_SYSINFO_LOGDEVICE;
+</PRE>
+
+<P>
+If an MCD creates one or more custom settings pages, the Multimedia Setup
+program sends a MCI_DEVICESETTINGS message to the MCD.  This allows the
+MCD the opportunity to insert device-specific pages in the Multimedia Setup
+notebook for a particular device.  The MCD then passes this message to a
+Vendor-Specific Driver (VSD) if one exists.  Some device properties might
+be related to the type of device and some might be related to the particular
+manufacturer's hardware.
+<P>
+The MCI_DEVICESETTINGS_PARMS data structure (as shown in the following example)
+defines the information that is passed to the MCD in the MCI_DEVICESETTINGS
+message.  The<I> hwndNotebook</I> field contains the window handle of a
+CUA notebook control window where the page should be inserted.  The<I> usDeviceType
+</I>field defines the type of media device, and the<I> pszDeviceName</I> field
+defines the logical device name (WAVEAUDIO01) of the device for which custom
+settings are to be inserted.
+<PRE>typedef struct_MCI_DEVICESETTINGS_PARMS {
+ULONG     hwndCallback;              /* Window handle              */
+HWND      hwndNotebook;              /* Handle to notebook window  */
+USHORT    usDeviceType;              /* Device type                */
+PSZ       pszDeviceName;             /* Device name                */
+ } MCI_DEVICESETTINGS_PARMS;
+</PRE>
+
+<P>
+You should also provide help for each page inserted in the notebook.  The
+<!-- entering slot 71 -->recommended way of implementing help for a Multimedia
+Setup settings page is to handle the WM_HELP message explicitly in the dialog
+procedure and then send the HM_DISPLAY_HELP message to a help instance that
+is created by the page (or group of pages).
+<P>
+When help for a tab is requested the Multimedia Setup program sends a MM_TABHELP
+message to the page as shown in the following example. The page window procedure
+can then display the appropriate help panel.
+<PRE>MM_TABHELP
+   mp1          ULONG ulPageID       /* Page identifier            */
+   mp2          ULONG Reserved
+   return       TRUE for handled and FALSE not handled
+</PRE>
+
+<P>
+Some pages use the device-specific parameters of the MCD to save settings
+information.  New pages should expect that other pages are also using the
+device-specific parameters to save their settings and therefore other keywords
+may exist or exist in the future.  New pages should be implemented in such
+as way as to preserve keyword values that they do not recognize.
+<P>
+The following example provides source code to create a modeless secondary
+window and insert a page in a notebook.  This code can be provided as a
+part of an external DLL or part of the MCD code itself.  The page should
+be consistent with the existing notebook design and be inserted after the
+standard pages in the notebook.
+<PRE>HWND InsertExamplePage( LPMCI_DEVICESETTINGS_PARMS pMCIDevSettings)
+{
+  HWND  hwndPage;               /* Page window handle                     */
+  CHAR  szTabText[CCHMAXPATH];  /* Buffer for tab string                  */
+  ULONG ulPageId;               /* Page Identifier                        */
+
+  /************************************************************************/
+  /*  Load a modeless secondary window.                                   */
+  /************************************************************************/
+
+  hwndPage    = WinLoadSecondaryWindow(
+                       pMCIDevSettings-&gt;hwndNotebook,
+                       pMCIDevSettings-&gt;hwndNotebook,
+                       ExamplePageDlgProc,
+                       vhmodMRI,
+                       ID_EXAMPLE,
+                       (PVOID)pMCIDevSettings);
+
+  if (!hwndPage) return (NULL);
+
+  ulPageId = (ULONG)WinSendMsg( pMCIDevSettings-&gt;hwndNotebook,
+                       BKM_INSERTPAGE,
+                       (ULONG)NULL,
+                       MPFROM2SHORT( BKA_AUTOPAGESIZE | BKA_MINOR, BKA_LAST ) );
+
+  /************************************************************************/
+  /*  Associate a secondary window with a notebook page.                  */
+  /************************************************************************/
+
+  WinSendMsg(pMCIDevSettings-&gt;hwndNotebook, BKM_SETPAGEWINDOWHWND,
+            MPFROMP( ulPageId ), MPFROMLONG( hwndPage ) );
+
+  /************************************************************************/
+  /* Get tab text from DLL.                                               */
+  /************************************************************************/
+
+  WinLoadString(WinQueryAnchorBlock( HWND_DESKTOP ), vhmodMRI,
+         (USHORT)IDB_EXAMPLE, CCHMAXPATH, szTabText );
+
+  /************************************************************************/
+  /* Set tab text.                                                        */
+  /************************************************************************/
+
+  WinSendMsg( pMCIDevSettings-&gt;hwndNotebook, BKM_SETTABTEXT,
+        MPFROMP( ulPageId ), szTabText );
+
+  return( hwndPage );
+
+}
+
+ typedef struct {
+    HWND hwndHelpInstance;
+ } MMPAGEINFO;
+ typedef MMPAGEINFO * PMMPAGEINFO;
+
+  /************************************************************************/
+  /* Modeless secondary window procedure                                  */
+  /************************************************************************/
+
+ MRESULT EXPENTRY ExamplePageDlgProc (HWND hwnd, USHORT msg, MPARAM mp1, MPARAM mp2)
+
+    PMMPAGEINFO pMMPageInfo = (PMMPAGEINFO) WinQueryWindowPtr (hwnd, QWL_USER);
+
+    switch (msg) {
+       case WM_INITDLG:
+          /*******************************************************************/
+          /*  Place window initialization code here.                         */
+          /*******************************************************************/
+          pMMPageInfo = (PMMPAGEINFO) malloc(sizeof(MMPAGEINFO));
+          WinSetWindowPtr (hwnd, QWL_USER, pMMPageInfo);
+
+          /*******************************************************************/
+          /*  Create a help instance.                                        */
+          /*******************************************************************/
+          pMMPageInfo-&gt;hwndHelpInstance = WinCreateHelpInstance(...);
+          break;
+
+       case WM_DESTROY:
+          /*******************************************************************/
+          /*  Clean up page window resources.                                */
+          /*******************************************************************/
+          WinDestroyHelpInstance (pMMPageInfo-&gt;hwndHelpInstance);
+          free (pMMPageInfo);
+          break;
+       case WM_COMMAND:
+          /*******************************************************************/
+          /*  Process all commands.                                          */
+          /*******************************************************************/
+          return ((MRESULT) FALSE);
+          break;
+
+       case MM_TABHELP:
+          /*******************************************************************/
+          /*  Display help for a tab.                                        */
+          /*******************************************************************/
+          if (pMMPageInfo-&gt;hwndHelpInstance) {
+              WinSendMsg(
+                    pMMPageInfo-&gt;hwndHelpInstance,
+                    HM_DISPLAY_HELP,
+                    MPFROMSHORT( WinQueryWindowUShort( hwnd, QWS_ID ) ),
+                    HM_RESOURCEID );
+          }
+          break;
+
+       case WM_CLOSE:
+          return ((MRESULT) FALSE);
+          break;
+
+       case WM_HELP:
+          if (pMMPageInfo-&gt;hwndHelpInstance) {
+              WinSendMsg(
+                    pMMPageInfo-&gt;hwndHelpInstance,
+                    HM_DISPLAY_HELP,
+                    (MPARAM) mp1,
+                    HM_RESOURCEID );
+           }
+           return ((MRESULT)TRUE);
+           break;
+
+       case WM_TRANSLATEACCEL:
+          return (WinDefWindowProc (hwnd, msg, mp1, mp2));
+          break;
+
+     case HM_QUERY_KEYS_HELP:
+          return((MRESULT) IDH_HELPFORKEYS);
+          break;
+
+    }
+
+    return (WinDefSecondaryWindowProc(hwnd, msg, mp1, mp2)); }
+</PRE>
+
+
+<P><HR>
+
+<A HREF="056_L2_ResourceUnitsandClas.html">[Back: Resource Units and Classes]</A> <BR>
+<A HREF="058_L1_StreamHandlers.html">[Next: Stream Handlers]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,200 @@
+<HTML>
+<HEAD>
+<TITLE>Stream Protocols</TITLE>
+</HEAD>
+<BODY>
+<H1>Stream Protocols</H1><!-- entering slot 82 -->
+<P>
+The Stream Protocol Control Block (SPCB) defines key parameters that control
+the behavior of a data stream. The application can query, install, or deinstall
+a specific SPCB from a stream handler. SPCB information is installed in
+the SPI.INI file by means of a resource file. (See <A HREF="141_L2_InstallingaStreamHan.html">Installing
+a Stream Handler</A> for a description of how to install stream protocol.)
+
+<P>
+Each stream handler supports one or more stream protocols. Each SPCB is
+uniquely identified by the value of the stream data type (SPCB key). One
+field in the SPCB key allows the stream handler to have multiple SPCBs installed
+for the same data type. This field can be used by an application to specify
+which SPCB, for any data type, it wants to use. Each application in the
+system could define multiple SPCBs for the same data type (see the<I> ulType
+</I>field in the SPCBKEY data structure). The application can modify a stream
+protocol by installing a new SPCB and deinstalling the old SPCB.
+<P>
+The parameters in the SPCB are:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B>Fields</B><!-- lm: 0x2 26 -->
+<UL><B> Meaning</B><!-- lm: 0x2 1 -->
+</UL> SPCB
+Length<!-- lm: 0x2 26 -->
+<UL> Length of SPCB structure. Provided for future
+expansion of the SPCB.<!-- lm: 0x2 1 -->
+</UL> SPCB Key<!-- lm: 0x2 26 -->
+<UL> Data
+stream type and internal key. The internal key is used to differentiate
+between multiple SPCB's of the same data stream type.<!-- lm: 0x2 28 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 31 -->Data Type - The data type of the stream (for example,
+waveform or MIDI).<!-- lm: 0x2 28 -->
+<BR>
+<LI><!-- lm: 0x2 31 -->Data Subtype - The subtype of the stream (for example,
+16-bit stereo PCM).<!-- lm: 0x2 28 -->
+<BR>
+<LI><!-- lm: 0x2 31 -->Internal Key - Used to differentiate between multiple
+SPCB's of the same data type and subtype.<!-- lm: 0x2 26 --><!-- lm: 0x2 1 -->
+</UL> Data
+Flag<!-- lm: 0x2 26 -->
+<UL> Attributes of the data type. (that is, specifies
+whether data or time cuepoints are supported by this data type).<!-- lm: 0x2 28 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 31 -->SPCBDATA_CUETIME - This data type can support time
+cuepoint events.<!-- lm: 0x2 28 -->
+<BR>
+<LI><!-- lm: 0x2 31 -->SPCBDATA_CUEDATA - This data type can support data
+cuepoint events.<!-- lm: 0x2 28 -->
+<BR>
+<LI><!-- lm: 0x2 31 -->SPCBDATA_NOSEEK - Seeking cannot be done on this
+data type.<!-- lm: 0x2 26 --><!-- lm: 0x2 1 -->
+</UL> Number of Records
+<!-- lm: 0x2 26 -->
+<UL>Maximum number of records per buffer. (This is only
+valid for split streams).<!-- lm: 0x2 1 -->
+</UL> Data Block Size<!-- lm: 0x2 26 -->
+<UL> Size
+of a block. A block is an atomic piece of data. For example, for digital
+audio data type PCM 16-bit stereo at a 44.1 kHz sampling rate, the block
+size would be 4 bytes.<!-- lm: 0x2 1 -->
+</UL> Data Buffer Size<!-- lm: 0x2 26 -->
+<UL> Size
+of buffer to be used while streaming. Maximum buffer size is 64KB.<!-- lm: 0x2 1 -->
+</UL> Min
+Number of Buffers<!-- lm: 0x2 26 -->
+<UL> Minimum number of buffers needed
+to maintain a constant data stream.<!-- lm: 0x2 1 -->
+</UL> Max Number of
+Buffers<!-- lm: 0x2 26 -->
+<UL> Maximum number of buffers needed (ideal
+number). For normal streams, this means the number of buffers that will
+be allocated for the stream. For user provided buffer streaming, this means
+the number of buffers that the Sync/Stream Manager can queue up for a consumer.
+This can be used by a source stream handler that gives the same set of buffers
+to the Sync/Stream Manager repeatedly. If the number of buffers is set to
+the number of buffers in the set minus one, the source stream handler will
+be able to detect when the target has consumed a buffer and it can be reused.
+Assuming that the set of buffers is an ordered set and each buffer is used
+in the same order each time.<!-- lm: 0x2 1 -->
+</UL> Source Start Number
+<!-- lm: 0x2 26 -->
+<UL>Number of EMPTY buffers required to start the source
+stream handler. The value should be at least as big as the maximum number
+of buffers that would be requested by the source stream handler.<!-- lm: 0x2 1 -->
+</UL> Target
+Start Number<!-- lm: 0x2 26 -->
+<UL> Number of FULL buffers required to
+start the target stream handler. The value should be at least as big as
+the maximum number of buffers that would be requested by the target stream
+handler. Usually, a target will require at least two buffers at the start
+of the stream.<!-- lm: 0x2 1 -->
+</UL> Buffer Flag<!-- lm: 0x2 26 -->
+<UL> Buffer
+attributes (that is, the user provides buffers, fixed block size, interleaved
+data type, and maximum buffer size).<!-- lm: 0x2 28 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 31 -->SPCBBUF_USERPROVIDED - User provides buffers for
+streaming. The Sync/Stream Manager will not allocate buffers, but attempt
+to lock down user provided buffers or copy the data to locked buffers. Using
+this flag will affect the performance of streaming. Only a source stream
+handler can set this flag. This flag is mutually exclusive with the SPCBBUF_<!-- entering slot 83 -->INTERLEAVEDflag
+.TheSPCBBUF _ FIXEDBUFcannotbeusedwiththisflagset .<!-- lm: 0x2 28 -->
+<BR>
+<LI><!-- lm: 0x2 31 -->SPCBBUF_FIXEDBUF - The buffer size for this stream
+handler must be a particular fixed size (for this data type). This flag
+cannot be used with the SPCBBUF_USERPROVIDED flag. The SPCBBUF_INTERLEAVED
+flag (split stream) implies SPCBBUF_FIXEDBUF.<!-- lm: 0x2 28 -->
+<BR>
+<LI><!-- lm: 0x2 31 -->SPCBBUF_NONCONTIGUOUS - Each data buffer is allocated
+contiguously in physical memory unless both stream handlers set the non-contiguous
+flag (SPCBBUF_NONCONTIGUOUS). This flag allows the system flexibility in
+allocating memory. A device driver stream handler may require contiguous
+memory, while a DLL stream handler may not.<!-- lm: 0x2 28 -->
+<BR>
+<LI><!-- lm: 0x2 31 -->SPCBBUF_INTERLEAVED - This stream is a split stream.
+It consists of one input stream of interleaved data that is split into multiple
+streams of individual data types. Only the source stream handler can set
+this flag. This flag is mutually exclusive with the SPCBBUF_USERPROVIDED
+flag. The SPCBBUF_FIXEDBUF cannot be used with this flag set.<!-- lm: 0x2 28 -->
+<BR>
+<LI><!-- lm: 0x2 31 -->SPCBBUF_MAXSIZE - The<I> ulBufSize</I> field contains
+that maximum size buffer that this stream handler can handle.<!-- lm: 0x2 28 -->
+<BR>
+<LI><!-- lm: 0x2 31 -->SPCBBUF_16MEG - The stream buffers may be allocated
+above 16MB. This is used by stream handlers device drivers that can support
+greater than 16MB addresses.<!-- lm: 0x2 26 --><!-- lm: 0x2 1 -->
+</UL> Handler
+Flag<!-- lm: 0x2 26 -->
+<UL> Stream handler flags (that is, the handler
+can generate and receive sync pulses, and use the Sync/Stream Manager timer
+as the master, non-streaming handler).<!-- lm: 0x2 28 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 31 -->SPCBHAND_GENSYNC - This stream handler can generate
+sync pulses.<!-- lm: 0x2 28 -->
+<BR>
+<LI><!-- lm: 0x2 31 -->SPCBHAND_RCVSYNC - This stream handler can receive
+sync pulses.<!-- lm: 0x2 28 -->
+<BR>
+<LI><!-- lm: 0x2 31 -->SPCBHAND_NONSTREAM - This stream handler is a non-streaming
+handler (that is, a stream handler that can participate in synchronization,
+but does not stream).<!-- lm: 0x2 28 -->
+<BR>
+<LI><!-- lm: 0x2 31 -->SPCBHAND_GENTIME - This stream handler can keep track
+of the real stream time. This handler also supports the<I> SpiGetTime</I> and
+cuepoint events.<!-- lm: 0x2 28 -->
+<BR>
+<LI><!-- lm: 0x2 31 -->SPCBHAND_NOPREROLL - This stream handler cannot preroll
+its device (that is, for recording streams, the source stream handler cannot
+be prerolled).  The Sync/Stream Manager will treat this stream as if it
+were prerolled if asked to preroll this stream.<!-- lm: 0x2 28 -->
+<BR>
+<LI><!-- lm: 0x2 31 -->SPCBHAND_NOSYNC - This stream handler can be in a
+sync group but does not receive or generate sync pulses. (It is useful to
+group streams together so that they can be manipulated as a group).<!-- lm: 0x2 28 -->
+<BR>
+<LI><!-- lm: 0x2 31 -->SPCBHAND_PHYS_SEEK - This stream handler does a seek
+to a physical device. Other stream handlers only adjust stream time on a
+seek request. The Sync/Stream Manager will always call this stream handler
+first on a call to the<I> SpiSeekStream</I> function.<!-- lm: 0x2 26 --><!-- lm: 0x2 1 -->
+</UL> Resync
+Tolerance<!-- lm: 0x2 26 -->
+<UL> Resync tolerance value. It is used to
+determine whether to send a sync pulse to this specific slave stream handler,
+if it is a slave.<!-- lm: 0x2 1 -->
+</UL> Sync Pulse Granularity<!-- lm: 0x2 26 -->
+<UL> Time
+interval in MMTIME units between sync pulses. Used to save sync pulse generation
+granularity if this stream handler is a master, but cannot generate its
+own sync pulse.<!-- lm: 0x2 1 -->
+</UL> Bytes Per Unit<!-- lm: 0x2 26 -->
+<UL> Bytes
+per unit of time. This is used to do seeks on linear data that is not compressed
+or of variable length. It is also used for SHC_GETTIME queries in a stream
+handler.<!-- lm: 0x2 1 -->
+</UL> MMTIME Per Unit<!-- lm: 0x2 26 -->
+<UL> The
+amount of MMTIME each unit represents. This is also used for the seek and
+"get time" functions of a stream handler.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Refer to the<I> OS/2 Multimedia Programming Reference</I> for further information
+on structure and flag definitions.
+
+<P><HR>
+
+<A HREF="065_L3_NullStreamHandler.html">[Back: Null Stream Handler]</A> <BR>
+<A HREF="067_L3_StreamProtocolNegoti.html">[Next: Stream Protocol Negotiation at Stream Creation Time]</A> 
+</BODY>
+</HTML>

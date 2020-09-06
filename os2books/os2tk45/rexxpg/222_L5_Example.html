@@ -1,0 +1,64 @@
+<HTML>
+<HEAD>
+<TITLE>Example</TITLE>
+</HEAD>
+<BODY>
+<H1>Example</H1><!-- entering slot 232 -->
+<P>
+The following is a sample of system exit usage:
+<BR>
+Sample system exit usage
+<BR>
+
+<PRE>WORKAREARECORD  *user_info[2];         /* saved user information     */
+RXSYSEXIT exit_list[2];                /* system exit list           */
+  user_info[0] = global_workarea;      /* save global work area for  */
+  user_info[1] = NULL;                 /* re-entrancy                */
+  rc = RexxRegisterExitExe("EditInit", /* register exit handler      */
+      &amp;Init_exit,                      /* located at this address    */
+      user_info);                      /* save global pointer        */
+                                       /* set up for RXINI exit      */
+  exit_list[0].sysexit_name = "EditInit";
+  exit_list[0].sysexit_code = RXINI;
+  exit_list[1].sysexit_code = RXENDLST;
+  return_code = RexxStart(1,           /* one argument               */
+                          argv,        /* argument array             */
+                          "CHANGE.ED", /* REXX procedure name        */
+                          NULL,        /* use disk version           */
+                          "Editor",    /* default address name       */
+                          RXCOMMAND,   /* calling as a subcommand    */
+                          exit_list,   /* exit list                  */
+                          &amp;rc,         /* converted return code      */
+                          &amp;retstr);    /* returned result            */
+                                       /* process return value       */
+.
+.
+.
+}
+LONG Init_exit(
+     LONG  ExitNumber,    /* code defining the exit function    */
+     LONG  Subfunction,   /* code defining the exit subfunction */
+     PEXIT ParmBlock)     /* function dependent control block   */
+{
+  WORKAREARECORD  *user_info[2];       /* saved user information     */
+  WORKAREARECORD   global_workarea;    /* application data anchor    */
+  USHORT           query_flag;         /* flag for handler query     */
+  rc = RexxQueryExit("EditInit",       /* retrieve application work  */
+      NULL,                            /* area anchor from REXX.     */
+      &amp;query_flag,
+      user_info);
+  global_workarea = user_info[0];      /* set the global anchor      */
+  if (global_workarea-&gt;rexx_trace)     /* trace at start?            */
+                                       /* turn on macro tracing      */
+    RexxSetTrace(global_workarea-&gt;rexx_pid, global_workarea-&gt;rexx_tid);
+  return RXEXIT_HANDLED;               /* successfully handled       */
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="221_L4_IdentifyingExitHandl.html">[Back: Identifying Exit Handlers to REXX]</A> <BR>
+<A HREF="223_L3_SystemExitDefinition.html">[Next: System Exit Definitions]</A> 
+</BODY>
+</HTML>

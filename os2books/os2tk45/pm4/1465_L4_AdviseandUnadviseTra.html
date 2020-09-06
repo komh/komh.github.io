@@ -1,0 +1,84 @@
+<HTML>
+<HEAD>
+<TITLE>Advise and Unadvise Transactions</TITLE>
+</HEAD>
+<BODY>
+<H1>Advise and Unadvise Transactions</H1><!-- entering slot 1494 -->
+<P>
+A client application can use DDE to establish a link to an item in a server
+application. When such a link is established, the server sends periodic
+updates about the linked item to the client (typically, whenever the data
+associated with the item in the server application has changed). A permanent
+<I>data stream</I> is established between the two applications and remains
+in place until it is explicitly disconnected.
+<P>
+The client sends the server a WM_DDE_ADVISE message to set up the data link.
+The advise message contains a shared-memory pointer containing a DDESTRUCT
+data structure with the item name, format information, and status information.
+
+<P>
+If the server has access to the requested item and can render it in the
+desired format, the server records the new link, then sends the client a
+positive WM_DDE_ACK message. Until the client issues a WM_DDE_UNADVISE message,
+the server sends data messages to the client every time a change occurs
+in the source data associated with the item in the server application.
+<P>
+If the server is unable to satisfy the request, it sends the client a negative
+WM_DDE_ACK message.
+<P>
+When a link is established with the DDE_FNODATA status bit cleared, the
+client is sent the data each time the data changes. In such cases, the server
+renders the new version of the item in the previously specified format and
+posts a WM_DDE_DATA message to the client.
+<P>
+When the client receives a WM_DDE_DATA message, it extracts data from the
+shared-memory object by using the DDESTRUCT data structure at the beginning
+of the object. If the DDE_FACKREQ status bit in the status word of the DDESTRUCT
+data structure is set, the client must post a positive WM_DDE_ACK message
+to the server.
+<P>
+When a link is established with the DDE_FNODATA status flag set, a notification,
+not the data itself, is posted to the client each time the data changes.
+In this case, the server does not render the new version of the item when
+the source data changes, but simply posts a WM_DDE_DATA message with 0 bytes
+of data and the DDE_FNODATA status flag set.
+<P>
+The client can request the latest version of the data by performing a regular
+one-time WM_DDE_REQUEST transaction, or it can simply ignore the data-change
+notice from the server. In either case, if the DDE_FACKREQ status bit is
+set, the client should send a positive WM_DDE_ACK message to the server.
+
+<P>
+When a client sends a WM_DDE_ADVISE message on a topic/item pair that is
+already engaged in an advise loop but has a different format specified,
+the server interprets this as a request to add an advise loop with the given
+format requested. Therefore, several advise loops can exist for a given
+topic/item pair. If a server does not support this extent of advise loops,
+it rejects the advise request.
+<P>
+Correspondingly, when a server receives a WM_DDE_UNADVISE message, the server
+must compare the format field with the current format of the advise loop.
+Only if the specified format is 0, meaning all advise loops,  or matches
+an active advise loop does the server stop the advise loop and return a
+positive acknowledgment.
+<P>
+To terminate a specific item link, the client posts a WM_DDE_UNADVISE message
+to the server. The server ensures that the client currently has a link to
+the specified item in this exchange. If the link exists, the server sends
+a positive WM_DDE_ACK message to the client and no longer sends updates
+on the item in this exchange. If the server has no such link, it sends a
+negative WM_DDE_ACK message.
+<P>
+To terminate all links for a particular exchange, the client application
+posts a WM_DDE_UNADVISE message with a zero-length item name to the server.
+The server ensures that the exchange has at least one link currently established.
+If so, the server posts a positive WM_DDE_ACK message to the client, and
+no longer sends any updates in the exchange. If the server has no links
+in the exchange, it posts a negative WM_DDE_ACK message.
+
+<P><HR>
+
+<A HREF="1464_L4_RequestandPokeTransa.html">[Back: Request and Poke Transactions]</A> <BR>
+<A HREF="1466_L4_ExecuteTransaction.html">[Next: Execute Transaction]</A> 
+</BODY>
+</HTML>

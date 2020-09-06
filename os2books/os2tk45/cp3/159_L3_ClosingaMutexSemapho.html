@@ -1,0 +1,69 @@
+<HTML>
+<HEAD>
+<TITLE>Closing a Mutex Semaphore</TITLE>
+</HEAD>
+<BODY>
+<H1>Closing a Mutex Semaphore</H1><!-- entering slot 168 -->
+<P>
+When a process no longer requires access to a mutex semaphore, it can close
+the semaphore by calling<A><!-- external link: 1D 67 C3 FC --> DosCloseMutexSem</A>.
+However, if a process ends without closing an open semaphore, the semaphore
+is closed by OS/2.
+<P>
+The following code fragment closes a mutex semaphore. Assume that the handle
+of the semaphore has been placed into<I> hmtx</I> already.
+<PRE>    #define INCL_DOSSEMAPHORES   /* Semaphore values */
+    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+
+    HMTX    hmtx;    /* Mutex semaphore handle */
+    APIRET  ulrc;    /* Return code            */
+
+    ulrc = DosCloseMutexSem(hmtx);
+
+    if (ulrc != 0) {
+        printf("DosCloseMutexSem error: return code = %ld",
+               ulrc);
+        return;
+    }
+
+</PRE>
+
+<P>
+Each call to<A><!-- external link: 1D 67 C3 3F --> DosCloseMutexSem</A> decrements
+the usage count of the semaphore. This count is initialized to 1 when the
+semaphore is created and is incremented by each call to<A><!-- external link: 1D A1 C3 FC --> DosOpenMutexSem</A>.
+When the usage count reaches 0, the semaphore is deleted by OS/2.
+<P>
+The call to<A><!-- external link: 1D 67 C3 3F --> DosCloseMutexSem</A> that
+decrements the usage count to 0 and causes the semaphore to be deleted is
+referred to as the<I> final close</I>. The final close will not succeed
+if either of the following conditions exists:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->The semaphore is owned by another thread in the same
+process.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Another thread in the same process is still blocked
+on a<A><!-- external link: 1D DA C3 42 --> DosRequestMutexSem</A> request
+for the semaphore.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+For both conditions, ERROR_SEM_BUSY is returned.
+<P>
+ERROR_SEM_BUSY is also returned if a thread tries to close a mutex semaphore
+that it still owns. The thread must first relinquish ownership of the semaphore
+by calling<A><!-- external link: 1D D9 C3 FC --> DosReleaseMutexSem</A>.
+
+<P>
+Calls to<A><!-- external link: 1D A1 C3 40 --> DosOpenMutexSem</A> and<A><!-- external link: 1D 67 C3 3F --> DosCloseMutexSem
+</A>can be nested, but the usage count for a semaphore cannot exceed 65535.
+If an attempt is made to exceed this number, ERROR_TOO_MANY_OPENS is returned.
+
+
+<P><HR>
+
+<A HREF="158_L3_ReleasingaMutexSemap.html">[Back: Releasing a Mutex Semaphore]</A> <BR>
+<A HREF="160_L3_QueryingaMutexSemaph.html">[Next: Querying a Mutex Semaphore]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,221 @@
+<HTML>
+<HEAD>
+<TITLE>Memory Playlists</TITLE>
+</HEAD>
+<BODY>
+<H1>Memory Playlists</H1><!-- entering slot 27 -->
+<P>
+In addition to specifying files or Resource Interchange File Format (RIFF)
+chunks to be loaded by compound devices, you also can specify memory objects.
+You create memory objects, for example, to play synthesized audio using
+the waveform audio media driver. These memory objects can be placed under
+the control of the memory playlist.
+<P>
+The memory playlist is a data structure in an application. It contains an
+array of simple, machine-like instructions you formulate, each of which
+has a fixed format consisting of a 32-bit operation code and three 32-bit
+operands. Playlist instructions are described in the following table.
+<P>
+To have playlist instructions interpreted by the playlist processor, you
+specify the MCI_OPEN_PLAYLIST flag with the MCI_OPEN command message. This
+flag indicates that the<I> pszElementName</I> field in the MCI_OPEN_PARMS
+data structure is a pointer to a memory playlist.
+<P>
+Using playlist instructions, you can play audio objects in succession from
+one or more memory buffers. Instructions include branching to and returning
+from subroutines within the playlist. In addition, the playlist can be modified
+dynamically by the application while it is being played. Because less overhead
+is involved when playing audio data from memory, playlist programs will
+have higher performance. If your application requires speed or if it needs
+to modify the data before it is sent to the audio device, use playlists.
+
+<P>
+
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Command             ³Description                                       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³BRANCH_OPERATION    ³Transfers control to another instruction in the   ³
+³                    ³playlist.                                         ³
+³                    ³Operand 1-Ignored.                                ³
+³                    ³Operand 2-The absolute instruction number in the  ³
+³                    ³playlist to which control is being transferred.   ³
+³                    ³Because the playlist is defined as an array of    ³
+³                    ³structures (instruction, operation, and operand   ³
+³                    ³values) its first instruction is referenced as    ³
+³                    ³array element, index 0. Therefore, the first      ³
+³                    ³instruction in the list is 0, the second          ³
+³                    ³instruction is 1, and so on.                      ³
+³                    ³Operand 3-Ignored.                                ³
+³                    ³Branching out of a subroutine is not prohibited;  ³
+³                    ³however, it is not recommended because an unused  ³
+³                    ³return address is left on the stack maintained by ³
+³                    ³the playlist processor.                           ³
+³                    ³An application can enable or disable a            ³
+³                    ³BRANCH_OPERATION by exchanging it with a          ³
+³                    ³NOP_OPERATION. Operands for a NOP_OPERATION are   ³
+³                    ³ignored.                                          ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³CALL_OPERATION      ³Transfers control to the absolute instruction     ³
+³                    ³number specified in Operand 2, saving the number  ³
+³                    ³of the instruction following the CALL for use on a³
+³                    ³RETURN instruction.                               ³
+³                    ³CALL instructions may be nested up to 20 levels.  ³
+³                    ³Operand 1-Ignored.                                ³
+³                    ³Operand 2-Absolute instruction number in the      ³
+³                    ³playlist to which control is being transferred.   ³
+³                    ³Operand 3-Ignored.                                ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³CUEPOINT_OPERATION  ³Causes a cue point data record to be entered into ³
+³                    ³the data stream. Note that the cue point is       ³
+³                    ³relative to the DATA_OPERATION that follows it.   ³
+³                    ³Operand 1-User-defined parameter to be returned as³
+³                    ³the low word of <I>ulMsgParam1</I> in the MM_MCICUEPOINT ³
+³                    ³message.                                          ³
+³                    ³Operand 2-Offset in MMTIME units for the actual   ³
+³                    ³time the CUEPOINT message should be <!-- entering slot 28 -->generated.    ³
+³                    ³Operand 3-Ignored.                                ³
+³                    ³The MM_MCICUEPOINT message is returned to the     ³
+³                    ³application as soon as possible after the cue     ³
+³                    ³point data record is encountered in the data      ³
+³                    ³stream. The message is sent to the window handle  ³
+³                    ³specified when the device was originally opened.  ³
+³                    ³Note: The CUEPOINT instruction is ignored when    ³
+³                    ³used in a recording operation.                    ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³DATA_OPERATION      ³Specifies a data buffer to be played from or      ³
+³                    ³recorded into.                                    ³
+³                    ³Operand 1-Long pointer to a buffer in the         ³
+³                    ³application.                                      ³
+³                    ³Operand 2-Length of the buffer pointed to by      ³
+³                    ³Operand 1.                                        ³
+³                    ³Operand 3-Current position in the buffer. This    ³
+³                    ³operand is updated by the system during a         ³
+³                    ³recording or playback operation. For a playback   ³
+³                    ³operation, it is the number of bytes that have    ³
+³                    ³been sent to the output device handler. For a     ³
+³                    ³recording operation, it is the number of bytes    ³
+³                    ³that have been placed into a user buffer.         ³
+³                    ³The current position in the buffer is particularly³
+³                    ³important after a recording operation, because    ³
+³                    ³this field contains the number of bytes of        ³
+³                    ³recorded data.  The remaining bytes in the buffer ³
+³                    ³are not valid. This field is initialized to zero  ³
+³                    ³when the DATA_OPERATION statement is first        ³
+³                    ³encountered.                                      ³
+³                    ³The buffer indicated by the DATA instruction must ³
+³                    ³only contain the raw data bytes from the device   ³
+³                    ³and cannot include any header information.        ³
+³                    ³Therefore, the precise meaning or format of the   ³
+³                    ³data is dependent on the current settings of the  ³
+³                    ³media device.  For example, a wave audio data     ³
+³                    ³element is assumed to have the format PCM or      ³
+³                    ³ADPCM, number of bits per sample, and so on, that ³
+³                    ³is indicated by the settings of the audio device. ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³EXIT_OPERATION      ³Indicates the end of the playlist.                ³
+³                    ³Operand 1-Ignored.                                ³
+³                    ³Operand 2-Ignored.                                ³
+³                    ³Operand 3-Ignored.                                ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³LOOP_OPERATION      ³Controls iteration in a playlist. It is the       ³
+³                    ³responsibility of the application to initialize   ³
+³                    ³the current iteration.  The current iteration is  ³
+³                    ³reset to zero following loop termination.         ³
+³                    ³Operand 1-Number of times the loop is to be       ³
+³                    ³executed.                                         ³
+³                    ³Operand 2-Target instruction to branch to, when   ³
+³                    ³the loop condition fails.                         ³
+³                    ³Operand 3-Current iteration.                      ³
+³                    ³The last instruction in a loop is a branch back to³
+³                    ³the LOOP_OPERATION. The operation of the          ³
+³                    ³LOOP_OPERATION instruction is as follows:         ³
+³                    ³1. If Operand 3 is less than Operand 1, control is³
+³                    ³transferred to the playlist instruction following ³
+³                    ³the LOOP instruction, and the iteration count in  ³
+³                    ³Operand 3 is incremented.                         ³
+³                    ³2. Otherwise, the iteration count is reset to zero³
+³                    ³and control is passed to the instruction specified³
+³                    ³in Operand 2.                                     ³
+³                    ³Typically, the application sets the iteration     ³
+³                    ³count to zero when the playlist is passed to the  ³
+³                    ³device, but this is not required.  The loop       ³
+³                    ³instruction merely compares the loop count with   ³
+³                    ³the iteration count. If the iteration count is set³
+³                    ³to a value other than zero when the playlist is   ³
+³                    ³passed in, it is as if the loop has been executed ³
+³                    ³that number of times. Also, if a playback         ³
+³                    ³operation is stopped, and then the same playlist  ³
+³                    ³is loaded again, the loop iteration count is not  ³
+³                    ³initialized by the playlist processor.            ³
+³                    ³It is the application's responsibility to see that³
+³                    ³iteration count values are what is required when  ³
+³                    ³switching from play to record, record to play, and³
+³                    ³when changing settings for the data (for example, ³
+³                    ³<I>bitspersample</I>, <I>samplespersec</I>, and so on) with the ³
+³                    ³set command. These commands cause the playlist    ³
+³                    ³stream to be destroyed and re-created, and the    ³
+³                    ³playlist to be reassociated as a new playlist with³
+³                    ³the playlist processor.                           ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³MESSAGE_OPERATION   ³Returns a message to the application during       ³
+³                    ³playlist processing.                              ³
+³                    ³Operand 1-Ignored.                                ³
+³                    ³Operand 2-ULONG that is returned to the           ³
+³                    ³application in the MM_MCIPLAYLISTMESSAGE message  ³
+³                    ³MsgParam2.                                        ³
+³                    ³Operand 3-Ignored.                                ³
+³                    ³Each time the playlist processor encounters a     ³
+³                    ³MESSAGE instruction, MM_MCIPLAYLISTMESSAGE is     ³
+³                    ³returned to the application. MESSAGE instructions ³
+³                    ³can be used by the application to trace specific  ³
+³                    ³points during the execution of the playlist       ³
+³                    ³processor. The message is sent to the window      ³
+³                    ³handle specified when the device was originally   ³
+³                    ³opened.                                           ³
+³                    ³This function is not intended to be used for      ³
+³                    ³timing of data production or consumption          ³
+³                    ³identified by previously interpreted instructions.³
+³                    ³Do not rely on the MESSAGE instruction to indicate³
+³                    ³precisely when a particular <!-- entering slot 29 -->piece of digital audio³
+³                    ³has been played by an audio device; however, the  ³
+³                    ³MESSAGE instruction can be used to indicate when a³
+³                    ³buffer has been consumed and needs to be refilled.³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³NOP_OPERATION       ³Used as a placeholder.                            ³
+³                    ³Operand 1-Ignored.                                ³
+³                    ³Operand 2-Ignored.                                ³
+³                    ³Operand 3-Ignored.                                ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³RETURN_OPERATION    ³Transfers control to the playlist instruction     ³
+³                    ³following the most recently executed CALL         ³
+³                    ³instruction.                                      ³
+³                    ³Operand 1-Ignored.                                ³
+³                    ³Operand 2-Ignored.                                ³
+³                    ³Operand 3-Ignored.                                ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³SEMPOST_OPERATION   ³Causes the playlist processor to post an event    ³
+³                    ³semaphore. The playlist processor will call       ³
+³                    ³DosWaitEventSem.                                  ³
+³                    ³Operand 1-Contains the semaphore to post.         ³
+³                    ³Operand 2-Ignored.                                ³
+³                    ³Operand 3-Ignored.                                ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³SEMWAIT_OPERATION   ³Causes the playlist processor to wait on a        ³
+³                    ³semaphore. The playlist processor will call       ³
+³                    ³DosWaitEventSem.                                  ³
+³                    ³Operand 1-Contains the semaphore to perform the   ³
+³                    ³wait on.                                          ³
+³                    ³Operand 2-Amount of time the semaphore should     ³
+³                    ³wait.                                             ³
+³                    ³Operand 3-Boolean value indicating whether or not ³
+³                    ³the semaphore should be cleared before waiting.   ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+
+<P><HR>
+
+<A HREF="022_L3_UsingtheCommandMessa.html">[Back: Using the Command Message Interface]</A> <BR>
+<A HREF="024_L3_ClockSampleProgramPl.html">[Next: Clock Sample Program Playlist Example]</A> 
+</BODY>
+</HTML>

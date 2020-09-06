@@ -1,0 +1,205 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Change the OS/2 recovery screen options</TITLE>
+</HEAD>
+<BODY>
+<H1>Change the OS/2 recovery screen options</H1><!-- entering slot 380 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+The flag indicating the status of the<B> Display recovery choices at each
+restart</B> checkbox (this is the<B> Archive system files</B> checkbox on
+the<B> Archive</B> page in the Desktop setup menu) is saved in the file
+<B>\OS2\BOOT\ARCHBASE.$$$</B> in the byte at the offset 0xD9. Set this byte
+to 0x01 to turn the feature on; 0x00 turns the feature off.
+<P>
+The number of seconds to wait is saved as word in the same file at the offset
+0xDD. (tested with OS/2 WARP and OS/2 WARP Connect, see example program
+below). (see also <A HREF="367_L2_ChangetheWPSarchivef.html">Change the
+WPS archive flag</A> ) 
+<PRE> 
+/*                                                                    */
+/* Name:     Archive.CMD                                              */
+/*                                                                    */
+/* Function:                                                          */
+/*   Get, set or clear the                                            */
+/*     "Display recovery choices at each restart"                     */
+/*   feature of OS/2                                                  */
+/*                                                                    */
+/* Usage:                                                             */
+/*   archive  {ON{:time}|OFF{:time}|STATUS} {bootDrive}               */
+/*                                                                    */
+/* Where:                                                             */
+/*   ON        = switch the feature ON                                */
+/*   OFF       = switch the feature OFF                               */
+/*               time - time to wait in seconds                       */
+/*                      (def. use the current setting)                */
+/*   STATUS    = get the current status of the feature (default)      */
+/*   bootDrive = bootDrive (default: uset the environment variable    */
+/*               RUNWORKPLACE)                                        */
+/*                                                                    */
+/* Returns:                                                           */
+/*   parameter ON or OFF:                                             */
+/*     0 - successful                                                 */
+/*     else error                                                     */
+/*                                                                    */
+/*   parameter STATUS:                                                */
+/*     if called from the command line:                               */
+/*       0 - feature is off                                           */
+/*       1 - feature is on                                            */
+/*     else error                                                     */
+/*                                                                    */
+/*     if called from another REXX program:                           */
+/*       x n                                                          */
+/*     where                                                          */
+/*       x - 0 - feature is off                                       */
+/*           1 - feature is on                                        */
+/*         else error                                                 */
+/*       n - timeout value in seconds                                 */
+/*                                                                    */
+/*                                                                    */
+/*                                                                    */
+/* Credits:                                                           */
+/*   Thanks to Peter Bunney for pointing me to the file               */
+/*   \OS2\BOOT\ARCHBASE.$$$.                                          */
+/*   (see <A HREF="944_L2H_EMailaddressesB.html">EMail Addresses</A>)                                            */
+/*                                                                    */
+/* History:                                                           */
+/*   14.04.1996 /bs                                                   */
+/*     - initial release for RXT&amp;T v2.20                              */
+/*                                                                    */
+/* Notes:                                                             */
+/*   -                                                                */
+/*                                                                    */
+/* (c) 1996 <A HREF="002_L1_GeneralForeword.html">Bernd Schemmer</A>, Germany, EMail: Bernd.Schemmer@gmx.de     */
+/*                                                                    */
+                        /* init the return code                       */
+  retCode = 0
+
+                        /* get the parameter                          */
+  parse arg action bootdrive .
+
+                        /* check the parameter, use defaults if       */
+                        /* necessary                                  */
+  if bootDrive = "" then
+    bootDrive = left( value( "RUNWORKPLACE",, "OS2ENVIRONMENT" ),1 )
+  bootDrive = left( bootDrive,1 ) || ":"
+
+                        /* default action is STATUS                   */
+  if action = "" then
+    action = "STATUS"
+
+                        /* check the timeout value                    */
+  parse var action action ":" newTimeOut
+  action = translate( strip( action ) )
+
+  if newtimeOut &lt;&gt; "" then
+    if datatype( newtimeOut ) = "NUM" then
+    do
+      if NewtimeOut &gt;= 0 &amp; newtimeOut &lt;= 999 then
+        newtimeOut = translate( "12", d2c( newtimeOut,2 ), "21", "00"x )
+      else
+        retCode = 255 "Error: Invalid timeout value &lt;" || NewtimeOut || "&gt; found!"
+    end /* if */
+    else
+      retCode = 255 "Error: Invalid timeout parameter &lt;" || NewtimeOut || "&gt; found!"
+
+                        /* get the call type                          */
+  parse upper source . callType .
+
+                        /* file used by the OS/2 to save the current  */
+                        /* status                                     */
+  Archivefilename = bootDrive || "\os2\boot\archbase.$$$"
+
+  if retCode = 0 then
+    if stream( ArchiveFileName, "c", "QUERY EXISTS" ) &lt;&gt; "" then
+    do
+                        /* change file attributes                     */
+      "@attrib -r " ArchiveFilename "2&gt;NUL 1&gt;NUL"
+      if rc = 0 then
+      do
+                        /* process the appropriate action             */
+        select
+
+          when action = "ON" | action = "OFF" then
+          do
+                        /* turn the feature ON or OFF                 */
+
+            if stream( ArchiveFileName, "c", "OPEN WRITE" ) = "READY:" then
+            do
+              newFlagValue = x2c( ( action = "ON" ) )
+
+                        /* change the flag                            */
+              retCode = charOut( ArchiveFilename, newFlagValue, 218 )
+
+                        /* set the new timeout value                  */
+              if NewtimeOut &lt;&gt; "" &amp; retCode = 0 then
+                retCode = charOut( ArchiveFileName, NewTimeOut, 222 )
+
+            end /* if stream( ArchiveFileName, ... */
+
+            call stream ArchiveFileName, "c", "CLOSE"
+          end /* when */
+
+          when action = "STATUS" then
+          do
+                        /* get the status of the feature              */
+            if stream( ArchiveFileName, "c", "OPEN READ" ) = "READY:" then
+            do
+                        /* get the flag value                         */
+              flagValue = c2x( charin( ArchiveFilename,218,1 ) )
+
+                        /* get &amp; convert the timeout value            */
+              timeOut = translate( "12", charIn( ArchiveFileName,222,2 ), "21" )
+              timeOut = x2d( c2x( timeOut ) )
+
+              retCode = flagValue timeOut
+            end /* if */
+
+            call stream ArchiveFileName, "c", "CLOSE"
+          end /* when */
+
+          otherwise
+          do
+            retCode = 255 "Error: Invalid action parameter &lt;" || action || "&gt; found!"
+          end /* otherwise */
+
+        end /* select */
+
+                        /* reset file attributes                      */
+        "@attrib <!-- entering slot 381 -->+r " ArchiveFilename "2&gt;NUL 1&gt;NUL"
+      end /* if rc = 0 then */
+      else
+        retCode = 255 "Error changing the attributes of &lt;" || ArchiveFileName || "&gt;!"
+
+    end /* if stream( ... */
+    else
+      retCode = 255 "File &lt;" || ArchiveFileName || "&gt; not found!"
+
+                        /* process the return code                    */
+  parse var retCode exitCode errorMessage
+
+  if exitCode &gt; 1 then
+  do
+                        /* display the error message                  */
+    say errorMessage
+                        /* remove the error message from the return   */
+                        /* code                                       */
+    retCode = exitCode
+  end /* if exitCode &gt; 1 then */
+
+  if callType = "COMMAND" then
+    retCode = word( retCode,1 )
+
+exit retCode
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="367_L2_ChangetheWPSarchivef.html">[Back: Change the WPS archive flag]</A> <BR>
+<A HREF="369_L2_WPSObjects.html">[Next: WPS Objects ...]</A> 
+</BODY>
+</HTML>

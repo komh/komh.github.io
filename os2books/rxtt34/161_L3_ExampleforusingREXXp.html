@@ -1,0 +1,149 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Example for using REXX programs in the CONFIG.SYS</TITLE>
+</HEAD>
+<BODY>
+<H1>Example for using REXX programs in the CONFIG.SYS</H1><!-- entering slot 162 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+A REXX program called from within the CONFIG.SYS is<B> always</B> called
+after loading all drivers. So, if you want to use a REXX program to change
+one or more DEVICE or BASEDEV statements (or a file used by a device driver)
+in the CONFIG.SYS while booting the workstation, you must use a 2-step-method.
+
+<P>
+Here's an example: Some time ago a CompuServe forum member said he wanted
+to change the file PROTOCOL.INI in respect to the input of an user while
+OS/2 was booting. (PROTOCOL.INI is an ini file used by a device driver necessary
+for the Network support).
+<P>
+I suggested to call the REXX program below in the CONFIG.SYS for this purpose
+(see <A HREF="160_L2_CallingREXXprogramsi.html">Calling REXX programs in
+the CONFIG.SYS</A> on how to call a REXX program in the CONFIG.SYS). This
+program uses a status file and an additional boot process to change the
+configuration on the fly.
+<P>
+The advantage of this method in contrast with using OS/2's ALT-F1 feature
+to perform maintenance at bootup:
+<P>
+It runs not only on WARP 3, but also under OS/2 versions prior to WARP;
+there's no overhead and you only have to maintain<B> one</B> configuration.
+
+<P>
+(see <A HREF="239_L3_RxFuncAdd.html">RxFuncAdd</A> if you want to use other
+DLLs in a REXX program called in the CONFIG.SYS)
+<PRE> 
+/* REXX program which can be called in the CONFIG.SYS to get some     */
+/* input from the user, check the current configuration against the   */
+/* user input, and change the configuration and reboot the            */
+/* workstation with the changed configuration if necessary.           */
+/*                                                                    */
+/* Note that you can use this method also to change some lines in     */
+/* your CONFIG.SYS.                                                   */
+/* Note further, that you can also replace the code to get the user   */
+/* input with some code to automatically get the needed configuration.*/
+/*                                                                    */
+/* You can also use the routine <A HREF="456_L3_ChoiceroutineforREXX.html">Getkey</A> in programs called in the      */
+/* CONFIG.SYS.                                                        */
+/*                                                                    */
+/* (c) 1996 <A HREF="002_L1_GeneralForeword.html">Bernd Schemmer</A>, Germany, EMail: Bernd.Schemmer@gmx.de     */
+/*                                                                    */
+
+                    /* install an error handler for user breaks       */
+  SIGNAL ON HALT Name UserBreak
+
+                    /* name of the status file for the current boot   */
+                    /* process. If this file exists, this is the      */
+                    /* second boot, if not it's the first.            */
+  statusFile = "C:\BOOTSEM"
+
+  if stream( statusFile, "c", "QUERY EXISTS" ) = "" then
+  do
+                    /* first boot                                     */
+
+                    /* load the necessary REXXUTIL function(s). Note  */
+                    /* that you CANNOT use SysLoadFuncs!!!            */
+    call rxFuncAdd "SysGetKey", "REXXUTIL", "SysGetKey"
+
+                    /* get the user input                             */
+    call CharOut, "Which PROTOCOL.INI do you want? Press A or B -&gt;&gt; "
+    do forever
+      userInput = translate( SysGetKey( "NOECHO" ) )
+      if UserInput = "A" | UserInput = "B" then
+        leave
+      else          /* invalid user response - ring the bell          */
+        call CharOut , "07"x
+    end /* do forever */
+
+    call LineOut , UserInput
+
+
+                    /* check the configuration, in this example:      */
+                    /* check if the existing PROTOCOL.INI is correct  */
+    call LineOut , "Checking the configuration. Please wait ..."
+
+                /* ... insert the code to check the configuration ... */
+                /* set ConfigurationOK to 1 if PROTOCOL.INI is okay   */
+
+    if ConfigurationOK = 1 then
+    do
+                    /* the current configuration is okay              */
+                    /* continue with the boot process                 */
+
+      call LineOut, "The current configuration is okay." ,
+                    "Boot process continues ..."
+
+    end /* if ConfigurationOK = 1 then */
+    else
+    do
+                    /* the current configuration is NOT okay          */
+
+      call LineOut, "The current configuration is NOT okay." ,
+                    "Now changing the configuration ..."
+
+
+                    /* correct the configuration, in this example:    */
+                    /* replace the PROTOCOL.INI                       */
+
+                /* ... insert the code to change the configuration ...*/
+
+                    /* now create the status file                     */
+      call LineOut statusFile, "We <!-- entering slot 163 -->need a second boot ..."
+
+                    /* close the status file                          */
+     call stream statusFile, "c", "CLOSE"
+
+     call LineOut, "Rebooting your workstation please wait ..."
+
+                    /* and reboot the workstation using SETBOOT       */
+     "SETBOOT /IBD:C"
+
+    end /* else */
+  end  /* if stream( statusFile, "c", "QUERY EXISTS" ) = "" then */
+  else
+  do
+                    /* second boot                                    */
+
+                    /* normally nothing to do because the             */
+                    /* configuration should now be okay               */
+  end /* else */
+
+                    /* delete the status file also on user breaks     */
+UserBreak:
+
+                    /* delete the status file if it exists            */
+  if stream( statusFile, "c", "QUERY EXISTS" ) &lt;&gt; "" then
+    "@del " statusFile "2&gt;NUL 1&gt;NUL"
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="160_L2_CallingREXXprogramsi.html">[Back: Calling REXX programs in the CONFIG.SYS]</A> <BR>
+<A HREF="162_L2_UsingREXXifbootedfro.html">[Next: Using REXX if booted from diskette]</A> 
+</BODY>
+</HTML>

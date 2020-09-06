@@ -1,0 +1,152 @@
+<HTML>
+<HEAD>
+<TITLE>P - PTrace Instruction Execution</TITLE>
+</HEAD>
+<BODY>
+<H1>P - PTrace Instruction Execution</H1><!-- entering slot 442 --><!-- Unable to decode bitmap format --><IMG SRC="307_L3_PPTraceInstructionEx_93.gif" WIDTH=32 HEIGHT=32>
+<P>
+Trace instruction execution within a single procedure. This command is very
+similar to the <A HREF="311_L3_TTraceInstructionExe.html">T command</A>,
+except that<B> CALL</B>, loop and string repeat instructions are traced
+as single instructions (even though allowed to execute correctly). 
+<P>
+<U><I>Syntax:</I></U>
+<PRE>ÄÄÄÄÄÄ P ÄÄÄÄÂÄÄÄÄÄÄÄÂÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÂÄÄÄÄÄÄÄÄÄÂÄÄ
+               ÃÄ  N  Ä´  ÀÄ = ÄÄ start-addr ÄÄÙ   ÀÄ count ÄÙ
+               ÀÄ  T  ÄÙ
+
+
+
+</PRE>
+
+<P>
+<U><I>Parameters:</I></U><!-- lm: 0x2 1 -->
+<UL>
+<P>
+<I><LI>Default)</I><!-- lm: 0x11 11 -->
+<UL> Trace instruction execution
+by single-stepping, treating<B> CALL</B> loop and string repeat instructions
+as single events.
+<P>
+<B>Note: </B>
+<P>
+Certain areas of the system are known to cause problems if traced. Attempts
+to trace these areas are intercepted by the Kernel Debugger. See below for
+further information.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL><B> N</B><!-- lm: 0x11 11 -->
+<UL> Trace
+instructions but suppress the register display after each instruction is
+executed.<!-- lm: 0x2 1 -->
+</UL><B> T</B><!-- lm: 0x11 11 -->
+<UL> This
+option causes the Kernel Debugger's trap vector handlers to be removed temporarily
+from the <A HREF="3278_L0_.html">IDT</A> and the system's re-instated until
+after then next instruction has executed. After execution of the next instruction
+the the Kernel Debugger's <A HREF="313_L3_VExceptionTrapFaultV.html">V commands
+</A>are re-instated.
+<P>
+This is a convenience option that saves manually unhooking a Kernel Debugger
+trap vector handlers from the <A HREF="3278_L0_.html">IDT</A>. using a command
+sequence similar to:
+<PRE>VC n
+P
+VS n
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL><B><I>start-addr</B></I><!-- lm: 0x11 11 -->
+<UL> The
+address from which execution is to continue. This must be a valid address
+for the current context. If<B><I> start-addr</B></I> is omitted then execution
+continues from the current<B> CS:EIP</B>, as shown by the <A HREF="309_L3_RSetorDisplayCurrent.html">R
+command</A>.<!-- lm: 0x2 1 -->
+</UL><B><I> count</B></I><!-- lm: 0x11 11 -->
+<UL> The
+number of instructions to trace before re-entering the Kernel Debugger unless
+one of the following conditions is encountered:<!-- lm: 0x2 11 -->
+<P>
+<!-- lm: 0x2 17 -->
+<UL>A fatal exception occurs<!-- lm: 0x2 11 -->
+</UL><!-- lm: 0x2 17 -->
+<UL> An
+Internal Processing Error (IPE) occurs.<!-- lm: 0x2 11 -->
+</UL><!-- lm: 0x2 17 -->
+<UL> A
+'sticky' breakpoint fires<!-- lm: 0x2 11 -->
+</UL><!-- lm: 0x2 17 -->
+<UL> A
+non-maskable interrupt occurs<!-- lm: 0x2 11 -->
+</UL><!-- lm: 0x2 17 -->
+<UL> An
+<B>INT 3</B> instruction is executed<!-- lm: 0x2 11 -->
+</UL><!-- lm: 0x2 17 -->
+<UL> The
+user enters<B> Ctrl-C</B> from the debugging console.
+<P>
+If omitted then<B><I> count</B></I> defaults to<B> 1</B> instruction.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<U><I>Results &amp; Notes:</I></U>
+<P>
+The<B> Ptrace</B> commands trace the execution of machine instructions,
+and by default, display the current registers and next instruction to execute
+at each step. For the purposes of the displayed trace, the<B> CALL</B> instruction
+does not have the called routine traced, but tracing resumes on return.
+Loop and string repeat instructions are also treated as atomic entities
+with the instruction following the loop or repeat shown as the next to execute.
+<B>INT 3</B> instructions are stepped over to avoid a double breakpoint
+at the same address even though they appear as the next instruction to execute.
+
+<P>
+The following system routines are known to causes inconsistency or even
+system failure if traced. Consequently<B> Ptrace</B> will suspend tracing
+until after execution leaves these routines.
+<PRE>        _Debug_CtrlC32   through _EndCtrlC32
+        _DebugLoadSymMTE through EndDebugLoadSymMTE
+        _PGSwitchContext through pgSwitchRet
+
+</PRE>
+
+<P>
+See the <A HREF="311_L3_TTraceInstructionExe.html">TX command</A> for information
+on tracing these routines.
+<P>
+<B>PN</B> suppresses the register display from the automatic <A HREF="309_L3_RSetorDisplayCurrent.html">R
+command</A>, but still displays an <A HREF="312_L3_UUnassemble.html">unassembled
+</A>next instruction for each traced instruction. If the <A HREF="316_L3_ZSetExecuteorDisplay.html">ZS
+command</A> has been used to specify a different default command then<B> PN
+</B>behaves exactly as<B> P</B>.
+<P>
+An example of the output from<B> PN</B> is as<!-- entering slot 443 --> follows:
+
+<PRE>##PN 5
+0170:fff4521f 803d9e53e0ffff cmp     byte ptr [InterruptLevel (ffe0539e)],ff
+0170:fff45226 75b4           jnz     fff451dc
+0170:fff45228 803d9643e0ff00 cmp     byte ptr [_cTKNoBlock (ffe04396)],00
+0170:fff4522f 75be           jnz     fff451ef
+0170:fff45231 0f01e1         smsw    cx
+##
+</PRE>
+
+<P>
+<B>Note: </B> The last traced instruction is the next to be executed.<!-- lm: 0x2 1 -->
+<P>
+
+<P>
+
+<P>
+<B>Warning:</B>
+<P>
+If any of the<B> PTrace</B> commands is interrupted, the Kernel Debugger
+may leave a temporary break-point active. This will result in a<B> Trap
+1</B> when the system is next given control. If this occurs then either
+of the<B> PT</B> or <A HREF="299_L3_GGo.html">GT</A> commands will clear
+this condition.
+<P>
+
+
+<P><HR>
+
+<A HREF="306_L3_OOutputtoanIOPort.html">[Back: O - Output to an I/O Port]</A> <BR>
+<A HREF="308_L3_QQuittheDumpFormatte.html">[Next: Q - Quit the Dump Formatter]</A> 
+</BODY>
+</HTML>

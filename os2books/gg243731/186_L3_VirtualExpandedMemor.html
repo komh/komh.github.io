@@ -1,0 +1,291 @@
+<HTML>
+<HEAD>
+<TITLE>Virtual Expanded Memory Manager</TITLE>
+</HEAD>
+<BODY>
+<H1>Virtual Expanded Memory Manager</H1><!-- entering slot 201 -->
+<P>
+EMS services are implemented under MVDM using a virtual device driver known
+as the <A HREF="468_L2_VirtualExpandedMemor.html"><B>Virtual Expanded Memory
+Manager</B> (<B>VEMM</B>)</A>, which offers a separate EMS emulation to
+each VDM. This implementation is accomplished by placing most VEMM control
+structures in a per-VDM data area outside the V86 mode address space. Each
+VDM has up to 255 handles, 15 alternate register sets, remappable conventional
+memory for operating system use, and a 16KB "raw" block size.
+<P>
+VEMM prehooks interrupt vector 67h through a VDH service to catch software
+interrupts for EMS services.  Prehooking means that VEMM gains control before
+the V86 mode interrupt vector is called. VEMM also provides a V86 mode stub
+driver used to indicate to DOS applications that EMS is available. This
+stub must hook INT 67h so that applications can find a particular string
+in the header to determine if EMS is available. When, as in the typical
+case, applications have not also hooked INT 67h, VEMM handles service requests
+at prehook time. When INT 67 has been hooked, VEMM handles requests when
+the stub's hook calls it by doing an INT 67h from inside the stub.
+<P>
+To prevent VDM's from grabbing large amounts of EMS memory, there is a configurable
+default per VDM limit.  VEMM depends heavily upon the memory manager. EMS
+object allocation, reallocation, or deallocation is accomplished by requesting
+corresponding services from VDH services. Most VEMM creation time setup
+is postponed until the first INT 67h service request is made. <A HREF="033_L2_ExpandedMemoryManage.html">Figure
+"Expanded Memory Manager Control Flow"</A> shows the flow of control when
+a DOS application makes an EMS service request from within a VDM:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->INT 67h service requests are trapped by the Virtual
+DOS Machine Manager and routed to VEMM.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The VEMM makes the appropriate requests to VDH
+services to allocate or manipulate the EMS object.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+<B>Expanded Memory Manager Control Flow</B>
+<P>
+During the initialization of the VDM the VDM Manager loads and initializes
+the EMS DOS stub device driver into the VDM address space.
+<P>
+The VDM Application can use either of two methods to test for the existence
+of the VEMM:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Issue an open request (INT 21h Function 3DH)
+using the guaranteed device name of the VEMM driver. If the open function
+succeeds, either the driver is present or a file with the same name coincidentally
+exists on the default disk drive. To rule out the latter, the application
+can use IOCTL(INT 21h Function 44H) subfunctions 00h and 07h to ensure that
+VEMM is present. Don't forget to use INT 21H Function 3Eh to close the handle
+that was obtained from the open function, so that the handle can be reused
+for another file or device.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Look for a special signature in the EMS DOS stub
+device driver which signals the VDM Application that EMS is available. This
+search is done by using the address that is found in the INT 67h vector
+to inspect the device header of the presumed VEMM which is, in this case,
+the fooling EMS DOS stub device driver. Interrupt handlers and device drivers
+<B>must</B> use this method. If the VEMM seems to be present, the name field
+at a special offset of the device header contains a special string. This
+method is not only<!-- entering slot 202 --> avoiding the relatively high
+overhead of an VDM DOS open function but is nearly foolproof. However, it
+is somewhat less well behaved because it involves inspection of memory that
+does not belong to the application.
+<P>
+The only task of the EMS DOS stub device driver is to tell the VDM DOS application
+that EMS is available. As soon as this is done the regular EMS business
+can start as explained in the following points:<!-- lm: 0x2 0 -->
+<BR>
+<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The VDM Application issues a INT 67h service
+request.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The VDM Manager loads the VEMM.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The VDM Manager initialization, creation, termination
+calls for EMM-objects.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The VDM Manager traps the VDM application's INT
+67h service request and routes it to VEMM.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The VDM callback for V86 call with far return.
+<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The VEMM requests corresponding services from
+the VDH services:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 5 -->Creation/termination handler registration<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 5 -->INT 67h pre-hooking<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 5 -->Linear address reservation<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 5 -->Memory management.<!-- lm: 0x2 4 -->
+<UL><!-- lm: 0x2 0 -->
+</UL>
+7.<!-- lm: 0x2 4 -->
+<UL>The result is returned.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+This constellation also allows a VDM application to hook INT 67h.
+<P>
+Note that unlike most virtual device drivers, VEMM does not have a corresponding
+physical device driver.  Instead, VEMM manages its memory using the OS/2
+Version 2.0 operating system kernel's memory management services. EMS object
+allocation, reallocation, or deallocation is accomplished by requesting
+corresponding services from the operating system's memory manager.  For
+example, when an application requests the allocation of an expanded memory
+object, VEMM asks the memory manager to allocate a memory object in linear
+memory outside any VDM.
+<P>
+<B>Structure</B>
+<P>
+The VEMM module consists of:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->An<I> Initialization Component</I> that determines
+the default size at boot time<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->A<I> Creation Component</I> that initializes per-VDM
+structures when a VDM is created<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->A<I> Router</I> that decodes application INT 67h (and
+routes the call to a service routine) and 30 service routines with associated
+sub-services.<!-- lm: 0x2 0 -->
+<P>
+Each VDM has a 255-entry EMS handle table used to keep track of the size
+and allocation of expanded memory objects, 16 register sets that indicate
+which parts of the expanded objects are mapped into the VDM address space,
+and save tables to save register set contents.  Only one register set is
+active at a time.  That active register set indicates the actual page table
+contents.  Switching register sets or restoring a saved register set resets
+all aliases in the windows to those indicated by the new register set.  Unmapped
+pages are set to "black hole" memory.  The memory manager's page size for
+all these operations is 4KB.  VEMM makes the adjustment for its 16KB page
+size.
+<P>
+<B>Initialization</B>
+<P>
+VEMM is typically installed at system initialization time, via a DEVICE=
+statement in CONFIG.SYS, as shown below:
+<PRE>DEVICE=C:\OS2\MDOS\VEMM.SYS 4096, 2048
+</PRE>
+
+<P>
+<!-- entering slot 203 -->To prevent VDMs from using all available memory,
+there is an overall limit on the amount of EMS memory, and a default limit
+for each VDM to prevent a VDM from requesting all available EMS memory.
+ The defaults for these limits are specified in the DEVICE= statement for
+VEMM.  The default limit for each VDM may be overridden using the DOS Settings
+feature.
+<P>
+Setting the overall limit to zero disables EMS in all VDMs, regardless of
+the per-VDM value.  Setting the per-VDM value to zero disables EMS in all
+VDMs unless their entries on the Presentation Manager desktop specify a
+non-zero EMS size.  Setting the EMS size to zero for an entry on the desktop
+disables EMS for that application only.  Most users need never change the
+default value.  DOS settings for frame position, and the size of extra mapping
+regions above and below 640KB may be configured by the user; see <A HREF="284_L1_DOSSettings.html">DOS
+Settings</A>.
+<P>
+Upon installation, an initialization routine within VEMM supplies the entry
+point addresses of VEMM creation and close routines to the Virtual DOS Machine
+Manager.
+<P>
+Most VEMM setup is postponed until the first INT 67H service request is
+made.  Only remappable conventional memory is set up before that time. This
+assures that other virtual device drivers have a chance to reserve ROM and
+device memory areas.
+<P>
+<B>VDM Creation</B>
+<P>
+Upon creation of a VDM, a VDH service is used to get the EMS size for that
+VDM.  This will return a string if the DOS program's entry on the desktop
+has an associated EMS size.  If not defined, the default size retrieved
+from CONFIG.SYS at system initialization is used.  If EMS size is not zero,
+the following steps are then performed:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Two mappable windows are located and reserved.
+<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Memory is mapped into the low window.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Interrupt 67h is hooked using a VDH service.
+<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->The V86 mode device driver stub is loaded.<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->An initial block of the handle table is allocated.
+<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+Upon VDM creation, VEMM allocates a block of memory in the area between
+256KB and RMSIZE [The RMSIZE statement in CONFIG.SYS specifies the maximum
+size of a VDM's address space; values up to 640KB are allowed. ] and maps
+it into the VDM address space.  VEMM requests VDH services to locate the
+largest free address range in the V86 mode address space above 640KB that
+is available for the mappable window.  VEMM then reserves the largest range
+available that is at least 64KB and no more than 128KB in size, and is a
+multiple of 16KB.  If an extended BIOS data area is present, the returned
+free range will be below this area so that BIOS cannot be inadvertently
+mapped away.
+<P>
+Waiting until creation time to reserve this memory allows virtual device
+drivers with actual hardware to claim their addresses first, since VEMM
+can place its memory at any available address.  A consequence of this technique
+is that the space is reserved only for the VDM being created. It could be
+in a different location or be a different size for other VDMs.
+<P>
+VEMM performs mapping by requesting the operating system's memory manager
+to alias linear space<!-- entering slot 204 --> inside a mappable window
+in the V86 mode address space to a memory region outside the V86 address
+space.  The application can then access this part of the expanded memory
+object.
+<P>
+The VEMM virtual device driver prehooks interrupt vector 67h through a VDH
+service to catch software interrupts for EMS services.  Prehooking means
+that VEMM gains control before the V86 mode interrupt vector is called.
+VEMM also provides a stub driver, the sole function of which is to indicate
+to DOS applications that EMS is available.
+<P>
+VEMM then arranges for the loading of a stub device driver in the VDM. This
+driver provides a header within the V86 mode address space which can be
+read by an application searching for the name of the real mode EMS driver.
+ It also responds to a few simple requests made to its strategy routine,
+basically replying that it is present and ready.  The stub driver does not
+actually process EMS service requests; these are handled by VEMM.
+<P>
+<B>Routing</B>
+<P>
+The router receives notification from the Virtual DOS Machine Manager when
+an application issues an INT 67h request.  The router checks the request
+to ensure that it is valid, and then causes an exception which is routed
+to the Virtual DOS Machine Manager.  The Virtual DOS Machine Manager then
+reflects the interrupt back into the VDM's interrupt vector table.  This
+technique is necessary since interrupt vector hooks are only allowed after
+application code has been executed.  The V86 mode interrupt vector for INT
+67h causes another exception which is routed to the Virtual DOS Machine
+Manager which then calls VEMM.
+<P>
+The EMS<I> Alter Map and Call</I> service allows an application to have
+VEMM remap memory to place a routine within the V86 mode address space,
+call that routine and then remap memory to its previous state again after
+the routine issues a<I> far return</I>.  This call can occur recursively;
+the application code that is called can in turn use the<I> Alter Map and
+Call</I> service.
+<P>
+VEMM does the initial remapping and stores the after-call remapping information
+on the client's stack.  VDH services are used to call the application's
+routine and intercept the return.  VEMM supplies the Virtual DOS Machine
+Manager with a V86 mode address to call and a VEMM handler which is invoked
+when the application routine does a<I> far return</I>.  After the routine
+returns, VEMM restores the original mapping saved on the client's stack.
+
+<P>
+The<I> Remap and Jump</I> service is similar but does not require interception
+of an application routine's return or the saving of a mapping.  Remapping
+is done and the CS:IP is changed to jump to the address provided by the
+application.
+<P>
+Information calls involve at most a quick search of structures.  Structures
+are maintained to provide information about handles, allocations, and VEMM
+capabilities.  Handle directory services are also provided.  The number
+of pages VEMM reports as available is the minimum of the number of pages
+the VDM has left in VEMM pages and the amount the memory manager estimates
+is available.
+<P>
+<B>Protection</B>
+<P>
+A pseudo-random key is produced with the first protection call made by a
+VDM and also for the first protection call made after a key was returned.
+This key is given to the application which made the call that caused its
+generation.  OSEnabled can be reset only by the owner of the key.  The key
+owner can also return the key.  OSEnabled indicates whether or not protected
+functions can be executed.  The key will be generated by operations on the
+current time to ensure that the key changes, even for multiple calls between
+successive timer ticks.
+
+<P><HR>
+
+<A HREF="185_L2_ExpandedMemorySuppor.html">[Back: Expanded Memory Support]</A> <BR>
+<A HREF="187_L3_EMSObjectMapping.html">[Next: EMS Object Mapping]</A> 
+</BODY>
+</HTML>

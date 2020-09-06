@@ -1,0 +1,119 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>UUDecoding files</TITLE>
+</HEAD>
+<BODY>
+<H1>UUDecoding files</H1><!-- entering slot 496 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* UUDECODE.CMD - uudecode a file                                     */
+/*                                                                    */
+/* usage: uudecode encodedFile {&gt;decodedFile}                         */
+/*                                                                    */
+/* where: encodedFile - file to UUDecode                              */
+/*        decodedFile - UUDecoded file                                */
+/*                                                                    */
+/* authors:                                                           */
+/*   Based on original by Stefan Haubenthal 1992/94                   */
+/*   Hacked for OS/2 by Graham Bingham (grahamb@iacces.za), Dec 1994  */
+/*   Hacked for more speed and accuracy near EOF by Xtian, Dec 1994   */
+/*                                                                    */
+
+                    /* do not allow uninitialized variables           */
+  signal on NOVALUE
+
+                    /* get the parameter                              */
+  parse arg input
+
+  if input = "" then
+  do
+                    /* show usage                                     */
+    call LineOut, "Usage: UUDECODE encodedFile {&gt;decodedFile}"
+    exit 1
+  end /* if input = "" then */
+
+  do forever
+
+                    /* search the start of the UUEncoded data         */
+    do until datatype( mode ) = "NUM"
+      line = linein( input )
+      if stream( input, "S" ) &lt;&gt; "READY" then
+        exit
+      parse value line with "begin" mode dest .
+    end /* do until ... */
+
+    say "uudecoding "dest"..."
+
+    if stream( dest, "C", "QUERY EXISTS" ) &lt;&gt; "" then
+      "@ERASE" dest "2&gt;NUL 1&gt;NUL"
+
+    call time( "e" )
+
+    do lines=1
+      line=linein( input )
+      if line = "end" then
+        leave
+      len=c2d( decode( 1,left( line,1 ) ) )
+      if len &gt; 0 then
+        call charout dest,decode( len,substr( line,2,trunc((len+2)/3)*4 ) )
+    end /* do lines=1 */
+
+    say trunc( lines/time( "e" ) * 60)" lines per minute"
+
+    call stream dest, "C", "CLOSE"
+  end /* do forever */
+
+exit 0
+
+/* ------------------------------------------------------------------ */
+/* Function: UUDecode a line                                          */
+/*                                                                    */
+/* Usage:    Decode p1, p2                                            */
+/*                                                                    */
+/* where:    p1 = ?                                                   */
+/*           p2 = ?                                                   */
+/*                                                                    */
+/* returns: the UUdecoded line                                        */
+/*                                                                    */
+/* Notes:                                                             */
+/*  xx765432 xx107654 xx321076 xx543210 -&gt; 76543210 76543210 76543210 */
+/*                                                                    */
+DECODE: PROCEDURE /* sub &amp; del */
+
+ bin=c2b( translate( arg(2),xrange("00"x,"5f"x),xrange("20"x,"7f"x) ) )
+ do n=1 to length( bin ) by 6
+   bin=delstr( bin,n,2 )
+ end /* do n=1 ... */
+
+ if length( bin ) &lt; 8 then
+   return b2c( right( bin,8,"0" ) )
+
+return b2c( left( bin,arg(1)*8,"0" ) )
+
+/* ------------------------------------------------------------------ */
+/* subroutines from DECODE                                            */
+
+c2b: PROCEDURE
+  return x2b( c2x( arg(1) ) )
+
+b2c: PROCEDURE
+  return x2c( b2x( arg(1) ) )
+
+/* ------------------------------------------------------------------ */
+
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="476_L3_MaintainMultiValueEA.html">[Back: Maintain Multi-Value EAs in REXX]</A> <BR>
+<A HREF="478_L3_CopyafilefromHPFStoF.html">[Next: Copy a file from HPFS to FAT and vice versa]</A> 
+</BODY>
+</HTML>

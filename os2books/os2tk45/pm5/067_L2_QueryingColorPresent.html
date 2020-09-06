@@ -1,0 +1,73 @@
+<HTML>
+<HEAD>
+<TITLE>Querying Color Presentation Parameter Pairs</TITLE>
+</HEAD>
+<BODY>
+<H1>Querying Color Presentation Parameter Pairs</H1><!-- entering slot 67 -->
+<P>
+Many of the color presentation parameters come in pairs. For example, the
+background color of a window can be set using either PP_BACKGROUNDCOLOR,
+which takes an RGB color value (for example, RGB_RED), or PP_BACKGROUNDCOLORINDEX,
+which takes a color index (for example, CLR_RED). The newer presentation
+parameters do not have a color index equivalent, so it is recommended that
+you use RGB values wherever possible. RGB presentation parameters will also
+work with SYSCLR_ index values and negative CLR_ indexes (for example, CLR_BLACK).
+
+<P>
+WinQueryPresParam can be used to query a pair of color presentation parameters
+at once. The first parameter takes precedence over the second, and should
+normally be the RGB presentation parameter. The color index should be the
+second. If you are querying a color index presentation parameter and you
+want the color value to be returned as an RGB value, you can specify either
+QPF_ID1COLORINDEX or QPF_ID2COLORINDEX to convert a color index value to
+an RGB value.
+<P>
+If a window does not have a presentation parameter set for a particular
+color, the window must select a default color to use. For example, if there
+is no value set for PP_FOREGROUNDCOLOR or PP_FOREGROUNDCOLORINDEX, the window
+has to choose a default foreground color when it paints. The usual practice
+is to select a corresponding system color (for example, SYSCLR_WINDOWTEXT)
+and use that to paint the foreground of the window.
+<P>
+The decision of which system color to use is an important one, as system
+colors can be changed by the user with a Scheme Palette. Your choice should
+always be appropriate to the functionality of the window. If the user does
+change a system color, your window will receive a WM_SYSCOLORCHANGED message
+to notify you that your default colors might have been changed.
+<P>
+If there is no appropriate system color available, you will need to select
+a hard-coded color value as the default instead.
+<PRE>
+   /****************************************************************/
+   /* Query presentation parameter value for background color      */
+   /****************************************************************/
+
+   if (WinQueryPresParam(
+           hwndMain,                /* Window handle               */
+           PP_BACKGROUNDCOLOR,      /* Background presparam (RGB)  */
+           PP_BACKGROUNDCOLORINDEX, /* Background presparam (Index)*/
+           NULL,
+           sizeof(lColor),          /* Length of data buffer       */
+           &amp;lColor,                 /* Data buffer returned        */
+           QPF_ID2COLORINDEX) == 0) /* Convert 2nd presparam to RGB*/
+   {
+      /*************************************************************/
+      /* No presparam found - query default background color       */
+      /*************************************************************/
+
+      lColor = WinQuerySysColors(
+           HWND_DESKTOP,            /* Desktop window handle       */
+           SYSCLR_BACKGROUND,       /* System default background   */
+           0);                      /* Reserved                    */
+   }
+
+   GpiSetBackColor(hps, lColor);
+</PRE>
+
+
+<P><HR>
+
+<A HREF="066_L2_SpecifyingPRESPARAMS.html">[Back: Specifying PRESPARAMS in a Dialog Template]</A> <BR>
+<A HREF="068_L2_SettingaFontPresenta.html">[Next: Setting a Font Presentation Parameter]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,194 @@
+<HTML>
+<HEAD>
+<TITLE>LAN Server 3.0 Advanced Architecture</TITLE>
+</HEAD>
+<BODY>
+<H1>LAN Server 3.0 Advanced Architecture</H1><!-- entering slot 4 --><!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+LAN Server-Advanced consists of an SMB processor (386 SMB server) tightly
+coupled to a file system (the 386 HPFS).  These components are designed
+and optimized for 386-compatible and above processors.  LAN Server-Advanced
+provides an OS/2 file system driv er, running at system privilege, which
+requires minimal, if any, OS/2 services to satisfy network file I/O requests.
+Performance is enhanced by the use of Busmaster disk and network device
+drivers, which increase overlap of network and disk activity.  LAN Server-Advanced
+uses read-ahead and write-behind logic, allowing network file I/O to occur
+at a rate that approaches network bandwidth when the data is fully cached
+or disk transfer rates when disk I/O is required.
+<P>
+The 386 HPFS provides access control information within each file.  The
+access control information enables Local Security, provided with LAN Server-Advanced,
+to function consistently with remote access control.  Local Security is
+the LAN Server component that allows a network administrator to secure the
+file system on the server workstation from local users.  File I/O performance
+is enhanced because of a much larger cache capacity and more intelligent
+caching algorithms.
+<P>
+Server network buffers are passed to the server by the NETBIOS device driver.
+ LAN Server-Advanced is optimized for 386 HPFS file I/O. Requests destined
+for non-HPFS resources such as the FAT file system, character devices, and
+named pipes are passed by LAN Server-Advanced to the Entry server, which
+is provided with LAN Server-Advanced.  The requests are satisfied through
+OS/2 APIs.
+<P>
+The Advanced server processes the three typical file accesses much like
+the Entry server.  The 386 HPFS file I/O requests may be sent with any of
+the three SMB protocol types discussed previously for the Entry server.
+ For information on the Entry Server, see "LAN Server-Entry Design Overview"
+in topic 1.3.  However, the Advanced server uses scatter/gather logic to
+enhance performance if it is supported by network and disk device drivers.
+
+<P>
+The following figure shows the components that may influence the performance
+of OS/2 LAN Servers (Advanced package) and OS/2 LAN Requesters.  This figure
+also provides a reference for discussing individual performance-related
+elements.
+<P>
+System Architecture of the OS/2 Advanced Server and OS/2 LAN Requester
+<P>
+
+<PRE>
+                                             ³
+&lt;ÄÄÄÄÄÄÄÄÄÄÄÄÄServerÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ&gt;³&lt;ÄÄÄÄÄÄÄRequesterÄÄÄÄÄÄÄÄÄ&gt;
+                          ÚÄÄÄÄÄÄÄÄÄÄÄÄÄ¿    ³     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                          ³    Local    ³    ³     ³    Local    ³
+                          ³ application ³    ³     ³ application ³
+                          ÀÄÄÄÄÄÄÄÄÄÄÂÄÄÙ    ³     ÀÄÄÄÄÄÄÂÄÄÄÄÄÄÙ
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿           ³       ³            ³
+³ LAN Server 3.0 - Entry ÃÄÄÄÄÄ¿     ³       ³            ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄ´     ³     ³       ³            ³
+³ Request    ³     Big   ³   ÚÄÁÄÄÄÄÄÁÄÄ¿    ³     ÚÄÄÄÄÄÄÁÄÄÄÄÄÄ¿
+³ buffers    ³   buffers ³   ³ OS/2 API ³    ³     ³   OS/2 API  ³
+ÀÄÄÄÂÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÙ   ÀÄÄÄÂÄÄÄÄÄÄÙ    ³     ÀÄÄÄÄÄÄÂÄÄÄÄÄÄÙ
+    ³                            ³           ³            ³ Application
+    ³                            ³           ³            ³ privilege
+ÄÄÄÄ³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ³ÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄ³ÄÄÄÄÄÄÄÄÄÄÄÄÄ
+    ³                            ³           ³            ³ System
+    ³                            ³           ³            ³ privilege
+    ³      ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄ¿         ³     ÚÄÄÄÄÄÄÁÄÄÄÄÄÄ¿
+    ³      ³      OS/2 kernel      ³         ³     ³ OS/2 kernel ³
+    ³      ÃÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄ´         ³     ÃÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+    ³    ÚÄ´   IFS    ³     FAT    ³         ³     ³     IFS     ³
+    ³    ³ ÀÄÄÄÄÄÄÂÄÄÄÁÄÄÄÄÄÄÄÄÄÄÂÄÙ         ³     ÀÄÄÄÄÄÄÂÄÄÄÄÄÄÙ
+ÚÄÄÄÁÄÄÄÄÁÄÄ¿     ³              ³           ³    ÚÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄ¿
+³ Redirector³     ³              ³           ³    ³   Redirector    ³
+ÀÄÄÄÄÄÂÄÄÄÄÄÙ     ³  ÚÄÄÄÄÄÄÄÄ¿  ³           ³    ³                 ³
+      ³           ÀÄÄ´  File  ³  ³           ³    ÃÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄ´
+      ³              ³ system ³  ³           ³    ³  Work   ³ Work  ³
+      ³              ³ driver ³  ³           ³    ³ buffers ³ cache ³
+ÚÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄ¿   ÃÄÄÄÄÄÄÄÄ´  ³           ³    ÀÄÄÄÄÂÄÄÄÄÁÄÄÂÄÄÄÄÙ
+³ LAN Server 3.0 ÃÄÄÄ´   386  ³  ³           ³         ÀÄÄÂÄÄÄÄÙ
+³  - Advanced    ³   ³  HPFS  ³  ³           ³            ³
+³ SMB processor  ³   ÃÄÄÄÄÄÄÄÄ´  ³           ³            ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´   ³  HPFS  ³  ³           ³            ³
+³ Request buffers³   ³  CACHE ³  ³           ³            ³
+ÀÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÙ   ÀÄÄÄÄÂÄÄÄÙ  ³           ³            ³
+ÚÄÄÄÄÄÁÄÄ¿            ÚÄÄÄÁÄÄÄÄÄÄÁ¿          ³         ÚÄÄÁÄÄÄÄÄ¿
+³NETBIOS ³            ³Disk driver³          ³         ³NETBIOS ³
+³protocol³            ÃÄÄÄÄÄÄÄÄÄÄÄ´          ³         ³protocol³
+³ driver ³            ³ DISKCACHE ³          ³         ³ driver ³
+ÀÄÄÄÂÄÄÄÄÙ            ÀÄÄÄÄÂÄÄÄÄÄÄÙ          ³         ÀÄÄÂÄÄÄÄÄÙ
+ÚÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿      ³                 ³   ÚÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄ¿
+³  Network adapter  ³      ³                 ³   ³  Network adapter  ³
+³      driver       ³      ³                 ³   ³      driver       ³
+ÃÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄ´      ³                 ³   ÃÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄ´
+³Receive ³  Transmit³      ³                 ³   ³Receive ³  Transmit³
+³buffers ³  buffers ³      ³                 ³   ³buffers ³  buffers ³
+ÀÄÄÄÄÂÄÄÄÁÄÄÄÄÂÄÄÄÄÄÙ      ³                 ³   ÀÄÄÄÄÂÄÄÄÁÄÄÂÄÄÄÄÄÄÄÙ
+     ÀÄÄÄÂÄÄÄÄÙ            ³                 ³        ÀÄÄÄÂÄÄÙ   PS/2 Processor
+ÄÄÄÄÄÄÄÄÄ³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄ³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+  ÚÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄ¿     ÚÄÄÁÄÄÄÄÄÄÄÄÄ¿       ³   ÚÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄ¿
+  ³Network adapter³     ³Disk adapter³       ³   ³  Network adapter  ³
+  ³     card      ³     ³   card     ³       ³   ³       card        ³
+  ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ     ÀÄÄÄÄÄÄÄÄÄÄÄÄÙ       ³   ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+The next figure shows the components that may influence the performance
+of OS/2 LAN Servers (Advanced package) and DOS LAN Requesters.  This figure
+also provides a reference for discussing individual performance-related
+elements.
+<P>
+System Architecture of the OS/2 Advanced Server and DOS LAN Requester
+<P>
+
+<PRE>&lt;ÄÄÄÄÄÄÄÄÄÄÄÄÄServerÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ&gt;³&lt;ÄÄÄÄÄÄÄRequesterÄÄÄÄÄÄÄÄÄ&gt;
+                          ÚÄÄÄÄÄÄÄÄÄÄÄÄÄ¿    ³ ÚÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄ¿
+                          ³    Local    ³    ³ ³   Local    ³Application³
+                          ³ application ³    ³ ³application ³   memory  ³
+                          ÀÄÄÄÄÄÄÄÄÄÄÂÄÄÙ    ³ ÀÄÄÄÄÄÄÄÄÄÄÂÄÁÄÄÄÄÄÄÄÄÄÄÄÙ
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿           ³       ³            ³
+³ LAN Server 3.0 - Entry ÃÄÄÄÄÄ¿     ³       ³            ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄ´     ³     ³       ³            ³
+³ Request    ³     Big   ³   ÚÄÁÄÄÄÄÄÁÄÄ¿    ³     ÚÄÄÄÄÄÄÁÄÄÄÄÄÄ¿
+³ buffers    ³   buffers ³   ³ OS/2 API ³    ³     ³   DOS API   ³
+ÀÄÄÄÂÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÙ   ÀÄÄÄÂÄÄÄÄÄÄÙ    ³     ÀÄÄÄÄÄÄÂÄÄÄÄÄÄÙ
+    ³                            ³           ³            ³
+    ³  Application privilege     ³           ³            ³
+ÄÄÄÄ³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ³ÄÄÄÄÄÄÄÄÄÄÄ´            ³
+    ³  System privilege          ³           ³            ³
+    ³                            ³           ³            ³
+    ³      ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄ¿         ³            ³
+    ³      ³      OS/2 kernel      ³         ³         Interrupt 2F
+    ³      ÃÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄ´         ³            ³
+    ³    ÚÄ´   IFS    ³     FAT    ³         ³            ³
+    ³    ³ ÀÄÄÄÄÄÄÂÄÄÄÁÄÄÄÄÄÄÄÄÄÄÂÄÙ         ³            ³
+ÚÄÄÄÁÄÄÄÄÁÄÄ¿     ³              ³           ³    ÚÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄ¿
+³ Redirector³     ³              ³           ³    ³   Redirector    ³
+ÀÄÄÄÄÄÂÄÄÄÄÄÙ     ³  ÚÄÄÄÄÄÄÄÄ¿  ³           ³    ³                 ³
+      ³           ÀÄÄ´  File  ³  ³           ³    ÃÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄ´
+      ³              ³ system ³  ³           ³    ³ Network ³  Big  ³
+      ³              ³ driver ³  ³           ³    ³ buffers ³buffers³
+ÚÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄ¿   ÃÄÄÄÄÄÄÄÄ´  ³           ³    ÀÄÄÄÄÂÄÄÄÄÁÄÄÂÄÄÄÄÙ
+³ LAN Server 3.0 ÃÄÄÄ´   386  ³  ³           ³         ÀÄÄÂÄÄÄÄÙ
+³  - Advanced    ³   ³  HPFS  ³  ³           ³            ³
+³ SMB processor  ³   ÃÄÄÄÄÄÄÄÄ´  ³           ³         Interrupt 5C
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´   ³  HPFS  ³  ³           ³            ³
+³ Request buffers³   ³CACHE386³  ³           ³            ³
+ÀÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÙ   ÀÄÄÄÄÂÄÄÄÙ  ³           ³         ÚÄÄÁÄÄÄÄÄ¿
+ÚÄÄÄÄÄÁÄÄ¿            ÚÄÄÄÁÄÄÄÄÄÄÁ¿          ³         ³        ³
+³NETBIOS ³            ³Disk driver³          ³         ³NETBIOS ³
+³protocol³            ÃÄÄÄÄÄÄÄÄÄÄÄ´          ³         ³protocol³
+³ driver ³            ³ DISKCACHE ³          ³         ³ driver ³
+ÀÄÄÄÂÄÄÄÄÙ            ÀÄÄÄÄÂÄÄÄÄÄÄÙ          ³         ÀÄÄÂÄÄÄÄÄÙ
+ÚÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿      ³                 ³   ÚÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄ¿
+³  Network adapter  ³      ³                 ³   ³  Network adapter  ³
+³      driver       ³      ³                 ³   ³      driver       ³
+ÃÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄ´      ³                 ³   ÃÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄ´
+³Receive ³  Transmit³      ³                 ³   ³Receive ³  Transmit³
+³buffers ³  buffers ³      ³                 ³   ³buffers ³  buffers ³
+ÀÄÄÄÄÂÄÄÄÁÄÄÄÄÂÄÄÄÄÄÙ      ³                 ³   ÀÄÄÄÄÂÄÄÄÁÄÄÂÄÄÄÄÄÄÄÙ
+     ÀÄÄÄÂÄÄÄÄÙ            ³                 ³        ÀÄÄÄÂÄÄÙ   PS/2 Processor
+ÄÄÄÄÄÄÄÄÄ³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄ³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+  ÚÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄ¿     ÚÄÄÁÄÄÄÄÄÄÄÄÄ¿       ³   ÚÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄ¿
+  ³Network adapter³     ³Disk adapter³       ³   ³  Network adapter  ³
+  ³     card      ³     ³   card     ³       ³   ³       card        ³
+  ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ     ÀÄÄÄÄÄÄÄÄÄÄÄÄÙ       ³   ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+Sideband Feature
+<P>
+
+<P>
+Sideband is a set of enhancements designed to<!-- entering slot 5 --> improve
+the performance of small random reads and writes to files on LAN Server
+3.0.  These enhancements are contained in the DOS LAN Requester and OS/2
+LAN Requester components, the Advanced server components, and the latest
+release of the LAN Adapter and Protocol Support components.
+<P>
+If it is determined that an excessive number of frames are being lost on
+a single session, Sideband will be disabled for that particular session.
+Sideband will stay disabled until the session is ended.  If the user would
+like to re-enable Sideband, the session can be deleted and restarted by
+disconnecting and then reconnecting all connections to the server in question.
+
+
+<P><HR>
+
+<A HREF="001_L1_LANServer30EntryArch.html">[Back: LAN Server 3.0 Entry Architecture]</A> <BR>
+<A HREF="003_L1_386HPFSFeatures.html">[Next: 386 HPFS Features]</A> 
+</BODY>
+</HTML>

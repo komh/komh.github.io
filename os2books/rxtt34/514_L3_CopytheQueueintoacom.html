@@ -1,0 +1,107 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Copy the Queue into a compound variable</TITLE>
+</HEAD>
+<BODY>
+<H1>Copy the Queue into a compound variable</H1><!-- entering slot 533 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* sample routine to copy the queue into a compound variable          */
+
+  "@dir | rxqueue"
+  call CopyQueueIntoStem "filesFound"
+
+  say filesFound.0 || " entries found."
+  do i = 1 to filesFound.0
+    say i || "-&gt; " || filesFound.i
+  end /* do i = 1 to filesFound.0 */
+
+exit 0
+
+/* ------------------------------------------------------------------ */
+/* function: Save all entries from within the queue into a compound   */
+/*           variable                                                 */
+/*                                                                    */
+/* call:     CopyQueueIntoStem stem                                   */
+/*                                                                    */
+/* where:    stem - stem of the compound variable for the lines from  */
+/*                  the queue                                         */
+/*                                                                    */
+/* returns:  no. of entries read                                      */
+/*                                                                    */
+CopyQueueIntoStem:
+  parse arg rqis.__stemName
+
+                        /* set the return code                        */
+  rc = 0
+
+  if rqis.__stemName &lt;&gt; "" then
+  do
+    if right( rqis.__stemName,1 ) &lt;&gt; "." then
+      rqis.__StemName = rqis.__StemName || "."
+
+    if symbol( rqis.__StemName || "0" ) &lt;&gt; "VAR" then
+    do
+                        /* the compound variable is not used at this  */
+                        /* time -- init the number of stem elements   */
+                        /*  with 0                                    */
+      rqis.__iLine = rqis.__StemName || "0 = 0 "
+      interpret rqis.__iLine
+      rqis.__InitNo = 0
+    end /* if */
+    else
+    do
+                        /* compound variable is already in use        */
+      rqis.__InitNo = value( rqis.__StemName || "0" )
+    end /* else */
+
+    if queued() &lt;&gt; 0 then
+    do
+      rqis.__iLine = "i = " rqis.__StemName || "0"
+      interpret rqis.__iLine
+
+                        /* create the code to read the queue          */
+      rqis.__iLine = ,
+       "do until queued() = 0;                                "  ,
+       "   rqis.__qLine = strip( lineIn( ""QUEUE:"" ) );      "  ,
+       "   if rqis.__qLine &lt;&gt; """" then                       "  ,
+       "   do;                                                "  ,
+       "     i = i +1;                                        "  ,
+             rqis.__StemName || "i = rqis.__qLine;            "  ,
+       "   end;                                               "  ,
+       "end;"
+                        /* and now execute the code to read the queue */
+      interpret rqis.__iLine
+
+                        /* correct the no. of lines in stem.0         */
+      rqis.__iLine = rqis.__StemName || "0 = i "
+      interpret rqis.__iLine
+
+                        /* set the return code                        */
+      rc = i - rqis.__InitNo
+    end /* if stream( ... */
+
+  end /* if rqis.__stemName &lt;&gt; "" then */
+
+  do while queued() &lt;&gt; 0
+    rqis.__dummyLine = lineIN( "QUEUE:" )
+  end /* do while */
+
+  drop rqis.
+
+RETURN rc
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="513_L3_Simpledebugroutine.html">[Back: Simple debug routine]</A> <BR>
+<A HREF="515_L3_Sampleforpersistentv.html">[Next: Sample for persistent variables]</A> 
+</BODY>
+</HTML>

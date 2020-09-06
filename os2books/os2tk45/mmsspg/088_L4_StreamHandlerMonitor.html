@@ -1,0 +1,72 @@
+<HTML>
+<HEAD>
+<TITLE>Stream Handler Monitors the Time</TITLE>
+</HEAD>
+<BODY>
+<H1>Stream Handler Monitors the Time</H1><!-- entering slot 110 -->
+<P>
+The second method of event detection is for the stream handler to monitor
+the time, independent of the PDD. This method is less accurate and not as
+efficient as requesting the PDD to monitor the time. It involves implementing
+an algorithm that constantly monitors real-time. When the stream handler
+detects the appropriate time, it reports the event to the Sync/Stream Manager
+as shown in the following example.
+<PRE>RC  SHDReportEvent(PSHD_REPORTEVENT pRptEvent)
+{
+  PSTREAM         pSTREAM;
+  ulRC            rc;
+
+  if (rc = GetStreamEntry(&amp;pSTREAM, pRptEvent-&gt;hStream))
+          return(rc);
+
+   pSTREAM-&gt;ulStreamTime = pRptEvent-&gt;ulStreamTime;
+   /* Update stream time */
+
+  /******************************************************************/
+  /* Stream handler detected event and notified the SSM.            */
+  /******************************************************************/
+
+  while (pEVENT != NULL) {             /* process all possible events */
+     if (pEVENT-&gt;hEvent == pRptEvent-&gt;hEvent) {
+                  /*********************************************/
+                  /* Poll the current time to determine if the */
+                  /* event time is now.                        */
+                  /*********************************************/
+                  if (mmtimeCurrTime &gt;= pTimeEvcb-&gt;mmtimeStream) {
+                      pTimeEvcb-&gt;mmtimeStream = mmtimeCurrTime;
+                      RptEvent.ulFunction = SMH_REPORTEVENT;
+                      RptEvent.hid = pSTREAM-&gt;hid;
+                      RptEvent.hevent = pEVENT-&gt;hEvent;
+                      RptEvent.pevcbEvent = &amp;(pEVENT-&gt;evcb);
+                      /******************************************/
+                      /* Call the Sync/Stream Manager to report */
+                      /*  event arrival.                        */
+                      /******************************************/
+                      VideoSH.pSMHEntryPoint(&amp;RptEvent); /* report it */
+   }
+     pEVENT = pEVENT-&gt;pNext;
+
+  } /* end while */
+
+  return(NO_ERROR);
+}
+</PRE>
+
+<P>
+Note that when you develop a stream handler, the stream handler should be
+able to support all time formats.
+<P>
+<B>Note: </B> Most physical device drivers use milliseconds as their reference;
+however, cuepoints initiated by the application come in as a request to
+the stream handler in the time format, MMTIME. Therefore, the stream handler
+must be able to convert from MMTIME to milliseconds and vice versa.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+
+<P><HR>
+
+<A HREF="087_L4_PDDMonitorstheTime.html">[Back: PDD Monitors the Time]</A> <BR>
+<A HREF="089_L3_Cuepoints.html">[Next: Cuepoints]</A> 
+</BODY>
+</HTML>

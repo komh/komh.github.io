@@ -1,0 +1,88 @@
+<HTML>
+<HEAD>
+<TITLE>Text String Substitution in Memory</TITLE>
+</HEAD>
+<BODY>
+<H1>Text String Substitution in Memory</H1><!-- entering slot 36 -->
+<P>
+<A><!-- external link: 1D 99 C3 3E -->DosInsertMessage</A> inserts variable
+text-string information into a message that resides within program memory.
+
+<P>
+In the following code fragment, the message resides in a program string
+variable named<I> Message</I>. The message is the string "%1 Error at Station
+%2". The application calls<A><!-- external link: 1D 99 C3 3E --> DosInsertMessage
+</A>to convert this message into the string "Automation Failure Error at
+Station 69B".
+<PRE>    #define INCL_DOSMISC   /* Miscellaneous values */
+    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+
+    UCHAR   *ucIvTable[2];               /* Table of variables to insert         */
+    ULONG    ulIvCount;                  /* Number of variables                  */
+    UCHAR    ucMsgInput[40] = "%1 Error at Station %2";     /* The input message */
+    ULONG    ulMsgInLength;              /* Length of input message              */
+    UCHAR    ucDataArea[80];             /* Message buffer (returned)            */
+    ULONG    ulDataLength;               /* Length of updated message buffer     */
+    ULONG    ulMsgLength;                /* Length of updated message (returned) */
+    UCHAR    ucField1[20];               /* String to substitute into variable   */
+                                         /* field %1 of the message              */
+    UCHAR    ucField2[20];               /* String to substitute into variable   */
+                                         /* field %2 of the message              */
+    APIRET   ulrc;                       /* Return code                          */
+
+    strcpy(ucField1,
+           "Automation Failure");        /* Define the field with which to  */
+                                         /* perform the first substitution  */
+
+    strcpy(ucField2,
+           "69B");                       /* Define the field with which to  */
+                                         /* perform the second substitution */
+
+    ucIvTable[0] = ucField1;     /* Set up the array of pointers to */
+    ucIvTable[1] = ucField2;     /* substitute strings              */
+
+    ulIvCount = 2;                          /* Two variable message fields in  */
+                                            /* message                         */
+
+    ulMsgInLength = strlen(ucMsgInput);     /* Length of input message         */
+
+    ulDataLength = 80;                      /* Data buffer that will receive   */
+                                            /* the complete message is 80      */
+                                            /* bytes in size                   */
+
+    ulrc = DosInsertMessage(ucIvTable,
+                            ulIvCount,
+                            ucMsgInput,
+                            ulMsgInLength,
+                            ucDataArea,
+                            ulDataLength,
+                            &amp;ulMsgLength);
+
+    if (ulrc != 0) {
+        printf("DosInsertMessage error: return code = %ld",
+               ulrc);
+        return;
+    }
+
+</PRE>
+
+<P>
+On successful return, the<I> DataArea</I> buffer contains the complete message
+(with the two variable fields appropriately updated), and the<I> MsgLength
+</I>variable contains the length of the message that was placed into the
+<I>DataArea</I> buffer.
+<P>
+If an error occurs (that is, if the return code does not equal 0), a message
+that is related to the error will be placed in the message buffer. See the
+<A><!-- external link: 1D 94 C3 3D -->DosGetMessage</A> API reference in
+<I>Control Program Programming Reference</I> for a description of the default
+messages that can be placed into the user's buffer if an error occurs during
+the processing of these requests.
+
+<P><HR>
+
+<A HREF="035_L3_MessageRetrievalandS.html">[Back: Message Retrieval and String Substitution]</A> <BR>
+<A HREF="037_L3_WritingMessages.html">[Next: Writing Messages]</A> 
+</BODY>
+</HTML>

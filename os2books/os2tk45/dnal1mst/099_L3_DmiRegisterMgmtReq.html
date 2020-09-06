@@ -1,0 +1,105 @@
+<HTML>
+<HEAD>
+<TITLE>DmiRegisterMgmtReq</TITLE>
+</HEAD>
+<BODY>
+<H1>DmiRegisterMgmtReq</H1><!-- entering slot 100 -->
+<P>
+Before a management application can initiate any management activity through
+the DMI, the application must register with the service layer. The command
+block used for registration is the DmiRegisterMgmtReq block.
+<P>
+The format for the command block is: ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+<BR>
+³ Table 21. DmiRegisterMgmtReq Command Block                  ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ OFFSET     ³ SIZE      ³ TYPE      ³ VARIABLE NAME         ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 0       ³ 64       ³ STRUCT     ³ DmiMgmtCommand        ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 64       ³ 4       ³ PTR      ³ pConfirmFunc         ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 68       ³ 4       ³ PTR      ³ pIndicationFunc        ³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+<B><!-- lm: 0x2 1 -->
+<UL>
+<P>
+Variable Name<!-- lm: 0x2 21 -->
+<UL> Variable Description</B><!-- lm: 0x2 1 -->
+</UL> DmiMgmtCommand
+<!-- lm: 0x12 21 -->
+<UL>The command block.  The value of iCommand is 0x100.
+<!-- lm: 0x2 1 -->
+</UL>pConfirmFunc<!-- lm: 0x12 21 -->
+<UL> Pointer to
+a routine in the management application that the service layer calls after
+completing each command. The C prototype for this call is:
+<PRE>void pConfirmFunc(PTR cmd)
+</PRE>
+
+<P>
+The variable<I> cmd</I> points to the command block that has completed.
+If pConfirmFunc() is set to zero, the management application cannot use
+DmiInvoke to issue management directives but can still receive indications,
+if pIndicationFunc() is non-zero.<!-- lm: 0x2 1 -->
+</UL> pIndicationFunc
+<!-- lm: 0x12 21 -->
+<UL>Pointer to a routine in the management application
+that the service layer calls to send unsolicited reports, either because
+of an event or because a component has been removed. If the management application
+does not want to receive indications, it must set this field to zero. The
+C prototype for this call is:
+<PRE>void pIndicationFunc(DmiIndicate *buf)
+</PRE>
+
+<P>
+The variable<I> buf</I> points to a DmiIndicate block.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Issuing DmiRegisterMgmtReq displays an example of how to issue the DmiRegisterMgmtReq
+command block to the MI. IssuingDmiRegisterMgmtReq
+<BR>
+
+<PRE>ULONG IssueReg(void)   // attempt to register with the service layer
+{
+DMI_RegisterMgmtReq_t    *reg;
+ULONG RC;
+
+    /* Register with the Service Layer. */
+    reg = (DMI_RegisterMgmtReq_t *)malloc(sizeof(DMI_RegisterMgmtReq_t));
+    memset((void *)reg,0,sizeof(DMI_RegisterMgmtReq_t));
+    reg-&gt;DmiMgmtCommand.iLevelCheck = DMI_LEVEL_CHECK;
+    reg-&gt;DmiMgmtCommand.iCmdHandle = YOUR_COMMAND_HANDLE;  // set the command counter
+    reg-&gt;DmiMgmtCommand.iCnfBufLen = 4000UL;               // set the size of the response
+    reg-&gt;DmiMgmtCommand.pCnfBuf = malloc(4000);   // set up the response buffer
+    reg-&gt;DmiMgmtCommand.iRequestCount = 1;
+    reg-&gt;DmiMgmtCommand.iCmdLen = sizeof(DMI_RegisterMgmtReq_t);
+    reg-&gt;DmiMgmtCommand.iCommand = DmiRegisterMgmtCmd;
+    reg-&gt;pIndicationFunc = (DMI_FUNC3_OUT) myEventHandler;
+    reg-&gt;pConfirmFunc = (DMI_FUNC3_OUT) myCallBackFunc;
+    if((RC = DmiInvoke((DMI_MgmtCommand_t *)reg)) != SLERR_NO_ERROR) {  // call service layer and register
+        free(reg-&gt;DmiMgmtCommand.pCnfBuf);
+        free(reg);
+    }
+    return RC;
+}
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="098_L2_ManagementInterfaceM.html">[Back: Management Interface (MI) Command Blocks]</A> <BR>
+<A HREF="100_L3_DmiRegisterCnf.html">[Next: DmiRegisterCnf]</A> 
+</BODY>
+</HTML>

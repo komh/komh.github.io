@@ -1,0 +1,205 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Using a file as semaphore</TITLE>
+</HEAD>
+<BODY>
+<H1>Using a file as semaphore</H1><!-- entering slot 520 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* sample code to ensure that a program does not run two or more      */
+/* times at once. This code also handles program crashes!             */
+/*                                                                    */
+/* Note: Run this program in 2 or more windows at the same time!      */
+/*                                                                    */
+/* Description:                                                       */
+/*                                                                    */
+/* This program uses a file as semaphore. This is possible because    */
+/* OS/2 REXX does not support shared files - only one REXX program    */
+/* can have write access to a file at any time.                       */
+/*                                                                    */
+/* There are 3 cases to check at the start of the program             */
+/*                                                                    */
+/* 1. Another instance of the program is already running.             */
+/*    In this case the semaphore file exists. The program cannot      */
+/*    delete it because the other instance running has locked it.     */
+/*                                                                    */
+/* 2. No other instance of the program is running and the last        */
+/*    call of the program ended without an error.                     */
+/*    In this case the semaphore file does not exist. The program can */
+/*    create and lock it.                                             */
+/*                                                                    */
+/* 3. No other instance of the program is running but the last call   */
+/*    of the program crashed.                                         */
+/*    In this case the semaphore file exists, but the program can     */
+/*    delete it because there is no other program locking it.         */
+/*    After that the program can create and lock the semaphore file.  */
+/*                                                                    */
+/*    Note that this algorithm works because OS/2 closes all open     */
+/*    files if a program ends.                                        */
+/*                                                                    */
+/* Note that the new <A HREF="327_L2_NewREXXUTILfunctions.html">REXXUTIL</A> introduced with <A HREF="269_L1_HintsforObjectREXX.html">Object-Oriented REXX</A>    */
+/* contains functions to use normal OS/2 semaphores in REXX programs. */
+/*                                                                    */
+/* (see also <A HREF="501_L3_Simulateasemaphore.html">Simulate a semaphore</A> and                                 */
+/* <A HREF="502_L3_UsingREXXqueuestosim.html">Using REXX queues to simulate a semaphore</A>)                         */
+/*                                                                    */
+/* (c) 1996 <A HREF="002_L1_GeneralForeword.html">Bernd Schemmer</A>, Germany, EMail: Bernd.Schemmer@gmx.de     */
+/*                                                                    */
+
+                        /* name of the semaphore file                 */
+  SemFile = "C:\MySem"
+
+  call CharOut , "Waiting for the semaphore ..."
+
+  do forever
+    i = TestAndSetSemaphor( semFile )
+    select
+
+      when i = 1 then
+      do
+        say "... ok. Semaphore set."
+        leave
+      end /* when i = 1 */
+
+      when i = 2 then
+      do
+        say
+        say " ... Ops: The last program call " || ,
+            "died because of an accident!"
+        say " now this instance has set the semaphore."
+        leave
+      end /* when i = 0 */
+
+      otherwise
+      do
+                        /* semaphore is already in use - just wait    */
+        call CharOut , "."
+      end /* otherwise */
+
+    end /* select */
+  end /* do forever */
+
+                        /* if we come to this part of the code, we    */
+                        /* have set the semaphore                     */
+  say "Enter I to simulate a program crash, or any other key to end  "
+  say "the program normally ..."
+  userKey = translate( left( strip( lineIn() ),1 ) )
+
+  if userKey = "I" then
+  do
+                        /* simulate a program crash without deleting  */
+                        /* the semaphore                              */
+    say "Now simulating a program crash without " || ,
+        "resetting the semaphore ..."
+    exit 255
+  end /* if userKey = "I" then */
+
+                        /* normal program end - delete the semaphore  */
+  say "Now deleting the semaphore and ending the program ..."
+  call DeleteSemaphor semFile
+exit 0
+
+/* ------------------------------------------------------------------ */
+/* Function: Test the semaphore and set it if it is free              */
+/*                                                                    */
+/* call:     TestAndSetSemaphor semaphorFileName                      */
+/*                                                                    */
+/* where:    semaphorFileName                                         */
+/*              - fully qualified name of the semaphore file          */
+/*                                                                    */
+/* returns:  0 - error, semaphore is already set                      */
+/*           1 - okay, semaphore set                                  */
+/*           2 - okay, semaphore set, the last program call crashes   */
+/*           else error setting the semaphore                         */
+/*                                                                    */
+TestAndSetSemaphor: PROCEDURE
+  parse arg semaphorFileName .
+
+                        /* init the return code                       */
+  thisRC = -1
+
+  if stream( semaphorFileName, "c", "QUERY EXISTS" ) &lt;&gt; "" then
+  do
+                        /* semaphore file exists                      */
+                        /* -&gt; either an instance of this program is   */
+                        /*    already running or the last call of the */
+                        /*    program crashed                         */
+
+                        /* try to delete the semaphore file           */
+    "@del " semaphorFileName "2&gt;NUL 1&gt;NUL"
+    if rc = 0 then
+    do
+                        /* semaphore file deleted                     */
+                        /* -&gt; no other instance of this program is    */
+                        /*    running but the last call crashes       */
+
+                        /* try to set the semaphore                   */
+      if stream( semaphorFileName, "c", "OPEN WRITE" ) = "READY:" then
+      do
+                        /* semaphore set                              */
+        thisRC = 2
+      end /* if stream( semaphorFileName, "c", "OPEN WRITE" ) = ...  */
+      else
+      do
+                        /* something went wrong ...                   */
+        thisRC = -1
+      end /* else */
+    end /* if rc = 0 */
+    else
+    do
+                        /* we cannot delete the semaphore file        */
+                        /* -&gt; another instance of this program is     */
+                        /*    already running                         */
+      thisRC = 0
+    end /* else */
+  end /* if stream( semaphorFileName, "c", "QUERY EXISTS" ) &lt;&gt; "" then */
+  else
+  do
+                    /* try to create and lock (!) the semaphore file  */
+    if stream( semaphorFileName , "c", "OPEN WRITE" ) = "READY:" then
+    do
+                        /* ok, semaphore set                          */
+      thisRC = 1
+    end /* if */
+    else
+    do
+                        /* something went wrong ...                   */
+        thisRC = -1
+    end /* else */
+  end /* else */
+
+RETURN thisRC
+
+/* ------------------------------------------------------------------ */
+/* Function: Delete a semaphore                                       */
+/*                                                                    */
+/* call:     DeleteSemaphor semaphorFileName                          */
+/*                                                                    */
+/* where:    semaphorFileName                                         */
+/*              - fully qualified name of the semaphore file          */
+/*                                                                    */
+/* returns:  nothing                                                  */
+/*                                                                    */
+DeleteSemaphor: PROCEDURE
+  parse arg semaphorFileName .
+
+                        /* close the semaphore file                   */
+  call stream semaphorFileName , "c", "CLOSE"
+
+                        /* and delete the semaphore file              */
+  "@del " semaphorFileName "2&gt;NUL 1&gt;NUL"
+RETURN
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="502_L3_UsingREXXqueuestosim.html">[Back: Using REXX queues to simulate a semaphore]</A> <BR>
+<A HREF="504_L3_REXXWrapperfortextmo.html">[Next: REXX Wrapper for textmode programs]</A> 
+</BODY>
+</HTML>

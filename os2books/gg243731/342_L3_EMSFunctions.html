@@ -1,0 +1,169 @@
+<HTML>
+<HEAD>
+<TITLE>EMS Functions</TITLE>
+</HEAD>
+<BODY>
+<H1>EMS Functions</H1><!-- entering slot 393 -->
+<P>
+The following is a brief summary of LIM EMS Version 4.0 functions.  Note
+that it is a summary of the EMS specification itself, and<I> not</I> of
+its implementation under OS/2 Version 2.0.
+<P>
+<B>Allocating/Reallocating/Deallocating Expanded Memory</B>
+<P>
+An allocation request can be made for a number of expanded memory pages
+and, if successful, a handle is returned.  This handle is then used by the
+application to reallocate or deallocate memory.
+<P>
+<B>Mapping Expanded Memory</B>
+<P>
+Logical pages in an object can be mapped into physical address ranges addressable
+by the 8086 processor.  A mapping indicates the relation between EMS physical
+pages and &lt;EMS Handle, EMS Logical Page&gt; pairs that the application
+requires.  One example would be to map an expanded memory video buffer (EMS
+logical pages) to the mappable window (EMS physical pages) to create a video
+image in expanded memory.  An EMS service request can then be used to move
+the image from expanded memory to screen memory.
+<P>
+A single logical page can be mapped to multiple physical pages. This is
+used by programs such as Lotus 1-2-3. When a single logical page is mapped
+to multiple physical pages, a write to any of these physical pages writes
+to the same expanded memory.  An application can write to one address and
+then read the results from another address.  This feature can be used to
+provide independent mappings to a shared structure for multiple modules.
+To implement this aliasing, multiple page registers must all point to the
+same memory.  This leads to a requirement for the memory manager to support
+aliasing of page table entries.
+<P>
+A physical page can be unmapped.  Reads/writes to unmapped memory do not
+kill the application, but an application cannot depend on reading what it
+has previously written.  LIM EMS specifies that a program must unmap mappable
+windows before allowing another program to run, in order to protect the
+memory mapped by the first program.
+<P>
+The specification does not stipulate what happens to programs that touch
+unmapped memory, only that the physical pages are "inaccessible for reading
+and writing".  One possible implementation is to map unmapped pages to nonexistent
+physical pages (the Microsoft Windows/386 product does this). Another alternative
+is to map them to physical ROM.  This can lead to problems, however, on
+some machines that cache ROM.  The safest alternative is to use a single
+physical page of memory.
+<P>
+<B>Information Calls</B>
+<P>
+An application may obtain information about the EMS resources available,
+current mappings, and handle usage.  In a multiprogramming environment or
+where TSRs are loaded, however, this information may be out of date by the
+time it is used.  For instance, an application may determine the amount
+of LIM memory available, but before getting the opportunity to request an
+allocation, a TSR may request EMS memory.  The application would find less
+memory available than expected.
+<P>
+<B>Saving/Restoring Mappings</B>
+<P>
+Several calls are available for an application to obtain data that can later
+be returned to EMS to restore a mapping.  For some calls, this information
+is saved internally by the EMS driver.  For others, it is returned to the
+application.
+<P>
+One type of save operation automatically saves the registers pointing to
+the first 64KB of the mappable window to an internal EMS buffer associated
+wtih an EMS handle supplied by the user.  Typically, this is used by a TSR
+to save and restore the current mappable window by<!-- entering slot 394 --> saving
+to an EMS buffer associated with a handle owned by the TSR.  Other save
+operations return either complete or partial information to the application,
+which the application can later provide to restore memory mappings.  Still
+other calls allow EMS the option to store register information on the application's
+stack.  There are five different ways to save and restore registers in addition
+to techniques for setting the registers.
+<P>
+<B>Alternate Register Sets</B>
+<P>
+This is an optional feature of EMS.  Mapping can be done to any of a number
+of register sets.  The application can then switch the active register set.
+The effect is similar to switching page tables under OS/2 Version 2.0.  Alternate
+Register Sets can be protected by the first application to claim a protection
+key.  Only the application with the key will be allowed to claim a register
+set or switch the active one unless no one claims the key or the process
+with the key permits others to use the alternate sets.
+<P>
+This feature is typically used by DOS extenders such as Microsoft Windows.
+Switching memory during a task switch can be accomplished by turning on
+permission for changing register sets using the permission key, switching
+the current register set, and turning alternate set permission off.  Even
+when alternate register sets are not supported, save and restore operations
+for register set 0 are simulated with data passed to and from the application.
+
+<P>
+<B>DMA Register Sets</B>
+<P>
+This is an optional feature of EMS.  These register sets allow association
+of a DMA channel with a register set.  All DMA on that channel is remapped
+through the associated DMA register set allowing EMS remapping during DMA.
+When this feature is not supported, remapping of register sets may be delayed
+until DMA completes.
+<P>
+<B>Program Execution</B>
+<P>
+This function allows an application to execute a procedure or subroutine
+which lies in an expanded memory area not currently mapped into the 8086
+address space.  EMS will perform a remap to bring the procedure or routine
+into the 8086 address space, and pass control to the specified entry point.
+This may be accomplished in either of two ways:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->JUMP passes control to the specified entry point but
+makes no provision for return.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->CALL passes control to the specified entry point and
+after the application routine returns, sets up an address mapping that will
+be in effect when control returns to the calling routine.  The return address
+is that of the instruction following the INT 67h service request.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+This function allows applications to store code in expanded memory.
+<P>
+<B>Data Movement</B>
+<P>
+Copy and exchange services provide data movement between any combination
+of conventional or expanded memory.  The start of a region of expanded memory
+is indicated by handle, logical page and offset.  The memory being affected
+need not be currently mapped into the 8086 address space.  Overlapping copies
+succeed without corrupting data, and a return code indicates overlap to
+the application.  Exchange operations may not overlap.
+<P>
+This function allows applications to conveniently move portions of expanded
+objects around in expanded memory, or move them to or from conventional
+memory, without having to first remap the objects into the 8086 address
+space.
+<P>
+<B>EMM Protection</B>
+<P>
+Limited protection is available.  The first application that requests a
+key can turn enable or disable access to alternate and DMA register sets.
+There is no protection for memory objects.  Any application can determine
+all handles in use and perform any operations on them.  Within a single
+EMS implementation, a badly behaved application can wreak havoc on any application
+using EMS.
+<P>
+For example, one Windows application may<!-- entering slot 395 --> write
+over the memory of any other.  This is consistent with the general lack
+of protection in the DOS environment, where applications have free access
+to the machine's physical memory.
+<P>
+<B>OS Support</B>
+<P>
+On power up, an EMM implementation which supplies mappable conventional
+memory allocates all mappable conventional memory to handle 0 and maps it
+in.  This is typically all memory above the memory on the system board up
+to 640KB.  This occurs before the operating system starts up and allows
+programs like Windows to remap conventional memory.  Programs that remap
+conventional memory are required to reset the mapping before returning to
+the operating system.  EMS does not enforce this, however.
+
+<P><HR>
+
+<A HREF="341_L3_EMSOverview.html">[Back: EMS Overview]</A> <BR>
+<A HREF="343_L2_ExtendedMemorySpecif.html">[Next: Extended Memory Specification (XMS)]</A> 
+</BODY>
+</HTML>

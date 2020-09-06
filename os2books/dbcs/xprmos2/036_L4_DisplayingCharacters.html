@@ -1,0 +1,75 @@
+<HTML>
+<HEAD>
+<TITLE>Displaying Characters in a Window</TITLE>
+</HEAD>
+<BODY>
+<H1>Displaying Characters in a Window</H1><!-- entering slot 38 -->
+<PRE>旼컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴커
+쿛M-supplied controls are DBCS-enabled.                                �
+읕컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴켸
+</PRE>
+
+<P>
+ALL PM controls accept multibyte strings as their text.  The related APIs
+to set/query the text accept multibyte strings, too.  In case that the program
+uses wide string, the wide string must be converted before calling the PM
+APIs (refer to<A HREF="023_L3_InterfacebetweenWide.html">Interface between
+Wide-based Part and Multibyte-based Subsystems</A>).
+<PRE>旼컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴커
+쿏o not assume font size when writing characters with GPIs.            �
+읕컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴켸
+</PRE>
+
+<P>
+When an application writes characters on a presentation space directly,
+assuming the heights/width of the font may cause overlapping of characters.
+The following figure shows a very common example of this mistake.<!-- Unable to decode bitmap format --><IMG SRC="036_L4_DisplayingCharacters_4.gif" WIDTH=537 HEIGHT=400 ALIGN=center>
+<P>
+To avoid this, query the size of the current font size by GPIs.
+<BR>
+Querying font size (XPRMMAIN.C)
+<BR>
+
+<PRE>...
+/* device information */
+long lDevCaps[4];
+...
+/**********************************************************************/
+/* queryDevCapabilities()                                             */
+/*   Queries desk top resolution and the main window's font's size in */
+/*   pels.  The information is stored in lDevCaps[].                  */
+/**********************************************************************/
+void queryDevCapabilities( HWND hwndFrame )
+{
+  HPS hps;
+  FONTMETRICS fm;
+  ...
+  /* Query main window's font size */
+  hps = WinGetPS(hwndFrame);
+<B>  GpiQueryFontMetrics(hps, (LONG)sizeof(fm), &amp;fm);
+</B>  WinReleasePS(hps);
+  lDevCaps[CHAR_X] = fm.<B>lAveCharWidth</B>;
+  lDevCaps[CHAR_Y] = fm.<B>lMaxBaselineExt+fm.lExternalLeading</B>;
+}
+
+</PRE>
+
+<P>
+The<I> lAveCharWidth</I> of FONTMETRICS is the average width of SBCS characters
+in the font.  In general, the width of DBCS characters are fixed even if
+it is a proportional font.  Thus, if the width of a DBCS character is required,
+use<B>  GpiQueryTextBox()</B> with DBCS white space.
+<P>
+<B>Note: </B> The code point of the DBCS white space are different among
+code pages. Externalize the data to the string table in a resource file.
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+
+<P><HR>
+
+<A HREF="035_L4_FewThingsAboutFonts.html">[Back: Few Things About Fonts]</A> <BR>
+<A HREF="037_L2_PreparingforPIITrans.html">[Next: Preparing for PII Translation]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,97 @@
+<HTML>
+<HEAD>
+<TITLE>The mkDPItrap() Function</TITLE>
+</HEAD>
+<BODY>
+<H1>The mkDPItrap() Function</H1><!-- entering slot 44 -->
+<P>
+<B>Syntax</B>
+<PRE>#include &lt;snmp_dpi.h&gt;
+
+unsigned char      *mkDPItrap(   /* Make a DPI trap packet    */
+  long int            generic,   /* generic traptype  (32 bit)*/
+  long int            specific,  /* specific traptype (32 bit)*/
+  snmp_dpi_set_packet *packet_p, /* ptr to varBinds, a chain  */
+                                 /* of dpi_set_packets        */
+  char           *enterprise_p); /* ptr to enterprise OID     */
+</PRE>
+
+<P>
+<B>Parameters</B><!-- lm: 0x2 1 -->
+<UL>
+<P>
+generic<!-- lm: 0x11 3 -->
+<UL> The generic trap type.  The range of this
+value is 0-6, where 6, which is enterprise specific, is the type that is
+probably used most by DPI subagent programmers.  The values 0-5 are well
+defined standard SNMP traps.<!-- lm: 0x2 1 -->
+</UL> specific<!-- lm: 0x11 3 -->
+<UL> The
+enterprise specific trap type.  This can be any value that is valid for
+the MIB sub-trees that the subagent implements.<!-- lm: 0x2 1 -->
+</UL> packet_p
+<!-- lm: 0x11 3 -->
+<UL>A pointer to a chain of snmp_dpi_set_structures,
+representing the varBinds to be passed with the trap.  This partial parse
+tree will be freed by the mkDPItrap() function so you cannot reference it
+anymore upon completion of the call.  A NULL pointer means that there are
+no varBinds to be included in the trap.<!-- lm: 0x2 1 -->
+</UL> enterprise_p
+<!-- lm: 0x11 3 -->
+<UL>A pointer to a NULL terminated character string
+representing the enterprise ID (OBJECT IDENTIFIER) for which this trap is
+defined.  A NULL pointer can be used.  In this case, the subagent Identifier,
+as passed in the DPI OPEN packet, will be used when the agent receives the
+DPI TRAP packet.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Return Values</B><!-- lm: 0x2 6 -->
+<UL>
+<P>
+If successful, a pointer to a static DPI packet buffer is returned.  The
+first two bytes of the buffer in network byte order contain the length of
+the remaining packet.  The macro DPI_PACKET_LEN can be used to calculate
+the total length of the DPI packet.<!-- lm: 0x2 6 -->
+<P>
+If failure, a NULL pointer is returned.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Note: </B> The static buffer for the DPI packet is shared by other mkDPIxxxx()
+functions that create a serialized DPI packet.
+<P>
+<B>Description</B>
+<P>
+The mkDPItrap() function is used at the subagent side to prepare a DPI TRAP
+packet.  The resulting packet can be sent to the DPI peer, which is normally
+a DPI capable SNMP agent.
+<P>
+<B>Examples</B>
+<PRE>  #include &lt;snmp_dpi.h&gt;  unsigned char       *pack_p;
+  snmp_dpi_set_packet *set_p;
+  long int             num;
+
+  set_p = mkDPIset(snmp_dpi_set_packet_NULL_p,
+                   "1.3.6.1.2.3.4.5.", "1.0",
+                   SNMP_TYPE_Integer32,
+                   sizeof(num), &amp;num);
+  if (set_p) {
+     pack_p = mkDPItrap(6,1,set_p, (char *)0);
+     if (pack_p) {
+        /* send packet to subagent */
+     } /* endif */
+  } /* endif */
+</PRE>
+
+<P>
+<B>Related Information</B><!-- lm: 0x2 6 -->
+<UL>
+<P>
+<A HREF="034_L2_ThefDPIsetFunction.html">The fDPIset() Function</A><!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="040_L2_ThemkDPIsetFunction.html">[Back: The mkDPIset() Function]</A> <BR>
+<A HREF="042_L2_ThemkDPIunregisterFu.html">[Next: The mkDPIunregister() Function]</A> 
+</BODY>
+</HTML>

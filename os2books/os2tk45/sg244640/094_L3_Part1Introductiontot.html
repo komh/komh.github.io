@@ -1,0 +1,123 @@
+<HTML>
+<HEAD>
+<TITLE>Part 1: Introduction to the Debug Kernel</TITLE>
+</HEAD>
+<BODY>
+<H1>Part 1: Introduction to the Debug Kernel</H1><!-- entering slot 115 --><!-- lm: 0x2 6 -->
+<UL>
+<P>
+Procedures: Introduction<!-- lm: 0x2 2 -->
+</UL>  1.<!-- lm: 0x2 6 -->
+<UL>Change
+to directory CLASS\LABS\LAB09<!-- lm: 0x2 2 -->
+</UL>  2.<!-- lm: 0x2 6 -->
+<UL>Execute
+OSPREY, see the failure, and the trap screen.<!-- lm: 0x2 1 -->
+</UL> At
+the failure, record CS:EIP from the trap screen.
+<P>
+CS _________   EIP _____________
+<P>
+At this point, it is too late to cause a dump. Dismiss the trap screen.
+
+<P>
+We will refer to the system on which the problem occurs at the Machine Under
+Test, or the MUT.  The MUT is connected via a null modem cable to an adjacent
+machine, which we will call the debug terminal. Most of the debugging actions
+will occur from the debug terminal, on which we will run a public domain
+terminal emulation program, LOGICOMM.  If you like LOGICOMM and intend to
+use it frequently, you should register it, which will also get you an improved
+version.
+<P>
+Let's use the debug kernel for the first time. First, we need to get its
+attention.  The way to do this is to enter Control-C on the debug terminal,
+after starting LOGICOMM.  The debug kernel defaults to settings
+<BR>
+   9600, N , 8, 1
+<BR>
+<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Start LOGICOMM on the debug terminal, then type
+Control-C.<!-- lm: 0x2 1 -->
+</UL> The default response of the debug kernel
+is the registers at whatever point OS/2 was interrupted by the Control-C.
+ This is not generally very useful.  We need to get control where we want
+it, not at a random place.<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Enter the command  VSF*<!-- lm: 0x2 1 -->
+</UL> This
+tells the debug kernel that you want control on any interupt which may be
+Fatal to a thread.  The 'F' is for fatal, the '*' is for 'any'.
+<P>
+Enter the command G    (Go), so OS/2 can continue.<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->On the MUT, rerun OSPREY.<!-- lm: 0x2 1 -->
+</UL> This
+time, you should get a group of lines on the debug terminal which tell you
+that a fatal failure has occurred.
+<P>
+Enter the command   DG CS    You will find that this is in ring 0.
+<P>
+Before we look at ring 0, let us find where ring 3 called ring 0, and also
+identify the API which was called.
+<P>
+Enter the command   .R   (the period is very significant!)
+<P>
+.R shows you the ring 3 registers, whereas R shows you the current ones.
+
+<P>
+CS=__________   EIP=_____________   Does this match the trap screen?
+<PRE>eax=00000000 ebx=0000405c ecx=00000000 edx=00000001 esi=00000000 edi=000016b0
+eip=00001bc3 esp=000011e4 ebp=0000120e iopl=2 -- -- -- nv up ei pl zr na pe nc
+cs=000f ss=001f ds=001f es=001f fs=150b gs=0000  cr2=00000000  cr3=001a7000
+000f:00001bc3 0bc0           or      ax,ax
+</PRE>
+
+<P>
+We already know this instruction did not trap; the trap is in ring 0.<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->If we unassemble prior to 000f:1bc3, we will
+find a far call.<!-- lm: 0x2 1 -->
+</UL>  ...1BBE   call  ___________:0000
+
+<P>
+The instruction<!-- entering slot 116 --> as hex data is _____ _____ _____
+_____ _____<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->If you inquire about the descriptor by entering
+DG  and the selector, You should see something similar to this
+<PRE>
+# DG 1xxx
+1xxx  CallG32 Sel:Off=0148:0000550a     DPL=3 P  DWC=7
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>Write down  CS ______  EIP__________  DPL________
+ DWC________
+<P>
+If you enter the LN command with the values of CS and EIP from the call
+gate, you will identify the API which is called via this gate.<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->We know how to find parameters on the ring 3
+stack,  DW SS:SP<!-- lm: 0x2 1 -->
+</UL> We can also find them on the ring
+0 stack, but at this point, the kernel has already manipulated some of the
+addresses, so there is not an exact match.  We need to get control at the
+point of the call at 1BBE.<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Enter the command  GT   which will GoThrough
+the trap.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="093_L2_Exercise7LookingataR.html">[Back: Exercise 7: Looking at a Ring Transition]</A> <BR>
+<A HREF="095_L3_Part2SomeTechniques.html">[Next: Part 2: Some Techniques]</A> 
+</BODY>
+</HTML>

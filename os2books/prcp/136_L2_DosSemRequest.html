@@ -1,0 +1,111 @@
+<HTML>
+<HEAD>
+<TITLE>DosSemRequest</TITLE>
+</HEAD>
+<BODY>
+<H1>DosSemRequest</H1><!-- entering slot 167 -->Bindings:  <A HREF="311_L2H_DosSemRequest.html">C</A>,
+<A HREF="486_L2H_DosSemRequest.html">MASM</A>
+<BR>
+
+<P>
+This call obtains a semaphore and sets the semaphore as owned by the thread
+that requested it.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+DosSemRequest<!-- lm: 0x2 19 -->
+<UL> (SemHandle, Timeout)<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+<B>SemHandle</B> (HSEM) - input<!-- lm: 0x11 4 -->
+<UL> Reference to the
+semaphore.
+<P>
+For a system semaphore, this reference is the handle returned by a <A HREF="019_L2_DosCreateSem.html">DosCreateSem
+</A>or <A HREF="094_L2_DosOpenSem.html">DosOpenSem</A> request that granted
+the requesting thread access to the semaphore.
+<P>
+For a RAM semaphore, this reference is the address of a doubleword of storage,
+allocated and initialized to zero by the application. This sets the semaphore
+as unowned. Other than initializing the doubleword to zero, an application
+must not modify a RAM semaphore directly; instead it manipulates the semaphore
+with semaphore function calls.<!-- lm: 0x2 1 -->
+</UL><B> Timeout</B> (LONG)
+- input<!-- lm: 0x11 4 -->
+<UL> Action taken by the requesting thread when
+the semaphore is owned by another thread.  The values that can be specified
+are:<!-- lm: 0x2 4 -->
+<P>
+Value<!-- lm: 0x2 14 -->
+<UL> Definition<!-- lm: 0x2 4 -->
+</UL> -1<!-- lm: 0x2 14 -->
+<UL> The requesting thread waits indefinitely
+for the semaphore to be cleared.<!-- lm: 0x2 4 -->
+</UL>  0<!-- lm: 0x2 14 -->
+<UL> The requesting thread returns immediately.
+<!-- lm: 0x2 4 -->
+</UL> &gt; 0<!-- lm: 0x2 14 -->
+<UL> The requesting thread waits the indicated
+number of milliseconds for the semaphore to be cleared before resuming execution.
+<!-- lm: 0x2 1 -->
+</UL><B>rc</B> (USHORT) - return<!-- lm: 0x11 4 -->
+<UL> Return
+code descriptions are:<!-- lm: 0x2 4 -->
+<P>
+<LI><!-- lm: 0x2 14 -->NO_ERROR<!-- lm: 0x2 4 --> 95<!-- lm: 0x2 14 -->
+<UL> ERROR_INTERRUPT
+<!-- lm: 0x2 4 -->
+</UL>100<!-- lm: 0x2 14 -->
+<UL> ERROR_TOO_MANY_SEMAPHORES<!-- lm: 0x2 4 -->
+</UL>105<!-- lm: 0x2 14 -->
+<UL> ERROR_SEM_OWNER_DIED<!-- lm: 0x2 4 -->
+</UL>121<!-- lm: 0x2 14 -->
+<UL> ERROR_SEM_TIMEOUT<!-- lm: 0x2 1 -->
+</UL><B>Remarks</B>
+<P>
+Typically, DosSemRequest is called to set a semaphore for the purpose of
+accessing a protected resource. DosSemRequest checks the status of the semaphore.
+ If the semaphore is not set (that is, not owned) by another thread, DosSemRequest
+sets the semaphore as owned by the current thread and returns immediately
+to the caller.
+<P>
+If the semaphore is already owned by another thread, DosSemRequest optionally
+can block the requesting thread until the semaphore becomes available. The
+unblocking of a thread blocked by a DosSemRequest is level-triggered. That
+is, DosSemRequest does not return until the semaphore remains clear long
+enough for the affected thread to be redispatched and successfully claim
+the semaphore. Thus, if a number of threads are blocked indefinitely on
+DosSemRequest calls for the semaphore, only the thread that sets the semaphore
+is actually unblocked. If a milliseconds value is specified for the Timeout
+parameter, this places an upper limit on the amount of time the requesting
+thread remains blocked, waiting for the semaphore to become available.
+<P>
+When a thread no longer requires the protected resource, it issues <A HREF="135_L2_DosSemClear.html">DosSemClear
+</A>to clear the semaphore, so another thread may claim it with a successful
+DosSemRequest. If the semaphore is an exclusive system semaphore, it has
+a use count associated with it, which is incremented by a DosSemRequest
+and decremented by a <A HREF="135_L2_DosSemClear.html">DosSemClear</A>.
+The semaphore is not actually cleared and made available to the next thread
+that wants to access the resource until the semaphore has been cleared the
+same number of times it has been requested. This means that exclusive system
+semaphores can be used in recursive routines.  When the use count is 0,
+the semaphore is available to be claimed by the next user of the protected
+resource.
+<P>
+If a process terminates while owning a nonexclusive system semaphore, ERROR_SEM_OWNER_DIED
+is returned to the thread that next gets the semaphore through DosSemRequest.
+That thread takes steps to ensure the integrity of the resource.  The thread
+can release the resource by issuing a <A HREF="135_L2_DosSemClear.html">DosSemClear</A>,
+or it can reset the ERROR_SEM_OWNER_DIED return code condition flagged in
+the semaphore data structure.
+<P>
+<B>Note: </B> To request a Fast-Safe RAM semaphore, a thread calls <A HREF="050_L2_DosFSRamSemRequest.html">DosFSRamSemRequest</A>.
+<!-- lm: 0x2 1 -->
+<P>
+
+
+<P><HR>
+
+<A HREF="135_L2_DosSemClear.html">[Back: DosSemClear]</A> <BR>
+<A HREF="137_L2_DosSemSet.html">[Next: DosSemSet]</A> 
+</BODY>
+</HTML>

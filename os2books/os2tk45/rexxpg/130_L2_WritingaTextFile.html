@@ -1,0 +1,82 @@
+<HTML>
+<HEAD>
+<TITLE>Writing a Text File</TITLE>
+</HEAD>
+<BODY>
+<H1>Writing a Text File</H1><!-- entering slot 137 -->
+<P>
+To write lines of text to a file, use the LINEOUT method. By default, LINEOUT
+appends to an existing file. The following example adds an item to a to-do
+list that is maintained as a simple text file:
+<PRE>/* TODO.CMD -- add to a todo list                              */
+parse arg text
+file=.stream~new('todo.dat')      /* Create a stream object    */
+file~lineout(date() time() text)  /* Append a line to the file */
+exit
+</PRE>
+
+<P>
+In TODO.CMD, a text string is provided as the only argument on LINEOUT.
+REXX writes the line of text to the file and then writes a new-line character.
+You do not have to provide a new-line character in the string being written.
+
+<P>
+If you want to overwrite a file, specify a line number as a second argument.
+When a line number is specified, REXX uses it to position the write pointer
+before writing:
+<PRE>file~lineout('13760-0006',35)  /* Replace line 35 */
+</PRE>
+
+<P>
+For text files, write positioning has a somewhat specialized use. REXX does
+not prevent you from overwriting existing new-line characters in the file.
+ REXX writes whatever line you give it at whatever write position you tell
+it to use. Consequently, if you want to replace a line of the file without
+overlaying following lines,<I> the line you write must be exactly the same
+length as the line you are replacing.</I> Writing a line that's shorter
+than an existing line will leave part of the old line in the file.
+<P>
+Also, don't assume that positioning the write pointer to line 1 will cause
+the file to be replaced. Yes, REXX will start writing over the existing
+data starting at line 1, but if you happen to write fewer bytes than previously
+existed in the file, your data will be followed by the remainder of the
+old file.
+<P>
+To replace a file, use the OPEN method with WRITE REPLACE or BOTH REPLACE
+as an argument. In the following example, a file named TEMP.DAT is replaced
+with a random number of lines. TEMP.DAT is then read and displayed. You
+can run the example repeatedly to verify that TEMP.DAT is replaced on each
+run.
+<PRE>/* REPFILE.CMD -- demonstrates file replacement                       */
+testfile=.stream~new('temp.dat') /* Create a new stream object        */
+testfile~open('both replace')    /* Open for read, write, and replace */
+numlines=random(1,100)           /* Pick a number from 1 to 100       */
+runid=random(1,9999)             /* Pick a run identifier             */
+do i=1 to numlines               /* Write the lines                   */
+   testfile~lineout('Run ID:'||runid 'Line number' i)
+end
+
+/* Now read and display the file.  The read pointer is already at the */
+/* beginning of the file.  MAKEARRAY reads from the read position to  */
+/* the end of the file and returns an array object containing the     */
+/* lines.                                                             */
+filedata=testfile~makearray('line')
+do i over filedata
+   say i
+end
+testfile~close
+</PRE>
+
+<P>
+The REPFILE example also demonstrates that REXX maintains separate read
+and write pointers to a stream. Notice that we started reading without repositioning
+the read pointer. Since we hadn't yet read anything, the read pointer was
+still at the beginning of the file. The write pointer, however, is at the
+end of the file.
+
+<P><HR>
+
+<A HREF="129_L2_ReadingSpecificLines.html">[Back: Reading Specific Lines of a Text File]</A> <BR>
+<A HREF="131_L2_ReadingBinaryFiles.html">[Next: Reading Binary Files]</A> 
+</BODY>
+</HTML>

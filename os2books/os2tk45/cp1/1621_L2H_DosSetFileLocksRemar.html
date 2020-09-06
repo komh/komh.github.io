@@ -1,0 +1,112 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosSetFileLocks - Remarks</TITLE>
+</HEAD>
+<BODY>
+<H1>DosSetFileLocks - Remarks</H1><!-- entering slot 1639 -->
+<P>
+DosSetFileLocks allows a process to lock and unlock a range in a file. The
+time during which a file range is locked should be short.
+<P>
+If the lock and unlock ranges are both zero, ERROR_LOCK_VIOLATION is returned
+to the caller.
+<P>
+If you only want to lock a file range, set the unlock file offset and the
+unlock range length to zero.
+<P>
+If you only want to unlock a file range, set the lock file offset and the
+lock range length to zero.
+<P>
+When the Atomic bit of<I> flags</I> is set to 0, and DosSetFileLocks specifies
+a lock operation and an unlock operation, the unlock operation occurs first,
+and then the lock operation is performed. If an error occurs during the
+unlock operation, an error code is returned and the lock operation is not
+performed. If an error occurs during the lock operation, an error code is
+returned and the unlock remains in effect if it was successful.
+<P>
+The lock operation is atomic when all of these conditions are met:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->The Atomic bit is set to 1 in<I> flags</I><!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The unlock range is the same as the lock range<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The process has shared access to the file range, and
+has requested exclusive access to it; or the process has exclusive access
+to the file range, and has requested shared access to it.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Some file system drivers (FSDs) may not support atomic lock operations.
+Versions of the operating system prior to OS/2 Version 2.00 do not support
+atomic lock operations. If the application receives the error code ERROR_ATOMIC_LOCK_NOT_SUPPORTED,
+the application should unlock the file range and then lock it using a non-atomic
+operation (with the atomic bit set to 0 in<I> flags</I>). The application
+should also refresh its internal buffers before making any changes to the
+file.
+<P>
+If you issue <A HREF="132_L2_DosClose.html">DosClose</A> to close a file
+with locks still in effect, the locks are released in no defined sequence.
+
+<P>
+If you end a process with a file open, and you have locks in effect in that
+file, the file is closed and the locks are released in no defined sequence.
+
+<P>
+The locked range can be anywhere in the logical file. Locking beyond the
+end of the file is not an error. A file range to be locked exclusively must
+first be cleared of any locked file subranges or overlapping locked file
+ranges.
+<P>
+If you repeat DosSetFileLocks for the same file handle and file range, then
+you duplicate access to the file range. Access to locked file ranges is
+not duplicated across <A HREF="445_L2_DosExecPgm.html">DosExecPgm</A>. The
+proper method of using locks is to attempt to lock the file range, and to
+examine the return value.
+<P>
+The following table shows the level of access granted when the accessed
+file range is locked with an exclusive lock or a shared lock. "Owner" refers
+to a process that owns the lock. "Non-owner" refers to a process that does
+not own the lock.
+<PRE>ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³Action          ³Exclusive Lock        ³Shared Lock           ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Owner read      ³Success               ³Success               ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Non-owner read  ³Wait for unlock.      ³Success               ³
+³                ³Return error code     ³                      ³
+³                ³after time-out.       ³                      ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Owner write     ³Success               ³Wait for unlock.      ³
+³                ³                      ³Return error code     ³
+³                ³                      ³after time-out.       ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³Non-owner write ³Wait for unlock.      ³Wait for unlock.      ³
+³                ³Return error code     ³Return error code     ³
+³                ³after time-out.       ³after time-out.       ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+If only locking is specified, DosSetFileLocks locks the specified file range
+using<I> pflLock</I>. If the lock operation cannot be accomplished, an error
+is returned, and the file range is not locked.
+<P>
+After the lock request is processed, a file range can be unlocked using
+the<I> pflUnlock</I> parameter of another DosSetFileLocks request. If unlocking
+cannot be accomplished, an error is returned.
+<P>
+Instead of denying read/write access to an entire file by specifying access
+and sharing modes with <A HREF="754_L2_DosOpen.html">DosOpen</A> requests,
+a process attempts to lock only the range needed for read/write access and
+examines the error code returned.
+<P>
+Once a specified file range is locked exclusively, read and write access
+by another process is denied until the file range is unlocked. If both unlocking
+and locking are specified by DosSetFileLocks, the unlocking operation is
+performed first, then locking is done.
+
+<P><HR>
+
+<A HREF="1620_L2H_DosSetFileLocksParam.html">[Back: DosSetFileLocks - Parameters]</A> <BR>
+<A HREF="1622_L2H_DosSetFileLocksRelat.html">[Next: DosSetFileLocks - Related Functions]</A> 
+</BODY>
+</HTML>

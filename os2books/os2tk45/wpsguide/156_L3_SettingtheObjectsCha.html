@@ -1,0 +1,117 @@
+<HTML>
+<HEAD>
+<TITLE>Setting the Object's Characteristics and Behaviors</TITLE>
+</HEAD>
+<BODY>
+<H1>Setting the Object's Characteristics and Behaviors</H1><!-- entering slot 165 -->
+<P>
+Invoking wpSetupOnce parent causes wpSetup to be called. Two new keywords,
+PUSHITEM and POPITEM, have been defined for this class to push and pop items
+from the stack. This method is invoked when an object is created and when
+WinSetObjectData is called. Note the use of wpIsObjectInitialized and wpSaveDeferred
+to write the persistent image to the .INI file, if called as a result of
+WinSetObjectData. The wpScanSetupString method searches a setup string for
+a given keyname and returns its corresponding value. It also has a feature
+which returns just the length of the value when passed NULL as a pointer
+to the value buffer. Keynames and their values are separated by semicolons
+in the setup string. The escape character ( ^ ) followed by a semicolon
+can be used to represent a semicolon, if one is required in a keyname value
+specification. The following code fragments shows an example of a setup
+string for a stack object:
+<PRE>PSZ pszSetupString = "TITLE    = MyStack;"
+                     "OBJECTID = &lt;MyStack&gt;;"
+                     "PUSHITEM = Pushed by Setup"
+
+</PRE>
+
+<P>
+The following sample code shows the use of wpSetup:
+<PRE>SOM_Scope BOOL SOMLINK stk_wpSetup(
+                       Stack *somSelf,    // In - pointer to the object
+                       PSZ   pszSetupString)
+
+// The method returns the value:
+//     TRUE  = successful
+//     FALSE = error
+{
+  BOOL  bSaveObject = FALSE;
+  BOOL  bStatus;
+  ULONG cbValue;
+  PSZ   pszValue;
+
+  // StackData *somThis = StackGetData(somSelf);
+  StackMethodDebug("Stack","stk_wpSetup");
+
+  bStatus = parent_wpSetup(somSelf, pszSetupString);
+  if (bStatus &amp;&amp; pszSetupString &amp;&amp; *pszSetupString)
+  { //
+    // Process PUSHITEM
+    //
+    if (_wpScanSetupString(somSelf,
+                           pszSetupString,
+                           "PUSHITEM",
+                           NULL,
+                           &amp;cbValue))
+    {
+
+      pszValue = (PSZ)_wpAllocMem(somSelf, cbValue, NULL);
+      bStatus  = FALSE;
+      if (pszValue)
+      {
+        bStatus = _wpScanSetupString(somSelf,
+                                     pszSetupString,
+                                     "PUSHITEM",
+                                     pszValue,
+                                     &amp;cbValue);
+
+        if (bStatus)
+        {
+          bStatus     = _Push(somSelf, pszValue, cbValue);
+          bSaveObject = bStatus;
+        } /* Endif */
+        _wpFreeMem(somSelf, (PBYTE)pszValue);
+      } /* Endif */
+    } /* Endif */
+
+    //
+    // Process POPITEM
+    //
+    if (bStatus &amp;&amp; _wpScanSetupString(somSelf,
+                                      pszSetupString,
+                                      "POPITEM",
+                                      NULL,
+                                      &amp;cbValue))
+    {
+      bStatus = FALSE;
+
+      if (_Pop(somSelf, NULL, &amp;cbValue))
+      {
+        pszValue = (PSZ)_wpAllocMem(somSelf, cbValue, NULL);
+        if (pszValue)
+        {
+          bStatus     = _Pop(somSelf, pszValue, &amp;cbValue);
+          bSaveObject = bStatus;
+          _wpFreeMem(somSelf, (PBYTE)pszValue);
+        } /* Endif */
+      } /* Endif */
+    } /* Endif */
+
+    if (bSaveObject &amp;&amp; _wpIsObjectInitialized(somSelf))
+    { //
+      // Save the object to the INI file
+      //
+      _wpSaveDeferred(somSelf);
+    } /* Endif */
+  } /* Endif */
+  return(bStatus);
+} // End stk_wpSetup
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="155_L3_InitializingaNewlyCr.html">[Back: Initializing a Newly Created Object]</A> <BR>
+<A HREF="157_L3_NotifyingtheObjectIs.html">[Next: Notifying the Object Is Ready]</A> 
+</BODY>
+</HTML>

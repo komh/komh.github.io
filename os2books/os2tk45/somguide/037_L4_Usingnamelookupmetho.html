@@ -1,0 +1,125 @@
+<HTML>
+<HEAD>
+<TITLE>Using name-lookup method resolution</TITLE>
+</HEAD>
+<BODY>
+<H1>Using name-lookup method resolution</H1><!-- entering slot 51 -->
+<P>
+<U><I>For C/C++  programmers</I></U>:  Offset resolution is the most efficient
+way to select the method procedure appropriate to a given method call. Client
+programs can, however, invoke a method using "name-lookup" resolution instead
+of offset resolution. The C and C++ bindings for method invocation use offset
+resolution by default, but methods defined with the<B> namelookup</B> SOM
+IDL modifier result in C bindings in which the short form invocation macro
+uses name-lookup resolution instead.  Also, for both C and C++ bindings,
+a special<I> lookup_&lt;methodName&gt;</I> macro is defined.
+<P>
+Name-lookup resolution is appropriate in the case where a programmer knows
+at compile time which arguments will be expected by a method (that is, its
+<I>signature</I>), but does not know the<U> type</U> of the object on which
+the method will be invoked. For example, name-lookup resolution can be used
+when two different classes introduce different methods of the same name
+and signature, and it is not known which method should be invoked (because
+the type of the object is not known at compile time).
+<P>
+Name-lookup resolution is also used to invoke<I> dynamic methods</I> (that
+is, methods that have been added to a class's interface at run time rather
+than being specified in the class's IDL specification). For more information
+on name-lookup method resolution, see the topic "Method Resolution" in Chapter
+4, "SOM IDL and the SOM Compiler."
+<P>
+<U><I>For C</I></U>: To invoke a method using name-lookup resolution, when
+using the C bindings for a method that has been implemented with the<U><I> namelookup
+</I></U>modifier, use either of the following macros:
+<P>
+ _&lt;<I>methodName</I>&gt; (<I>receiver, args</I>)
+<BR>
+
+<P>
+<B>lookup_</B>&lt;<I>methodName</I>&gt; (<I>receiver, args</I>)
+<P>
+Thus, the short-form method invocation macro results in name-lookup resolution
+(rather than offset resolution), when the method has been defined as a<B> namelookup
+</B>method. (The long form of the macro for offset resolution is still available
+in the C usage bindings.) If the method takes a variable number of arguments,
+then the first form shown above is used when supplying a variable number
+of arguments, and the second form is used when supplying a<B> va_list</B> argument
+in place of the variable number of arguments.
+<P>
+<U><I>For C++</I></U>: To invoke a method using name-lookup resolution,
+when using the C++ bindings for a method that has been defined with the
+<U><I>namelookup</I></U> modifier, use either of the following macros:
+<P>
+<B> lookup_</B>&lt;<I>methodName</I>&gt; (<I>receiver, args)</I>
+<P>
+<I> &lt;className&gt;</I><B>_lookup_</B>&lt;<I>methodName</I>&gt; (<I>receiver,
+args)
+<BR>
+</I>
+<P>
+If the method takes a variable number of arguments, then the first form
+shown above is used when supplying a variable number of arguments, and the
+second form is used when supplying a<B> va_list</B> argument in place of
+the variable number of arguments. Note that the offset-resolution forms
+for invoking methods using the C++ bindings are also still available, even
+if the method has been defined as a<B> namelookup</B> method.
+<P>
+<U><I>For C/C++</I></U>  To invoke a method using name-lookup resolution,
+when the method has<U> not</U> been defined as a<U><I> namelookup</I></U> method:
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Use the<B> somResolveByName</B> procedure (described
+in the following section)<B>,</B> or any of the methods<B> somLookupMethod,
+somFindMethod</B> or<B> somFindMethodOk</B> to obtain a pointer to the procedure
+that implements the desired method.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Then, invoke the desired method by calling that procedure,
+passing the method's intended receiver, the<B> Environment</B> pointer (if
+needed), the<B> context</B> argument (if needed), and the remainder of the
+method's arguments, if any.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The<B> somLookupMethod, somFindMethod</B> and<B> somFindMethodOK</B> methods
+are invoked on a class object  (the class of the method receiver should
+be used), and take as an argument the<B> somId</B> for the desired method
+(which can be obtained from the method's name using the<B> somIdFromString
+</B>function). For more information on these methods, see the<I> System
+Object Model Programming Reference</I>.
+<P>
+<B>Important Note</B>: SOM provides many ways for a SOM user to acquire
+a pointer to a method procedure. Once this is done, it becomes the user's
+responsibility to make appropriate use of this procedure.<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->First, the procedure should only be used on objects
+for which this is appropriate-otherwise, run-time errors are likely to result.
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Second, when the procedure is used, it is essential
+that the compiler be given correct information concerning the signature
+of the method and the linkage required by the method.  (On many systems,
+there are different ways to pass method arguments, and linkage information
+tells a compiler how to pass the arguments indicated by a method's signature).
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+SOM method procedures on OS/2 must be called with "system" linkage.  On
+AIX, there is only one linkage convention for procedure calls. While C and
+C++ provide standard ways to indicate a method signature, the way to indicate
+linkage information depends on the<!-- entering slot 52 --> specific compiler
+and system.  For each method declared using OIDL or IDL,  the C and C++
+usage bindings therefore use conditional macros and a typedef to name a
+type that has the correct linkage convention. This type name can then be
+used by programmers with access to the usage bindings for the class that
+introduces the method whose procedure pointer is used. The type is named
+<B>somTD_</B><I>&lt;className&gt;</I><B>_</B><I>&lt;methodName&gt;</I>.
+This is illustrated in the following example, and further details are provided
+in the section below, titled "Obtaining a method's procedure pointer."
+
+<P><HR>
+
+<A HREF="036_L4_Usingva_listmethods.html">[Back: Using 'va_list' methods]</A> <BR>
+<A HREF="038_L4_Anamelookupexample.html">[Next: A name-lookup example]</A> 
+</BODY>
+</HTML>

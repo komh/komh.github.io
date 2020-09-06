@@ -1,0 +1,318 @@
+<HTML>
+<HEAD>
+<TITLE>MMIOM_CLOSE</TITLE>
+</HEAD>
+<BODY>
+<H1>MMIOM_CLOSE</H1><!-- entering slot 139 -->
+<P>
+This message must be implemented by file format IOProcs to be able to properly
+close the file.  Note that the mmioClose function will call the mmioFlush
+function to empty the file I/O buffers (so this does not need to be performed
+by the IOProc message handler).
+<P>
+A file format IOProc will call mmioClose with its internal HMMIO handle
+to close the file, unless it chooses to recognize the MMIO_FHOPEN flag available
+on mmioClose.  This flag allows the close processing to occur, but still
+allow the file handle to remain open.  If the file is an element of a compound
+file, it will need to possibly update the compound file header to reflect
+any changes that have been made to the file.
+<P>
+The following example shows an example of how the M-Motion IOProc supports
+the MMIOM_CLOSE message.
+<PRE>case MMIOM_CLOSE:
+    {
+    /************************************************************
+     * Declare local variables.
+     ************************************************************/
+    PMMFILESTATUS   pVidInfo;         /* MMotion IOProc instance data */
+
+    ULONG           ulHeight;         /* Image height                */
+    USHORT          usBitCount;
+    /* Image width, including overflow in 1bpp &amp; 4bpp                */
+    ULONG           ulImgPelWidth;
+    PBYTE           lpYUVLine;        /* One line of packed YUV      */
+    LONG            lYUVBytesPerLine;
+
+    ULONG           ulMaxPelWidth;    /* # pels on 4-pel boundaries  */
+    /* # pels on a YUV line in the output file                       */
+    ULONG           ulYUVPelWidth;
+    ULONG           ulRGBMaxBytesPerLine; /* #bytes on 4-pel bounds  */
+    PBYTE           lpRGBLine;        /* One line of 24bit RGB       */
+
+    PBYTE           lpImgBufPtr;      /* Current loc in RGB image buf*/
+    LONG            lRGBBytesPerLine; /* #bytes on a line in image   */
+    ULONG           ulRowCount;       /* loop counter                */
+    LONG            lBytesWritten;    /* #bytes output on a write    */
+    LONG            lRetCode;
+    USHORT          rc;
+
+    /***********************************************************
+     * Check for valid MMIOINFO block.
+     ***********************************************************/
+    if (!pmmioinfo)
+        return (MMIO_ERROR);
+
+    /***********************************************************
+     * Set up our working file status variable.
+     ***********************************************************/
+    pVidInfo = (PMMFILESTATUS)pmmioinfo-&gt;pExtraInfoStruct;
+
+    /***********************************************************
+     * Assume success for the moment....
+     ***********************************************************/
+    lRetCode = MMIO_SUCCESS;
+
+    /************************************************************
+     * see if we are in Write mode and have a buffer to write out.
+     *    We have no image buffer in UNTRANSLATED mode.
+     ************************************************************/
+    if ((pmmioinfo-&gt;ulFlags &amp; MMIO_WRITE) &amp;&amp; (pVidInfo-&gt;lpImgBuf))
+        {
+        /*******************************************************
+         * The buffer should be in palettized or 24-bit RGB
+         * We must convert it to YUV to be written to the file.
+         *******************************************************
+         * The buffer should be complete.  If not, then we
+         * should still close, but can flag an error to the
+         * user that the data may be corrupted.  The only way
+         * we can estimate if this is true is to check the final
+         * position.  If not at the end...
+         *******************************************************/
+        if (pVidInfo-&gt;lImgBytePos !=
+                                  (LONG)pVidInfo-&gt;ulImgTotalBytes)
+            {
+            lRetCode = MMIO_WARNING;
+            }
+        /*******************************************************
+         * Set up width and height of image in the buffer.
+         *******************************************************/
+        ulHeight = pVidInfo-&gt;mmImgHdr.mmXDIBHeader.BMPInfoHeader2.cy;
+        usBitCount =
+            pVidInfo-&gt;mmImgHdr.mmXDIBHeader.BMPInfoHeader2.cBitCount;
+
+        /*******************************************************
+         * Get the line width in YUV pels and packed bytes.
+         *******************************************************/
+        ulYUVPelWidth = pVidInfo-&gt;mmotHeader.mmXlen;
+        lYUVBytesPerLine = (LONG)(ulYUVPelWidth * 3) &gt;&gt; 1;
+
+        /*******************************************************
+         * This changes from OS/2 PM bottom-up bitmap form
+         *    to M-Motion's top-<!-- entering slot 140 -->down form.  Flip all pad, boundary
+         *    bytes as well
+         *******************************************************/
+        ImgBufferFlip ((PBYTE)pVidInfo-&gt;lpImgBuf,
+                                pVidInfo-&gt;ulImgPaddedBytesPerLine,
+                                ulHeight);
+
+        /*******************************************************
+         * Determine number of POSSIBLE pels on a line, though
+         *   some may be overflow in 1bpp and 4bpp modes.
+         *
+         * From that, we can calc the number of RGB pels we will
+         *   create to represent this line.
+         *******************************************************/
+        ulImgPelWidth = (pVidInfo-&gt;ulImgPelBytesPerLine &lt;&lt; 3) /
+                                     usBitCount;
+        lRGBBytesPerLine = ulImgPelWidth * 3;
+
+        /*******************************************************
+         * Ensure the width is on a 4-pel boundary, necessary for
+         *     M-Motion.  We will buffer with black
+         *    *** THIS IS ONLY NECESSARY FOR M-MOTION IMAGES
+         *******************************************************/
+        if (ulImgPelWidth % 4)
+            ulMaxPelWidth = (((ulImgPelWidth &gt;&gt; 2) + 1) &lt;&lt; 2);
+        else
+            ulMaxPelWidth = ulImgPelWidth;
+
+        /* #RGB bytes/line = #pels * 3 bytes/pel */
+        ulRGBMaxBytesPerLine = ulMaxPelWidth * 3;
+
+
+        /*******************************************************
+         * Create a buffer for one line of RGB data, accounting for
+         *   the 4-pel boundary required.  Extra bytes won't be used.
+         *******************************************************/
+        if (DosAllocMem ((PPVOID) &amp;lpRGBLine,
+                         ulRGBMaxBytesPerLine,
+                         fALLOC))
+            return (MMIO_ERROR);
+
+        /*******************************************************
+         * Create a buffer for one line of YUV data.
+         *******************************************************/
+        if (DosAllocMem ((PPVOID) &amp;lpYUVLine,
+                         lYUVBytesPerLine,
+                         fALLOC))
+            return (MMIO_ERROR);
+
+        /*******************************************************
+         * Zero out RGB buffer to cover for any extra black pels
+         * needed at the end.
+         *******************************************************/
+        memset (lpRGBLine, 0, ulRGBMaxBytesPerLine);
+
+        /*******************************************************
+         * Initialize start position of RGB buffer.
+         *******************************************************/
+        lpImgBufPtr = pVidInfo-&gt;lpImgBuf;
+
+        /*******************************************************
+         * Process Image Buffer - Save to file
+         * Place "your" processing code here, if full image
+         *      buffering is performed.
+         * For M-Motion:
+         *    Loop
+         *       1.Convert and copy a line of 1bpp, 4bpp, 8 bpp or
+         *            24bpp data into a temporary 24 bpp RGB line.
+         *            This line may contain overflow garbage
+         *            pels from 1bpp and 4bpp modes (where
+         *            width does not fall on even byte boundaries.)
+         *       2.Convert the temporary RGB line contents into a
+         *           YUV line.  ONLY that data necessary converted.
+         *           Overflow from bitmap data ignored.
+         *       3.Write the YUV line to the file
+         *******************************************************/
+        for (ulRowCount = 0;
+             ulRowCount &lt; ulHeight;
+             ulRowCount++)
+            {
+            /***************************************************
+             * Convert 1 line of Image data into RGB data
+             ***************************************************/
+           switch (usBitCount)
+               {
+               case 1:
+                   {
+                   /* Convert 1bpp padded image buffer into 24-bit */
+                   /*    RGB line buffer, w/pads                   */
+                   Convert1BitTo24Bit (
+                           (PBYTE)lpImgBufPtr,
+                           (PRGB) lpRGBLine,
+                           (PRGB) &amp;(pVidInfo-&gt;rgbPalette),
+                           pVidInfo-&gt;ulImgPelBytesPerLine);
+                   break;
+                   }
+
+               case 4:
+                   {
+                   /* Convert data from app buffer into 24-bit and */
+                   /*    copy into image buffer                    */
+                   Convert4BitTo24Bit (
+                           (PBYTE)lpImgBufPtr,
+                           (PRGB) lpRGBLine,
+                           (PRGB) &amp;(pVidInfo-&gt;rgbPalette),
+                           pVidInfo-&gt;ulImgPelBytesPerLine);
+                   break;
+                   }
+
+               case 8:
+                   {
+                   /* Convert data from app buffer into 24-bit and */
+                   /*    copy into image buffer                    */
+                   Convert8BitTo24Bit (
+                           (PBYTE)lpImgBufPtr,
+                           (PRGB) lpRGBLine,
+                           (PRGB) &amp;(pVidInfo-&gt;rgbPalette),
+                           pVidInfo-&gt;ulImgPelBytesPerLine);
+                   break;
+                   }
+
+               case 24:
+                   {
+                   /* Copy raw RGB data from the image buffer into */
+                   /*    the temporary                             */
+                   /*   RGB line.  Only copy those pels necessary. */
+                   /*    No conversion required                    */
+                   memcpy ((PVOID) lpRGBLine,
+                                  (PVOID) lpImgBufPtr,
+                                  ulYUVPelWidth * 3);
+                   break;
+                   }
+
+               }   /* end of Switch for Bit Conversion block */
+
+            /***************************************************
+             * Convert one line at a time from RGB to YUV.
+             ***************************************************/
+            ConvertOneLineRGBtoYUV (lpRGBLine,
+                                    lpYUVLine,
+                                    ulYUVPelWidth);
+
+            /***************************************************
+             * Write out line of YUV data to the file.
+             ***************************************************/
+            lBytesWritten  = mmioWrite (pVidInfo-&gt;hmmioSS,
+                                        (PVOID) lpYUVLine,
+                                        lYUVBytesPerLine);
+
+            /* Check if error or EOF  */
+            if (lBytesWritten != lYUVBytesPerLine)
+               {
+               lRetCode = lBytesWritten;
+               break;
+               }
+
+            /***************************************************
+             * Make sure bitmap image buffer pointer is correct
+             *    for next line to be converted.  Move forward ALL
+             *    the bytes in the bitmap line, including overflow
+             *    and pad bytes.
+             ***************************************************/
+            lpImgBufPtr += pVidInfo-&gt;ulImgPaddedBytesPerLine;
+            }
+
+        /*******************************************************
+         * Free temp buffers.
+         *******************************************************/
+        if (lpRGBLine)
+           {
+           DosFreeMem ((PVOID) lpRGBLine);
+           }
+
+        if (lpYUVLine)
+           {
+           DosFreeMem ((PVOID) lpYUVLine);
+           }
+        }  /* end IF WRITE &amp; IMAGE BUFFER block */
+
+    /***********************************************************
+     * Free the RGB buffer, if it exists, that was created
+     * for the translated READ operations.
+     ***********************************************************/
+    if (pVidInfo-&gt;lpRGBBuf)
+       {
+       DosFreeMem ((PVOID) pVidInfo-&gt;lpRGBBuf);
+       }
+
+    /***********************************************************
+     * Free the IMG buffer, if it exists, that was created
+     * for the translated  WRITE operations.
+     ***********************************************************/
+    if (pVidInfo-&gt;lpImgBuf)
+       {
+       DosFreeMem ((PVOID) pVidInfo-&gt;lpImgBuf);
+       }
+
+    /***********************************************************
+     * <!-- entering slot 141 -->Close the file with mmioClose.
+     ***********************************************************/
+    rc = mmioClose (pVidInfo-&gt;hmmioSS, 0);
+
+    DosFreeMem ((PVOID) pVidInfo);
+
+    if (rc != MMIO_SUCCESS)
+       return (rc);
+
+    return (lRetCode);
+    }  /* end case of MMIOM_CLOSE */
+</PRE>
+
+
+<P><HR>
+
+<A HREF="110_L3_MMIOM_SEEK.html">[Back: MMIOM_SEEK]</A> <BR>
+<A HREF="112_L3_MMIOM_IDENTIFYFILE.html">[Next: MMIOM_IDENTIFYFILE]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,165 @@
+<HTML>
+<HEAD>
+<TITLE>Exercise 6: Unwinding a 32-bit Stack</TITLE>
+</HEAD>
+<BODY>
+<H1>Exercise 6: Unwinding a 32-bit Stack</H1><!-- entering slot 100 -->
+<P>
+Objectives:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->To learn how to 'unwind' a stack. This is how
+to find the calling hierarchy which existed at the point of failure.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->To learn how to 'mine' information from the stack
+frames.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Normally, every routine which has not returned to its caller will have a
+stack frame.  Each stack frame normally contains the parameters passed to
+a routine, the return address for the routine, and the data which is local
+for that routine.
+<P>
+Start the dump formatter by typing  DF_RET ..\DUMPS.162\DUMP04.DMP
+<P>
+Questions:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->The convention states that BP or EBP will point
+to the current stack frame.  ESP will point to the lowest address which
+is in use. <!-- lm: 0x2 1 -->
+</UL> Therefore, note the initial values for
+ESP _______  and EBP ________. Since SS is the selector that defines the
+stack, note which it is. 
+<P>
+SS ________    SSLIM _______ (not generally useful when SS is 53) <!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Display the current stack frame using  DD SS:EBP.
+ This will show you only part of the frame, but most analysts do this because
+it makes following the chain so easy.<!-- lm: 0x2 1 -->
+</UL> The first
+doubleword is the offset, or near address, of the next frame. The second
+doubleword is the offset part of the return address.  If the call was a
+far call, the return must also be a far call. If this is the case, the third
+doubleword is the selector part of the return address. IT IS RARE FOR 32-BIT
+PROGRAMS TO USE FAR ADDRESSES. 
+<P>
+next stack frame ________  return offset ________ <!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Some number of doublewords following the return
+address  are the parameters passed. There is no way to know for certain
+how many parameters there are, unless you know how both the caller and the
+routine are written. Analysts typically write down a few doublewords, as
+convenient. <!-- lm: 0x2 1 -->
+</UL> parameter doubleword# 1 ________   2
+________  3 ________  4 ________ <!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->At this point we have gleaned what we can from
+this frame. Now you need to repeat the process for the rest of the stack
+frames.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>eax=00080000 ebx=000097eb ecx=0000002d edx=00001000 esi=000000c5 edi=0000002deip=0001008e esp=000320c0 ebp=000320cc iopl=2 rf -- -- nv up ei pl zr na pe nc
+cs=005b ss=0053 ds=0053 es=0053 fs=150b gs=0000  cr2=00000000  cr3=001a7000
+005b:0001008e 891c90         mov dword ptr [eax+edx*27],ebx ds:00084000=invalid
+
+DD SS:ESP EBP-4
+0053:000320c0  00000000 00000000 00000000
+
+DD SS:EBP L18
+0053:000320cc  000320f8 000100f2 00080000 00080000
+0053:000320dc  00080000 00000000 00000000 00000000
+0053:000320ec  00010f8e 00000001 00070010 00000000
+0053:000320fc  1bfbbf68 0000036d 00000000 00040000
+0053:0003210c  0004030b 00000000 00000000 00000000
+0053:0003211c  00000000 00000000 00000000 00000000
+
+DD <!-- entering slot 101 -->330F8 L 10
+0053:000320f8  00000000 1bfbbf68 0000036d 00000000
+0053:00032108  00040000 0004030b 00000000 00000000
+0053:00032118  00000000 00000000 00000000 00000000
+0053:00032128  00000000 00000000 00000000 00000000
+
+The first parameter passed by OS/2 is the load module handle.
+
+úLMO 36D
+hmte=036d pmte=%ff652c6c mflags=00903150 c:\pmg\classes\labs\lab4\demo.exe
+obj   vsize    vbase    flags   ipagemap cpagemap hob  sel
+0001 00001a98 00010000 80002025 00000001 00000002 0361 000f r-x shr big
+0002 0000006c 00020000 80002003 00000003 00000001 0000 0017 rw- big
+0003 00002110 00030000 80002003 00000004 00000001 0000 001f rw- big
+
+Wonder what the 00040000 and 0004030B are? Display them to see!
+
+DB %40000
+%00040000 57 50 5f 4f 42 4a 48 41-4e 44 4c 45 3d 31 33 32 WP_OBJHANDLE=132
+%00040010 37 33 39 00 41 55 54 4f-53 54 41 52 54 3d 50 52 739úAUTOSTART=PR
+%00040020 4f 47 52 41 4d 53 2c 54-41 53 4b 4c 49 53 54 2c OGRAMS,TASKLIST,
+%00040030 46 4f 4c 44 45 52 53 2c-4c 41 55 4e 43 48 50 41 FOLDERS,LAUNCHPA
+%00040040 44 00 42 4f 4f 4b 53 48-45 4c 46 3d 43 3a 5c 4f DúBOOKSHELF=C:\O
+%00040050 53 32 5c 42 4f 4f 4b 3b-00 43 4f 4d 53 50 45 43 S2\BOOK;úCOMSPEC
+%00040060 3d 43 3a 5c 4f 53 32 5c-43 4d 44 2e 45 58 45 00 =C:\OS2\CMDúEXEú
+%00040070 44 50 41 54 48 3d 43 3a-5c 50 4d 47 5c 4f 53 32 DPATH=C:\PMG\OS2
+
+DB %4030B L 20
+%0004030b 4c 41 42 34 5c 44 45 4d-4f 00 00 55 f0 8b c7 e8 LAB4\DEMOúúUpúGh
+%0004031b d5 1d 01 00 ff 75 e8 e8-19 1e 01 00 83 c4 14 89 UúúúúuhhúúúúúDú.
+</PRE>
+
+<PRE>Frame at    Next Frame at   Return address    parameters:
+
+__________  __________      _______________   __________ __________ __________ __________
+
+
+
+
+Frame at    Next Frame at   Return address    parameters:
+
+__________  __________      _______________   __________ __________ __________ __________
+
+
+
+
+Frame at    Next Frame at   Return address    parameters:
+
+__________  __________      _______________   __________ __________ __________ __________
+</PRE>
+
+<P>
+Many analysts will follow the entire chain of stack frames before going
+to the system or application documentation to find the names of the routines
+involved, and the line numbers. Others choose to go back and forth, and
+put in the routine names and line numbers for each frame as they go.
+<P>
+The application documentation will tell you where variables are stored.
+Remember that each routine uses its own stack frame, so be certain to use
+the<!-- entering slot 102 --> numeric value rather than the register name
+'BP' to look at local data for routines other than the failing one.
+<P>
+If you display from ESP to EBP-2, or ESP to EBP-4, you will see the entire
+local data for the routine using the current stack frame. This can be quite
+nice for locating the individual variables. 
+<P>
+Find the routine which failed by looking at the úMAP file. 
+<P>
+Find the line number that failed by looking again at the úMAP file. 
+<P>
+The following variables are involved in the failure:  'npr' and 't'. their
+locations can be found in the úASM file. 
+<P>
+Find the location of npr,________ then display its value ________ 
+<P>
+Find the location of t,________  then display its value ________ Hint:  t
+has been optimized, and is in a register. 
+<P>
+You may want to look at the call to the failing routine, before going away
+to find the programmer.
+
+<P><HR>
+
+<A HREF="080_L2_Exercise5Unwindinga1.html">[Back: Exercise 5: Unwinding a 16-bit Stack]</A> <BR>
+<A HREF="082_L2_RequestingKernelServ.html">[Next: Requesting Kernel Services]</A> 
+</BODY>
+</HTML>

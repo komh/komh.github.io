@@ -1,0 +1,106 @@
+<HTML>
+<HEAD>
+<TITLE>Starting a Drag Operation</TITLE>
+</HEAD>
+<BODY>
+<H1>Starting a Drag Operation</H1><!-- entering slot 191 -->
+<P>
+Folders are containers; therefore, they receive notification from the container
+controls when an object is added to a container. The Workplace Shell subclasses
+the owner of the container control. The Workplace Shell initiates the Drag
+operation, calls wpFormatDragItem to fill out the data structures, and calls
+DrgDrag or DrgLazyDrag to perform the actual dragging. A Workplace Shell
+object need not invoke DrgDrag or DrgLazyDrag, since this is done automatically
+by the Workplace Shell when the object completes the processing of wpFormatDragItem.
+
+<P>
+When the user begins to drag an object, the source object is notified by
+the system, which invokes the object's wpFormatDragItem. This method is
+used to build a DRAGITEM structure, which is passed to a potential target
+object. The DRAGITEM structure contains the source object's rendering information,
+which is used to determine whether a Drop operation is valid at that point.
+Default information for the DRAGITEM structure is inserted by the default
+processing provided by the parent class, but an object class may override
+the method and include its own class-specific processing. The DRAGITEM structure
+is nested within a DRAGINFO structure, which is passed to any object over
+which the current item is being dragged. In a situation where more than
+one object is being dragged, a separate DRAGITEM is produced for each object
+and the set of structures is combined into a single DRAGINFO structure.
+The DRAGINFO structure, as shown in the following code fragments contains
+information about the Drag operation:
+<PRE>typedef struct _DRAGINFO
+{
+  ULONG   cbDraginfo;             /* Size of DRAGINFO               */
+  USHORT  cbDragitem;             /* Size of DRAGITEM               */
+  USHORT  usOperation;            /* Current Drag operation         */
+  HWND    hwndSource;             /* Window handle of source        */
+  SHORT   xDrop;                  /* X coordinate of drop position  */
+  SHORT   yDrop;                  /* Y coordinate of drop position  */
+  USHORT  cditem;                 /* Count of DRAGITEM              */
+  USHORT  usReserved;             /* Reserved for future use        */
+} DRAGINFO;
+
+</PRE>
+
+<P>
+The DRAGITEM data structure, as shown in the following code fragments is
+used to describe the items being dragged:
+<PRE>typedef struct _DRAGITEM
+{
+  HWND    hwndItem;               /* Conversation partner          */
+  ULONG   ulItemID;               /* Identifies item being dragged */
+  HSTR    hstrType;               /* Type of item                  */
+  HSTR    hstrRMF;                /* Rendering mechanism and format*/
+  HSTR    hstrContainerName;      /* Name of source container      */
+  HSTR    hstrSourceName;         /* Name of item at source        */
+  HSTR    hstrTargetName;         /* Suggested name of item at dest*/
+  SHORT   cxOffset;               /* X offset of the origin of the */
+                                  /* image from the mouse hotspot  */
+  SHORT   cyOffset;               /* Y offset of the origin of the */
+                                  /* image from the mouse hotspot  */
+  USHORT  fsControl;              /* Source item control flags     */
+  USHORT  fsSupportedOps;         /* Ops supported by source       */
+} DRAGITEM;
+
+</PRE>
+
+<P>
+The Workplace Shell itself performs the intialization of the DRAGINFO structure.
+If class-specific processing is required, the object may perform its own
+initialization during processing of wpFormatDragItem. A Workplace Shell
+object does not need to allocate the DRAGITEM structure, since it is allocated
+by the Workplace Shell, and a pointer is passed to wpFormatDragItem. The
+following sample code shows an example of how to use wpFormatDragItem:
+<PRE>/*
+ *  Specify a unique RMF that will only be understood
+ *  by my instances of class MYFOLDER.
+ */
+
+SOM_Scope BOOL SOMLINK myf_wpFormatDragItem(MYFILE *somSelf,
+                 PDRAGITEM pdrgItem)
+
+{
+  /* MYFILEData *somThis <!-- entering slot 192 -->= MYFILEGetData(somSelf); */
+  MYFILEMethodDebug("MYFILE","myf_wpFormatDragItem");
+
+  parent_wpFormatDragItem(somSelf,pdrgItem);
+
+  /* We do NOT want to really let the workplace shell render
+   * our object, so change the rendering mechanism and format
+   * to be uniquely ours.
+   */
+
+  DrgDeleteStrHandle(pdrgItem-&gt;hstrRMF);
+  pdrgItem-&gt;hstrRMF = DrgAddStrHandle("&lt;DRM_OUROWNSPECIAL,DRF_OBJECT&gt;");
+  return(TRUE);
+}
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="176_L2_UsingDirectManipulat.html">[Back: Using Direct Manipulation Methods]</A> <BR>
+<A HREF="178_L3_DeterminingwhetherDa.html">[Next: Determining whether Data Can Be Exchanged]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,99 @@
+<HTML>
+<HEAD>
+<TITLE>Overriding the Default Colors Used by PM Controls</TITLE>
+</HEAD>
+<BODY>
+<H1>Overriding the Default Colors Used by PM Controls</H1><!-- entering slot 90 -->
+<P>
+There is a way to override the default colors used by PM controls. WinSetControlColors
+can be used to set one or more<I> control colors</I>. Control colors can
+be set globally for all instances of the control class (CCF_GLOBAL), or
+for all instances of the control created on the same thread (CCF_APPLICATION).
+For example, you can set the background color of all the push buttons in
+your application to brown without affecting the global default push button
+background color (normally light-gray). Setting a control color for an individual
+control window causes the appropriate presentation parameter to be set.
+Each control has a control color type, and a set of control color indexes
+are used for each type to provide access to the colors used in the control.
+
+<P>
+WinQueryControlColors allows an application to query one or more of the
+colors being used by a PM control. When your application uses this function
+in conjunction with WinSetControlColors, it can query and then set all of
+the colors used in a PM system control window at one time. This is more
+convenient than using presentation parameters, but it is not backwardly
+compatible with versions earlier than OS/2 Warp Version 4.0.
+<P>
+WM_CTLCOLORCHANGE is sent to a window when a control color has been changed
+(similar to WM_SYSCOLORCHANGE), and  WM_QUERYCTLTYPE can be sent to a window
+to find out which, if any, control colors it responds to (a control returns
+a non-zero index value corresponding to a CCT_ constant).
+<PRE>
+   /******************************************************************/
+   /* Query the number of colors used by a push button.              */
+   /******************************************************************/
+
+   cCount = WinQueryControlColors(
+                 HWND_DESKTOP,             /* Desktop window handle  */
+                 CCT_PUSHBUTTON,           /* Select push button     */
+                 CCF_COUNTCOLORS,          /* Count number of colors */
+                 0, 0);
+
+   pactlColor = (PCTLCOLOR)malloc(sizeof(CTLCOLOR) * cCount);
+
+   /******************************************************************/
+   /* Query all the colors used by push buttons in application.      */
+   /******************************************************************/
+
+   WinQueryControlColors(HWND_DESKTOP,     /* Desktop window handle  */
+                 CCT_PUSHBUTTON,           /* Select push button     */
+                 CCF_ALLCOLORS |           /* Return all colors ...  */
+                 CCF_APPLICATION,          /* ... for application    */
+                 cCount,                   /* Size of array          */
+                 pactlColor);              /* Buffer for color data  */
+
+   /******************************************************************/
+   /* Give the global push button borders a red color.               */
+   /******************************************************************/
+
+   for (i = 0; i &lt; cCount; i++)
+   {
+       switch (pactlColor[i].clrIndex)
+       {
+          case CCI_BORDERLIGHT:
+
+             pactlColor[i].clrValue = 0x00FFC0C0;   /* Light red     */
+             break;
+
+          case CCI_BORDERDARK:
+
+             pactlColor[i].clrValue = 0x00C00000;   /* Dark red      */
+             break;
+
+          default:
+
+             pactlColor[i].clrValue = CCV_DEFAULT;  /* Default color */
+             break;
+       }
+   }
+
+   /******************************************************************/
+   /* Set the new border colors for all push buttons in application. */
+   /******************************************************************/
+
+   WinSetControlColors(HWND_DESKTOP,       /* Desktop window handle  */
+                 CCT_PUSHBUTTON,           /* Select push button     */
+                 CCF_APPLICATION,          /* Application colors     */
+                 cCount,                   /* Number of colors       */
+                 pactlColor);              /* Buffer for color data  */
+
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="089_L2H_ContainerCCT_CONTAIN.html">[Back: Container : CCT_CONTAINER]</A> <BR>
+<A HREF="091_L1_ResourceFiles.html">[Next: Resource Files]</A> 
+</BODY>
+</HTML>

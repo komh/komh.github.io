@@ -1,0 +1,164 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Source code of DelClass.CMD - part 4</TITLE>
+</HEAD>
+<BODY>
+<H1>Source code of DelClass.CMD - part 4</H1><!-- entering slot 592 -->
+<PRE> 
+/***       Start of Part 4 of the source code of DELCLASS.CMD       ***/
+
+/* ------------------------------------------------------------------ */
+/* function: main procedure of the program                            */
+/*                                                                    */
+/* call:     called by the runtime system with:                       */
+/*           =&gt; call main parameter_of_the_program                    */
+/*                                                                    */
+/* returns:  nothing                                                  */
+/*                                                                    */
+/* Note:     YOU MUST FILL THIS ROUTINE WITH CODE.                    */
+/*                                                                    */
+Main: PROCEDURE expose (exposeList)
+
+                        /* NO PARAMETERS DEFINED                      */
+
+                        /* load the dll REXXUTIL                      */
+  global.rexxUtilLoaded = LoadDll(        ,
+     'SysLoadFuncs', ,  /* dll init function                          */
+     'REXXUTIL',     ,  /* dll name                                   */
+     'SysLoadFuncs', ,  /* dll init entry point                       */
+     'SysDropFuncs', ,  /* dll exit function                          */
+     'SysDropFuncs', ,  /* check function                             */
+     0,              ,  /* 1: ignore rc of rxfuncadd                  */
+     '',             ,  /* errorcode of the init function             */
+     1 )                /* 1: abort if loading failed                 */
+
+                        /* load the dll VREXX                         */
+  global.vrexxLoaded = LoadDll( 'VINIT', 'VREXX', 'VINIT', ,
+                                'VEXIT', '', 1 ,'ERROR' , 1 )
+
+  do forever
+                        /* get the names of all registered classes    */
+    call sysQueryClassList "classlist."
+
+                        /* calculate the height of the dialog         */
+    dialogHigh=10
+    if classList.0 &lt; dialogHigh then
+      dialogHigh=classList.0
+
+
+                        /* convert the entries and calculate the      */
+                        /* width of the dialog                        */
+    dialogwidth=10
+
+    do i=1 to classList.0
+      parse var ClassList.i className dllName
+      if dllName &lt;&gt; '' then
+        ClassList.i = className || ' (DLL: ' || dllName || ')'
+      else
+        ClassList.i = className
+
+      dialogWidth = max( length( classList.i ), dialogWidth )
+    end /* do i=1 ...*/
+
+    dialogWidth=TRUNC( dialogWIdth * 1.5 )
+    dialogHigh=TRUNC( dialogHigh * 0.75 )
+
+                        /* center the dialogs                         */
+    call VDialogPos 50,50
+
+                        /* show the main dialog                       */
+    rc = VlistBox( classList.0 || ' classes found. ' || ,
+                   'Select a class to delete and press OK.' , ,
+                   'classList', dialogWidth, dialogHigh ,3 )
+
+    if ( rc = 'OK') | ( rc = 'YES') then
+    do
+      parse var ClassList.VString className '(DLL: ' dllName ')'
+      className = strip( className); dllName = strip( dllName )
+
+      mbox. = ''; mbox.0 = 4
+      mbox.2 = ' Really delete the class "' || className || '"?  '
+      mbox.3 = ' (DLL is "' || dllName || '")'
+      rc = VMsgBox( 'Caution', 'mbox', 6 )
+      if rc = 'OK' | rc = 'YES' then
+      do
+        rc = SysDeRegisterObjectClass( className )
+        if rc = 1 then
+        do
+          mbox. = ''; mbox.0 = 3
+          mbox.2 = 'Class "' || className || '" deleted.'
+
+                    /* check if this was the only class in the dll    */
+          call sysQueryClassList "classlist."
+          delDll = 1
+          do i = 1 to classList.0 while delDll = 1
+            if pos( dllName, classList.i ) &lt;&gt; 0 then
+              delDll = 0
+          end /* do i = 1 to classList.0 */
+          if delDLL = 1 then
+          do
+            mbox.0 = 6
+            mbox.3 = 'You may delete the dll '
+            mbox.4 = dllName
+            mbox.5 = 'after the next reboot.'
+          end /* if delDLL = 1 then */
+
+        end /* if rc = 1 */
+        else
+        do
+          mbox. = ''; mbox.0 = 3
+          mbox.2 = 'Error deleting the class "' || className || '"!'
+        end /* else */
+        rc = VMsgBox('Result', 'mbox', 1 )
+
+      end /* if rc = 'OK' ... */
+    end /* if  ( rc = 'OK' ) ... */
+    else
+    do
+      prog.__ExitCode = global.__OKExitCode
+      leave
+    end /* else */
+  end /* do forever */
+
+/* ------------------------------ */
+
+RETURN
+
+/* ------------------------------------------------------------------ */
+
+/*** INSERT FURTHER SUBROUTINES HERE ***/
+
+/* ------------------------------------------------------------------ */
+/* function: Show the invocation syntax                               */
+/*                                                                    */
+/* call:     called by the runtime system with                        */
+/*           =&gt; call ShowUsage                                        */
+/*                                                                    */
+/* where:    -                                                        */
+/*                                                                    */
+/* returns:  ''                                                       */
+/*                                                                    */
+/* Note:     YOU SHOULD FILL THIS ROUTINE WITH CODE.                  */
+/*           You may change the return code for your program in this  */
+/*           routine. The default for the return code is 253.         */
+/*           (The variable for the return code is prog.__ExitCode)    */
+/*                                                                    */
+/*                                                                    */
+ShowUsage:
+  call ShowString 'Usage: DelClass'
+RETURN ''
+
+/***        End of Part 4 of the source code of DELCLASS.CMD        ***/
+
+/**********************************************************************/
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="550_L4_SourcecodeofDelClass.html">[Back: Source code of DelClass.CMD - part 1]</A> <BR>
+<A HREF="552_L3_ConvIniCMD.html">[Next: ConvIni.CMD]</A> 
+</BODY>
+</HTML>

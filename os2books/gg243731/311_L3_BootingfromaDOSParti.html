@@ -1,0 +1,111 @@
+<HTML>
+<HEAD>
+<TITLE>Booting from a DOS Partition</TITLE>
+</HEAD>
+<BODY>
+<H1>Booting from a DOS Partition</H1><!-- entering slot 360 -->
+<P>
+If VMB will be used regularly, the most convenient method may be to do so
+from a DOS partition on hard disk, rather than via diskettes or diskette
+images.  This may be achieved by specifying<I> C:</I> as the value for<I> DOS_STARTUP_DRIVE
+</I>under DOS Settings. Loading DOS from a DOS partition proceeds more quickly
+and offers the user a more "familiar" working environment. It is also easier
+to apply DOS Corrective Service to a disk partition than to diskettes or
+images.
+<P>
+Note that this method is different from that of a single hard disk partition
+with the Dual Boot feature available under previous versions of OS/2.
+<P>
+In order to load DOS from a DOS partition, the following requirements must
+be satisfied:<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->Boot Manager must be installed<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->DOS must be installed on a primary partition
+on the first hard disk in the machine<!-- lm: 0x2 0 -->
+<P>
+ <LI><LI><!-- lm: 0x2 4 -->OS/2 Version 2.0 must be installed on an extended
+partition on the first fixed disk, or on another hard disk.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+This will require re-partitioning on single-drive systems if the disk initially
+contains DOS alone, or earlier versions of OS/2.
+<P>
+Loading DOS from a DOS partition presents one significant problem.  The
+DOS partition is itself bootable directly via Boot Manager, should the user
+so choose, and there may a requirement to boot this DOS partition directly
+on occasions.  OS/2 Version 2.0 provides stub device drivers for functions
+such as EMS, XMS and mouse support in the VMB session, and these must be
+used in place of the normal DOS device drivers when DOS is booted in a VMB
+session. Since the same CONFIG.SYS  and AUTOEXEC.BAT in the C: root directory
+is used, the question arises of which drivers should be specified for functions
+such as EMS and XMS support:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->If the partition is booted via VMB, the DOS drivers
+are inappropriate<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->If the partition is booted directly via Boot Manager,
+the OS/2 stub drivers are inappropriate.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+It might appear that the user would have to maintain multiple configuration
+files and rename or copy them depending upon whether the partition was being
+booted into a VMB session or directly from Boot Manager.  This is clearly
+unsatisfactory. Fortunately there is a solution which avoids this. The key
+is to specify<I> both</I> sets of drivers, in the correct order, in CONFIG.SYS
+and AUTOEXEC.BAT.
+<P>
+The following example assumes:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 -->DOS 5.0 is installed on the C: Primary partition<!-- lm: 0x2 0 -->
+<BR>
+<LI><!-- lm: 0x2 2 -->OS/2 Version 2.0 is installed on the E: Extended partition
+<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+CONFIG.SYS on the C: drive contains:
+<PRE>device=c:\dos\setver.exe
+device=c:\dos\himem.sys
+device=c:\dos\emm386.exe noems
+device=e:\os2\mdos\himem.sys
+device=e:\os2\mdos\emm386.sys
+dos=high,umb
+   ... etc ...
+</PRE>
+
+<P>
+When this file is processed in an OS/2 VMB session, the DOS HIMEM load fails
+as it sees no available extended memory. EMM386.EXE cannot load as it sees
+protect-mode software already running. Then, the OS/2 HIMEM and EMM386 stub
+device drivers load as normal.
+<P>
+When this file is processed as part of a native DOS boot, the DOS HIMEM
+and EMM386 load as normal, but the OS/2 stub device drivers detect that
+they are not running under OS/2 and do not load themselves.
+<P>
+A similar technique works for mouse support in AUTOEXEC.BAT:
+<PRE>@echo off
+prompt $p$g
+set path=c:\dos
+LH e:\os2\mdos\mouse
+LH c:\dos\mouse
+   ... etc ...
+</PRE>
+
+<P>
+Note that<!-- entering slot 361 --> here the OS/2 driver is listed first.
+When this file is processed in an OS/2 VMB session, the OS/2 stub loads
+first.  The DOS mouse driver sees that a mouse driver is already present,
+and hence it does not install itself.  When booting DOS natively, the OS/2
+mouse stub device driver detects that it is not running under OS/2, and
+does not load itself. The DOS mouse driver then loads as normal.
+
+<P><HR>
+
+<A HREF="310_L3_BootingfromDisketteI.html">[Back: Booting from Diskette Image]</A> <BR>
+<A HREF="312_L3_PuttingtheVirtualMac.html">[Next: Putting the Virtual Machine Boot Session in the Workplace Shell]</A> 
+</BODY>
+</HTML>

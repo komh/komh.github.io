@@ -1,0 +1,126 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>wpSetContentsFromHandle - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>wpSetContentsFromHandle - Example Code</H1><!-- entering slot 3592 -->
+<P>
+This example shows how the Image File class processes the wpSetContentsFromHandle
+method.  Notice how this method finds the bitmap data from the specified
+handle and calls the <A HREF="3530_L2_wpSetBitmapData.html">wpSetBitmapData
+</A>method to update the data file. This allows any subclass of<A><!-- external link: 1D 83 C3 AF --> WPImageFile
+</A>to provide this function without writing any extra code.
+<PRE>SOM_Scope BOOL SOMLINK img_wpSetContentsFromHandle(WPImageFile *somSelf,
+                                                   LHANDLE handle)
+{
+   BITMAPINFOHEADER2    bmih;
+   PBITMAPINFO2         pbmih = NULL;
+   ULONG                scansize, tsize;
+   LONG                 bmisize;
+   PVOID                data;
+   BOOL                 bResult;
+   PBITMAPFILEHEADER2   pbmfh = NULL;
+   ULONG                bmfhsize, ctabsize;
+   HBITMAP              hbm = handle;
+   HDC                  hdc = NULLHANDLE;
+   SIZEL                sizl = {0L, 0L};
+   HPS                  hps = NULLHANDLE;
+   HPAL                 hPalette = NULLHANDLE;
+
+   /* Get the bitmap information header from the bitmap  */
+   bmih.cbFix = sizeof(bmih);
+   if (!GpiQueryBitmapInfoHeader(hbm, &amp;bmih))
+   {
+      return(FALSE);
+   }
+
+   /* Allocate a buffer large enough to contain the bitmap file header,
+    * the bitmap information header, the color table, and the bitmap data */
+   scansize = ((bmih.cBitCount*bmih.cx+31)/32)*bmih.cPlanes*4;
+   bmisize = (bmih.cbFix+(sizeof(RGB2))*
+                 (bmih.cclrUsed ? bmih.cclrUsed :
+                                  1&lt;&lt;(bmih.cBitCount*bmih.cPlanes) ) );
+
+   tsize = bmisize + scansize*bmih.cy + offsetof(BITMAPFILEHEADER2, bmp2);
+
+   pbmfh = (PBITMAPFILEHEADER2) AllocMem(tsize, NULL);
+   if (!pbmfh)
+   {
+      return(FALSE);
+   }
+
+   /* Copy the bitmap information header to the buffer  */
+   pbmih = (PVOID) (((PBYTE)pbmfh) + offsetof(BITMAPFILEHEADER2,bmp2));
+   data = (PVOID)pbmih;
+   memcpy(data, (PVOID)&amp;bmih, bmih.cbFix);
+   pbmih-&gt;cBitCount = bmih.cBitCount*bmih.cPlanes;
+   pbmih-&gt;cPlanes = 1;
+   pbmih-&gt;cbImage = scansize*bmih.cy;
+
+   /* Open a Device Context for the bitmap  */
+   hdc = DevOpenDC (vhab, OD_MEMORY, "*", 0L, NULL, NULLHANDLE);
+   if (hdc == DEV_ERROR)
+   {
+      FreeMem((PCHAR)pbmfh);
+      pbmfh = NULL;
+      return FALSE;
+   }
+
+   /* Create a Presentation Space for the bitmap  */
+   hps = GpiCreatePS (vhab,
+                      hdc,
+                      &amp;sizl,
+                      PU_PELS | GPIT_NORMAL | GPIA_ASSOC);
+   if (hps == GPI_ERROR)
+   {
+      DevCloseDC (hdc);
+      hdc = NULLHANDLE;
+      FreeMem((PCHAR)pbmfh);
+      pbmfh = NULL;
+      return FALSE;
+   }
+
+   /* Copy the color table and bitmap data to the buffer  */
+   GpiCreateLogColorTable(hps,0,LCOLF_RGB,0,0,NULL);
+   GpiSelectPalette(hps,hPalette);
+   GpiSetBitmap(hps,hbm);
+   GpiQueryBitmapBits(hps, 0, bmih.cy, ((PSZ)data)+bmisize, pbmih);
+   GpiSetBitmap(hps,NULLHANDLE);
+   GpiSelectPalette(hps,NULLHANDLE);
+   GpiAssociate(hps,NULLHANDLE);
+   GpiDestroyPS(hps);
+   hps = NULLHANDLE;
+   DevCloseDC (hdc);
+   hdc = NULLHANDLE;
+
+   ctabsize = ((sizeof(RGB2))* (pbmih-&gt;cclrUsed ? pbmih-&gt;cclrUsed :
+                               1&lt;&lt;(pbmih-&gt;cBitCount*pbmih-&gt;cPlanes) ) );
+
+   bmfhsize = offsetof(BITMAPFILEHEADER2, bmp2) +
+              sizeof(BITMAPINFOHEADER2) +
+              ctabsize;
+
+   /* Construct the bitmap file header at the beginning of the buffer  */
+   pbmfh-&gt;usType   = BFT_BMAP;
+   pbmfh-&gt;cbSize   = bmfhsize+pbmfh-&gt;bmp2.cbImage;
+   pbmfh-&gt;xHotspot = 0;
+   pbmfh-&gt;yHotspot = 0;
+   pbmfh-&gt;offBits  = bmfhsize;
+
+   /* Update the image file from the bitmap data  */
+   bResult = _wpSetBitmapData(somSelf,(PBYTE)pbmfh,tsize);
+
+   /* Free the temporary buffer and return to the caller  */
+   FreeMem((PCHAR)pbmfh);
+   pbmfh = NULL;
+   return bResult;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="3591_L2H_wpSetContentsFromHan.html">[Back: wpSetContentsFromHandle - Related Methods]</A> <BR>
+<A HREF="3593_L2H_wpSetContentsFromHan.html">[Next: wpSetContentsFromHandle - Topics]</A> 
+</BODY>
+</HTML>

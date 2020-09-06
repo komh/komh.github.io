@@ -1,0 +1,273 @@
+<HTML>
+<HEAD>
+<TITLE>MMIOM_SETHEADER</TITLE>
+</HEAD>
+<BODY>
+<H1>MMIOM_SETHEADER</H1><!-- entering slot 147 -->
+<P>
+This message requests the IOProc to set header-specific information in a
+file opened for writing by mmioOpen.  This would include data such as resolution
+and colors for images, and duration and sample rate for audio.
+<P>
+When the translate header is TRUE, the IOProc should expect to be passed
+the standard presentation header for that media type.  The IOProc is expected
+to transpose the data from that structure into its native header structure
+before writing the header to the file.
+<P>
+The following example shows an example of how the M-Motion IOProc supports
+the MMIOM_SETHEADER message.
+<PRE>case MMIOM_SETHEADER:
+     {
+     /************************************************************
+      * Declare local variables.
+      ************************************************************/
+     PMMIMAGEHEADER          pMMImgHdr;
+     PMMFILESTATUS           pVidInfo;
+     USHORT                  usNumColors;
+     ULONG                   ulImgBitsPerLine;
+     ULONG                   ulImgBytesPerLine;
+     ULONG                   ulBytesWritten;
+     ULONG                   ulWidth;
+     ULONG                   ul4PelWidth;
+     ULONG                   ulHeight;
+     USHORT                  usPlanes;
+     USHORT                  usBitCount;
+     USHORT                  usPadBytes;
+
+     /************************************************************
+      * Check for valid MMIOINFO block.
+      ************************************************************/
+     if (!pmmioinfo)
+         return (MMIO_ERROR);
+
+     /************************************************************
+      * Set up our working variable MMFILESTATUS.
+      ************************************************************/
+     pVidInfo = (PMMFILESTATUS) pmmioinfo-&gt;pExtraInfoStruct;
+
+     /************************************************************
+      * Only allow this function if we are in WRITE mode
+      * And only if we have not already set the header
+      ************************************************************/
+     if ((!(pmmioinfo-&gt;ulFlags &amp; MMIO_WRITE)) ||
+         (!(pVidInfo-&gt;hmmioSS)) ||
+         (pVidInfo-&gt;bSetHeader))
+         return (0);
+
+     /********************************************************
+      * Make sure lParam1 is a valid pointer
+      ********************************************************/
+     if (!lParam1)
+         {
+         pmmioinfo-&gt;ulErrorRet = MMIOERR_INVALID_STRUCTURE;
+         return (0);
+         }
+
+     /************************************************************
+      * Header is not in translated mode.
+      ************************************************************/
+     if (!(pmmioinfo-&gt;ulTranslate &amp; MMIO_TRANSLATEHEADER))
+         {
+         /********************************************************
+          * Make sure lParam2 is correct size
+          ********************************************************/
+         if (lParam2 != MMOTION_HEADER_SIZE)
+             {
+             pmmioinfo-&gt;ulErrorRet = MMIOERR_INVALID_BUFFER_LENGTH;
+             return (0);
+             }
+
+         /********************************************************
+          * Ensure that the header at least begins with "YUV12C"
+          ********************************************************/
+         if (strncmp ((char *)lParam1, "YUV12C", 6))
+            {
+            pmmioinfo-&gt;ulErrorRet = MMIOERR_INVALID_STRUCTURE;
+            return (0);
+            }
+
+         /********************************************************
+          * Take 16 byte buffer (lParam1), write to file and .
+          *    copy to internal structure.
+          ********************************************************/
+         memcpy ((PVOID)&amp;pVidInfo-&gt;mmotHeader,
+                 (PVOID)lParam1, (ULONG) MMOTION_HEADER_SIZE);
+         ulBytesWritten = mmioWrite (pVidInfo-&gt;hmmioSS,
+                                     (PVOID) lParam1,
+                                     (ULONG) MMOTION_HEADER_SIZE);
+
+         /*********************************
+          * Check for an error on the write..
+          *********************************/
+         if (ulBytesWritten != MMOTION_HEADER_SIZE)
+             return (0);   /* 0 indicates error */
+
+         /*********************************
+          * Success...
+          *********************************/
+         pVidInfo-&gt;bSetHeader = TRUE;
+         return (sizeof (MMOTIONHEADER));
+         }  /* end IF NOT TRANSLATED block */
+
+     /************************************************************
+      * Header is translated.
+      ************************************************************/
+
+     /************************************************************
+      * Create local pointer media specific structure.
+      ************************************************************/
+     pMMImgHdr = (PMMIMAGEHEADER) lParam1;
+
+
+     /************************************************************
+      * Check for validity of header contents supplied
+      ************************************************************
+      *  --  Length must be that of the standard header
+      *  --  NO Compression
+      *      1 plane
+      *      24, 8, 4 or 1 bpp
+      ************************************************************/
+     usBitCount = pMMImgHdr-&gt;mmXDIBHeader.BMPInfoHeader2.cBitCount;
+     if ((pMMImgHdr-&gt;mmXDIBHeader.BMPInfoHeader2.ulCompression !=
+          BCA_UNCOMP) ||
+         (pMMImgHdr-&gt;mmXDIBHeader.BMPInfoHeader2.cPlanes != 1) ||
+         (! ((usBitCount == 24) || (usBitCount == 8) ||
+             (usBitCount == 4) || (usBitCount == 1)))
+        )
+         {
+         pmmioinfo-&gt;ulErrorRet = MMIOERR_INVALID_STRUCTURE;
+         return (0);
+         }
+
+     if (lParam2 != sizeof (MMIMAGEHEADER))
+        {
+        pmmioinfo-&gt;ulErrorRet = MMIOERR_INVALID_BUFFER_LENGTH;
+        return (0);
+        }
+
+     /************************************************************
+      * Complete MMOTIONHEADER.
+      ************************************************************/
+     memcpy ((PVOID)&amp;pVidInfo-&gt;mmotHeader.mmID, "YUV12C", 6);
+     pVidInfo-&gt;mmotHeader.mmXorg  = 0;
+     pVidInfo-&gt;mmotHeader.mmYorg  = 0;
+
+     /********************************************************
+      * Ensure we will save stuff on 4-pel boundaries when
+      * we actually convert to YUV and pack the bits.
+      * We don't change what the user is actually going to
+      * give us.  The user thinks he is on 1-pel boundaries,
+      * and that is how we buffer the <!-- entering slot 148 -->RGB data.
+      ********************************************************/
+     ulWidth  = pMMImgHdr-&gt;mmXDIBHeader.BMPInfoHeader2.cx;
+     ulHeight = pMMImgHdr-&gt;mmXDIBHeader.BMPInfoHeader2.cy;
+     if (ulWidth % 4)
+         ul4PelWidth = (((ulWidth &gt;&gt; 2) + 1) &lt;&lt; 2);
+     else
+         ul4PelWidth = ulWidth;
+     pVidInfo-&gt;mmotHeader.mmXlen  = (USHORT) ul4PelWidth;
+     pVidInfo-&gt;mmotHeader.mmYlen  = (USHORT) ulHeight;
+
+     /************************************************************
+      * Write the M-Motion Header.
+      ************************************************************/
+     ulBytesWritten = mmioWrite (pVidInfo-&gt;hmmioSS,
+                                 (PVOID) &amp;pVidInfo-&gt;mmotHeader,
+                                 (ULONG) MMOTION_HEADER_SIZE);
+
+     /***************************************
+      * Check for an error on the write...
+      ***************************************/
+     if (ulBytesWritten != MMOTION_HEADER_SIZE)
+         return (0);
+
+     /************************************************************
+      * Flag that MMIOM_SETHEADER has been done.  It can only
+      * be done ONCE for a file.  All future attempts will
+      * be flagged as errors.
+      ************************************************************/
+     pVidInfo-&gt;bSetHeader = TRUE;
+
+     /************************************************************
+      * Create copy of MMIMAGEHEADER for future use.
+      ************************************************************/
+     pVidInfo-&gt;mmImgHdr = *pMMImgHdr;
+
+     /************************************************************
+      * Check bitcount, set palette if less than 24.
+      ************************************************************/
+     if (usBitCount &lt; 24)
+        {
+        /*********************************************************
+         * Find out how many colors are in the palette.
+         *********************************************************/
+        usNumColors = (USHORT)(1 &lt;&lt; usBitCount);
+
+        /*********************************************************
+         * Take the RGB2 palette and convert it to an RGB palette
+         *    Place the converted palette in MMFILESTATUS struct
+         *********************************************************/
+        RGB2_To_RGB (pVidInfo-&gt;mmImgHdr.bmiColors,
+                     (PRGB) &amp;(pVidInfo-&gt;rgbPalette),
+                     usNumColors);
+        }
+
+     /*********************************************************
+      * We must allocate the buffer.  The app will load the
+      * buffer on subsequent write calls.
+      *********************************************************/
+     usPlanes = pVidInfo-&gt;mmImgHdr.mmXDIBHeader.BMPInfoHeader2.cPlanes;
+
+     /********************************************************
+      * Determine total Image size
+      ********************************************************
+      * Find bits-per-line BEFORE padding and 1bpp or 4bpp pel overflow
+      ********************************************************/
+     ulImgBitsPerLine = ulWidth * usPlanes * usBitCount;
+     ulImgBytesPerLine = ulImgBitsPerLine &gt;&gt; 3;
+
+     /********************************************************
+      * Account for extra pels not on an even byte boundary
+      *   for 1bpp and 4bpp
+      ********************************************************/
+     if (ulImgBitsPerLine % 8)
+        ulImgBytesPerLine ++;
+
+     pVidInfo-&gt;ulImgPelBytesPerLine = ulImgBytesPerLine;
+
+     /********************************************************
+      * Ensure the row length in bytes accounts for byte padding.
+      *   All bitmap data rows are aligned on LONG/4-BYTE boundaries.
+      *   The data FROM an application should always appear in this form
+      ********************************************************/
+     usPadBytes = (USHORT)(ulImgBytesPerLine % 4);
+     if (usPadBytes)
+        ulImgBytesPerLine += 4 - usPadBytes;
+
+     pVidInfo-&gt;ulImgPaddedBytesPerLine  = ulImgBytesPerLine;
+     pVidInfo-&gt;ulImgTotalBytes = ulImgBytesPerLine * ulHeight;
+
+     /********************************************************
+      * Get space for full image buffer.
+      ********************************************************/
+     if (DosAllocMem ((PPVOID) &amp;(pVidInfo-&gt;lpImgBuf),
+                       pVidInfo-&gt;ulImgTotalBytes,
+                       fALLOC))
+         return (MMIO_ERROR);
+
+     /********************************************************
+      * Set up initial pointer value within RGB buffer &amp; image
+      ********************************************************/
+     pVidInfo-&gt;lImgBytePos = 0;
+
+     return (sizeof (MMIMAGEHEADER));
+     }  /* end case of MMIOM_SETHEADER */
+</PRE>
+
+
+<P><HR>
+
+<A HREF="116_L3_MMIOM_GETHEADER.html">[Back: MMIOM_GETHEADER]</A> <BR>
+<A HREF="118_L2_CODECSupport.html">[Next: CODEC Support]</A> 
+</BODY>
+</HTML>

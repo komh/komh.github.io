@@ -1,0 +1,173 @@
+<HTML>
+<HEAD>
+<TITLE>select()</TITLE>
+</HEAD>
+<BODY>
+<H1>select()</H1><!-- entering slot 70 -->
+<P>
+<B>Description</B>
+<P>
+Determine the status of one or more sockets, waiting if necessary.
+<P>
+
+<PRE>#include &lt;winsock.h&gt;</PRE>
+ 
+<P>
+<B>long PASCAL FAR select ( int</B><I> nfds</I><B>, fd_set FAR *</B><I> readfds</I><B>,
+fd_set FAR *</B><I> writefds</I><B>, fd_set FAR *</B><I> exceptfds</I><B>,
+const struct timeval FAR *</B><I> timeout</I><B> );</B><!-- lm: 0x2 1 -->
+<UL>
+<P>
+<I>nfds</I><!-- lm: 0x11 3 -->
+<UL> This argument is ignored and included
+only for the sake of compatibility.<!-- lm: 0x2 1 -->
+</UL><I> readfds</I><!-- lm: 0x11 3 -->
+<UL> An
+optional pointer to a set of sockets to be checked for readability.<!-- lm: 0x2 1 -->
+</UL><I> writefds
+</I><!-- lm: 0x11 3 -->
+<UL>An optional pointer to a set of sockets to be
+checked for writeability<!-- lm: 0x2 1 -->
+</UL><I> exceptfds</I><!-- lm: 0x11 3 -->
+<UL> An
+optional pointer to a set of sockets to be checked for errors.<!-- lm: 0x2 1 -->
+</UL><I> timeout
+</I><!-- lm: 0x11 3 -->
+<UL>The maximum time for<B> select()</B> to wait,
+or NULL for blocking operation.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Remarks</B>
+<P>
+This function is used to determine the status of one or more sockets.  For
+each socket, the caller may request information on read, write or error
+status.  The set of sockets for which a given status is requested is indicated
+by an fd_set structure.  Upon return, the structure is updated to reflect
+the subset of these sockets which meet the specified condition, and<B> select()
+</B>returns the number of sockets meeting the conditions.  A set of macros
+is provided for manipulating an fd_set.  These macros are compatible with
+those used in the Berkeley software, but the underlying representation is
+completely different.
+<P>
+The parameter<I> readfds</I> identifies those sockets which are to be checked
+for readability.  If the socket is currently <A HREF="059_L3_listen.html">listen()</A>ing,
+it will be marked as readable if an incoming connection request has been
+received, so that an <A HREF="047_L3_accept.html">accept()</A> is guaranteed
+to complete without blocking.  For other sockets, readability means that
+queued data is available for reading or,  for sockets of type SOCK_STREAM,
+that the virtual socket corresponding to the socket has been closed, so
+that a <A HREF="062_L3_recv.html">recv()</A> or <A HREF="063_L3_recvfrom.html">recvfrom()
+</A>is guaranteed to complete without blocking.  If the virtual circuit
+was closed gracefully, then a <A HREF="062_L3_recv.html">recv()</A> will
+return immediately with 0 bytes read; if the virtual circuit was closed
+abortively, then a <A HREF="062_L3_recv.html">recv()</A> will complete immediately
+with the error code WSAECONNRESET.  The presence of out-of-band data will
+be checked if the socket option SO_OOBINLINE has been enabled (see <A HREF="067_L3_setsockopt.html">setsockopt()</A>).
+
+<P>
+The parameter<I> writefds</I> identifies those sockets which are to be checked
+for writeability.  If a socket is <A HREF="050_L3_connect.html">connect()</A>ing
+(non-blocking), writeability means that the connection establishment is
+complete.  For other sockets, writeability means that a <A HREF="065_L3_send.html">send()
+</A>or <A HREF="066_L3_sendto.html">sendto()</A> will complete without blocking.
+ íIt is not specified how long this guarantee can be assumed to be valid,
+particularly in a multithreaded environment.ù
+<P>
+The parameter<I> exceptfds</I> identifies those sockets which are to be
+checked for the presence of out-of-band data or any exceptional error conditions.
+ Note that out-of-band data will only be reported in this way if the option
+SO_OOBINLINE is FALSE.  For a SOCK_STREAM, the breaking of the connection
+by the peer or due to KEEPALIVE failure will be indicated as an exception.
+ This specification does not define which other errors will be included.
+ If a socket is<B> connect()</B>ing (non-blocking), failure of the connect
+attempt is indicated in<I> exceptfds.</I>
+<P>
+Any of<I> readfds</I>,<I> writefds</I>, or<I> exceptfds</I> may be given
+as NULL if no descriptors are of interest.  Four macros are defined in the
+header file<B> winsock.h</B> for manipulating the descriptor sets.  The
+variable FD_SETSIZE determines the maximum number of descriptors in a set.
+ (The default value of FD_SETSIZE is 64, which may be modified by #defining
+FD_SETSIZE to another value before #including<B> winsock.h</B>.)  Internally,
+an fd_set is represented as an array of SOCKETs; the last valid entry is
+followed by an element set to INVALID_SOCKET. The macros are:
+<P>
+<!-- lm: 0x2 1 -->
+<P>
+<B>FD_CLR(</B><I>s</I><B>, *</B><I>set</I><B>)</B><!-- lm: 0x11 11 -->
+<UL><!-- entering slot 71 --> Removes
+the descriptor<I> s</I> from<I> set</I>.<!-- lm: 0x2 1 -->
+</UL><B> FD_ISSET(</B><I>s</I><B>,
+*</B><I>set</I><B>)</B><!-- lm: 0x11 11 -->
+<UL> Nonzero if<I> s</I> is
+a member of the<I> set</I>, zero otherwise.<!-- lm: 0x2 1 -->
+</UL><B> FD_SET(</B><I>s</I><B>,
+*</B><I>set</I><B>)</B><!-- lm: 0x11 11 -->
+<UL> Adds descriptor<I> s</I> to
+<I>set</I>.<!-- lm: 0x2 1 -->
+</UL><B> FD_ZERO(*</B><I>set</I><B>)</B><!-- lm: 0x11 11 -->
+<UL> Initializes
+the<I> set</I> to the NULL set.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The parameter<I> timeout</I> controls how long the<B> select()</B> may take
+to complete.  If<I> timeout</I> is a null pointer,<B> select()</B> will
+block indefinitely until at least one descriptor meets the specified criteria.
+Otherwise,<I> timeout</I> points to a struct timeval which specifies the
+maximum time that<B> select()</B> should wait before returning.  If the
+timeval is initialized to {0, 0},<B> select()</B> will return immediately;
+this is used to "poll" the state of the selected sockets.  If this is the
+case, then the<B> select()</B> call is considered nonblocking and the standard
+assumptions for nonblocking calls apply.  For example, the blocking hook
+must not be called, and the Windows Sockets implementation must not yield.
+
+<P>
+<B>Return Value</B>
+<P>
+<B>select()</B> returns the total number of descriptors which are ready
+and contained in the fd_set structures, or 0 if the time limit expired,
+or SOCKET_ERROR if an error occurred.  If the return value is SOCKET_ERROR,
+<A HREF="089_L3_WSAGetLastError.html">WSAGetLastError()</A> may be used
+to retrieve a specific error code.
+<P>
+<B>Error Codes</B>
+<P>
+<!-- lm: 0x2 1 -->
+<P>
+WSANOTINITIALISED<!-- lm: 0x11 11 -->
+<UL> A successful <A HREF="093_L3_WSAStartup.html">WSAStartup()
+</A>must occur before using this API.<!-- lm: 0x2 1 -->
+</UL> WSAENETDOWN
+<!-- lm: 0x11 11 -->
+<UL>The Windows Sockets implementation has detected
+that the network subsystem has failed.<!-- lm: 0x2 1 -->
+</UL> WSAEINVAL
+<!-- lm: 0x11 11 -->
+<UL>The<I> timeout</I> value is not valid.<!-- lm: 0x2 1 -->
+</UL> WSAEINTR
+<!-- lm: 0x11 11 -->
+<UL>The (blocking) call was canceled via <A HREF="087_L3_WSACancelBlockingCal.html">WSACancelBlockingCall()
+</A><!-- lm: 0x2 1 -->
+</UL>WSAEINPROGRESS<!-- lm: 0x11 11 -->
+<UL> A blocking
+Windows Sockets operation is in progress.<!-- lm: 0x2 1 -->
+</UL> WSAENOTSOCK
+<!-- lm: 0x11 11 -->
+<UL>One of the descriptor sets contains an entry which
+is not a socket.<!-- lm: 0x2 1 -->
+</UL> 
+<P>
+<B>See Also</B>
+<P>
+<A HREF="085_L3_WSAAsyncSelect.html">WSAAsyncSelect()</A><B>,</B> <A HREF="047_L3_accept.html">accept()</A><B>,
+</B><A HREF="050_L3_connect.html">connect()</A><B>,</B> <A HREF="062_L3_recv.html">recv()</A><B>,
+</B><A HREF="063_L3_recvfrom.html">recvfrom()</A><B>,</B> <A HREF="065_L3_send.html">send()
+</A>
+<P>
+
+
+<P><HR>
+
+<A HREF="063_L3_recvfrom.html">[Back: recvfrom()]</A> <BR>
+<A HREF="065_L3_send.html">[Next: send()]</A> 
+</BODY>
+</HTML>

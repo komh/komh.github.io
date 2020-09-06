@@ -1,0 +1,185 @@
+<HTML>
+<HEAD>
+<TITLE>Finding available fonts on DBCS OS/2</TITLE>
+</HEAD>
+<BODY>
+<H1>Finding available fonts on DBCS OS/2</H1><!-- entering slot 36 -->
+<PRE>旼컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴커
+쿎heck font metrics to find DBCS fonts available to you.               �
+읕컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴켸
+</PRE>
+
+<P>
+Your application programs can use fonts available on a user's OS/2 system.
+ You must query available fonts on a user's system.  If your application
+program cannot find applicable fonts, you should inform the user that the
+font is not available on the user's OS/2 system. Do not assume presence
+of your preferred fonts such as face names or sizes of fonts. Users may
+not have installed OS/2 V2-supplied fonts.
+<P>
+To find out which fonts are available to your application programs, you
+need to check the value of font metrics.<B> GpiQueryFonts</B> serves for
+the purpose.
+<P>
+If you are on any of DBCS combined code pages, you need to select a DBCS
+font. If you select a SBCS font, double-byte characters are not properly
+displayed to a user.  (A double-byte character is displayed as two single-byte
+characters with the selected SBCS font. Some PM controls such as Multi-line
+Entry Field Control display double-byte characters as blanks.)  To select
+a DBCS font, pick up a font of which an<B> FM_TYPE_MBCS flag</B> of<B> fsType
+</B>in the font metrics is set to ON.
+<P>
+A mechanism for setting one of available fonts is common to both SBCS and
+DBCS OS/2. That is,<B> GpiSetCharSet</B> is used to select a font on both
+SBCS OS/2 and DBCS OS/2.<!-- lm: 0x2 5 -->
+<UL>
+<P>
+<LI><LI><LI><LI><LI><LI><LI><LI><LI><LI>Hints and Tips
+<P>
+Do not assume that out-line fonts for combined pages are always available
+to your application program. A user may not have installed out-line fonts
+for combined code pages.
+<P>
+---------- End of Hints and Tips<!-- lm: 0x2 1 -->
+</UL>Checkingfontmetrics( source :EHLLAPI . C )
+<PRE>...
+USHORT ListFonts(HPS hps) {
+
+   SHORT         i, j;
+   USHORT        temp, cFonts;
+   LONG          NoOfFontsReq = 0;
+   LONG          ActualNoOfFonts;
+   USHORT        sizereq;
+   NPBYTE        offset;
+   PFONTMETRICS  pMetrics;
+
+   ActualNoOfFonts = GpiQueryFonts(hps,
+                                   QF_PUBLIC | QF_PRIVATE,
+                                   (PSZ)NULL,
+                                   &amp;NoOfFontsReq,
+                                   0L,
+                                   (PFONTMETRICS)NULL);
+
+   sizereq = (USHORT)sizeof(FONTMETRICS) * (USHORT)ActualNoOfFonts;
+   offset = WinAllocMem(hHeap, sizereq);
+   pMetrics = MAKEP(sel, offset);
+
+   <B>GpiQueryFonts</B>(hps,
+                 QF_PUBLIC | QF_PRIVATE,
+                 (PSZ)NULL,
+                 &amp;ActualNoOfFonts,
+                 (LONG)sizeof(FONTMETRICS),
+                 pMetrics);
+   cFonts = 0;
+
+   if (_dbcs_cp == NON_DBCS_CP) {
+      for (i = 0; i &lt; (USHORT)ActualNoOfFonts; ++i) {
+         if (!(pMetrics[i].fsDefn &amp; FM_DEFN_OUTLINE) &amp;&amp;
+              (pMetrics[i].fsType &amp; FM_TYPE_FIXED)) {
+            ++cFonts;
+         }
+      }
+      sizereq = (USHORT)sizeof(CONDENSED_FM) * (USHORT)cFonts;
+      offset = WinAllocMem(hHeap, sizereq);
+      pFM = MAKEP(sel, offset);
+      cFonts = 0;
+      for (i = 0; i &lt; (USHORT)ActualNoOfFonts; ++i) {
+         if (!(pMetrics[i].fsDefn &amp; FM_DEFN_OUTLINE) &amp;&amp;
+              (pMetrics[i].fsType &amp; FM_TYPE_FIXED)) {
+            strcpy(pFM[cFonts].szFacename, pMetrics[i].szFacename);
+            pFM[cFonts].lMaxBaselineExt = pMetrics[i].lMaxBaselineExt;
+            pFM[cFonts].lAveCharWidth   = pMetrics[i].lAveCharWidth;
+            pFM[cFonts].lMatch          = pMetrics[i].lMatch;
+            ++cFonts;
+         }
+      }
+   } else {
+      for (i = 0; i &lt; (USHORT)ActualNoOfFonts; ++i) {
+         if (!(pMetrics[i].fsDefn &amp; FM_DEFN_OUTLINE) &amp;&amp;
+              (pMetrics[i].fsType &amp; FM_TYPE_FIXED) &amp;&amp;
+              (pMetrics[i].fsType &amp; FM_TYPE_MBCS)) {
+            ++cFonts;
+         }
+      }
+      sizereq = (USHORT)sizeof(CONDENSED_FM) * (USHORT)cFonts;
+      offset = WinAllocMem(hHeap, sizereq);
+      pFM = MAKEP(sel, offset);
+      cFonts = 0;
+      for (i = 0; i &lt; (USHORT)ActualNoOfFonts; ++i) {
+         if (!(pMetrics[i].fsDefn &amp; FM_DEFN_OUTLINE) &amp;&amp;
+              (pMetrics[i].fsType &amp; FM_TYPE_FIXED) &amp;&amp;
+              (pMetrics[i].fsType &amp; FM_TYPE_MBCS)) {
+            strcpy(pFM[cFonts].szFacename, pMetrics[i].szFacename);
+            pFM[cFonts].lMaxBaselineExt = pMetrics[i].lMaxBaselineExt;
+            pFM[cFonts].lAveCharWidth   = pMetrics[i].lAveCharWidth;
+            pFM[cFonts].lMatch          = pMetrics[i].lMatch;
+            ++cFonts;
+         }
+      }
+   }
+
+   offset = WinFreeMem(hHeap, (NPBYTE)OFFSETOF(pMetrics), sizereq);
+
+   sizereq = (USHORT)sizeof(USHORT) * (USHORT)cFonts;
+   offset = WinAllocMem(hHeap, sizereq);
+   pLID = MAKEP(sel, offset);
+
+   for (i = 0; i &lt; cFonts; ++i) {
+      pLID[i] = (USHORT)(i + 1);
+   }
+
+   /*--- Sorting LIDs in the order of lMaxBaselineExt --------*/
+   for (i = 0; i &lt; cFonts - 1; ++i) {
+      for (j = cFonts - 2; j &gt;= i; --j) {
+         if (pFM[pLID[j + 1] - 1].lMaxBaselineExt &lt;
+             pFM[pLID[j] - 1].lMaxBaselineExt) {
+            temp = pLID[j];
+            pLID[j] = pLID[j + 1];
+            pLID[j + 1] = temp;
+         }
+      }
+   }
+   return (USHORT)cFonts;
+}
+</PRE>
+
+<BR>
+Setting a DBCS font (source: EHLLAPI.C)
+<BR>
+
+<PRE>...
+PUSHORT       pLID;                   // Pointer to list of LIDs sorted in
+                                      // the order of lMazBaselineExt
+PCONDENSED_FM pFM;                    // Pointer to structures that store
+                                      // information on available fixed pitch
+                                      // raster fonts in the specified
+                                      // code page
+...
+SHORT         idCFont;                // The ID of current selected font
+...
+      case WM_PAINT:
+         GetPS("A");                     // Connect to 3270 session 'A'.
+         hps = WinBeginPaint(hwnd, NULL, NULL);
+         GpiSetColor(hps, CLR_DARKGREEN);
+         WinQueryWindowRect(hwnd, &amp;rcl);
+         <!-- entering slot 37 -->WinFillRect(hps, &amp;rcl, CLR_BLACK);
+         CreateFont(hps, &amp;pFM[pLID[idCFont] - 1]);
+         GpiSetCharSet(hps, LCID_CRFONT);
+         ptlCharPos.x = 0;
+         ptlCharPos.y = cyClient - METMBE(idCFont);
+         for (i = 0; i &lt; HEIGHT; ++i) {
+            GpiCharStringAt(hps, &amp;ptlCharPos, (LONG)80, &amp;PS_CHR(0, i));
+            ptlCharPos.y -= METMBE(idCFont);
+         }
+         WinEndPaint(hps);
+         return 0;
+...
+</PRE>
+
+
+<P><HR>
+
+<A HREF="031_L2_PreparingforDBCSoutp.html">[Back: Preparing for DBCS output]</A> <BR>
+<A HREF="033_L3_Calculatingthewindow.html">[Next: Calculating the window coordinate]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,73 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>create_request - Example Code</TITLE>
+</HEAD>
+<BODY>
+<H1>create_request - Example Code</H1><!-- entering slot 2168 -->
+<P>
+
+<PRE>#include  &lt;somd.h&gt;
+#include  &lt;repostry.h&gt;
+#include  &lt;intfacdf.h&gt;
+#include  &lt;foo.h&gt;   /* provided by user */
+
+/* assume following method declaration in interface Foo:
+ *      long methodLong  (in long inLong,inout long inoutLong);
+ * then the following code builds a request to execute the call:
+ *      result = methodLong(fooObj, &amp;ev, 100,200);
+ *using the DII.
+ */
+Environment ev;
+OperationDef opdef;
+Description desc;
+OperationDescription *opdesc;
+NVList arglist;
+long rc;
+long value1 = 100;
+long value2 = 200;
+Foo fooObj;
+Request reqObj;
+NamedValue result;
+Identifier name;
+TypeCode tc;
+void *dummy;
+long dummylen;
+Flags flags;
+
+/* Get the OperationDef from the Interface Repository. */
+opdef = _lookup_id(SOM_InterfaceRepository,
+                   &amp;ev, "Foo::methodLong");
+
+/* Create a NamedValue list for the operation. */
+rc= _create_operation_list
+                 (SOMD_ORBObject, &amp;ev, opdef, &amp;arglist);
+
+/* Insert arg1 info into arglist */
+_get_item(arglist, &amp;ev,
+          0, &amp;name, &amp;tc, &amp;dummy, &amp;dummylen, &amp;flags);
+_set_item(arglist,&amp;ev,0, name, tc, &amp;value1, sizeof(long), flags);
+
+/* Insert arg2 info into arglist */
+_get_item(arglist, &amp;ev,
+          1, &amp;name, &amp;tc, &amp;dummy, &amp;dummylen, &amp;flags);
+_set_item(arglist,&amp;ev,1, name, tc, &amp;value2, sizeof(long), flags);
+
+/* Get the operation description structure. */
+desc = _describe(opdef, &amp;ev);
+opdesc = (OperationDescription *) desc.value._value;
+
+/* Fill in the TypeCode field for result. */
+result.argument._type = opdesc-&gt;result;
+
+/* Finally, create the Request, reqObj */
+rc = <B>_create_request</B>(fooObj, &amp;ev, (Context *)NULL, "methodLong",
+                                   arglist, &amp;result, &amp;reqObj, (Flags)0);
+</PRE>
+
+
+<P><HR>
+
+<A HREF="2166_L2H_create_requestRelate.html">[Back: create_request - Related Methods]</A> <BR>
+<A HREF="2168_L2H_create_requestTopics.html">[Next: create_request - Topics]</A> 
+</BODY>
+</HTML>

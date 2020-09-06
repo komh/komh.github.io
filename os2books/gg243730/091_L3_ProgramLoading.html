@@ -1,0 +1,69 @@
+<HTML>
+<HEAD>
+<TITLE>Program Loading</TITLE>
+</HEAD>
+<BODY>
+<H1>Program Loading</H1><!-- entering slot 99 -->
+<P>
+OS/2 V2.0 will load programs linked by both LINK386 (the linear executable
+linker) and by LINK (the segmented executable linker).  Executables linked
+under previous versions of OS/2 can be executed without relinking on OS/2
+V2.0.
+<P>
+Included in the executable files are relocation records (also referred to
+as fixup records), because not all address references can be resolved at
+the time of linking. These records are used by the OS/2 program loader to
+resolve addresses that were unknown at link time. There is a difference
+in the way that LINK386 and LINK packages fixup records.  LINK386 fixup
+records are identified by the page to which they belong, whereas LINK produces
+fixup records by segment.
+<P>
+LINK386 executables are page orientated.  LINK executables are segment orientated.
+ The loader employs different strategies when handling modules produced
+by the different link editors.  In both cases there is no preloading of
+any part of the executable.  Loading only takes place when an attempt is
+made to access a section of the module, which is not already loaded.
+<P>
+In the case of LINK386, the executable will be loaded on a page-by-page
+basis. Reloading parts of a module that has been discarded is no problem
+since when a page fault occurs, the contents of the page and its fixup records
+can easily be recovered from the EXE or DLL file on disk.
+<P>
+With LINK executables, the situation is different as everything is segment
+based.  The procedure that is followed depends on whether a particular segment
+is swappable or discardable.  Again there is no preloading of segments.
+ The initial load of a particular segment is triggered by a segment not
+present fault.  At this time, sufficient pages to hold the segment will
+be allocated.  The complete segment is loaded and fixups applied.  If the
+segment and hence the pages that contain it are swappable, the fixup records
+are discarded.  In the case of discardable segments, the fixup data is reorganized
+on a per-page basis and held in swappable memory.  Pages of a swappable
+segment are recovered from the swap file.  When a page of a discardable
+segment needs to be recovered, it must be reloaded from the EXE or DLL file.
+ After the first load of the segment, only the page needs loading, as the
+fixup data is now available by page. Generally read-only pages are discardable,
+read/write pages are swappable.
+<P>
+However there is a further complication.  Memory is always allocated in
+a multiple of 4KB pages.  If a segment contains 20 bytes or 4000 bytes,
+one page will be allocated to contain it. There is a potential for using
+far more memory to load a program than the program actually requires.  To
+overcome this, OS/2 V2.0 uses a technique called segment packing.  A single
+page may contain parts from two or more segments.  When segments are packed
+onto a page, the page is always marked swappable. This is true even if all
+segments on the page are read-only.
+<P>
+By default, segment packing is enabled.  The<B> MEMMAN</B> statement has
+a new option<B> NOPACK</B>, which turns off segment packing. A segment will
+be considered for packing, if there are other qualifying segments, its is
+less than a certain size and if loaded on its own, would result in there
+being significant free space in the last or only page into which the segment
+is loaded. The current recommendation would be to leave segment packing
+enabled.
+
+<P><HR>
+
+<A HREF="090_L3_SharedMemory.html">[Back: Shared Memory]</A> <BR>
+<A HREF="092_L2_Summary.html">[Next: Summary]</A> 
+</BODY>
+</HTML>

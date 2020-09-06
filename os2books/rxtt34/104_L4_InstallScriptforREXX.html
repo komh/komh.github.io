@@ -1,0 +1,256 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Install-Script for REXX Tips & Tricks</TITLE>
+</HEAD>
+<BODY>
+<H1>Install-Script for REXX Tips & Tricks</H1><!-- entering slot 102 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* CMD to create (or update) the object for REXX Tips &amp; Tricks        */
+/*                                                                    */
+/* The default is on the desktop, but if you have already an object   */
+/* for an older version of RXT&amp;T this program will update that        */
+/* object.                                                            */
+/*                                                                    */
+/* Usage: INSTALL {os2BootDrive}                                      */
+/*                                                                    */
+/* where: os2BootDrive - drive specifier for the boot drive           */
+/*                       (e.g. C:, default: Search the boot drive)    */
+/*                                                                    */
+/*                                                                    */
+/* Initial Release: 26.12.1995 /bs                                    */
+/*                                                                    */
+/* Last update:     24.10.1997 /bs                                    */
+/*                  29.12.2000 /bs                                    */
+/*                   - added more error checking                      */
+/*                                                                    */
+/*                                                                    */
+/* ------------------------------------------------------------------ */
+
+                        /* check &amp; process the parameter              */
+  parse arg OS2BootDrive
+  OS2BootDrive = substr( translate( strip( OS2BootDrive ) ),1,2 )
+  if OS2BootDrive &lt;&gt; '' then
+  do
+    if stream( OS2BootDrive || '\CONFIG.SYS', 'c', 'QUERY EXIST' ) = '' then
+    do
+                        /* show the usage                             */
+      say 'Usage: INSTALL {os2BootDrive}'
+      say ''
+      say 'Default: Search the OS/2 boot drive'
+      exit 253
+    end /* if stream( ... */
+  end /* if OS2BootDrive &lt;&gt; '' then */
+
+                        /* init the return code                       */
+  thisRC = 255
+
+                        /* init some global variables                 */
+  fileMask =          'RXTT*.INF'
+  fixedName =         'RXTT'
+  defaultTitle =      'REXX Tips &amp; Tricks'
+  curObjectID =       '&lt;RXTT&gt;'
+  defaultLocation =   '&lt;WP_DESKTOP&gt;'
+
+                        /* show the logo                              */
+  say ''
+  say center( 'Installation program for REXX Tips &amp; Tricks', 79 )
+  say center( '===========================================', 79 )
+  say ''
+
+                        /* install some error handler                 */
+  signal on halt name UserAbort
+  signal on syntax name RexxUtilNotFound
+
+  say ' Loading REXXUTIL ... '
+
+                        /* load REXXUTIL                              */
+  call rxFuncAdd 'SysLoadFuncs', 'REXXUTIL', 'SysLoadFuncs'
+  call SysLoadFuncs
+
+                        /* turn on the default error handler again    */
+  signal off Syntax
+
+                        /* search the OS/2 boot drive                 */
+  if OS2BootDrive = '' then
+  do
+    say ' Searching the boot drive. Please wait ...'
+    OS2BootDrive = SearchbootDrive()
+
+    say ' ... the OS/2 bootdrive is "' || OS2BootDrive || '".'
+  end /* if OS2BootDrive = '' then */
+
+
+  say ' Searching the newest version of ' || defaultTitle || ' ...'
+  say ' (only in the current directory!)'
+
+                        /* search RXTT*.INF                           */
+  call SysFileTree fileMask, 'infFileStem' , 'FO'
+
+                        /* get the newest version                     */
+  curInfFileVersion = '00'
+
+  do i = 1 to infFileStem.0
+    parse upper var infFileStem.i (fixedName) infFileVersion '.' .
+    if infFileVersion &gt; curInfFileVersion then
+    do
+      curInfFile = infFileStem.i
+      curInfFileVersion = infFileVersion
+    end /* infFileVersion &gt; curInfFileVersion then */
+  end /* do i = 1 to infFileStem.0 */
+
+                        /* check, if we found a version of RXT&amp;T      */
+  if curInfFileVersion &lt;&gt; '00' then
+  do
+    curtitle = strip( getTitle( '"' || curInfFile || '"' ) )
+    if curTitle &lt;&gt; '' then
+    do
+
+      say ' ... "' || curTitle || '" found.'
+      say ''
+      say ' Should I create an object for "' || curTitle || '" (Y/n)? '
+      userResponse = substr( strip( translate( SysGetKey( 'NOECHO' ) ) ),1,1 )
+      if UserResponse = 'N' then
+        signal UserAbort
+
+      curTitle = translate( curTitle, '^', ',' )
+
+      say ' Creating the object ...'
+
+                        /* create the object                          */
+      tempRC = SysCreateObject( 'WPProgram' ,,
+                                curTitle ,,
+                                defaultLocation ,,
+                               'EXENAME=' || OS2BootDrive || '\OS2\VIEW.EXE;' || ,
+                               'PARAMETERS="' || curInfFile || '";' || ,
+                               'STARTUPDIR=' || OS2BootDrive || '\;' || ,
+                               'TITLE=' || curTitle || ';' || ,
+                               'OBJECTID=' || curObjectID || ';' ,,
+                               'U' )
+
+      if tempRC = 1 then
+      do
+        thisRC = 0
+        say ' ... object created.'
+      end /* if tempRC = 1 then */
+      else
+        say 'Error creating the object!'
+
+    end /* if curTitle &lt;&gt; '' then */
+    else
+    do
+      say '07'x
+      say ' Error: Error reading the file'
+      say
+      say '  "' || curInfFile || '"!'
+      say
+      say ' Please close RXT&amp;T if it''s open and try it again.'
+    end /* else */
+  end /* if curInfFileVersion &lt;&gt; '00' then */
+  else
+  do
+    say '07'x
+    say ' Error: ' || defaultTitle || ' not found!'
+    say
+    say ' Please make sure, that the file RXTT*.INF is in the current directory'
+    say ' and try it again.'
+  end /* else */
+exit thisRC
+
+/* ------------------------------------------------------------------ */
+/* function:   search the boot drive                                  */
+/*                                                                    */
+/* parameters: none                                                   */
+/*                                                                    */
+/* returns:    boot drive (e.g. "C:")                                 */
+/*                                                                    */
+SearchBootDrive: PROCEDURE
+
+                        /* install a local error handler              */
+  signal on syntax name BootDriveNotFound
+
+                    /* try the new function from the new REXXUTIL DLL */
+  OS2BootDrive = SysBootDrive()
+
+BootDriveNotFound:
+
+  if symbol( 'OS2BootDrive' ) &lt;&gt; 'VAR' then
+  do
+                        /* new REXXUTIL DLL not found  --             */
+                        /* use the old method                         */
+    OS2BootDrive = substr( value( 'RUNWORKPLACE' ,, '<!-- entering slot 103 -->OS2ENVIRONMENT' ), 1,2 )
+
+    if OS2BootDrive = '' then
+      OS2BootDrive = substr( value( 'COMSPEC' ,, 'OS2ENVIRONMENT' ), 1,2 )
+
+    if OS2BootDrive = '' then
+      OS2BootDrive = 'C:'
+
+  end /* if symbol( 'OS2BootDrive' ) &lt;&gt; 'VAR' then */
+RETURN OS2BootDrive
+
+/* ------------------------------------------------------------------ */
+/* function:   get the title of an INF file                           */
+/*                                                                    */
+/* parameters: fully qualified path of the INF file                   */
+/*                                                                    */
+/* returns:    the title of the INF file                              */
+/*             or an empty string in case of an error                 */
+/*                                                                    */
+GetTitle: PROCEDURE
+  parse arg '"' infFile '"'
+
+                        /* init the return code                       */
+  thisTitle = ''
+
+                        /* read the header of the INF file            */
+  thisRC = stream( infFile, 'c', 'OPEN READ' )
+  if thisRC = 'READY:' then
+  do
+    infHeader = charIn( infFile, 1,500 )
+    thisRC = stream( infFile, 'c', 'CLOSE' )
+
+                        /* search the title                           */
+    startPos = x2d( '6B' )
+
+    do i = 1 to 100
+      curChar = substr( infHeader, startPos+i, 1 )
+      if curChar = '00'x then
+        leave
+      else
+       thisTitle = thisTitle || curChar
+    end /* do i=0 to 100 */
+  end /* if */
+
+RETURN thisTitle
+
+/* ------------------------------------------------------------------ */
+/* Error handler (called if the DLL REXXUTIL is not found)            */
+/*                                                                    */
+RexxUtilNotFound:
+  say ''
+  say 'Error: REXXUTIL.DLL not found!'
+exit 255
+
+/* ------------------------------------------------------------------ */
+/* Error handler (called if the user presses CTRL-BREAK)              */
+/*                                                                    */
+UserAbort:
+  say ''
+  say ' Installation aborted by the user.'
+exit 254
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="103_L3_InstallingREXXTips&T.html">[Back: Installing REXX Tips & Tricks]</A> <BR>
+<A HREF="105_L3_PrintingREXXTips&Tri.html">[Next: Printing REXX Tips & Tricks]</A> 
+</BODY>
+</HTML>

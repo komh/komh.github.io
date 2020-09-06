@@ -1,0 +1,120 @@
+<HTML>
+<HEAD>
+<TITLE>Requesting a Mutex Semaphore</TITLE>
+</HEAD>
+<BODY>
+<H1>Requesting a Mutex Semaphore</H1><!-- entering slot 165 -->
+<P>
+In order to access a shared resource, a process must own the mutex semaphore
+that is protecting the shared resource. Ownership is obtained by first opening
+the mutex semaphore with<A><!-- external link: 1D A1 C3 FC --> DosOpenMutexSem</A>,
+then using<A><!-- external link: 1D DA C3 4F --> DosRequestMutexSem</A> to
+request ownership of the semaphore. If another process already owns the
+semaphore, the requesting process is blocked. If the semaphore is not owned,
+OS/2 grants ownership to the requesting process and the process can access
+the shared resource. When the process is finished using the shared resource,
+it uses<A><!-- external link: 1D D9 C3 4E --> DosReleaseMutexSem</A> to
+relinquish its ownership of the semaphore, thereby enabling another process
+to gain ownership.
+<P>
+A process can gain ownership of a mutex semaphore in three ways:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->The thread that creates a mutex semaphore can
+designate itself as the owner by setting a flag when it calls<A><!-- external link: 1D 6F C3 FC --> DosCreateMutexSem</A>.
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Any thread in the process that created the semaphore
+can request ownership by calling<A><!-- external link: 1D DA C3 FC --> DosRequestMutexSem</A>.
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->A thread in another process must request access
+to the semaphore with<A><!-- external link: 1D A1 C3 4D --> DosOpenMutexSem
+</A>before it can call<A><!-- external link: 1D DA C3 FC --> DosRequestMutexSem</A>.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Note that ownership of a mutex semaphore is given only to the requesting
+thread; it is not shared by other threads in the same process.
+<P>
+If a mutex semaphore is unowned,<A><!-- external link: 1D DA C3 4F --> DosRequestMutexSem
+</A>sets it as<I> owned</I> and returns immediately to the caller. If the
+semaphore is already owned, the calling thread is blocked until either the
+owning thread calls<A><!-- external link: 1D D9 C3 4E --> DosReleaseMutexSem
+</A>to release the semaphore, or a specified time limit is reached.
+<P>
+The following code fragment shows how a process opens a mutex semaphore,
+requests it, and, after writing to the shared file, releases and closes
+the semaphore:
+<PRE>    #define INCL_DOSSEMAPHORES   /* Semaphore values */    #include &lt;os2.h&gt;
+
+    HMTX hmtxProtFile;
+
+    DosOpenMutexSem("\\sem32\\ProtFile",
+                    &amp;hmtxProtFile);           /* Opens for this process    */
+
+    DosRequestMutexSem(hmtxProtFile,
+                       5000);                 /* Returns in 5 seconds if   */
+        .                                     /* Ownership not obtained    */
+        .
+        .                                     /* Write data to shared file */
+        .
+        .
+    DosReleaseMutexSem(hmtxProtFile);         /* Releases ownership        */
+        .
+        .                                     /* Continue execution        */
+        .
+        .
+    DosCloseMutexSem(hmtxProtFile);           /* Finished with shared file */
+
+</PRE>
+
+<P>
+If more than one thread is blocked on a<A><!-- external link: 1D DA C3 4F --> DosRequestMutexSem
+</A>request, the thread with the highest priority level is the first to
+be unblocked and given ownership of the semaphore. If more than 1 of the
+waiting threads have the same priority level, then FIFO ordering is used
+to determine which thread is unblocked and given ownership.
+<P>
+The<I> time-out</I> parameter (5000 milliseconds in the example above) places
+a limit on the amount of time a thread blocks on a<A><!-- external link: 1D DA C3 4F --> DosRequestMutexSem
+</A>request. If the time limit is reached before the thread gains ownership
+of the semaphore, ERROR_TIMEOUT is returned. If SEM_IMMEDIATE_RETURN is
+specified for the time limit,<A><!-- external link: 1D DA C3 4F --> DosRequestMutexSem
+</A>returns without blocking the thread. The thread can then perform other
+operations and call<A><!-- external link: 1D DA C3 4F --> DosRequestMutexSem
+</A>again later if it still requires access to the protected resource. If
+SEM_INDEFINITE_WAIT is specified for the time limit, the thread waits indefinitely.
+If the thread is unblocked by an external event while it is waiting for
+the mutex semaphore (as when a<I> No Wait</I> I/O request has just been
+completed), ERROR_INTERRUPT is returned to the caller.
+<P>
+In addition to the usage count that OS/2 maintains for all semaphores, OS/2
+maintains a request count for each mutex semaphore. Each call to<A><!-- external link: 1D DA C3 4F --> DosRequestMutexSem
+</A>increments the count, and each call to<A><!-- external link: 1D D9 C3 4E --> DosReleaseMutexSem
+</A>decrements it.
+<P>
+Calls to<A><!-- external link: 1D DA C3 4F --> DosRequestMutexSem</A> and
+<A><!-- external link: 1D D9 C3 4E -->DosReleaseMutexSem</A> can be nested,
+but the request count for a semaphore cannot exceed 65535. If an attempt
+is made to exceed this number, ERROR_TOO_MANY_SEM_REQUESTS is returned.
+When calls to<A><!-- external link: 1D DA C3 4F --> DosRequestMutexSem</A> and
+<A><!-- external link: 1D D9 C3 4E -->DosReleaseMutexSem</A> are nested,
+a call to<A><!-- external link: 1D D9 C3 4E --> DosReleaseMutexSem</A> merely
+decrements the request count for the semaphore; the semaphore is not actually
+released to another thread until its request count is 0. If a process ends
+while it owns a mutex semaphore, all of the currently blocked<A><!-- external link: 1D DA C3 4F --> DosRequestMutexSem
+</A>requests, as well as any<!-- entering slot 166 --> future requests for
+the semaphore, return ERROR_SEM_OWNER_DIED. This return code indicates that
+the owning process ended abnormally, leaving the protected resource in an
+indeterminate state. An application that receives this error should close
+the mutex semaphore (so that it can be deleted from OS/2), because it is
+no longer valid. Appropriate action should also be taken concerning the
+protected resource.
+
+<P><HR>
+
+<A HREF="156_L3_OpeningaMutexSemapho.html">[Back: Opening a Mutex Semaphore]</A> <BR>
+<A HREF="158_L3_ReleasingaMutexSemap.html">[Next: Releasing a Mutex Semaphore]</A> 
+</BODY>
+</HTML>

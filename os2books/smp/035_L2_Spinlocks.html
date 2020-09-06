@@ -1,0 +1,61 @@
+<HTML>
+<HEAD>
+<TITLE>Spinlocks</TITLE>
+</HEAD>
+<BODY>
+<H1>Spinlocks</H1><!-- entering slot 36 -->
+<P>
+The defined mechanism for protection of critical resources in OS/2 MP is
+a spinlock.  A spinlock is a serialization mechanism that is used to restrict
+access to a critical resource to the owner of the spinlock.  Spinlocks are
+implemented in the LockManager, which is part of the kernel, and are manipulated
+by using the new MPHelper services.  The act of acquiring a spinlock can
+be thought of as locking the spinlock.
+<P>
+The reason spinlocks are used for critical resource protection instead of
+disabling interrupts, is disabling interrupts no longer works in an MP environment.
+CLI and STI will only work on the processor on which the instruction is
+executing. It will not prevent another processor from executing task time
+or interrupt code from the same device driver. Even though the kernel is
+non-preemptive, another processor can enter the kernel, and hence a device
+driver at any time. That means that CLI will not provide the same protection
+as on a single processor system. CLI/STI must be avoided.
+<P>
+MP aware device drivers will use spinlocks to protect critical resources.
+A spinlock must be allocated for each critical resource. Spinlock allocation
+should be done during initialization. When access to the resource is required,
+the device driver will try to lock the spinlock for the resource. If the
+spinlock is already locked then the processor will "spin" waiting for the
+lock to become available. Once the spinlock is acquired (locked) the device
+driver has exclusive access to the critical resource. The spinlock should
+remain locked for a VERY short time. When done with the resource the spinlock
+is released (unlocked).
+<P>
+Because spinlocks are for VERY SHORT durations, interrupts must be disabled
+while a spinlock is locked. If interrupts were enabled the path of execution
+could be expanded indefinitely by interrupt handlers. To enforce this rule,
+the LockManager will save the state of the interrupt flag and disable interrupts
+when a spinlock is locked. When the spinlock is unlocked, the LockManager
+will restore the interrupt flag to his original state. This allows device
+drivers to be unaware of the interrupt flag state while locking and unlocking
+spinlocks. The device driver, however, must not enable interrupts while
+owning a spinlock. If interrupts were enabled there are two possible effects.
+First is the uncontrolled expansion of the time a spinlock is owned. Second
+is the possibility of deadlock.
+<P>
+A spinlock is defined such that an attempt to acquire a spinlock which is
+currently owned by another processor, makes you spin (i.e. a tight loop
+of code which waits for the spinlock to be released). Spinlocks should be
+used sparingly, and should only be owned for very short periods of time,
+as spinning prevents the processor from doing any additional work. Spinlocks
+have different properties depending on whether it is a kernel or device
+driver spinlock. Spinlocks have been used because it is more expensive to
+reschedule a thread that is trying to acquire a spinlock than it would be
+waiting for the lock to clear.
+
+<P><HR>
+
+<A HREF="034_L1_UnderstandingSpinloc.html">[Back: Understanding Spinlocks]</A> <BR>
+<A HREF="036_L2_PropertiesofSpinlock.html">[Next: Properties of Spinlocks]</A> 
+</BODY>
+</HTML>

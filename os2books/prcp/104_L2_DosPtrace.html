@@ -1,0 +1,442 @@
+<HTML>
+<HEAD>
+<TITLE>DosPtrace</TITLE>
+</HEAD>
+<BODY>
+<H1>DosPtrace</H1><!-- entering slot 127 -->Bindings:  <A HREF="279_L2H_DosPtrace.html">C</A>,
+<A HREF="454_L2H_DosPtrace.html">MASM</A>
+<BR>
+
+<P>
+This call provides an interface into the OS/2 kernel to facilitate program
+debugging.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+DosPtrace<!-- lm: 0x2 13 -->
+<UL> (PtraceB)<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+<B>PtraceB</B> (PBYTE) - output<!-- lm: 0x11 4 -->
+<UL> Address of the Ptrace
+command/data buffer.  This buffer is used to communicate between the debug
+program and the DosPtrace routines.<!-- lm: 0x2 1 -->
+</UL><B> rc</B> (USHORT)
+- return<!-- lm: 0x11 4 -->
+<UL> Return code descriptions are:<!-- lm: 0x2 4 -->
+<P>
+<LI><!-- lm: 0x2 14 -->NO_ERROR<!-- lm: 0x2 4 --> 1<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_FUNCTION
+<!-- lm: 0x2 4 -->
+</UL>5<!-- lm: 0x2 14 -->
+<UL> ERROR_ACCESS_DENIED<!-- lm: 0x2 4 -->
+</UL>115<!-- lm: 0x2 14 -->
+<UL> ERROR_PROTECTION_VIOLATION<!-- lm: 0x2 4 -->
+</UL>303<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_PROCID<!-- lm: 0x2 1 -->
+</UL><B>Remarks</B>
+<P>
+DosPtrace allows a parent process to control the execution of another process
+by implementing breakpoint debugging for a debugger. Both the program under
+test and the program being debugged must be executing in OS/2 mode.
+<P>
+DosPtrace supports debugging of a process with multiple threads by allowing
+the debugger to read and write registers, freeze and resume thread execution,
+and get status on the threads.
+<P>
+The debugger must be able to read and write the instructions, data, and
+registers of the program being debugged to insert breakpoint instructions.
+ When a process runs in OS/2 mode, one process cannot directly manipulate
+the address space of another process.  OS/2 controls this address space
+through the use of the trace flag facility in <A HREF="033_L2_DosExecPgm.html">DosExecPgm
+</A>and the Ptrace buffer in DosPtrace.
+<P>
+The steps to program debugging in OS/2 mode follow:<!-- lm: 0x2 1 -->
+<P>
+ <LI><LI><!-- lm: 0x2 5 -->The debug program issues <A HREF="033_L2_DosExecPgm.html">DosExecPgm
+</A>for the program to be debugged, and specifies the trace option.<!-- lm: 0x2 1 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 5 -->The debug program calls DosPtrace with the TRC_C_Stop
+command to initialize the Ptrace Buffer.<!-- lm: 0x2 1 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 5 -->The debug program sets up a Ptrace buffer with
+commands for inserting the breakpoints and issues repeated DosPtrace requests
+as necessary.<!-- lm: 0x2 1 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 5 -->The debug program sets up a Ptrace buffer with
+a command to begin execution and issues DosPtrace.  This may be a TRC_CS_Step,
+or TRC_C_Go.<!-- lm: 0x2 1 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 5 -->When the kernel DosPtrace program receives control
+from the program being debugged, it returns to the debug program with the
+Ptrace buffer set to the current register contents and with indicators of
+the reason for return.<!-- lm: 0x2 1 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 5 -->The kernel DosPtrace program receives control
+at a breakpoint interrupt, at processor exceptions, or when the program
+ends.<!-- lm: 0x2 1 -->
+<BR>
+
+<P>
+To debug a process with multiple threads, set a field in the Ptrace buffer
+(Ptrace_B.TID)  to the thread ID of the thread of interest.  This causes
+the read/write register commands to receive only the register set of the
+specified thread.
+<P>
+<B>Note: </B> For a process with multiple threads, the address space is
+the same for all the threads in the process.  When commands are issued to
+read/write memory locations or set breakpoints, they affect all the threads
+in the process, even when a command is issued with a specific thread ID.
+<!-- lm: 0x2 1 -->
+<P>
+
+<P>
+The debugger may suspend and resume specific threads through use of the
+TRC_C_Freeze and TRC_C_Resume commands.  Having only selected threads be
+affected by the breakpoints is useful for manipulating them while other
+threads are suspended.
+<P>
+When a process debugger terminates, the program being debugged also terminates.
+ To accomplish this, an internal link between the debugger and the program
+being debugged is maintained.  This link is established as a result of the
+first successful DosPtrace command.  Once established, this link can not
+be reset.
+<P>
+The process being debugged does not need to be a direct child process. In
+this situation, a small window of time exists between the <A HREF="033_L2_DosExecPgm.html">DosExecPgm
+</A>call and the first DosPtrace call. If the debugger terminates during
+this window, the program being debugged cannot be cleaned up. The system
+automatically terminates the program that was to be debugged.
+<P>
+Specifying a trace option of 2 with <A HREF="161_L2_DosStartSession.html">DosStartSession
+</A>enables a debugger running in the parent session to trace all processes
+associated with an application running in the child session, regardless
+of whether the process was started by <A HREF="161_L2_DosStartSession.html">DosStartSession
+</A>request or by  <A HREF="033_L2_DosExecPgm.html">DosExecPgm</A>. See
+<A HREF="161_L2_DosStartSession.html">DosStartSession</A> for more information.
+
+<P>
+Contents of the Ptrace Buffer:
+<PRE> <!-- entering slot 128 -->ÚÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+ ³ PTRACE_B ³    ³    ³ STRUCTURE                                        ³
+ ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ PID      ³ DW ³ 0  ³ ; Process ID of the process being debugged       ³
+ ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TID      ³ DW ³ 0  ³ ; Thread ID of the process being debugged        ³
+ ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ Cmd      ³ DW ³ 0  ³ ; Request to DosPtrace, or DosPtrace result code ³
+ ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ Value    ³ DW ³ ?  ³ ; Data to DosPtrace, or DosPtrace error code     ³
+ ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ OffV     ³ DW ³ ?  ³ ; Offset value                                   ³
+ ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ SegV     ³ DW ³ ?  ³ ; Segment value                                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ MTE      ³ DW ³ ?  ³ ; Library Module handle                          ³
+ ÃÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ Ptrace B ³    ³    ³                                                  ³
+ ³ ENDS     ³    ³    ³                                                  ³
+ ÀÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÁÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+Exceptions:
+<PRE> ÚÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+ ³ PTRACEREGS³    ³    ³ STRUCTURE                        ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ rAX       ³ DW ³ ?  ³ ; Registers AX through SS        ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ rBX       ³ DW ³ ?  ³                                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ rCX       ³ DW ³ ?  ³                                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ rDX       ³ DW ³ ?  ³                                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ rSI       ³ DW ³ ?  ³                                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ rDI       ³ DW ³ ?  ³                                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ rBP       ³ DW ³ ?  ³                                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ rDS       ³ DW ³ ?  ³                                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ rES       ³ DW ³ ?  ³                                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ rIP       ³ DW ³ ?  ³                                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ rCS       ³ DW ³ ?  ³                                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ rF        ³ DW ³ ?  ³                                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ rSP       ³ DW ³ ?  ³                                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ rSS       ³ DW ³ ?  ³                                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ Ptraceregs³    ³    ³                                  ³
+ ³ ENDS      ³    ³    ³                                  ³
+ ÀÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÁÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+For the TRC_C_ReadMemB and TRC_C_WriteMemB commands, the remainder of the
+Ptrace buffer contains:
+<PRE> ÚÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+ ³ PTRACEPTR ³    ³    ³ STRUCTURE                        ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ OffB      ³ DW ³ ?  ³ ; Buffer Address                 ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ SegB      ³ DW ³ ?  ³                                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ Ptraceptr ³    ³    ³                                  ³
+ ³ ENDS      ³    ³    ³                                  ³
+ ÀÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÁÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+DosPtrace Commands:   PTrace_B.Cmd must contain one of the following commands
+
+<BR>
+upon entrance to DosPtrace:
+<PRE> ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+ ³ TRC_C_Null        ³ EQU 0   ³                   ³ ; Invalid        ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_ReadMem_I   ³ EQU 1   ³                   ³ ; Instruction    ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_ReadMem_D   ³ EQU 2   ³                   ³ ; Data           ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_ReadMem     ³ EQU     ³ TRC_C_ReadMem_I   ³                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_ReadReg     ³ EQU 3   ³                   ³                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_WriteMem_I  ³ EQU 4   ³                   ³ ; Instruction    ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_WriteMem_D  ³ EQU 5   ³                   ³ ; Data           ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_WriteMem    ³ EQU     ³ TRC_C_WriteMem_I  ³                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_WriteReg    ³ EQU 6   ³                   ³                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_Go          ³ EQU 7   ³                   ³                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_Term        ³ EQU 8   ³                   ³                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_SStep       ³ EQU 9   ³                   ³                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_Stop        ³ EQU 10  ³                   ³ ; Initialize     ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_Freeze      ³ EQU 11  ³                   ³                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_Resume      ³ EQU 12  ³                   ³                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_NumToSel    ³ EQU 13  ³                   ³                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_GetFPRegs   ³ EQU 14  ³                   ³                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_SetFPRegs   ³ EQU 15  ³                   ³                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_GetLibName  ³ EQU 16  ³                   ³                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_ThrdStat    ³ EQU 17  ³                   ³                  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_ReadMem_B   ³ EQU 18  ³                   ³ ; Read Block     ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_WriteMem_B  ³ EQU 19  ³                   ³ ; Write Block    ³
+ ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+
+<P>
+Commands and Required Input:   A command is issued by placing the command
+number in Ptrace buffer, and calling DosPtrace with that buffer.
+<P>
+All of the commands require that Ptrace_B.PID be the PID of the process
+to debug.<!-- lm: 0x2 1 -->
+<P>
+TRC_C_Null<!-- lm: 0x2 26 -->
+<UL> Not a valid command<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+Memory Operations:<!-- lm: 0x11 4 -->
+<UL> For the following commands, SegV:OffV
+is the affected location, and Ptrace_B.Value contains the value to write
+to or that was read from the debugger's memory.  GDT segments cannot be
+written to: all except privilege level 2 and 3 access is disallowed. A write
+to a shared code segment makes that segment a non-shared segment before
+the write.<!-- lm: 0x2 4 -->
+<P>
+TRC_C_ReadMem_I<!-- lm: 0x2 29 -->
+<UL> Read instruction.<!-- lm: 0x2 4 -->
+</UL>TRC_C_ReadMem_D<!-- lm: 0x2 29 -->
+<UL> Read data.<!-- lm: 0x2 4 -->
+</UL>TRC_C_ReadMem<!-- lm: 0x2 29 -->
+<UL> Read any memory.<!-- lm: 0x2 4 -->
+</UL>TRC_C_WriteMem_I<!-- lm: 0x2 29 -->
+<UL> Write instruction.<!-- lm: 0x2 4 -->
+</UL>TRC_C_WriteMem_D<!-- lm: 0x2 29 -->
+<UL> Write data.<!-- lm: 0x2 4 -->
+</UL>TRC_C_WriteMem<!-- lm: 0x2 29 -->
+<UL> Write to any memory.<!-- lm: 0x2 1 -->
+</UL> Block
+operations:<!-- lm: 0x11 4 -->
+<UL> For the block operations, SegV:OffV
+must point to the starting address in the debugger's memory, and Value is
+the number of bytes to copy.  On return, Value contains the number of bytes
+actually copied.<!-- lm: 0x2 4 -->
+<P>
+TRC_C_ReadMem_B<!-- lm: 0x2 29 -->
+<UL> Read memory block.<!-- lm: 0x2 4 -->
+</UL>TRC_C_WriteMem_B<!-- lm: 0x2 29 -->
+<UL> Write memory block.<!-- lm: 0x2 1 -->
+</UL> Register
+/ Thread Operations:<!-- lm: 0x11 4 -->
+<UL> For the following commands,
+Ptrace_B.TID must contain the thread ID of the thread in question.  If the
+Ptrace_B.TID field is zero:<!-- lm: 0x2 4 -->
+<P>
+o<!-- lm: 0x2 6 -->
+<UL>TRC_C_ThrdStat returns the number of threads in
+the process, (PTrace_B.Value).<!-- lm: 0x2 4 -->
+</UL> o<!-- lm: 0x2 6 -->
+<UL>TRC_C_Freeze
+and TRC_C_Resume affects all of the debugger's threads.<!-- lm: 0x2 4 -->
+</UL> TRC_C_ReadReg
+<!-- lm: 0x2 29 -->
+<UL>Examine thread's registers.<!-- lm: 0x2 4 -->
+</UL>TRC_C_WriteReg<!-- lm: 0x2 29 -->
+<UL> Write thread's registers.<!-- lm: 0x2 4 -->
+</UL>TRC_C_Freeze<!-- lm: 0x2 29 -->
+<UL> Suspend a thread.<!-- lm: 0x2 4 -->
+</UL>TRC_C_Resume<!-- lm: 0x2 29 -->
+<UL> Resume a suspended thread.<!-- lm: 0x2 4 -->
+</UL>TRC_C_ThrdStat<!-- lm: 0x2 29 -->
+<UL> Get thread status.<!-- lm: 0x2 1 -->
+</UL> Command
+Operations:<!-- lm: 0x11 4 -->
+<UL> For the following commands, the Ptrace_B.PID
+must be valid. The Ptrace_B registers are ignored for these commands.  For
+TRC_C_Go and TRC_C_SStep, any thread may gain<!-- entering slot 129 -->
+control first.  The TRC_C_Term command terminates the program being debugged.
+<!-- lm: 0x2 4 -->
+<P>
+TRC_C_Go<!-- lm: 0x2 29 -->
+<UL> Run the program being debugged.<!-- lm: 0x2 4 -->
+</UL>TRC_C_Term<!-- lm: 0x2 29 -->
+<UL> Terminate the program being debugged.
+<!-- lm: 0x2 4 -->
+</UL>TRC_C_SStep<!-- lm: 0x2 29 -->
+<UL> Run one instruction.<!-- lm: 0x2 4 -->
+</UL>TRC_C_Stop<!-- lm: 0x2 29 -->
+<UL> Initialize PTrace buffer.<!-- lm: 0x2 1 -->
+</UL> Library
+Support:<!-- lm: 0x11 4 -->
+<UL> For TRC_C_NumToSel, Ptrace_B.Value should
+be set to the segment number on entrance, and a valid selector on exit.
+ Also, Ptrace_B.MTE should be set to the module's handle.  The MTE identifies
+the different library files in the program being debugged.
+<P>
+For TRC_C_GetLibName, SegV:OffV should point to a buffer where the name
+of the library is returned. PTrace_B.Value should hold the library's module
+handle (MTE).<!-- lm: 0x2 4 -->
+<P>
+TRC_C_NumToSel<!-- lm: 0x2 29 -->
+<UL> Convert Segment number to selector.
+<!-- lm: 0x2 4 -->
+</UL>TRC_C_GetLibName<!-- lm: 0x2 29 -->
+<UL> Return name of module.<!-- lm: 0x2 1 -->
+</UL> Floating
+Point Support:<!-- lm: 0x11 4 -->
+<UL> For the following two commands, SegV:OffV
+must contain a pointer to a 94 byte buffer to be used to read/write the
+floating point registers from/to.
+<P>
+The layout of this area is described in the NPX287 manual under the heading
+FSAVE/FRSTOR memory layout.<!-- lm: 0x2 4 -->
+<P>
+TRC_C_GetFPRegs<!-- lm: 0x2 29 -->
+<UL> Read floating point registers.<!-- lm: 0x2 4 -->
+</UL>TRC_C_SetFPRegs<!-- lm: 0x2 29 -->
+<UL> Write floating point registers.
+<!-- lm: 0x2 1 -->
+</UL>DosPtrace Return Codes:<!-- lm: 0x11 4 -->
+<UL> When
+DosPtrace returns to the debug program, the result is placed in Ptrace_B.Cmd,
+and reflects the reason for the return.<!-- lm: 0x2 1 -->
+</UL>  <!-- lm: 0x11 4 -->
+<UL> The
+values returned are:
+<PRE> ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿ ³ TRC_C_SUC_ret  ³ EQU 0    ³ ; Success      ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_ERR_ret  ³ EQU -1   ³ ; Error        ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_SIG_ret  ³ EQU -2   ³ ; Signal       ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_TBT_ret  ³ EQU -3   ³ ; Single Step  ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_BPT_ret  ³ EQU -4   ³ ; Breakpoint   ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_NMI_ret  ³ EQU -5   ³ ; Parity Error ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_KIL_ret  ³ EQU -6   ³ ; Process      ³
+ ³                ³          ³ dying          ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_GPF_ret  ³ EQU -7   ³ ; GP fault     ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_LIB_ret  ³ EQU -8   ³ ; Library load ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_FPE_ret  ³ EQU -9   ³ ; FP error     ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_THD_ret  ³ EQU -10  ³ ; Thread       ³
+ ³                ³          ³ ending         ³
+ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+ ³ TRC_C_STP_ret  ³ EQU -11  ³ ; Async. Stop. ³
+ ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL> <!-- lm: 0x11 4 -->
+<UL> If Ptrace_B.Cmd is returned
+as TRC_C_ERR_ret, Ptrace_B.Value is set to one of the following:<!-- lm: 0x2 4 -->
+<P>
+TRACE_BAD_COMMAND<!-- lm: 0x2 34 -->
+<UL> EQU 1<!-- lm: 0x2 4 -->
+</UL>TRACE_CHILD_NOT_FOUND<!-- lm: 0x2 34 -->
+<UL> EQU 2<!-- lm: 0x2 4 -->
+</UL>TRACE_CHILD_UNTRACEABLE<!-- lm: 0x2 34 -->
+<UL> EQU 5<!-- lm: 0x2 1 -->
+</UL>  
+<!-- lm: 0x11 4 -->
+<UL>If Ptrace_B.Cmd is returned as TRC_C_SIG_ret, the
+process is about to receive a signal.<!-- lm: 0x2 1 -->
+</UL>  <!-- lm: 0x11 4 -->
+<UL> If
+Ptrace_B.Cmd is returned as TRC_C_KIL_ret, the process is about to terminate.
+<!-- lm: 0x2 1 -->
+</UL> <!-- lm: 0x11 4 -->
+<UL> If Ptrace_B.Cmd returns
+as TRC_C_GPF_ret, the process creates a General Protection fault.  The fault
+type is returned in PTrace_B.Value, and SegV:OffV contains the reference
+that generated the fault.<!-- lm: 0x2 1 -->
+</UL>  <!-- lm: 0x11 4 -->
+<UL> If
+Ptrace_B.Cmd is returned as TRC_C_LIB_ret, a library module has been loaded.
+ The new module table entry (MTE)  is returned in Ptrace_B.Value.  This
+can be used with the library support commands to identify the library module.
+ The program module's MTE is returned in PTrace_B.MTE.  In this case, the
+initial TRC_C_Stop command should be re-issued until TRC_C_SUC_ret is returned.
+<!-- lm: 0x2 1 -->
+</UL> <!-- lm: 0x11 4 -->
+<UL> If Ptrace_B.Cmd is returned
+as TRC_C_FPE_ret, the process has generated a floating point error.<!-- lm: 0x2 1 -->
+</UL>  
+<!-- lm: 0x11 4 -->
+<UL>If Ptrace_B.Cmd is returned as TRC_C_THD_ret, the
+Ptrace_b.TID field contains the thread ID of the terminating thread.<!-- lm: 0x2 1 -->
+</UL>  
+<!-- lm: 0x11 4 -->
+<UL>If Ptrace_B.Cmd is returned as TRC_C_STP_ret, then
+the asynchronous stop caused the debugger to stop.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="103_L2_DosPortAccess.html">[Back: DosPortAccess]</A> <BR>
+<A HREF="105_L2_DosPurgeQueue.html">[Next: DosPurgeQueue]</A> 
+</BODY>
+</HTML>

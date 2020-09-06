@@ -1,0 +1,233 @@
+<HTML>
+<HEAD>
+<TITLE>How do I get a bitmap into a dialog in a DLL?</TITLE>
+</HEAD>
+<BODY>
+<H1>How do I get a bitmap into a dialog in a DLL?</H1><!-- entering slot 102 -->
+<P>
+You've hit on a known problem with bitmaps in dialogs in dlls. This also
+used to be a problem for icons but that appears to be working now.
+<P>
+First, define your bitmap in your dialog like this (notice no mention of
+SS_BITMAP). It is strictly text at this point. PM can handle this when loading
+the dialog:
+<P>
+Below are all the files necessary to create dllbitmp.exe and dlgdll.dll.
+Dlgdll has the dialog box and bitmap. Dllbitmp.exe calls DllDialog() in
+dlgdll.dll to bring up the dialog box from the dll's resource file...
+<P>
+DLLBITMP.C:
+<PRE> #define  INCL_GPI
+ #define  INCL_WIN
+ #include &lt;os2.h&gt;
+ #include "dllbitmp.h"
+
+ #define FRAME_FLAGS  (FCF_TASKLIST | FCF_TITLEBAR   |
+                       FCF_MENU     | FCF_SYSMENU    |
+                       FCF_MINMAX   | FCF_SIZEBORDER |
+                       FCF_SHELLPOSITION)
+ #define CLIENT_CLASS "DllBitmp"
+
+
+ INT main( VOID );
+ VOID EXPENTRY DllDialog( HWND );
+ FNWP wpClient;
+
+
+ INT main( VOID )
+ {
+    HAB   hab;
+    HMQ   hmq;
+    QMSG  qmsg;
+    HWND  hwndFrame, hwndClient;
+    ULONG flFrame = FRAME_FLAGS;
+
+    hab = WinInitialize( 0 );
+    hmq = WinCreateMsgQueue( hab, 0 );
+    WinRegisterClass( hab, CLIENT_CLASS, wpClient, 0, 0 );
+    hwndFrame = WinCreateStdWindow( HWND_DESKTOP, WS_VISIBLE,
+                                    &amp;flFrame,CLIENT_CLASS, NULL,
+                                    0,NULLHANDLE, ID_RESOURCES,
+                                    &amp;hwndClient );
+    while( WinGetMsg( hab, &amp;qmsg, NULLHANDLE, 0, 0 ) )
+       WinDispatchMsg( hab, &amp;qmsg );
+
+    WinDestroyWindow( hwndFrame );
+    WinDestroyMsgQueue( hmq );
+    WinTerminate( hab );
+    return 0;
+ }
+
+
+ MRESULT EXPENTRY wpClient( HWND hwnd, ULONG msg,
+                            MPARAM mp1, MPARAM mp2 )
+ {
+    switch( msg )
+    {
+       case WM_ERASEBACKGROUND:
+          return (MRESULT) TRUE;
+       case WM_COMMAND:
+       switch( SHORT1FROMMP( mp1 ) )
+       {
+          case IDM_DOIT:
+          {
+             DllDialog( hwnd );
+             return 0;
+          }
+       }
+
+       break;
+    }
+    return WinDefWindowProc( hwnd, msg, mp1, mp2 );
+ }
+</PRE>
+
+<P>
+DLLBITMP.H:
+<PRE> #define ID_RESOURCES	1
+ #define IDD_DOIT	100
+ #define IDM_DOIT	110
+ #define ID_BITMAP	1100
+ #define ID_BITMAPID	1200
+</PRE>
+
+<P>
+DLLBITMP.DEF:
+<PRE> NAME		DLLBITMP      WINDOWAPI
+ PROTMODE
+ HEAPSIZE	16384
+ STACKSIZE	16384
+</PRE>
+
+<P>
+DLLBITMP.RC:
+<PRE> #include &lt;os2.h&gt;
+ #include "dllbitmp.h"
+
+
+ MENU ID_RESOURCES
+ {
+     MENUITEM "!~DoIt", IDM_DOIT
+ }
+</PRE>
+
+<P>
+DLGDLL.C:
+<PRE> #define  INCL_DOS
+ #define  INCL_GPI
+ #define  INCL_WIN
+ #include &lt;os2.h&gt;
+ #include "dllbitmp.h"
+
+
+ FNWP wpDlg;
+
+
+ VOID EXPENTRY DllDialog( HWND hwnd )
+ {
+    HMODULE hmod;
+
+    DosQueryModuleHandle( "DLGDLL", &amp;hmod );
+    WinDlgBox( HWND_DESKTOP, hwnd, wpDlg, hmod, IDD_DOIT, NULL );
+ }
+
+
+ MRESULT EXPENTRY wpDlg( HWND hwndDlg, ULONG msg, MPARAM mp1, MPARAM mp2 )
+ {
+    switch (msg)
+    {
+       case WM_INITDLG:
+       {
+          HWND    hwndBmp = WinWindowFromID( hwndDlg, ID_BITMAPID );
+          HPS     hps = WinGetPS( hwndDlg );
+          HBITMAP hbm;
+          HMODULE hmod;
+
+          DosQuieryModuleHandle( "DLGDLL", &amp;hmod );
+          hbm = GpiLoadBitmap( hps, hmod, ID_BITMAP, 0, 0 );
+          WinSetWindowBits(hwndBmp,QWL_STYLE,SS_BITMAP,SS_BITMAP | 0x7f);
+          WinSendMsg( hwndBmp, SM_SETHANDLE, MPFROMP( hbm ), NULL );
+          WinSetWindowULong( hwndDlg, QWL_USER, (ULONG) hbm );
+          WinReleasePS( hps );
+          break;
+       }
+       case WM_DESTROY:
+       {
+          HBITMAP hbm = (HBITMAP) WinQueryWindowULong(hwndDlg,QWL_USER );
+          GpiDeleteBitmap( hbm );
+          break;
+       }
+    }
+    return WinDefDlgProc( hwndDlg, msg, mp1, mp2 );
+ }
+</PRE>
+
+<P>
+DLGDLL.DLG:
+<PRE> DLGTEMPLATE IDD_DOIT LOADONCALL MOVEABLE DISCARDABLE
+ BEGIN
+   DIALOG "", IDD_DOIT, 0, 0, 210, 154, FS_NOBYTEALIGN | FS_DLGBORDER |
+              WS_VISIBLE | WS_CLIPSIBLINGS | WS_SAVEBITS, FCF_TITLEBAR
+   BEGIN
+       CONTROL "foo", ID_BITMAPID, 98, 56, <!-- entering slot 103 -->32, 32, WC_STATIC,
+               SS_TEXT | DT_LEFT | DT_TOP | WS_VISIBLE
+   END
+ END
+</PRE>
+
+<P>
+DLGDLL.DEF:
+<PRE> LIBRARY	DLGDLL		INITINSTANCE	TERMINSTANCE
+ PROTMODE
+ CODE		LOADONCALL
+ DATA		LOADONCALL	MULTIPLE	NONSHARED
+ EXPORTS	DllDialog
+</PRE>
+
+<P>
+DLGDLL.RC:
+<PRE> #include &lt;os2.h&gt;
+ #include "dllbitmp.h"
+
+
+ BITMAP  ID_BITMAP "dlgdll.bmp"
+
+
+ rcinclude dlgdll.dlg
+</PRE>
+
+<P>
+MAKEFILE:
+<PRE> all: dlgdll.dll dllbitmp.exe
+
+ dlgdll.dll: $*.obj $*.res
+     link386 /NOI /NOE /MAP /DE /NOL $*, $*.dll,, os2386, $*
+     rc $*.res $*.dll
+     implib $*.lib $*.def
+
+ dllbitmp.exe: $*.obj $*.def $*.res
+     link386  /NOI /NOE /MAP /DE /NOL $*,,, os2386 dlgdll, $*
+     rc $*.res $*.exe
+
+ dllbitmp.obj: $*.c
+     icc /Q+ /Ss /W3 /Kbcepr /Gm- /Gd- /Ge+ /Ti+ /O- /C $*.c
+
+ dllbitmp.res: $*.rc
+     rc -r $*
+
+ dlgdll.obj: $*.c
+     icc /Q+ /Ss /W3 /Kbcepr /Gm- /Gd- /Ge- /Ti+ /O- /C $*.c
+
+ dlgdll.res: $*.rc $*.dlg
+     rc -r $*
+</PRE>
+
+<P>
+Credit:  Rick Fishman 
+
+<P><HR>
+
+<A HREF="085_L2_HowdoIknowwhatitemwa.html">[Back: How do I know what item was selected in a Combo box?]</A> <BR>
+<A HREF="087_L2_HowdoesprogrammingPM.html">[Next: How does programming PM compare to programming X?]</A> 
+</BODY>
+</HTML>

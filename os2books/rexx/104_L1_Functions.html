@@ -1,0 +1,295 @@
+<HTML>
+<HEAD>
+<TITLE>Functions</TITLE>
+</HEAD>
+<BODY>
+<H1>Functions</H1><!-- entering slot 109 -->
+<P>
+<B>Syntax</B>
+<P>
+You can include function calls to internal and external routines in an expression
+anywhere that a data term (such as a string) would be valid, using the notation:
+
+<P>
+
+<PRE>
+<PRE> ÄÄfunctionÄname(ÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄ)ÄÄÄÄ
+
+                    ³ ÚÄÄÄÄÄÄ,ÄÄÄÄÄÄÄ¿ ³
+                    ³               ³ ³
+                    ÀÄÁÂÄÄÄÄÄÄÄÄÄÄÄÄÂÁÄÙ
+                       ÀÄexpressionÄÙ
+</PRE>
+</PRE>
+
+<P>
+<I>function-name</I> is a literal string or a single symbol, that is taken
+to be a constant.
+<P>
+There can be up to a maximum of 20 expressions, separated by commas, between
+the parentheses. These expressions are called the<I> arguments</I> to the
+function. Each argument expression may include further function calls.
+<P>
+The ( must be adjacent to the name of the function, with no blank in between,
+or the construct is not recognized as a function call. (A<I> blank operator
+</I>is assumed at this point instead.)
+<P>
+The arguments are evaluated in turn from left to right and they are all
+then passed to the function. This then executes some operation (usually
+dependent on the argument strings passed, though arguments are not mandatory)
+and eventually returns a single character string. This string is then included
+in the original expression as though the entire function reference had been
+replaced by the name of a variable that contained that data.
+<P>
+For example, the function SUBSTR is built-in to the language processor and
+could be used as:
+<PRE>N1='abcdefghijk'
+Z1='Part of N1 is: 'Substr(N1,2,7)
+/* would set Z1 to 'Part of N1 is: bcdefgh' */
+</PRE>
+
+<P>
+A function call without any arguments must always include the parentheses
+to be recognized as a function call.
+<PRE>date()  /* returns the date in the default format dd mon yyyy */
+</PRE>
+
+<P>
+<B>Calls to Functions and Subroutines</B>
+<P>
+The mechanism for calling functions and subroutines is the same. The only
+difference is that functions must return data, whereas subroutines need
+not. The following types of routines can be called as functions:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B>Internal</B><!-- lm: 0x2 11 -->
+<UL> If the routine name exists as a
+label in the program, the current processing status is saved, so that it
+will later be possible to return to the point of invocation to resume processing.
+Control is then passed to the first label in the program that matches the
+name. As with a routine invoked by the CALL instruction, various other pieces
+of status information (TRACE and NUMERIC settings and so on) are also saved.
+See the CALL instruction<A HREF="083_L2_CALL.html">Reference</A> for details
+of this. If an internal routine is to be called as a function, you must
+specify an<I> expression</I> in any RETURN instruction to return from the
+function.  This is not necessary if the function is called only as a subroutine.
+
+<P>
+<B>Example:</B>
+<PRE>/* Recursive internal function execution... */
+arg x
+say x'! =' factorial(x)
+exit
+
+factorial :   procedure     / *   calculate   factorial   by . .    * /
+   arg   n                   / *    . .   recursive   invocation .   * /
+   if   n = 0   then   return   1
+   return    factorial ( n - 1 )   *   n
+</PRE>
+
+<P>
+FACTORIAL is unusual in that it invokes itself (this is known as<I> recursive
+invocation</I>).  The PROCEDURE instruction ensures that a new variable
+<I>n</I> is created for each invocation).<!-- lm: 0x2 1 -->
+</UL><B><!-- entering slot 110 --> Built-in
+</B><!-- lm: 0x2 11 -->
+<UL>These functions are always available and are
+defined later in this section.<!-- lm: 0x2 1 -->
+</UL><B> External</B><!-- lm: 0x2 11 -->
+<UL> You
+can write or make use of functions that are external to a program and to
+the language processor. An external function can be written in any language,
+including REXX, that supports the system-dependent interfaces used by the
+language processor to invoke it. Again, when called as a function, it must
+return data to the caller.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Notes:</B><!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Calling an external REXX program as a function
+is similar to calling an internal routine.  The external routine is, however,
+an implicit PROCEDURE in that all the caller variables are always hidden
+and the status of internal values (NUMERIC settings and so on) start with
+their defaults (rather than inheriting those of the caller).<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Other REXX programs can be called as functions.
+You can use either EXIT or RETURN to leave the invoked REXX program; in
+either case, you must specify an expression.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Search Order</B>
+<P>
+The search order for functions is the same as in the preceding list. That
+is, internal labels take first precedence, then built-in functions, and
+finally external functions.
+<P>
+<I>Internal labels</I> are<I> not</I> used if the function name is given
+as a string (that is, is specified in quotation marks); in this case the
+function must be built-in or external. This lets you usurp the name of,
+for example, a built-in function to extend its capabilities, but still be
+able to invoke the built-in function when needed.
+<P>
+<B>Example:</B>
+<PRE>/* Modified DATE to return sorted date by default */date: procedure
+      arg in
+      if in='' then in='Sorted'
+      return 'DATE'(in)
+</PRE>
+
+<P>
+<I>Built-in functions</I> have names in uppercase letters.  The name in
+the literal string must be in uppercase for the search to succeed, as in
+the example.  The same is usually true of external functions.
+<P>
+<I>External functions</I> and<I> subroutines</I> have a system-defined search
+order.
+<P>
+REXX searches for external functions in the following order:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Functions that have been loaded into the macrospace
+for pre-order execution<!-- lm: 0x2 2 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 6 -->Functions that are part of a function package.
+<!-- lm: 0x2 2 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 6 -->REXX functions in the current directory, with
+the current extension<!-- lm: 0x2 2 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 6 -->REXX functions along environment PATH, with the
+current extension<!-- lm: 0x2 2 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 6 -->REXX functions in the current directory, with
+the default extension<!-- lm: 0x2 2 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 6 -->REXX functions along environment PATH, with the
+default extension<!-- lm: 0x2 2 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 6 -->Functions that have been loaded into the macrospace
+for post-order execution.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Errors during Execution</B>
+<P>
+If an external or built-in function detects an error of any kind, the language
+processor is informed, and a syntax error results.  Processing of the clause
+that included the function call is therefore terminated. Similarly, if an
+external function fails to return data correctly, this is detected by the
+language processor and reported as an error.
+<P>
+If a syntax error occurs during the processing of an internal function,
+it can be trapped (using SIGNAL ON SYNTAX) and recovery may then be possible.
+If the error is not trapped, the program is terminated.
+<P>
+<B>Return Values</B>
+<P>
+A function normally returns a value that is substituted for the function
+call when the expression is evaluated.
+<P>
+How the value returned by a function (or any REXX routine) is handled depends
+on whether it is called by a function call or called as a subroutine with
+the CALL instruction.<!-- lm: 0x2 6 -->
+<UL>
+<P>
+<B>A routine called as a subroutine:</B> If the routine returns a value,
+that value is stored in the special variable named<I> RESULT</I>. Otherwise,
+the<I> RESULT</I> variable is dropped, and its value is the string "RESULT".
+<!-- lm: 0x2 6 -->
+<P>
+<B>A routine called as a function:</B> If the function returns a value,
+that value is substituted into the expression at the position where the
+function was called.  Otherwise, REXX stops with an error message.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Examples:</B>
+<PRE>/* <!-- entering slot 111 -->Different ways to call a REXX procedure */
+call Beep 500, 100         /* Example 1: a subroutine call */
+bc = Beep(500, 100)        /* Example 2: a function call   */
+Beep(500, 100)             /* Example 3: result passed as  */
+                           /*            a command         */
+
+</PRE>
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+o<!-- lm: 0x2 6 -->
+<UL>In Example 1, the built-in function BEEP is called
+as a REXX subroutine. The return value from BEEP is placed in the REXX special
+variable<I> RESULT</I>.<!-- lm: 0x2 3 -->
+</UL> o<!-- lm: 0x2 6 -->
+<UL>Example
+2 shows BEEP called as a REXX function. The return value from the function
+is substituted for the function call. The clause itself is an assignment
+instruction; the return value from the BEEP function is placed in the variable
+<I>bc</I>.<!-- lm: 0x2 3 -->
+</UL> o<!-- lm: 0x2 6 -->
+<UL>In Example 3,
+the BEEP function is processed and its return value is substituted in the
+expression for the function call, just as in Example 2. In this case, however,
+the clause as a whole evaluates to a single expression; therefore the evaluated
+expression is passed to the current default environment as a command.
+<P>
+<B>ÁÖ: </B> Many other languages (such as C) throw away the return value
+of a function if it is not assigned to a variable. In REXX, however, a value
+returned as in Example 3 is passed on to the current environment or subcommand
+handler. If that environment is CMD (the default), then this action will
+result in the operating system performing a disk search for what seems to
+be a command.<!-- lm: 0x2 6 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Built-in Functions</B>
+<P>
+REXX provides a rich set of built-in functions. These include character
+manipulation, conversion, and information functions.
+<P>
+Here are some general notes on the built-in functions:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+o<!-- lm: 0x2 6 -->
+<UL>The parentheses in a function are always needed,
+even if no arguments are required. The first parenthesis must follow the
+name of the function with no space in between.<!-- lm: 0x2 3 -->
+</UL> o<!-- lm: 0x2 6 -->
+<UL>The
+built-in functions work internally with NUMERIC DIGITS 9 and NUMERIC FUZZ
+0 and are unaffected by changes to the NUMERIC settings, except where stated.
+<!-- lm: 0x2 3 -->
+</UL>o<!-- lm: 0x2 6 -->
+<UL>You can supply a null string
+where a<I> string</I> is referenced.<!-- lm: 0x2 3 -->
+</UL> o<!-- lm: 0x2 6 -->
+<UL>If
+an argument specifies a length, it must be a nonnegative whole number. If
+it specifies a start character or word in a string, it must be a positive
+whole number, unless otherwise stated.<!-- lm: 0x2 3 -->
+</UL> o<!-- lm: 0x2 6 -->
+<UL>Where
+the last argument is optional, you can always include a comma to indicate
+that you have omitted it; for example, DATATYPE(1,), like DATATYPE(1), would
+return NUM.<!-- lm: 0x2 3 -->
+</UL> o<!-- lm: 0x2 6 -->
+<UL>If you specify
+a<I> pad</I> character, it must be exactly one character long.<!-- lm: 0x2 3 -->
+</UL> o<!-- lm: 0x2 6 -->
+<UL>If
+a function has a suboption you can select by specifying the first character
+of a string, that character can be in uppercase or lowercase letters.<!-- lm: 0x2 3 -->
+</UL> o<!-- lm: 0x2 6 -->
+<UL>Conversion
+between characters and hexadecimal involves the machine representation of
+character strings, and hence returns appropriately different results for
+ASCII and EBCDIC machines.<!-- lm: 0x2 3 -->
+</UL> o<!-- lm: 0x2 6 -->
+<UL>A
+number of the functions described in this chapter support the double-byte-character-set
+(DBCS).  A complete list and description of these functions is given in
+the<I> OS/2 Procedures Language 2/REXX Reference</I>.<!-- lm: 0x2 1 -->
+</UL> 
+
+<P><HR>
+
+<A HREF="103_L2_TRACE.html">[Back: TRACE]</A> <BR>
+<A HREF="105_L2_ABBREV.html">[Next: ABBREV]</A> 
+</BODY>
+</HTML>

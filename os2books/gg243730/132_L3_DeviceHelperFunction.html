@@ -1,0 +1,169 @@
+<HTML>
+<HEAD>
+<TITLE>Device Helper Functions</TITLE>
+</HEAD>
+<BODY>
+<H1>Device Helper Functions</H1><!-- entering slot 146 -->
+<P>
+OS/2 Version 2.0 still uses a 16-bit device driver model. In order to optimize
+existing device drivers for the 32-bit flat memory model, new<B> DevHlp()
+</B>functions have been added for memory management.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B>Locking specific address ranges</B>
+<P>
+Since paging is used in OS/2 Version 2.0, segments no longer need to be
+physically contiguous in memory.  Thus, when locking these segments in memory,
+the memory manager may need to "shuffle" pages to make them contiguous.
+
+<P>
+This shuffling can greatly increase the amount of time it takes to perform
+the locking.  Locking of entire segments should therefore be avoided by
+using the new<I> VMLock</I><B> DevHlp()</B> function, which locks<I> only
+</I>the required range of addresses within a memory object.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B>Address context conversion without locking</B>
+<P>
+In previous versions of OS/2, device drivers were required to lock the user's
+buffers to gain context-free addressability.  Since locking degrades performance
+and reduces available pageable system memory, new<B> DevHlp()</B> functions
+have been added to convert these addresses without the need for locking.
+<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B>Removal of frequent selector loads</B>
+<P>
+Device drivers can reduce the amount of selector loading by using the new
+flat memory model<B> DevHlp()</B> functions to allocate memory.  All of
+the memory allocated by the new<I> VMAlloc</I><B> DevHlp()</B> function
+can be addressed via one flat selector available to device drivers at initialization
+time.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B>Scatter/gather DMA support</B>
+<P>
+Scatter/gather DMA adapters (such as the IBM SCSI adapters described in
+<A HREF="207_L1_MicroChannelArchitec.html">Micro Channel Architecture and
+SCSI</A>) allow DMA operations on physically discontiguous pages of memory.
+This ability provides a significant performance advantage over contiguous
+DMA operations.
+<P>
+By using the new<I> VMLock</I><B> DevHlp()</B> function, a device driver
+can specify that pages should be locked without being physically contiguous
+in memory. <I> VMLock</I> will then return the physical addresses of each
+page that was locked.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B>Address-limited devices</B>
+<P>
+Address-limited devices (using 24-bit addressing) do not support memory
+above 16MB.  The device drivers for these products will use a new bit on
+the<I> VMLock</I> and<I> VMAlloc</I> calls, which specifies that the memory
+must be locked or allocated below the 16MB line.<!-- lm: 0x2 0 -->
+<BR>
+
+<P>
+The following are some of the new<B> DevHlp()</B> functions implemented
+in OS/2 Version 2.0:<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B><I>VMAlloc</B></I> - Allocate block of physical
+memory
+<P>
+<I>VMAlloc</I> is used to allocate linear and/or physical address space
+in memory.  These allocations can exceed 64KB in size and can be either
+fixed, movable or swappable memory.  This call can be used to map non-system
+memory into the current process context.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B><I>VMFree</B></I> - Free memory allocated via<I> VMAlloc
+</I>
+<P>
+Memory allocated via<I> VMAlloc</I> can be freed with the<I> VMFree</I><B> DevHlp()
+</B>function. <I> VMFree</I> is also used to remove the mappings created
+by<I> VMGlobalToProcess</I> and<I> VMProcessToGlobal</I>.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B><I>VMLock</B></I> - Locks a range of memory within
+a segment
+<P>
+<I>VMLock</I> is used to lock a linear address range into physical memory.
+ If the lock is needed for scatter/gather DMA, then a list of physical page
+addresses is returned.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B><I>VMUnlock</B></I> - Unlocks a range of memory
+within a segment
+<P>
+<I>VMUnlock</I> is the counterpart of the<I> VMLock</I> function.  It is
+used to unlock memory previously locked via<I> VMLock</I>.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B><I>VMProcessToGlobal</B></I> - Map process address
+into global address space
+<P>
+The<I> VMProcessToGlobal</I><B> DevHlp()</B> function is used to convert
+an address that is in the context of the current process to an address in
+a global context.  This allows context-free addressability to the memory
+objects of a process.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B><I>VMGlobalToProcess</B></I> - Map global address
+into process address space
+<P>
+<I>VMGlobalToProcess</I> can be used to map a global context address into
+the address space of the current process.  When used for video buffers,
+the calling process can specify if the memory should be under screen group
+control.  This will cause the memory to be validated or invalidated at<!-- entering slot 147 --> task
+switch time.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B><I>VirtToLin</B></I> - Converts a selector:offset
+address to a linear address
+<P>
+<I>VirtToLin</I> will convert a selector:offset address into a flat 32-bit
+linear address.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B><I>LinToGDTSelector</B></I> - Convert a linear
+address to a virtual address
+<P>
+<I>LinToGDTSelector</I> is used to convert a linear address to a virtual
+(selector:offset) address by mapping the given GDT selector to the memory
+region referred to by the given linear address and range.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B><I>PhysToGDTSel</B></I> - Maps a physical address
+to a GDT selector
+<P>
+<I>PhysToGDTSel</I> converts a 32-bit physical address to a GDT selector:offset
+pair.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B><I>FreeGDTSelector</B></I> - Free selector allocated
+via<I> AllocateGDTSelector</I>
+<P>
+<I>FreeGDTSelector</I> frees up a GDT selector allocated via the<I> AllocGDTSelector
+</I><B>DevHlp()</B> function.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B><I>PageListToGDTSelector</B></I> - Maps given physical
+addresses to selector
+<P>
+<I>PageListToGDTSelector</I> is used to map physical addresses to a GDT
+selector, setting the access byte of the descriptor to the requested type.
+The virtual memory needed to map the physical ranges described by the page
+list array must not exceed 64KB.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B><I>GetDescInfo</B></I> - Return information on
+the contents of the descriptor
+<P>
+<I>GetDescInfo</I> is used to return the access byte, linear address, and
+size of a descriptor allocated via the<I> AllocGDTSelector</I><B> DevHlp()
+</B>function.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B><I>PageListToLin</B></I> - Maps physical pages
+to a linear address
+<P>
+<I>PageListToLin</I> is used to map physical memory pages described in an
+array of page list structures to a linear address.<!-- lm: 0x2 0 -->
+<P>
+<LI><!-- lm: 0x2 2 --><B><I>LinToPageList</B></I> - Returns the physical
+pages mapped by a linear range
+<P>
+<I>LinToPageList</I> is used to translate a linear address range to an array
+of page list structures that describe the physical pages mapped.<!-- lm: 0x2 0 -->
+<BR>
+
+
+<P><HR>
+
+<A HREF="131_L3_VirtualDeviceDrivers.html">[Back: Virtual Device Drivers]</A> <BR>
+<A HREF="133_L3_NewDiskDeviceDriver.html">[Next: New Disk Device Driver]</A> 
+</BODY>
+</HTML>

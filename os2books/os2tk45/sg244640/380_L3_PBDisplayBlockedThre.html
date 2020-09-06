@@ -1,0 +1,403 @@
+<HTML>
+<HEAD>
+<TITLE>.PB - Display Blocked Thread Information</TITLE>
+</HEAD>
+<BODY>
+<H1>.PB - Display Blocked Thread Information</H1><!-- entering slot 547 --><!-- Unable to decode bitmap format --><IMG SRC="380_L3_PBDisplayBlockedThre_149.gif" WIDTH=32 HEIGHT=32><!-- Unable to decode bitmap format --><IMG SRC="380_L3_PBDisplayBlockedThre_150.gif" WIDTH=32 HEIGHT=32>
+<P>
+Display information about all blocked <A HREF="3319_L0_.html">threads</A>.
+
+<P>
+<U><I>Syntax:</I></U>
+<PRE>ÄÄÄÄ.PB ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+                                ÃÄÄ #    ÄÄ´
+                                ÃÄÄ *    ÄÄ´
+                                ÀÄÄ slot ÄÄÙ
+</PRE>
+
+<P>
+<U><I>Parameters:</I></U><!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B><I>slot</B></I><!-- lm: 0x11 11 -->
+<UL> Display user information for
+<A HREF="3320_L0_.html">thread slot</A><B><I> slot</B></I>.
+<P>
+The following short-hand may be used for the slot number:<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->The current (last) thread the dispatcher gave control
+to. This value is taken from the word a global label:
+<PRE>     <B>_TaskNumber</B>
+</PRE>
+<!-- lm: 0x2 11 -->
+<BR>
+<LI><!-- lm: 0x2 26 -->The debugger default thread slot. This defaults to
+the current slot unless overridden by the <A HREF="386_L3_SSetorDisplayDefault.html">.S
+command</A>.<!-- lm: 0x2 11 -->
+<P>
+If no slot number is given then all thread slots are displayed in slot number
+order.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<U><I>Results &amp; Notes:</I></U>
+<P>
+The<B> .PB command</B> locates each thread's <A HREF="3345_L0_.html">TCB
+</A>from the thread slot table, the linear address of which is given by
+global variable:
+<PRE><B>_papTCBSlots</B></PRE>
+
+<P>
+or by traversing the process tree using<B> TCBpTCBNext</B> (<B>TCB</B> +0x14),
+<B>TCBpPTDA</B> (<B>TCB</B> +0x08) and<B> ptda_pTCBHead</B> (<B>PTDA</B> +
+0x20) fields.
+<P>
+Output is displayed only if a thread is blocked on a <A HREF="3351_L0_.html">Block-Id</A>.
+It appears in tabular form as follows: 
+<PRE>
+ Slot  Sta BlockID  Name     Type        Addr    Symbol
+ 0001  blk fff11050 *ager
+ 0002  blk fff74f59 *tsd                         _tkTSDDaemon
+ 0003  blk fff43c78 *ctxh                        _kmCTXHDaemon
+ 0004  blk fff7545a *kdb                         _tkKDBDaemon
+ 0005  blk fff02dfc *lazyw                       _semLW
+ 0006  blk fff111d4 *asyncr                      _AsyncReadSem
+ 0008  blk fffe000e pmshell  RamSem    074b:06d6
+ 000a  blk ffca0002 pmshell
+ 000b  blk fffd000b pmshell  MuxWait
+ 000c  blk fffd000c pmshell  MuxWait
+ 000d  blk 04000df0 pmshell  DosSem    0400:0df0 CtrlNumLkQ
+ 0007  blk fe750a10 pmshell  Sem32     8001 0019 vhevLazyWrite
+ 0010  blk fe728dcc pmshell  Sem32     8001 0001 SrvReq
+ 0011  blk fffe0006 pmshell  RamSem    d0c7:0020
+ 0012  blk fffd0012 pmshell  MuxWait
+*0013  blk fffe0007 pmshell  RamSem    d09f:0bc0 memory_pool + 127
+ 0014# blk fffe0008 pmshell  RamSem    d09f:0bc8 memory_pool + 12f
+
+</PRE>
+
+<P>
+Each of the fields has the following meaning:<!-- lm: 0x2 1 -->
+<P>
+<B>slot</B><!-- lm: 0x11 11 -->
+<UL> The unique (hexadecimal) index in to
+the thread slot table of all threads.
+<P>
+This value may be flagged with:<!-- lm: 0x2 11 -->
+<P>
+<B><LI></B><!-- lm: 0x2 17 -->to the left to signify the last dispatched
+thread.<!-- lm: 0x2 11 -->
+<BR>
+<B><LI></B><!-- lm: 0x2 17 -->to the right to signify the Kernel Debugger
+or Dump Formatter default thread slot.<!-- lm: 0x2 11 -->
+<P>
+<B>Slot</B> may be found in the<B> TCBNumber</B> (<B>TCB</B> + 0x2) field
+of the<B> TCB</B><!-- lm: 0x2 1 -->
+</UL><B> Sta</B><!-- lm: 0x11 11 -->
+<UL> The
+ascending or desired state of the thread. This should always appear as<B> blk
+</B>for the<B> .PB</B> command, however Dump Formatter does not check the
+thread state so formats all threads. Those whose state is not<B> blk</B> should
+be ignored. From fix pack 29 for Warp V3 and base Warp V4 this has<!-- entering slot 548 --> been
+fixed so that only blocked threads are formatted. See <A HREF="379_L4_SchedulerFiniteState.html">Scheduler
+Finite State Machine</A> and <A HREF="381_L3_PQDisplaySchedulerQu.html">.PQ
+command</A> for more information on thread states.<!-- lm: 0x2 1 -->
+</UL><B> BlockID
+</B><!-- lm: 0x11 11 -->
+<UL>The token used by<B> TKSleep</B> and<B> TKWapeUp
+</B>to sleep and wake a thread on an event.
+<P>
+The<B> BlockId</B> is taken from<B> TCBSleepID</B> (<B>TCB</B> + 0x18c).
+
+<P>
+The<B> BlockID</B> is a conventional value. A number of conventions are
+used by various system components. Usually the<B> BlockID</B> is constructed
+so to be unique across all conventions. Frequently it will refer to the
+address of an associated resource, such as a system control block, or a
+field within a control block. See discussion of the<B> Type</B> field below
+for more information on interpreting<B> BlockIds</B>. <!-- lm: 0x2 1 -->
+</UL><B> Name
+</B><!-- lm: 0x11 11 -->
+<UL>The name of the primary executable running
+in this process.
+<P>
+See<B> name</B> field description of the <A HREF="378_L3_PDisplayProcessStatu.html">.P
+command</A> for further information.<!-- lm: 0x2 1 -->
+</UL><B> Type</B><!-- lm: 0x11 11 -->
+<UL> Interpretation
+of the use of the<B> BlockID</B> in conjunction with double word<B> TCB_SemInfo
+</B>(<B>TCB</B> + 0x14c) and double word<B> TCB_SemDebugAddr</B> (<B>TCB
+</B>+ 0x150).
+<P>
+The following<B> Types</B> are recognised by the Dump Formatter and Kernel
+Debugger:<!-- lm: 0x2 11 -->
+<P>
+<B>RamSem</B><!-- lm: 0x11 26 -->
+<UL> The thread is waiting on a<B> RamSem
+</B>or<B> FastSafeRamSem</B>.
+<P>
+The high word of the<B> BlockID</B> is<B> 0xfffe</B>, the low word is the
+<B>RamSemID</B> taken from the <A HREF="3127_L3_RamSemStruc.html">RamSem
+structure</A>.
+<P>
+The<B> Addr</B> field is taken from<B> TCB_SemInfo</B>. This is a<B><I> selector:offset
+</B></I>address of the<B> RAMSEM</B> The<B> RamSem</B> may be imbedded within
+a <A HREF="3124_L3_FastSafeRamSemStruc.html">FastSafeRamSem</A> or a <A HREF="3125_L3_FastSafeRamSemStrucP.html">PMFastSafeRamSem</A>.
+
+<P>
+The<B> Symbol</B> displayed is either that of the<B> TCB_SemDebugAddr</B> or
+if -1, the<B> RamSem</B> address. See <A HREF="304_L3_LListMapsGroupsandSy.html">LN
+command</A> for information on displaying symbols.<!-- lm: 0x2 11 -->
+</UL><B> MuxWait
+</B><!-- lm: 0x11 26 -->
+<UL>The thread is waiting on multiple events.
+<P>
+The high word of the<B> BlockID</B> is<B> 0xfffd</B>, the low word is the
+<B>slot</B> of the waiting thread.
+<P>
+<B>TCB_SemInfo</B> and<B> TCB_SemDebugAddr</B> are not used with a<B> MuxWait
+</B><B>BlockID</B>.
+<P>
+To locate the semaphores that comprise a given<B> MuxWait</B> proceed as
+follows:<!-- lm: 0x2 26 -->
+<P>
+<LI><!-- lm: 0x2 34 -->Locate the<B> MuxWait</B> table at symbol<B> MuxTable</B>.
+Display this using<B> DB</B> for convenience. This table comprises 9 byte
+entries whose format is given by the <A HREF="3126_L3_MuxTableEntry.html">MuxTableEntry
+</A>structure.<!-- lm: 0x2 26 -->
+<P>
+<LI><!-- lm: 0x2 34 -->Scan the<B> MuxTable</B> for entries that have this
+thread's slot number (+0x2 into each entry).<!-- lm: 0x2 26 -->
+<P>
+<LI><!-- lm: 0x2 34 -->Of those entries, select those with non-zero<B> MuxType
+</B>(+4 into each entry).<!-- lm: 0x2 26 -->
+<P>
+<LI><!-- lm: 0x2 34 -->Choose one of the following:<!-- lm: 0x2 34 -->
+<UL>
+<P>
+For type 1 (SysSem)<!-- lm: 0x11 49 -->
+<UL> the last double word is the
+linear address of a system semaphore structure. Use the technique described
+below under<B> SysSem</B> for interpreting the<B> SysSem</B>.<!-- lm: 0x2 34 -->
+</UL>For type 2 (RamSem)<!-- lm: 0x11 49 -->
+<UL> the last double word of
+the entry contains the<B> RamSem</B> handle, the high word is the <A HREF="3350_L0_.html">hob
+</A>of the memory object containing the<B> RamSem</B>. The low word is the
+offset into the object where the<B> RamSem</B> is located. Use the technique
+described above under<B> RamSem</B> for interpreting the<B> RamSem</B><!-- lm: 0x2 34 -->
+</UL>For type 3 (Physical RamSem)<!-- lm: 0x11 49 -->
+<UL> the last double
+word is the physical address of the<B> RamSem.</B><!-- lm: 0x2 34 -->
+</UL>For type 4 (32-bit event sem)<!-- lm: 0x11 49 -->
+<UL> the last double
+word is the physical address of a 32-bit event semaphore. See<B> Sem32</B> below.
+<!-- lm: 0x2 34 --><!-- lm: 0x2 26 -->
+</UL>See <A HREF="153_L5_TheMUXWait.html">Mux
+Semaphore</A> example debugging log for an explicit example of using this
+technique.
+<P>
+<B>Addr</B> and<B> Symbol</B> fields are blank.<!-- lm: 0x2 11 -->
+</UL><B> ReqPkt
+</B><!-- lm: 0x11 26 -->
+<UL>The thread is waiting for an I/O request packed
+to complete.
+<P>
+The<B> BlockID</B> is the<B><I> Selector:Offset</B></I> address of the request
+packet. The Selector is the<B> DOSGROUP</B> kernel selector and should be
+selector 400.
+<P>
+The address should lie between addresses at global symbols:<B> FirstPacket
+</B>and<B> LastPacket</B>.
+<P>
+See the Physical Device Driver Reference manual for information on device
+driver request<!-- entering slot 549 --> packets.
+<P>
+<B>Addr</B> and<B> Symbol</B> fields are blank.<!-- lm: 0x2 11 -->
+</UL><B> SysSem
+</B><!-- lm: 0x11 26 -->
+<UL>The thread is waiting on a system semaphore.
+
+<P>
+The<B> BlockID</B> is the<B><I> Selector:Offset</B></I> address of the <A HREF="3132_L3_SystemSemaphoreStruc.html">SysSemTblStruc
+</A>structure. The Selector is the<B> DOSGROUP</B> kernel selector and should
+be selector 400.
+<P>
+The address should lie within the System Semaphore Data Table, located at
+symbol<B> SysSemDataTable</B> for length 256*6 bytes.
+<P>
+Offset +0 of each table entry contains the owner's thread number.
+<P>
+The name associated with the semaphore may be located as follows:<!-- lm: 0x2 26 -->
+<P>
+<LI><!-- lm: 0x2 34 -->Locate the<B> SysSem</B> <A HREF="3325_L0_.html">RMP
+</A>segment by displaying double word at symbol<B> SysSemRMPHdl</B>. The
+high word is the selector for the semaphore RMP.<!-- lm: 0x2 26 -->
+<P>
+<LI><!-- lm: 0x2 34 -->Display the System Semaphore RMP using<B> DB</B>.
+The first 0x14 bytes is the RMP header. The remainder comprises variable
+length records. The first word of each record is its length and therefore
+the relative offset to the beginning of the following record. Offset 2 of
+each record is the semaphore data table selector offset.<!-- lm: 0x2 26 -->
+<P>
+<LI><!-- lm: 0x2 34 -->Scan the RMP looking for an offset that matches the
+low word of the<B> BlockID</B>. When found the remaining bytes of the RMP
+record is the semaphore name (with the top two bytes overlaid by the semaphore
+offset).<!-- lm: 0x2 26 -->
+<P>
+See <A HREF="154_L6_TheSYSSEM.html">System Semaphore</A> example debugging
+log for an explicit example of using this technique.
+<P>
+The<B> Addr</B> and<B> Symbol</B> fields are blank.<!-- lm: 0x2 11 -->
+</UL><B> DosSem
+</B><!-- lm: 0x11 26 -->
+<UL>The thread is waiting on an internal<B> RamSem
+</B>or blocking on an address in the kernel's<B> DOSGROUP</B> segment.
+<P>
+The<B> BlockID</B> is the<B><I> selector:offset</B></I> of the<B> DosSem</B>.
+The Selector is the<B> DOSGROUP</B> kernel selector and should be selector
+400. The offset does not lie in the System Semaphore Data Table or the I/O
+Request Packet Table.
+<P>
+<B>Addr</B> is the<B> BlockID</B> formatted as<B><I> selector:offset</B></I>.
+
+<P>
+The<B> Symbol</B> displayed is either that of the<B> TCB_SemDebugAddr</B> or
+if -1, the<B> DosSem</B> address. See <A HREF="304_L3_LListMapsGroupsandSy.html">LN
+command</A> for information on displaying symbols.<!-- lm: 0x2 11 -->
+</UL><B> Sem32
+</B><!-- lm: 0x11 26 -->
+<UL>The thread is waiting on a 32-bit semaphore.
+
+<P>
+The<B> BlockID</B> is the address of the <A HREF="3130_L3_32bitSemaphoreStruct.html">32-bit
+Semaphore structure.</A>
+<P>
+<B>TCB_SemInfo</B> contains the semaphore handle. This is of the form:<!-- lm: 0x2 26 -->
+<P>
+<B>8001nnnn</B><!-- lm: 0x2 41 -->
+<UL> Shared 32-bit semaphore.<B><I> nnnn
+</B></I>is the (double-word) index into the shared semaphore table located
+at symbol<B> _pShSemTbl</B>. Each entry is an address of the corresponding
+32-bit semaphore structure. (that is, the<B> Sem32 BlockID</B>).<!-- lm: 0x2 26 -->
+</UL><B> 0001nnnn
+</B><!-- lm: 0x2 41 -->
+<UL>Private 32-bit semaphore.<B><I> nnnn</B></I> is
+the (double-word) index into the private semaphore table located at<B> pPrSemTbl
+</B>(<B>PTDA</B> +0x4cc (H/R: +0x4c4)). Each entry is an address of the
+corresponding 32-bit semaphore structure. (that is, the<B> Sem32 BlockID</B>).
+<!-- lm: 0x2 26 -->
+</UL><B>Addr</B> field is the semaphore handle formatted
+as two words.
+<P>
+The<B> Symbol</B> displayed is either that of the<B> TCB_SemDebugAddr</B> or
+if -1, the<B> Sem32</B> address. See <A HREF="304_L3_LListMapsGroupsandSy.html">LN
+command</A> for information on displaying symbols.
+<P>
+Use the <A HREF="285_L3_DDisplayMemory.html">.D SEM32 comand</A> with the
+<B>BlockID</B> to format the 32-bit semaphore.<!-- lm: 0x2 11 -->
+</UL><B> Buffer
+</B><!-- lm: 0x11 26 -->
+<UL>The thread is waiting for a file system buffer.
+
+<P>
+The<B> BlockId</B> is the<B><I> selector:offset</B></I> address of the buffer.
+The high word is the buffer selector and should be<B> a8</B>.
+<P>
+The<B> Addr</B> and<B> Symbol</B> fields are blank.<!-- lm: 0x2 11 -->
+</UL><B> SFT
+</B><!-- lm: 0x11 26 -->
+<UL>The thread is waiting for a <A HREF="3297_L0_.html">SFT
+</A>entry.
+<P>
+The<B> BlockId</B> is the<B><I> selector:offset</B></I> address of the SFT.
+The high word is the buffer selector and should be one that is listed in
+the<B> SFT</B> table pointed to by<B> c0:0</B>.
+<P>
+The<B> Addr</B> and<B> Symbol</B> fields are blank.<!-- lm: 0x2 11 -->
+</UL><B> ChildWait
+</B><!-- lm: 0x11 26 -->
+<UL>The thread is waiting in DosWaitChild for a
+child process to terminate.
+<P>
+The high word of the<B> BlockID</B> is the<B> ptda_Pid</B> offset from selector
+30 (0xffca).
+<P>
+The low word of the<B> BlockID</B> is the <A HREF="3322_L0_.html">Pid</A> to
+which this thread belongs.<!-- lm: 0x2 11 -->
+</UL><B><I> blank type</B></I><!-- lm: 0x11 26 -->
+<UL> The
+thread is waiting on a<B> BlockId</B> that the Kernel Debugger and Dump
+Formatter have not been able to identify.
+<P>
+<B>Addr</B> field is blank.
+<P>
+The<B> Symbol</B> displayed is either that of the<B> TCB_SemDebugAddr</B> or
+if -1, the<B> Sem32</B> address. See <A HREF="304_L3_LListMapsGroupsandSy.html">LN
+command</A> for information on displaying symbols.<!-- lm: 0x2 11 --> 
+</UL><B> Notes:
+ </B>
+<P>
+The<B> BlockID</B> interpretation is not exact. A device driver, for example,
+could call<B> DevHlp_ProcBlock</B> using a value for<B> BlockID</B> that
+conflicts with another convention.
+<P>
+Under the Debug kernel only,<B> TCB_SemDebugAddr</B> is used to record the
+creator's address of kernel, system and RAM semaphores. If it is not used
+it is set to 0xffffffff.
+<P>
+<B>ChildWait</B><B> BlockIDs</B> might be missed by the Dump Formatter and
+Kernel Debugger. Look out for<B> BlockIDs</B> of the form<B> 0xffca????</B>.
+<B>ChildWait</B> is correctly reported from fix pack 29 for Warp V3 and
+base Warp V4.
+<P>
+<!-- entering slot 550 -->Some<B> Sem32</B><B> BlockIDs</B> are missed by
+the Dump Formatter. Check<B> TCB_SemInfo</B> for a 32-bit semaphore handle
+and<B> BlockIDs</B> of the form<B> 0xfe??????</B>
+<P>
+If<B> BlockID</B> is a linear address owned by <A HREF="3239_L2_VMSystemObjectOwnerI.html">ksem
+</A>then the semaphore is a<B> Kernel Semaphore</B>. However, not every
+<B>KSEM</B> is owned<B> ksem</B> owned memory. Under the ALLSTRICT kernel,
+a<B> KSEM</B> may be readily identified from the first 4 bytes, which have
+the signature<B> "KSEM"</B> Under the<B> RETAIL</B> and<B> HSTRICT</B> kernels,
+the<B> Blockid</B> is chosen to be the address (or handle) of the<B> KSEM</B>.
+Under the<B> ALLSTRICT</B> kernel, Event<B> KSEMs</B> use the<B> KSEM</B> handle+4
+as the<B> BlockId</B>. Use <A HREF="285_L3_DDisplayMemory.html">.D KSEM
+</A>command with the<B> BlockID</B> to format a<B> KSEM</B>.
+<P>
+In general a<B> BlockID</B> will be chosen to be meaningful to the programs
+using it. Often it is an address of a resource that needs to be serialised.
+Where no other information is given one should try:<!-- lm: 0x2 11 -->
+<P>
+<!-- lm: 0x11 26 -->
+<UL><!-- lm: 0x2 26 --><A HREF="339_L3_MFormatMemoryStructu.html"><LI>M
+<B><I>BlockID</B></I></A><!-- lm: 0x2 54 -->
+<UL> to try to establish an
+owner of the resource represented by the<B> BlockID</B><!-- lm: 0x2 26 -->
+</UL> <A HREF="304_L3_LListMapsGroupsandSy.html">LN
+<B><I>BlockID</B></I></A><!-- lm: 0x2 54 -->
+<UL> to try to establish a
+meaningful symbol associated with the<B> BlockID</B><!-- lm: 0x2 26 -->
+</UL> Unwind
+the User's Stack<!-- lm: 0x2 54 -->
+<UL> to try to establish the API or
+call the lead to the thread waiting on the<B> BlockID</B> (see <A HREF="337_L3_KDisplayUserStackTra.html">.K
+command</A>)<!-- lm: 0x2 26 --><!-- lm: 0x2 11 --><!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL><B> Addr
+</B><!-- lm: 0x11 11 -->
+<UL>The address of the semaphore associated with
+this<B> BlockID</B>
+<P>
+See<B> Type</B> field discussion above for more precise information.<!-- lm: 0x2 1 -->
+</UL><B> Symbol
+</B><!-- lm: 0x11 11 -->
+<UL>Either the symbolic address of the creator
+or of the associated semaphore.
+<P>
+See<B> Type</B> field discussion above for more precise information.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="379_L4_SchedulerFiniteState.html">[Back: Scheduler Finite State Machine]</A> <BR>
+<A HREF="381_L3_PQDisplaySchedulerQu.html">[Next: .PQ - Display Scheduler Queue Information]</A> 
+</BODY>
+</HTML>

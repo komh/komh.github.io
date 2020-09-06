@@ -1,0 +1,302 @@
+<HTML>
+<HEAD>
+<TITLE>Writing an Installation DLL</TITLE>
+</HEAD>
+<BODY>
+<H1>Writing an Installation DLL</H1><!-- entering slot 178 -->
+<P>
+You can provide one or two installation DLLs.  These DLLs can be the same
+DLL with two different entry points or two different DLLs with corresponding
+entry points. There are two ways to call an installation DLL:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Call the routine after all files have been copied,
+but<I> before</I> script files have been processed (using the SSDLL and
+SSDLLENTRY keywords), or<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Call the routine after all files have been copied
+and<I> after</I> script files have been processed (using the SSTERMDLL and
+SSTERMDLLENTRY keywords).<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The parameters for each entry point are as follows:<!-- lm: 0x2 1 -->
+<P>
+<I>HWND (input)</I><!-- lm: 0x2 16 -->
+<UL> Owner handle.  This handle allows
+the DLL to create windows for the user interface.<!-- lm: 0x2 1 -->
+</UL><I> PSZ
+(input)</I><!-- lm: 0x2 16 -->
+<UL> Source path of the installation package.
+<!-- lm: 0x2 1 -->
+</UL><I>PSZ (input)</I><!-- lm: 0x2 16 -->
+<UL> Target
+drive (a drive letter and colon (for example,<I> d</I>:).<!-- lm: 0x2 1 -->
+</UL><I> PSZ
+(input)</I><!-- lm: 0x2 16 -->
+<UL> DLL input parameters, as specified by
+the SSDLLINPUTPARMS keyword in CONTROL.SCR.<!-- lm: 0x2 1 -->
+</UL><I> HWND
+(input)</I><!-- lm: 0x2 16 -->
+<UL> MINSTALL object window handle that receives
+messages to perform media control interface and CONFIG.SYS operations.<!-- lm: 0x2 1 -->
+</UL><I> PSZ
+(output)</I><!-- lm: 0x2 16 -->
+<UL> A CHAR[256] null-terminated string
+that contains response-file data needed by the DLL.  The encoded string
+is created by the DLL as a series of ASCII characters. This information
+allows MINSTALL to operate in an unattended installation mode where all
+user responses are provided by the response-file string.  The encoded information
+is passed to the DLL, and all user interaction is bypassed.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following is an example prototype used to define an installation DLL.
+
+<PRE>ULONG APIENTRY StartMyInstall (HWND hwndOwnerHandle,                               PSZ pszSourcePath,
+                               PSZ pszTargetDrive,
+                               PSZ pszMyParms,
+                               HWND hwndMinstallHandle,
+                               PSZ pszResponseFile);
+</PRE>
+
+<P>
+MINSTALL provides numerous services to the installation DLLs due to the
+various environments in which MINSTALL must operate. You can use MINSTALL
+on a machine that has never had OS/2 multimedia installed on it.  You can
+also use MINSTALL on a machine that has OS/2 multimedia installed on the
+hard drive.  OS/2 multimedia does not need to be running to use MINSTALL
+in this environment. MINSTALL retains control of the MMPM2.INI and CONFIG.SYS
+files to ensure no changes are made to these files while MINSTALL is running.
+
+<P>
+While MINSTALL has control of the MMPM2.INI and CONFIG.SYS files it might
+be necessary for an installation DLL to read or write to one or both of
+these files.  MINSTALL provides an interface to allow the installation DLLs
+access to both the MMPM2.INI and CONFIG.SYS files.  Also, if OS/2 multimedia
+is installed and running, some files might be open that MINSTALL attempts
+to replace. When this occurs, MINSTALL copies the open files to a temporary
+directory until the next system restart.
+<P>
+The following table lists the messages, along with the message formats and
+descriptions, available to an installation DLL.  An installation DLL can
+send these messages with WinSendMsg or WinPostMsg.<!-- lm: 0x2 1 -->
+<P>
+<B>Message</B><!-- lm: 0x2 27 -->
+<UL><B> Description</B><!-- lm: 0x2 1 -->
+</UL> IM_CODEC1INSTALL
+<!-- lm: 0x2 27 -->
+<UL>Installs a CODEC using the<I> ulCodecCompType</I> field.
+<!-- lm: 0x2 1 -->
+</UL>
+<PRE>mp1 = 0;                               /* Not used */
+mp2 = MPFROMP(PINSTCODECINIFILEINFO);  /* Pointer to the
+                                          INSTIOPROC structure */
+</PRE>
+<!-- lm: 0x2 1 -->
+<P>
+IM_CODEC2INSTALL<!-- lm: 0x2 27 -->
+<UL> Installs a CODEC using the<I> fccCodecCompType[5]
+</I>field.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>mp1 = 0;                                /* Not used */
+mp2 = MPFROMP (PINSTCODECINIFILEINFO);  /* Pointer to the
+                                           INSTIOPROC structure */
+</PRE>
+<!-- lm: 0x2 1 -->
+<P>
+IM_CONFIGDELETE<!-- lm: 0x2 27 -->
+<UL> Deletes a line from the CONFIG.SYS
+file.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>mp1 = MPFROMP(PCONFIGDATA); /* Pointer to the <!-- entering slot 179 -->CONFIGDATA structure */
+mp2 = 0;                    /* Not used */
+</PRE>
+<!-- lm: 0x2 1 -->
+<P>
+IM_CONFIGENUMERATE<!-- lm: 0x2 27 -->
+<UL> Gets a line from the CONFIG.SYS
+file.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>mp1 = MPFROMP(PCONFIGDATA); /* Pointer to the CONFIGDATA structure */
+mp2 = 0;                    /* Not used */
+</PRE>
+<!-- lm: 0x2 1 -->
+<P>
+IM_CONFIGMERGE<!-- lm: 0x2 27 -->
+<UL> Merges data into an existing CONFIG.SYS
+entry.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>mp1 = MPFROMP(PCONFIGDATA); /* Pointer to the CONFIGDATA structure */
+mp2 = 0;                    /* Not used */
+</PRE>
+<!-- lm: 0x2 1 -->
+<P>
+IM_CONFIGNEW<!-- lm: 0x2 27 -->
+<UL> Adds a new line to the CONFIG.SYS file.
+<!-- lm: 0x2 1 -->
+</UL>
+<PRE>mp1 = MPFROMP(PCONFIGDATA); /* Pointer to the CONFIGDATA structure */
+mp2 = 0;                    /* Not used */
+</PRE>
+<!-- lm: 0x2 1 -->
+<P>
+IM_CONFIGQUERYCHANGED<!-- lm: 0x2 27 -->
+<UL> Returns TRUE if the CONFIG.SYS
+file has been changed.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>mp1 = 0;  /* Not used */
+mp2 = 0;  /* Not used */
+</PRE>
+<!-- lm: 0x2 1 -->
+<P>
+IM_CONFIGREPLACE<!-- lm: 0x2 27 -->
+<UL> Replaces an existing CONFIG.SYS
+file.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>mp1 = MPFROMP(PCONFIGDATA); /* Pointer to the CONFIGDATA structure */
+mp2 = 0;                    /* Not used */
+</PRE>
+<!-- lm: 0x2 1 -->
+<P>
+IM_CONFIGUPDATE<!-- lm: 0x2 27 -->
+<UL> Updates an existing CONFIG.SYS entry.
+<!-- lm: 0x2 1 -->
+</UL>
+<PRE>mp1 = MPFROMP(PCONFIGDATA); /* Pointer to the CONFIGDATA structure */
+mp2 = 0;                    /* Not used */
+</PRE>
+<!-- lm: 0x2 1 -->
+<P>
+IM_CREATE_WPS_OBJECT<!-- lm: 0x2 27 -->
+<UL> Installs a folder and its contents.
+<!-- lm: 0x2 1 -->
+</UL>
+<PRE>mp1 = 0;                        /* Not used */
+mp2 = MPFROMP(PINSTOBJECTDATA); /* Pointer to the
+                                   INSTOBJECTDATA structure */
+</PRE>
+<!-- lm: 0x2 1 -->
+<P>
+IM_DESTROY_WPS_OBJECT<!-- lm: 0x2 27 -->
+<UL> Destroys an existing folder
+and its contents.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>mp1 = 0;                /* Not used */
+mp2 = MPFROMP(HOBJECT); /* This must be the exact OBJECTID
+                           with which the object was created  */
+</PRE>
+<!-- lm: 0x2 1 -->
+<P>
+IM_EA_JOIN<!-- lm: 0x2 27 -->
+<UL> Joins an EA file to its parent file (the
+file that it was previously separated from).<!-- lm: 0x2 1 -->
+</UL>
+<PRE>mp1 = 0;                    /* Not used */mp2 = MPFROMP(PINSTEAJOIN); /* Pointer to the INSTEAJOIN
+                               structure */
+</PRE>
+<!-- lm: 0x2 1 -->
+<P>
+IM_EA_LONG_NAME_JOIN<!-- lm: 0x2 27 -->
+<UL> Creates an EA file containing
+a long name (greater than 8 characters but less than 256) and joins it to
+a file or directory.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>mp1 = 0;                            /* Not used */mp2 = MPFROMP(PINSTEALONGNAMEJOIN); /* A pointer to the structure
+                                       that contains the long name
+                                       as an ASCII string, the file or
+                                       directory name to which the long
+                                       name is to be applied, and the
+                                       new EA name */
+</PRE>
+<!-- lm: 0x2 1 -->
+<P>
+IM_LOG_ERROR<!-- lm: 0x2 27 -->
+<UL> Writes a message to the MINSTALL.LOG
+file.  This can be an error type message or only an information type message.
+<!-- lm: 0x2 1 -->
+</UL>
+<PRE>mp1 = MPFROMP((PSZ)pszStatement); /* The text of the message to insert
+                                     at the end of the MINSTALL.LOG
+                                     file */
+mp2 = 0;                          /* Not used */
+</PRE>
+<!-- lm: 0x2 1 -->
+<P>
+IM_MCI_EXTENDED_SYSINFO<!-- lm: 0x2 27 -->
+<UL> Maps to the mciSendCommand
+MCI_SYSINFO.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>mp1 = MPFROML(LONG);  /* The MCI_SYSINFO extended function desired */
+mp2 = MPFROMP(*MCI_SYSINFO_PARMS); /* The SYSINFO
+                                                      structure       */
+
+</PRE>
+<!-- lm: 0x2 1 -->
+<P>
+IM_MCI_SEND_COMMAND<!-- lm: 0x2 27 -->
+<UL> Sends an MCI command.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>mp1 = 0;                            /* Not used */
+mp2 = MPFROMP(PINSTMCISENDCOMMAND); /* Pointer to the INSTMCISENDCOMMAND
+                                       structure */
+</PRE>
+<!-- lm: 0x2 1 -->
+<P>
+IM_MIDIMAP_INSTALL<!-- lm: 0x2 27 -->
+<UL> Installs a MIDI map.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>mp1 = 0;                            /* Not used */
+mp2 = MPFROMP(PMIDIMAPINSTALLDATA); /* Pointer to the
+                                       MIDIMAPINSTALLDATA structure */
+</PRE>
+<!-- lm: 0x2 1 -->
+<P>
+IM_MMIO_INSTALL<!-- lm: 0x2 27 -->
+<UL> Installs an IOProc.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>mp1 = 0;                    /* Not used */
+mp2 = MPFROMP(PINSTIOPROC); /* Pointer to the INSTIOPROC structure */
+</PRE>
+<!-- lm: 0x2 1 -->
+<P>
+IM_QUERYPATH<!-- lm: 0x2 27 -->
+<UL> Requests the current location of a
+copied file.<!-- lm: 0x2 1 -->
+</UL>
+<PRE>mp1 = PMFROMP(PSZ); /* The name of the file needed  */
+mp2 = PMFROMP(PSZ); /* The full path to the file    */
+</PRE>
+<!-- lm: 0x2 1 -->
+<P>
+IM_SPI_INSTALL<!-- lm: 0x2 27 -->
+<UL> Installs stream protocol information.
+<!-- lm: 0x2 1 -->
+</UL>
+<PRE>mp1 = 0;            /* Not used */
+mp2 = MPFROMP(PSZ); /* The fully qualified path of a SPI resource DLL */
+</PRE>
+
+<P>
+The data structures used as parameters for the messages in the previous
+list are defined in the MINSTALL.H file located in the \TOOLKIT\H subdirectory.
+
+<P>
+Follow these guidelines when writing an installation DLL:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Set the mouse pointer to SPTR_WAIT during any operation
+lasting more than one second between requests for user information.<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Keep the user interface as responsive as possible
+by using the MM_DISPATCHVARS and MM_DISPATCHMESSAGES() macros before and
+after all I/O intensive operations and and while updates are being made
+to INI files and the CONFIG.SYS file. This is necessary because installation
+DLLs are executed in the MINSTALL message queue thread. These macros are
+defined in the MINSTALL.H file.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="138_L4_DefiningChangestoOth.html">[Back: Defining Changes to Other INI Files]</A> <BR>
+<A HREF="140_L2_InstallingaMediaCont.html">[Next: Installing a Media Control Driver]</A> 
+</BODY>
+</HTML>

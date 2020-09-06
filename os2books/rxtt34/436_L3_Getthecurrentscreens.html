@@ -1,0 +1,70 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Get the current screen size</TITLE>
+</HEAD>
+<BODY>
+<H1>Get the current screen size</H1><!-- entering slot 452 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* sample routine to get the current screensize for textmode windows  */
+/* without using REXXUTIL functions.                                  */
+
+  parse value GetDisplaySize() with columns rows
+  say "The current OS/2 window size is " || ,
+      rows || " rows and " || columns || " columns."
+exit 0
+
+/* ------------------------------------------------------------------ */
+/* function: Get the current display size                             */
+/*                                                                    */
+/* call:     GetDisplaySize                                           */
+/*                                                                    */
+/* returns:  columns rows                                             */
+/*                                                                    */
+/* note:     This function works only for display sizes up to 200 for */
+/*           columns or rows. The upper left corner is 1,1.           */
+/*           The REXXUTIL function SysCurPos uses zero based values   */
+/*           (the upper left corner is 0,0).                          */
+/*                                                                    */
+GetDisplaySize: PROCEDURE expose thisPos
+
+  usedChars = ":;&lt;=&gt;?@ABCD"
+
+                    /* save current cursor position                   */
+  rc = CharOut(, D2C(27) || '[' || "6n")
+  pull curPos
+
+                    /* try to set the cursor to the position 200,200  */
+  rc = CharOut(, D2C(27) || '[' || "200;200H" )
+
+                    /* get cursor position                            */
+  rc = CharOut(, D2C(27) || '[' || "6n")
+  pull tPos
+
+                    /* restore current cursor position                */
+  rc = CharOut(, substr( curPos,1, length( curPos)-1) || "H" )
+
+                                                             /* v2.30 */
+  parse var tPos 3 y1 +1 y2 +1 3 rows +2 6 x1 +1 x2 +1 6 cols +2 .
+
+  if pos( y1, usedChars ) &lt;&gt; 0 then
+    rows = 10 || y2
+
+  if pos( x1, usedChars ) &lt;&gt; 0 then
+    cols = 10 || x2
+
+RETURN cols rows
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="435_L3_Getthecurrentcursorp.html">[Back: Get the current cursor position]</A> <BR>
+<A HREF="437_L3_Redefinesomekeys.html">[Next: Redefine some keys]</A> 
+</BODY>
+</HTML>

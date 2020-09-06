@@ -1,0 +1,125 @@
+<HTML>
+<HEAD>
+<TITLE>DmiListAttributeReq</TITLE>
+</HEAD>
+<BODY>
+<H1>DmiListAttributeReq</H1><!-- entering slot 109 -->
+<P>
+The following List Attribute commands use the DmiListAttributeReq command
+block:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->DmiListAttributeCmd<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->DmiListFirstAttributeCmd<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->DmiListNextAttributeCmd<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The format for the command block is: ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³Table30
+.DmiListAttributeReqCommandBlock                 ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ OFFSET     ³ SIZE      ³ TYPE      ³ VARIABLE NAME         ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 0       ³ 64       ³ STRUCT     ³ DmiMgmtCommand        ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 64       ³ 4       ³ INT      ³ iComponentId         ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 68       ³ 4       ³ INT      ³ iGroupId           ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ 72       ³ 4       ³ INT      ³ iAttributeId         ³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+<B><!-- lm: 0x2 1 -->
+<P>
+Variable Name<!-- lm: 0x2 21 -->
+<UL> Variable Description</B><!-- lm: 0x2 1 -->
+</UL> DmiMgmtCommand
+<!-- lm: 0x12 21 -->
+<UL>The command block.  The values of iCommand are:
+<!-- lm: 0x2 21 -->
+<P>
+DmiListAttributeCmd<!-- lm: 0x2 51 -->
+<UL> 0x208<!-- lm: 0x2 21 -->
+</UL>DmiListFirstAttributeCmd<!-- lm: 0x2 51 -->
+<UL> 0x209<!-- lm: 0x2 21 -->
+</UL>DmiListNextAttributeCmd<!-- lm: 0x2 51 -->
+<UL> 0x20a<!-- lm: 0x2 21 --><!-- lm: 0x2 1 -->
+</UL> iComponentId
+<!-- lm: 0x12 21 -->
+<UL>The ID of the desired component.<!-- lm: 0x2 1 -->
+</UL> iGroupId
+<!-- lm: 0x12 21 -->
+<UL>The ID of the desired group within the component
+identified by iComponentId.<!-- lm: 0x2 1 -->
+</UL> iAttributeId<!-- lm: 0x12 21 -->
+<UL> The
+ID of the desired attribute within the group. In DmiListFirstAttributeCmd,
+this field is ignored. For the DmiListNextAttributeCmd command, the service
+layer starts filling the confirm buffer beginning with the attribute ID
+that follows the value in this field. To start at the first attribute, set
+this field to zero. On return from the command, the service layer updates
+this field with the ID of the last attribute put in the confirm buffer.
+The management application can continue issuing DmiListNextAttributeCmd
+commands until the returned iStatus field indicates that there is no more
+data.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Issuing DmiListAttributeReq displays an example of how to issue the DmiListAttributeReq
+command to the MI. IssuingDmiListAttributeReq
+<BR>
+
+<PRE>ULONG IssueListAttributes(ULONG ComponentID,ULONG GroupID, ULONG AttribID,SHORT CommandType)
+{
+DMI_ListAttributeReq_t *ListAttr;
+ULONG RC;
+
+    ListAttr = (DMI_ListAttributeReq_t *)malloc(sizeof(DMI_ListAttributeReq_t));
+    memset((void *)ListAttr,0,sizeof(DMI_ListAttributeReq_t));
+    ListAttr-&gt;DmiMgmtCommand.iLevelCheck = DMI_LEVEL_CHECK;
+    ListAttr-&gt;DmiMgmtCommand.iMgmtHandle = YOUR_MGMT_HANDLE;          // set the app handle
+    ListAttr-&gt;DmiMgmtCommand.iCmdHandle =  YOUR_COMMAND_HANDLE;       // set the command counter
+    ListAttr-&gt;DmiMgmtCommand.iCnfBufLen = 8000UL;                     // set the size of the response
+    ListAttr-&gt;DmiMgmtCommand.pCnfBuf = (void *)malloc(8000UL);        // set up the response buffer
+    ListAttr-&gt;DmiMgmtCommand.iRequestCount = 1;
+    ListAttr-&gt;DmiMgmtCommand.iCmdLen = sizeof(DMI_ListAttributeReq_t);
+    ListAttr-&gt;iComponentId = ComponentID;   // set to the currently selected component
+    ListAttr-&gt;iGroupId     = GroupID;       // set to the currenly selected group
+    ListAttr-&gt;iAttributeId = AttribID;
+    switch(CommandType){    // this is the type of command to issue
+        case 1:
+            ListAttr-&gt;DmiMgmtCommand.iCommand = DmiListFirstAttributeCmd;  // set the command
+            break;
+        case 0:
+            ListAttr-&gt;DmiMgmtCommand.iCommand = DmiListNextAttributeCmd;   // look for next one in list
+            break;
+        case 10:
+            ListAttr-&gt;DmiMgmtCommand.iCommand = DmiListAttributeCmd;    // get this specific one
+            break;
+    }
+    if((RC = DmiInvoke((DMI_MgmtCommand_t *)ListAttr)) != SLERR_NO_ERROR){   // call the SL and register
+        free(ListAttr-&gt;DmiMgmtCommand.pCnfBuf);
+        free(ListAttr);
+    }
+    return RC;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="105_L3_DmiListGroupPragmaRe.html">[Back: DmiListGroupPragmaReq]</A> <BR>
+<A HREF="107_L3_DmiListAttributeCnf.html">[Next: DmiListAttributeCnf]</A> 
+</BODY>
+</HTML>

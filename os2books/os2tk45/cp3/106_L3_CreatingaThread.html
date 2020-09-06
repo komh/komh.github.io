@@ -1,0 +1,94 @@
+<HTML>
+<HEAD>
+<TITLE>Creating a Thread</TITLE>
+</HEAD>
+<BODY>
+<H1>Creating a Thread</H1><!-- entering slot 111 -->
+<P>
+You use<A><!-- external link: 1D 74 C3 41 --> DosCreateThread</A> to create
+a new thread for a process.
+<P>
+<A><!-- external link: 1D 74 C3 41 -->DosCreateThread</A> requires the address
+of the code to execute and a variable to receive the identifier of the thread.
+The address of the code is typically the address of a function that is defined
+within the application.
+<P>
+You can pass one ULONG parameter to the thread when you start it. To pass
+more information to the thread, pass the address of a data structure.
+<P>
+You specify how you want the thread to run when you call<A><!-- external link: 1D 74 C3 FC --> DosCreateThread</A>.
+If bit 1 of the flag parameter in the function call is 0, the thread starts
+immediately. If bit 1 of the flag parameter is 1, the thread starts suspended
+and will not run until the application calls<A><!-- external link: 1D DE C3 FC --> DosResumeThread</A>.
+
+<P>
+Each thread maintains its own stack. You specify the size of the stack when
+you call<A><!-- external link: 1D 74 C3 FC --> DosCreateThread</A>. The
+amount of space needed depends on a number of factors, including the number
+of function calls the thread makes and the number of parameters and local
+variables used by each function. If you plan to call OS/2 functions, a reasonable
+stack size is 8192 bytes (8KB); 4096 bytes (4KB) should be the absolute
+minimum. If bit 1 of the flag parameter is 0, OS/2 uses the default method
+for initializing the thread's stack. If bit 1 of the flag parameter is 1,
+memory for the thread's entire stack is pre-committed.
+<P>
+The following code fragment creates a thread:
+<PRE>    #define INCL_DOSPROCESS         /* Process and thread values */
+    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+
+    #define HF_STDOUT 1             /* Standard output handle    */
+
+    VOID _System ThreadFunc(ULONG ulBeepLen);
+
+    INT main(VOID)
+      {
+      ULONG ulBeepLen;
+      TID   tidThread;
+
+      ulBeepLen = 1000;
+      DosCreateThread(&amp;tidThread,       /* Thread ID returned by DosCreateThread */
+                      &amp;ThreadFunc,      /* Address of the thread function        */
+                      ulBeepLen,        /* Parameter passed to thread            */
+                      0,                /* Immediate execution, default stack    */
+                                        /* initialization                        */
+                      4096);            /* Stack size                            */
+
+      DosWaitThread(&amp;tidThread,
+                    DCWW_WAIT);
+      return 0;
+      } /* end main */
+
+/***************************************************/
+/* ThreadFunc                                      */
+/***************************************************/
+    VOID _System ThreadFunc(ULONG ulBeepLen)
+      {
+      ULONG ulWritten; /* needed for DosWrite */
+
+      DosBeep(750, ulBeepLen);
+
+      DosWrite(HF_STDOUT,
+               "Message from new thread\r\n",
+               25,
+               &amp;ulWritten);
+
+      DosExit(EXIT_PROCESS, 0);
+      } /* end ThreadFunc */
+
+</PRE>
+
+<P>
+A thread continues to run until it calls<A><!-- external link: 1D 84 C3 FC --> DosExit</A>,
+returns control to OS/2, or is ended by a<A><!-- external link: 1D 9B C3 43 --> DosKillThread
+</A>call.
+<P>
+In the preceding example, the thread exits when the function implicitly
+returns control at the end of the function.
+
+<P><HR>
+
+<A HREF="105_L2_UsingThreads.html">[Back: Using Threads]</A> <BR>
+<A HREF="107_L3_ObtainingInformation.html">[Next: Obtaining Information about a Thread]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,164 @@
+<HTML>
+<HEAD>
+<TITLE>DosGetMessage</TITLE>
+</HEAD>
+<BODY>
+<H1>DosGetMessage</H1><!-- entering slot 74 -->Bindings:  <A HREF="235_L2H_DosGetMessage.html">C</A>,
+<A HREF="410_L2H_DosGetMessage.html">MASM</A>
+<BR>
+
+<P>
+This call retrieves a message from a message file and inserts variable information
+into the body of the message.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+DosGetMessage<!-- lm: 0x2 19 -->
+<UL> (IvTable, IvCount, DataArea, DataLength,
+MsgNumber, FileName, MsgLength)<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+<B>IvTable</B> (PCHAR FAR *) - input<!-- lm: 0x11 4 -->
+<UL> Address of
+a list of double-word pointers.  Each pointer points to an ASCIIZ or null-terminated
+DBCS string (variable insertion text).  0 to 9 strings can be present.<!-- lm: 0x2 1 -->
+</UL><B> IvCount
+</B>(USHORT) - input<!-- lm: 0x11 4 -->
+<UL> Count of variable insertion
+text strings is 0-9. If IvCount is 0, IvTable is ignored.<!-- lm: 0x2 1 -->
+</UL><B> DataArea
+</B>(PCHAR) - output<!-- lm: 0x11 4 -->
+<UL> Address of the requested message.
+If the message is too long to fit in the caller's buffer, as much of the
+message text is returned as possible, with the appropriate error return
+code.<!-- lm: 0x2 1 -->
+</UL><B> DataLength</B> (USHORT) - input<!-- lm: 0x11 4 -->
+<UL> Length,
+in bytes, of the user's storage area.<!-- lm: 0x2 1 -->
+</UL><B> MsgNumber
+</B>(USHORT) - input<!-- lm: 0x11 4 -->
+<UL> Requested message number.<!-- lm: 0x2 1 -->
+</UL><B> FileName
+</B>(PSZ) - input<!-- lm: 0x11 4 -->
+<UL> Address of the optional drive,
+path, and filename of the file where the message can be found.  If messages
+are bound to the .EXE file using MSGBIND utility, then filename is the name
+of the message file from which the messages are extracted.<!-- lm: 0x2 1 -->
+</UL><B> MsgLength
+</B>(PUSHORT) - output<!-- lm: 0x11 4 -->
+<UL> Address of the length, in
+bytes, of the message.<!-- lm: 0x2 1 -->
+</UL><B> rc</B> (USHORT) - return
+<!-- lm: 0x11 4 -->
+<UL>Return code descriptions are:<!-- lm: 0x2 4 -->
+<P>
+<LI><!-- lm: 0x2 14 -->NO_ERROR<!-- lm: 0x2 4 --> 2<!-- lm: 0x2 14 -->
+<UL> ERROR_FILE_NOT_FOUND
+<!-- lm: 0x2 4 -->
+</UL>206<!-- lm: 0x2 14 -->
+<UL> ERROR_FILENAME_EXCED_RANGE<!-- lm: 0x2 4 -->
+</UL>316<!-- lm: 0x2 14 -->
+<UL> ERROR_MR_MSG_TOO_LONG<!-- lm: 0x2 4 -->
+</UL>317<!-- lm: 0x2 14 -->
+<UL> ERROR_MR_MID_NOT_FOUND<!-- lm: 0x2 4 -->
+</UL>318<!-- lm: 0x2 14 -->
+<UL> ERROR_MR_UN_ACC_MSGF<!-- lm: 0x2 4 -->
+</UL>319<!-- lm: 0x2 14 -->
+<UL> ERROR_MR_INV_MSFG_FORMAT<!-- lm: 0x2 4 -->
+</UL>320<!-- lm: 0x2 14 -->
+<UL> ERROR_MR_INV_IVCOUNT<!-- lm: 0x2 4 -->
+</UL>321<!-- lm: 0x2 14 -->
+<UL> ERROR_MR_UN_PERFORM<!-- lm: 0x2 1 -->
+</UL><B>Remarks</B>
+<P>
+If IvCount is greater than 9, DosGetMessage returns an error that indicates
+IvCount is out of range.  If the numeric value of x in the %x sequence for
+%1through%9 is less than or equal to IvCount, text insertion by substitution
+for %x, is performed for all occurrences of %x in the message.  Otherwise
+text insertion is ignored and the %x sequence is returned in the message
+unchanged.  Text insertion is performed for all text strings defined by
+IvCount and IvTable.
+<P>
+Variable data insertion is not dependent on blank character delimiters nor
+are blanks automatically inserted.
+<P>
+For warning and error messages, the message ID (seven alphanumeric characters
+consisting of three upper case characters as the component ID, concatenated
+with a four-digit message number) followed by a colon and a blank character
+are returned to the caller as part of the message text. (DosGetMessage determines
+the type of message based on the message classification generated in the
+output file of the MKMSGF utility.)
+<P>
+The following is an example of a sample error message returned with the
+message ID:
+<PRE>   SYS0100: File not found
+</PRE>
+
+<P>
+DosGetMessage retrieves messages previously prepared by the utility MKMSGF
+to create a message file, or MSGBIND to bind a message segment to an .EXE
+file.  DosGetMessage tries to retrieve the message from RAM in the message
+segment bound to the .EXE program.  If the message cannot be found, DosGetMessage
+retrieves the message from the message file on DASD (direct access storage
+device, such as a diskette or fixed-disk).
+<P>
+If the file name is not a fully-qualified name, DosGetMessage searches the
+following directories for default drive and path:<!-- lm: 0x2 1 -->
+<P>
+o<!-- lm: 0x2 3 -->
+<UL>The system root directory<!-- lm: 0x2 1 -->
+</UL>o<!-- lm: 0x2 3 -->
+<UL>The current working directory<!-- lm: 0x2 1 -->
+</UL>o<!-- lm: 0x2 3 -->
+<UL>Directories listed in the DPATH<!-- entering slot 75 -->
+statement (OS/2 mode only)<!-- lm: 0x2 1 -->
+</UL>o<!-- lm: 0x2 3 -->
+<UL>Directories listed in the APPEND statement
+(DOS mode only).<!-- lm: 0x2 1 -->
+</UL>
+<P>
+If a message cannot be retrieved because of a DASD error or file not found
+condition, a default message is placed in the user's buffer area. A message
+is placed in the buffer area based on the following error conditions:<!-- lm: 0x2 1 -->
+<P>
+o<!-- lm: 0x2 3 -->
+<UL>The message number cannot be found in the message
+file.<!-- lm: 0x2 1 -->
+</UL>o<!-- lm: 0x2 3 -->
+<UL>The message file cannot be found.<!-- lm: 0x2 1 -->
+</UL>o<!-- lm: 0x2 3 -->
+<UL>The system detected a disk error trying to
+access the message file, or the message file format is incorrect.<!-- lm: 0x2 1 -->
+</UL>o<!-- lm: 0x2 3 -->
+<UL>IvCount is out of range.<!-- lm: 0x2 1 -->
+</UL>o<!-- lm: 0x2 3 -->
+<UL>A system error occurred trying to allocate
+storage.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+When these conditions occur, the default message allows the application
+program to issue a message and prompt that enables recovery opportunity.
+
+<P>
+The residency of the message in RAM (EXE bound) or on DASD is transparent
+to the caller and handled by DosGetMessage.  In either case the message
+is referenced by message number and file name.
+<P>
+In order for DosGetMessage to be properly resolved, an application must
+be linked with DOSCALLS.LIB.
+<P>
+<B>Family API Considerations</B>
+<P>
+Some options operate differently in the DOS mode than in OS/2 mode.  Therefore,
+the following restriction applies to DosGetMessage when coding for the DOS
+mode:
+<P>
+If the message file name is not a fully qualified name, DosGetMessage searches
+the root directory of the default drive for the message file, instead of
+the root directory of the startup drive.
+
+<P><HR>
+
+<A HREF="059_L2_DosGetMachineMode.html">[Back: DosGetMachineMode]</A> <BR>
+<A HREF="061_L2_DosGetModHandle.html">[Next: DosGetModHandle]</A> 
+</BODY>
+</HTML>

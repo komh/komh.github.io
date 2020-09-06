@@ -1,0 +1,140 @@
+<HTML>
+<HEAD>
+<TITLE>Binding Names to Sockets</TITLE>
+</HEAD>
+<BODY>
+<H1>Binding Names to Sockets</H1><!-- entering slot 39 -->
+<P>
+The <A HREF="206_L2_socket.html">socket()</A> call creates a socket without
+a name. An unnamed socket is one without any association to a local address.
+Until a name is bound to a socket, no messages can be received on it.
+<P>
+Communicating processes are bound by an association. The bind() call allows
+a process to specify half of an association: local address and local port
+(TCP/IP), or local path name (NetBIOS and local IPC). The connect() and
+accept() calls are used to complete a socket's association.
+<P>
+An application program may not care about the local address it uses and
+may allow the protocol software to select one. This is not true for server
+processes. Server processes that operate at a well-known port need to be
+able to specify that port to the system.
+<P>
+In most domains, associations must be unique. Internet domain associations
+must never include duplicate protocol, local address, local port, foreign
+address, or foreign port tuples.
+<P>
+Wildcard addressing is provided to aid local address binding in the Internet
+domain. When an address is specified as INADDR_ANY (a constant defined in
+the &lt;NETINET\IN.H&gt; file), the system interprets the address as any
+valid address.
+<P>
+Sockets with wildcard local addresses may receive messages directed to the
+specified port number and sent to any of the possible addresses assigned
+to a host. If a server process wished to connect only hosts on a given network,
+it would bind the address of the hosts on the appropriate network.
+<P>
+A local port can be specified or left unspecified (denoted by 0), in which
+case the system selects an appropriate port number for it.
+<P>
+The bind() call accepts the<I> s,</I><I> name,</I> and<I> namelen</I> parameters.
+The<I> s</I> parameter is the integer descriptor of the socket to be bound.
+The<I> name</I> parameter specifies the local address, and the<I> namelen
+</I>parameter indicates the length of address in bytes. The local address
+is defined by a data structure termed sockaddr.
+<P>
+In the internet  domain, a process does not have to bind an address and
+port number to a socket, because the connect() and send() calls automatically
+bind an appropriate address if they are used with an unbound socket.
+<P>
+The bound name is a variable-length byte string that is interpreted by the
+supporting protocols. Its interpretation can vary from protocol family to
+protocol family (this is one of the properties of the protocol family).
+
+<P>
+An example of an application using the bind() call is:
+<BR>
+An Application Using the bind() Call
+<BR>
+
+<PRE>int rc;
+int s;
+struct sockaddr_in myname;
+
+/* clear the structure */
+memset(&amp;myname, 0, sizeof(myname));
+myname.sin_len = sizeof(myname);
+myname.sin_family = AF_INET;
+myname.sin_addr.s_addr = inet_addr("129.5.24.1"); /* specific interface */
+myname.sin_port = htons(1024);
+...
+rc = bind(s, (struct sockaddr *) &amp;myname, sizeof(myname));
+</PRE>
+
+<P>
+For a server in the internet domain to be able to listen for connections
+on a stream socket or issue recvfrom() on a datagram socket, the server
+must first bind the socket to a specific address family, local address,
+and local port. This example binds<I> myname</I> to socket<I> s</I>. Note
+that the sockaddr_in structure should be zeroed before calling bind(). For
+a more detailed description, see <A HREF="182_L2_bind.html">bind()</A>.
+For information on the sockaddr_in structure, see <A HREF="074_L2_InternetAddressForma.html">Internet
+Address Formats</A>.
+<P>
+The unique name<I> myname</I> specifies that the application uses an internet
+address family (AF_INET) at internet address 129.5.24.1, and is bound to
+port 1024. The preceding example shows two useful network utility routines.
+ <!-- lm: 0x2 2 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 5 -->inet_addr()  takes an internet address in dotted-decimal
+<!-- entering slot 40 -->form and returns it in network-byte order. For
+a more detailed description, see <A HREF="252_L2_inet_addr.html">inet_addr()</A>.
+<!-- lm: 0x2 2 -->
+<P>
+<LI><!-- lm: 0x2 5 -->htons()  takes a port number in host-byte order and
+returns the port in network-byte order.  For a more detailed description,
+see <A HREF="251_L2_htons.html">htons()</A>.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+The next figure shows how the bind() call on the server side uses the network
+utility routine getservbyname() to find a<I> well-known</I> port number
+for a specified service from the ETC\SERVICES file (for more information
+on well-known ports, see <A HREF="085_L2_Ports.html">Ports</A>). The figure
+also shows the use of the internet address wildcard value INADDR_ANY.  This
+is the value generally used on a socket bind() call.  It binds the socket
+to all internet addresses available on the local machine, without requiring
+the program to know the local internet address. (The code fragment in the
+preceding figure will run successfully only on the machine with internet
+address 192.5.24.1.) If a host has more than one internet address (that
+is, if it is multihomed host), messages sent to any of the addresses will
+be deliverable to a socket bound to INADDR_ANY. Abind ( )CallUsingthegetservbyname
+( )Call
+<BR>
+
+<PRE>int rc;
+int s;
+struct sockaddr_in myname;
+struct servent *sp;
+...
+sp = getservbyname("login","tcp");  /* get application specific */
+/* well-known port          */
+...
+/* clear the structure */
+memset(&amp;myname, 0, sizeof(myname));
+myname.sin_len = sizeof(myname);
+myname.sin_family = AF_INET;
+myname.sin_addr.s_addr = INADDR_ANY;  /* any interface */
+myname.sin_port = sp-&gt;s_port;
+...
+rc = bind(s,(struct sockaddr *)&amp;myname,sizeof(myname));
+</PRE>
+
+<P>
+See <A HREF="182_L2_bind.html">bind()</A> for more on this call.
+
+<P><HR>
+
+<A HREF="036_L2_SocketCreation.html">[Back: Socket Creation]</A> <BR>
+<A HREF="038_L2_SocketConnections.html">[Next: Socket Connections]</A> 
+</BODY>
+</HTML>

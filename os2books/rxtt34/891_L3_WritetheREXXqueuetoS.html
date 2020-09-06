@@ -1,0 +1,207 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Write the REXX queue to STDOUT</TITLE>
+</HEAD>
+<BODY>
+<H1>Write the REXX queue to STDOUT</H1><!-- entering slot 933 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* ------------------------------------------------------------------ */
+/* Name:     RXQUEUE1.CMD                                             */
+/*                                                                    */
+/* Function: Write the contents of a REXX queue to STDOUT.            */
+/*                                                                    */
+/* Usage:    RXQUEUE1 {queueName} {/CLEAR}                            */
+/*                                                                    */
+/* Where:    queueName                                                */
+/*             name of the queue to use                               */
+/*             (def.: If the environment variable RXQUEUE is defined  */
+/*                    use the value of this variable else use the     */
+/*                    default REXX queue named SESSION)               */
+/*                                                                    */
+/*           /CLEAR                                                   */
+/*             only clear the REXX queue                              */
+/*                                                                    */
+/* Notes:    Error messages are written to STDERR.                    */
+/*                                                                    */
+/* Example:  RXQUEUE1 | myProgram                                     */
+/*                                                                    */
+/* (c) 1996 <A HREF="002_L1_GeneralForeword.html">Bernd Schemmer</A>, Germany, EMail: Bernd.Schemmer@gmx.de     */
+
+/* -------------------------- */
+                    /* install error handlers                         */
+
+  signal on error   Name ErrorAbort
+  signal on syntax  Name ErrorAbort
+  signal on failure Name ErrorAbort
+  signal on halt    Name ErrorAbort
+  signal on novalue Name ErrorAbort
+
+/* -------------------------- */
+
+                    /* init some variables                            */
+
+                    /* save the name of the current queue             */
+  saveQueueName = rxqueue( 'get' )
+
+                    /* name of the queue to use                       */
+  queueName = ''
+
+                    /* default queue to use                           */
+  defaultQueueName = 'SESSION'
+
+                    /* mode either CLEAR or ''                        */
+  mode = ''
+
+                    /* return code of this program                    */
+  rxqueueRC = 0
+
+/* -------------------------- */
+                    /* parse the parameter                            */
+
+  parse upper arg arguments
+
+  do while arguments &lt;&gt; ''
+
+    parse var arguments thisArgument arguments
+
+    select
+
+      when wordpos( thisArgument, '/? /H /HELP -? -H -HELP' ) &lt;&gt; 0 then
+      do
+
+        call lineOut 'STDERR:', ,
+           'RXQUEUE1.CMD - write the REXX queue to STDOUT' || '0D0A'x || ,
+           '  Usage:  RXQUEUE1 {queueName} {/CLEAR}'
+
+        rxqueueRC = 1
+        signal programEnd
+
+      end /* when */
+
+      when thisArgument = '/CLEAR' then
+        mode = 'CLEAR'
+
+      when left( thisArgument,1 ) = '/' then
+        call ShowErrorAndExit ,
+         'SYS1003: The syntax of the command is incorrect.'
+
+      otherwise
+        if queueName = '' then
+          queueName = thisArgument
+        else
+          call ShowErrorAndExit,
+           'SYS1003: The syntax of the command is incorrect.'
+
+    end /* select */
+  end /* do while arguments &lt;&gt; '' */
+
+                    /* check for environment variable if the queue    */
+                    /* name is not part of the parameters             */
+  if queueName = '' then
+    queueName = translate( value( 'RXQUEUE',, 'OS2ENVIRONMENT' ) )
+
+                    /* use the default queue if neither the parameter */
+                    /* nor the environment variable is set            */
+  if queueName = '' then
+    queueName = defaultQueueName
+
+                    /* check the name of the queue for invalid  v2.60 */
+                    /* characters                               v2.60 */
+  if verify( translate( queueName ), ,
+        XRANGE( 'A', 'Z' ) || '0123456789.!?_' , 'NOMATCH' ) &lt;&gt; 0 then
+    call ShowErrorAndExit ,
+        'REX0122: The name ' || queueName || 'is not a valid queue name.'
+
+  if queueName &lt;&gt; rxqueue( 'get' ) then
+  do
+                    /* the current queue is not the queue we should   */
+                    /* use -- so we have to change the current queue  */
+
+                    /* try to create the queue to check if it already */
+                    /* exists                                         */
+    tQueue = rxqueue( 'create', queueName )
+
+                    /* imediately delete the created queue            */
+    call rxqueue 'delete', tqueue
+
+    if tQueue = queueName then
+      call ShowErrorAndExit ,
+       'REX0124: The queue ' || queueName || ' does not exist.'
+
+                    /* make the queue use the current queue           */
+    call rxqueue 'set', queueName
+    if rxqueue( 'get' ) &lt;&gt; queueName then
+      call ShowErrorAndExit ,
+       'Cannot activate the queue "' || queueName || '".'
+
+  end /* queueName &lt;&gt; rxqueue( 'get' ) then */
+
+  if mode = 'CLEAR' then
+  do
+                    /* clear the queue                                */
+    do while queued() &lt;&gt; 0
+      parse pull
+    end /* do while queued() &lt;&gt; 0 */
+
+  end /* if mode = 'CLEAR' then */
+  else
+  do
+                    /* write the queue to STDOUT                      */
+    do while queued() &lt;&gt; 0
+      call lineOut 'STDOUT:', lineIn( 'QUEUE:' )
+    end /* do while queued() &lt;&gt; 0 */
+
+  end /* else */
+
+  rxqueueRC = 0
+
+/* ------------------------------------------------------------------ */
+ProgramEnd:
+
+                    /* restore the REXX queue                         */
+  if symbol( 'SaveQueueName' ) = 'VAR' then
+    call rxqueue 'set' , SaveQueueName
+
+                    /* check the RC variable                          */
+  if symbol( 'rxQueueRC' ) &lt;&gt; 'VAR' then
+    rxqueueRC = 254
+
+exit rxqueueRC
+
+/* ------------------------------------------------------------------ */
+/* error exit - print the error message to STDERR and exit with       */
+/*              rc=255                                                */
+/*                                                                    */
+ShowErrorAndExit:
+  parse arg ErrorMessage
+
+  call LineOut 'STDERR:', errorMessage
+
+  rxqueueRC = 255
+
+signal ProgramEnd
+
+/* ------------------------------------------------------------------ */
+
+ErrorAbort:
+  call LineOut 'STDERR:', 'Error "' || condition( 'c' ) || '" occured!'
+  call LineOut 'STDERR:', 'Error processing "' || condition('D') || '"'
+  call LineOut 'STDERR:', 'The invalid line is line no. ' || sigl
+  call LineOut 'STDERR:', 'The value of RC is ' || rc
+signal ProgramEnd
+
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="890_L2_TheRXQUEUEfilter.html">[Back: The RXQUEUE filter]</A> <BR>
+<A HREF="892_L2_Returncodeofthefunct.html">[Next: Return code of the function ADDRESS]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,141 @@
+<HTML>
+<HEAD>
+<TITLE>Current Directory Structure (CDS)</TITLE>
+</HEAD>
+<BODY>
+<H1>Current Directory Structure (CDS)</H1><!-- entering slot 472 -->
+<PRE>&gt;&gt; locate the SAS file system section
+##dw 70:12 l1
+0070:00000012  0074
+##dw 70:74
+0070:00000074  0fa4 fe70 00c0 07f8 0828 00a8 0428 0000
+0070:00000084  03c8 ffff ffff 0843 0000 0000 0000 0000
+0070:00000094  0000 0000 0000 0000 0000 0000 0000 0000
+0070:000000a4  0000 0000 0000 0000 0000 0000 0000 0000
+0070:000000b4  0000 0000 0000 0000 0000 0000 0000 0000
+0070:000000c4  0000 0000 0000 0000 0000 0000 0000 0000
+0070:000000d4  0000 0000 0000 0000 0000 0000 0000 0000
+0070:000000e4  0000 0000 0000 0000 0000 0000 0000 0000
+
+&gt;&gt; +8 into the file system section is the CDS RMP selector.
+&gt;&gt; Can verify this by checking out the memory object owner.
+
+##.m 828:0
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 0003 %feaef04c 00000400 %fe6ef000 001 0002 0023 0000 0000 0003 0000      =0000
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 0003  0003 fec5  0000 ffec 0000  0000 00  01 00 00 vmkrhrw
+   pvmli    cs    eip     phlock   cpg      va    flg  hptda hob sig  csig
+ %fe82e4c4 002d 0a6800a5 %ac22403c 0001 %fe83c000 0005 024b 0003 ea9f ea9f
+
+&gt;&gt; Owned by the Kernel Resident Heap. Look at the header
+
+##dd %(828:0)-10 l8
+%fe7015b4  000007d0 ff5c07b0 0000bd64 0000060d
+%fe7015c4  049d0600 01ae0014 00000001 00000400
+
+&gt;&gt; This is an attributed block so look at the trailer
+
+##dd %(828:0)-10-4+60c l8
+%fe701bbc  00000000 00000000 ff610828 0000fe70
+%fe701bcc  ff9e0054 4d45534b 00000201 00000000
+
+##.mo ff61
+ff61 cdsrmp
+
+&gt;&gt; 828 does indeed point to the CDS RMP
+
+
+&gt;&gt; Now dump the CDS handle table for the process of interest
+##.p#
+ Slot  Pid  Ppid Csid Ord  Sta Pri  pTSD     pPTDA    pTCB     Disp SG Name
+ 0048# 0029 0004 0029 0001 blk 0200 ab805000 ab99b820 ab97fc20 1ed4 11 cmd
+
+
+##dw %ab99b820 +cds_handle-ptda_start l1a
+%ab99bac8  0000 0000 0000 0000 0000 0000 0000 0090
+%ab99bad8  0000 0000 0000 0000 0000 0000 0000 0000
+%ab99bae8  0000 0000 0000 0000 0000 0000 0000 0000
+%ab99baf8  0000 0000
+
+&gt;&gt; Except for driver 07 (H:) the current directory handle is null.
+&gt;&gt; This implies that the current directory for drive H: is not the
+&gt;&gt; root. To see which it is, we need to locate the the CDS entry with
+&gt;&gt; handle 0x0090.
+
+
+&gt;&gt; The RMP has a 0x14 byte header. Each entry is prefixed with a word
+&gt;&gt; length followed by the handle for that entry.
+
+&gt;&gt; Starting with the first entry scan through until handle 0x0090 is
+&gt;&gt; located.
+
+##dw 828:14 l4
+0828:00000014  8028 0000 <!-- entering slot 473 -->00b2 0000
+
+##dw 828:14 l2
+0828:00000014  8028 0000
+
+##dw 828:14+28 l2
+0828:0000003c  0028 001c
+
+##dw 828:14+28+28 l2
+0828:00000064  0028 001d
+
+##dw 828:14+28+28+28 l2
+0828:0000008c  0026 001e
+
+##dw 828:14+28+28+28+26 l2
+0828:000000b2  8023 0014
+
+##dw 828:14+28+28+28+26+23 l2
+0828:000000d5  0028 0022
+
+##dw 828:14+28+28+28+26+23+28 l2
+0828:000000fd  002e 008f
+
+##dw 828:14+28+28+28+26+23+28+2e l2
+0828:0000012b  0025 0090
+
+&gt;&gt; The CDS starts after the length prefix.
+
+##.d cds 828:12b+2
+   cd_handle: 0090                          cddFAT_id: 0000
+   cd_refcnt: 0002
+    cd_flags: 40
+   cd_devptr: 04b8:00c4
+ cd_OwnerFSC: 0008
+
+    cdi_hVPB: 0012
+     cdi_end: 0002
+   cdi_flags: 80
+    cdi_text: H:\spool
+##</PRE>
+ 
+<BR>
+Current Directory Structure
+<P>
+<B>Notes: </B><!-- lm: 0x2 6 -->
+<UL>
+<P>
+The selector for the<B> CDS</B> segment may be located from the SAS, as
+illustrated above, or form the storage at label<B> CDSAddr</B>.<!-- lm: 0x2 6 -->
+<P>
+The CDS RMP has a unique owner ID, which may be determined using the <A HREF="339_L3_MFormatMemoryStructu.html">.M
+command.</A>. In the case of the CDS RMP, it is allocated from the kernel
+resident heap, so the true owner id is found in the heap header (or its
+extension - the trailer).<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+
+<P>
+For a description of the CDS fields see the <A HREF="3218_L3_CurrentDirectoryStru.html">Current
+Directory Structure (CDS)</A> in the<B> System Reference</B>. 
+
+<P><HR>
+
+<A HREF="325_L4_DriveParameterBlockD.html">[Back: Drive Parameter Block (DPB)]</A> <BR>
+<A HREF="327_L4_KernelSemaphoreKSEM.html">[Next: Kernel Semaphore (KSEM)]</A> 
+</BODY>
+</HTML>

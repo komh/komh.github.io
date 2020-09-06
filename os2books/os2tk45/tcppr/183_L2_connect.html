@@ -1,0 +1,246 @@
+<HTML>
+<HEAD>
+<TITLE>connect()</TITLE>
+</HEAD>
+<BODY>
+<H1>connect()</H1><!-- entering slot 197 -->
+<P>
+The connect() socket call requests a connection to a remote host.
+<P>
+<B>Syntax</B>
+<PRE>#include &lt;types.h&gt;
+#include &lt;sys\socket.h&gt;
+int connect(<I>s</I>, <I>name</I>, <I>namelen</I>)
+int <I>s</I>;
+struct sockaddr *<I>name</I>;
+int <I>namelen</I>;
+</PRE>
+
+<P>
+
+<P>
+<B>Parameters</B><!-- lm: 0x2 0 -->
+<P>
+<I>s</I><!-- lm: 0x11 2 -->
+<UL> Socket descriptor used to originate the
+connection request.<!-- lm: 0x2 0 -->
+</UL><I> name</I><!-- lm: 0x11 2 -->
+<UL> Pointer
+to a sockaddr structure containing the address of the socket to which a
+connection will be attempted.<!-- lm: 0x2 0 -->
+</UL><I> namelen</I><!-- lm: 0x11 2 -->
+<UL> Size
+in bytes of the sockaddr structure pointed to by<I> name</I>.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>Description</B>
+<P>
+The following diagram illustrates connect() processing: connect ( )Processing
+<BR>
+<!-- Unable to decode bitmap format --><IMG SRC="183_L2_connect_11.gif" WIDTH=231 HEIGHT=231>
+<P>
+If you are using a SOCKS server, connect() calls Rconnect(). See <A HREF="089_L2_SocketSecureSupport.html">Socket
+Secure Support</A> for information about SOCKS.
+<P>
+<B>Stream or sequenced packet sockets:</B> The connect() call performs two
+tasks when called for a stream or sequenced packet socket:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 5 -->Completes the binding if necessary for a socket
+<!-- lm: 0x2 1 -->
+<BR>
+ <LI><LI><!-- lm: 0x2 5 -->Attempts to create a connection between two sockets.
+<!-- lm: 0x2 0 -->
+</UL>
+<P>
+This call is used by the client side of socket-based applications to establish
+a connection with a server. The remote server must have a passive open pending.
+This means the server must successfully call bind() and listen(); otherwise,
+connect() returns a value of -1 and the error value is set to SOCECONNREFUSED.
+If you are using a SOCKS server and the connection is rejected by the SOCKS
+server, the return code will be SOCECONNREFUSED.
+<P>
+In the internet communication domain, a timeout occurs if a connection to
+the remote host is not successful within 75 seconds (1 minute and 15 seconds).
+ There is no timeout for Local IPC. In the NetBIOS communication domain,
+a timeout occurs if a connection to the host is not successful within the
+time defined by the NetBIOS protocol parameters<I> Transmit Timer</I> multiplied
+by<I> Transmit Retry</I>.
+<P>
+If<I> s</I> is in blocking mode, the connect() call blocks the caller until
+the connection is established or until an error is received.  If the socket
+is in nonblocking mode, and the connection was successfully initiated, connect()
+returns a value of -1 and sets the error value to SOCEINPROGRESS. The caller
+can test the completion of the connection setup by calling:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 5 -->select(), to test for the ability to write to the
+socket<!-- lm: 0x2 2 --> <!-- lm: 0x2 5 -->
+<UL>getsockopt(), with option
+SO_ERROR, to test if the connection succeeded<!-- lm: 0x2 0 -->
+</UL>Stream or sequenced packet sockets can call connect() only once.
+<P>
+<B>Datagram or raw sockets:</B> The connect() call specifies the destination
+peer address when called for a datagram or raw socket. Normally, datagram
+and raw sockets use connectionless data transfer calls such as sendto()
+and recvfrom().  However, applications can call connect() to specify and
+store the destination peer address for this socket.  The system will then
+know which address to send data to on this socket. This method of communication
+allows datagram and raw sockets to be connected. However, data is still
+not guaranteed to be delivered. Thus the normal features of connectionless
+mode sockets are maintained. The address is remembered until another connect()
+call is made. This permits the use of readv(), recv(), send(), and writev(),
+which are usually reserved for connection-oriented sockets. The application
+can still use sendto(), recvfrom(), sendmsg(), and recvmsg().  The advantage
+of calling connect() and being connected is that the destination peer address
+does not have to be specified for all datagrams sent.
+<P>
+Datagram and raw sockets can call connect() multiple times. The application
+can reset their destination address by specifying a new address on the connect()
+call. In addition, the socket can be returned to operate in a connectionless
+mode by calling connect() with a null destination address. The null address
+is created by zeroing the sockaddr structure and only<!-- entering slot 198 --> setting
+the address family field. The call to connect will return a value of -1,
+indicating that the connection to the null address cannot be established.
+Calling sock_errno() will return SOCEADDRNOTAVAIL. For more information
+on connecting datagram sockets, see <A HREF="201_L2_sendto.html">Description
+for sendto()</A>.
+<P>
+<B>Return Values</B>
+<P>
+The value 0 indicates success; the value -1 indicates an error. You can
+get the specific error code by calling sock_errno() or psock_errno(). If
+you are using a SOCKS server and the SOCKS server rejects the connection,
+the return code will be SOCECONNREFUSED.<!-- lm: 0x2 0 -->
+<P>
+<B>Error Code</B><!-- lm: 0x2 24 -->
+<UL><B>Description</B><!-- lm: 0x2 0 -->
+</UL>SOCEADDRNOTAVAIL<!-- lm: 0x12 24 -->
+<UL>Thecallinghostcannotreachthespecifieddestination
+.<!-- lm: 0x2 0 -->
+</UL>SOCEAFNOSUPPORT<!-- lm: 0x12 24 -->
+<UL>Theaddressfamilyisnotsupported
+.<!-- lm: 0x2 0 -->
+</UL>SOCEALREADY<!-- lm: 0x12 24 -->
+<UL>Thesocket<I>s</I>ismarkednonblocking
+,andapreviousconnectionattempthasnotcompleted .<!-- lm: 0x2 0 -->
+</UL>SOCENOTSOCK<!-- lm: 0x12 24 -->
+<UL>The<I>s</I>parameterisnotavalidsocketdescriptor
+.<!-- lm: 0x2 0 -->
+</UL>SOCECONNREFUSED<!-- lm: 0x12 24 -->
+<UL>Theconnectionrequestwasrejectedbythedestinationhost
+.IfyouareusingaSOCKSserverandtheSOCKSserverrejectstheconnection ,thereturncodewillbeSOCECONNREFUSED
+.<!-- lm: 0x2 0 -->
+</UL>SOCEFAULT<!-- lm: 0x12 24 -->
+<UL>Using<I>name</I>and<I>namelen</I>wouldresultinanattempttocopytheaddressintoaportionofthecaller
+' saddressspacetowhichdatacannotbewritten .<!-- lm: 0x2 0 -->
+</UL>SOCEINPROGRESS<!-- lm: 0x12 24 -->
+<UL>Thesocket<I>s</I>ismarkednonblocking
+,andtheconnectioncannotbecompletedimmediately .TheSOCEINPROGRESSvaluedoesnotindicateanerrorcondition
+.<!-- lm: 0x2 0 -->
+</UL>SOCEINTR<!-- lm: 0x12 24 -->
+<UL>Interruptedsystemcall
+.<!-- lm: 0x2 0 -->
+</UL>SOCEINVAL<!-- lm: 0x12 24 -->
+<UL>The<I>namelen</I>parameterisnotavalidlength
+.<!-- lm: 0x2 0 -->
+</UL>SOCEISCONN<!-- lm: 0x12 24 -->
+<UL>Thesocket<I>s</I>isalreadyconnected
+.<!-- lm: 0x2 0 -->
+</UL>SOCENETUNREACH<!-- lm: 0x12 24 -->
+<UL>Thenetworkcannotbereachedfromthishost
+.<!-- lm: 0x2 0 -->
+</UL>SOCETIMEDOUT<!-- lm: 0x12 24 -->
+<UL>Theconnectionestablishmenttimedoutbeforeaconnectionwasmade
+.<!-- lm: 0x2 0 -->
+</UL>SOCENOBUFS<!-- lm: 0x12 24 -->
+<UL>Nobufferspaceisavailable
+.<!-- lm: 0x2 0 -->
+</UL>SOCEOPNOTSUPP<!-- lm: 0x12 24 -->
+<UL>Theoperationisnotsupportedonsocket<I>s
+</I>.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>Examples</B>
+<P>
+Note the following about these connect() call examples:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 5 -->For the internet examples, put the internet address
+and port in network-byte order.  To put the port into network-byte order,
+use the htons() utility routine to convert a short integer from host-byte
+order to network-byte order.<!-- lm: 0x2 2 -->
+<P>
+<LI><!-- lm: 0x2 5 -->For the internet examples, set the<I> address</I> field
+using the inet_addr() utility routine, which takes a character string representing
+the dotted-decimal address of an interface and returns the binary internet
+address representation in network-byte order.<!-- lm: 0x2 2 -->
+<P>
+<LI><!-- lm: 0x2 5 -->To ensure that the name requested does not set any
+reserved fields, zero the structure before using it.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+These examples could be used to connect to the servers shown in the examples
+listed for <A HREF="182_L2_bind.html">bind()</A>.
+<PRE>int s;struct sockaddr_in servername;
+int rc;
+int connect(int s, struct sockaddr *name, int namelen); /* extracted from sys/socket.h */
+/* Connect to server bound to a specific interface in the <B>internet</B> domain */
+/* clear the structure */
+memset(&amp;servername, 0, sizeof(servername));
+servername.sin_len = sizeof(servername);
+servername.sin_family = AF_INET;
+servername.sin_addr.s_addr = inet_addr("129.5.24.1"); /* specific interface */
+servername.sin_port = htons(1024); /* set to the port to which */
+                                           /* the server is bound */
+...
+rc = connect(s, (struct sockaddr *) &amp;servername, sizeof(servername));
+
+/* Connect to a <B>NetBIOS</B> server */
+struct sockaddr_nb nbservername;
+memset(&amp;nbservername, 0, sizeof(nbservername));
+nbservername.snb_len = sizeof(nbservername);
+nbservername.snb_family = AF_NB;
+nbservername.snb_type = NB_UNIQUE;
+nbservername.snb_adapter = 0;
+strcpy(nbservername.snb_name, "NBSERVER");
+...
+rc = connect(s, (struct sockaddr *) &amp;nbservername, sizeof(nbservername));
+
+</PRE>
+
+<P>
+<B>Related Calls</B><!-- lm: 0x2 5 -->
+<UL>
+<P>
+<A HREF="179_L2_accept.html">accept()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="180_L2_accept_and_recv.html">accept_and_recv()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="182_L2_bind.html">bind()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="185_L2_getsockname.html">getsockname()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="251_L2_htons.html">htons()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="252_L2_inet_addr.html">inet_addr()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="188_L2_listen.html">listen()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="264_L2_Rconnect.html">Rconnect()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="197_L2_select.html">select()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="198_L2_send.html">send()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="205_L2_sock_errno.html">sock_errno()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="206_L2_socket.html">socket()</A><!-- lm: 0x2 0 -->
+</UL>
+
+<P><HR>
+
+<A HREF="182_L2_bind.html">[Back: bind()]</A> <BR>
+<A HREF="184_L2_getpeername.html">[Next: getpeername()]</A> 
+</BODY>
+</HTML>

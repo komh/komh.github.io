@@ -1,0 +1,287 @@
+<HTML>
+<HEAD>
+<TITLE>Using Details Methods</TITLE>
+</HEAD>
+<BODY>
+<H1>Using Details Methods</H1><!-- entering slot 118 -->
+<P>
+The CAR sample Workplace Shell object in the Toolkit can be used to illustrate
+the requirements for defining Details data for a class of objects. CAR can
+provide Details data for CAR objects by:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Defining a data structure for the Details fields
+to be included in the Details view, as shown in the following sample code:
+
+<PRE>/* CARDETAILS:  Structure used for Details view  */
+
+typedef struct _CARDETAILS
+{
+   PSZ      pszMake;     /* Manufacturer     */
+   PSZ      pszModel;    /* Model            */
+   PSZ      pszColor;    /* Color of car     */
+   CDATE    cdateSale;   /* Date of sale     */
+   ULONG    ulPrice;     /* Price in dollars */
+}
+CARDETAILS;
+typedef CARDETAILS *PCARDETAILS;
+
+</PRE>
+<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Defining and initializing a static array of CLASSFIELDINFO
+structures for each set of Details data, as shown in the following sample
+code. This is done on class initialization, when wpclsInitData is called.
+
+<P>
+<B>Note: </B> Title and Icon details are defined for CAR objects by its
+ancestor class WPObject. This means that the CLASSFIELDINFO data structures
+for Title and Icon details are defined and initialized in the WPObject class
+definition.<!-- lm: 0x2 6 -->
+<UL>
+<PRE>#define NUM_CAR_FIELDS 5
+
+CLASSFIELDINFO fieldinfo[NUM_CAR_FIELDS];
+
+PSZ pszCarColTitles[] =
+{
+   "Make",           /* Details column 1 */
+   "Model",          /* Details column 2 */
+   "Color",          /* Details column 3 */
+   "Sale date",      /* Details column 4 */
+   "Price ($)"       /* Details column 5 */
+};
+    .
+    .
+    .
+
+/****************************************************************/
+/* Method:  wpclsInitData                                       */
+/* Purpose: Initialize the Details data                         */
+/****************************************************************/
+
+SOM_Scope void SOMLINK carM_wpclsInitData(M_Car *somSelf)
+
+{
+  USHORT          rc, i;
+  PCLASSFIELDINFO pCFI;
+
+  /* M_CarData *somThis  = M_CarGetData(somSelf); */
+  M_CarMethodDebug("M_Car","carM_wpclsInitData");
+
+  /* Call the parent class method first */
+  parent_wpclsInitData(somSelf);
+
+  /*   Get the class title */
+  if (!WinLoadString(WinQueryAnchorBlock(HWND_DESKTOP),
+                     _clsQueryModuleHandle(somSelf),
+                     ID_TITLE,
+                     sizeof(szCarClassTitle), szCarClassTitle))
+    /* If the load string has failed, use the parent's string */
+    strcpy(szCarClassTitle, parent_wpclsQueryTitle(somSelf));
+
+  /* Initialize everything needed for the CLASSFIELDINFO */
+  /* data structure for the CAR object class             */
+  for (i=0,pCFI=fieldinfo;i&lt;NUM_CAR_FIELDS;i++,pCFI++)
+
+  {
+    /* Memset the structure to zero's */
+    memset((PCH)pCFI,0,sizeof(CLASSFIELDINFO));
+
+    pCFI-&gt;cb             = sizeof(CLASSFIELDINFO);
+
+    pCFI-&gt;flData         = CFA_RIGHT     |
+                           CFA_SEPARATOR |
+                           CFA_FIREADONLY;
+
+    pCFI-&gt;flTitle        = CFA_CENTER        |
+                           CFA_SEPARATOR     |
+                           CFA_HORZSEPARATOR |
+                           CFA_STRING        |
+                           CFA_FITITLEREADONLY;
+
+    pCFI-&gt;pNextFieldInfo = pCFI + 1;   /* Point to the next CLASSFIELDINFO */
+    pCFI-&gt;pTitleData     = (PVOID) apszCarColTitles[i];
+    pCFI-&gt;flCompare      = COMPARE_SUPPORTED |
+                           SORTBY_SUPPORTED;
+
+    switch (i)
+    {
+      case INDEX_MAKE:
+        pCFI-&gt;flData           |= CFA_STRING;
+        pCFI-&gt;offFieldData      = (ULONG)(FIELDOFFSET(CARDETAILS,pszMake));
+        pCFI-&gt;ulLenFieldData    = sizeof(PSZ);
+        pCFI-&gt;DefaultComparison = CMP_EQUAL;
+        break;
+
+      case INDEX_MODEL:
+        pCFI-&gt;flData           |= CFA_STRING;
+        pCFI-&gt;offFieldData      = (ULONG)(FIELDOFFSET(CARDETAILS,pszModel));
+        pCFI-&gt;ulLenFieldData    = sizeof(PSZ);
+        pCFI-&gt;DefaultComparison = CMP_EQUAL;
+        break;
+
+      case INDEX_COLOR:
+        pCFI-&gt;flData           |= CFA_STRING;
+        pCFI-&gt;offFieldData      = (ULONG)(FIELDOFFSET(CARDETAILS,pszColor));
+        pCFI-&gt;ulLenFieldData    = sizeof(PSZ);
+        pCFI-&gt;DefaultComparison = CMP_EQUAL;
+        break;
+
+      case INDEX_SALE_DATE:
+        pCFI-&gt;flData           |= CFA_DATE;
+        pCFI-&gt;offFieldData      = (ULONG)(FIELDOFFSET(CARDETAILS,cdateSale));
+        pCFI-&gt;ulLenFieldData    = sizeof(CDATE);
+        pCFI-&gt;ulLenCompareValue = sizeof(CDATE);
+        pCFI-&gt;DefaultComparison = CMP_GREATER;
+        break;
+
+      case INDEX_PRICE:
+        pCFI-&gt;flData           |= CFA_ULONG;
+        pCFI-&gt;offFieldData      = (ULONG)(FIELDOFFSET(CARDETAILS,ulPrice));
+        pCFI-&gt;ulLenFieldData    = sizeof(ULONG);
+        pCFI-&gt;ulLenCompareValue = sizeof(ULONG);
+        pCFI-&gt;DefaultComparison = CMP_GREATER;
+        break;
+
+    }  /* End switch(i) */
+  }   /* End for (i=0,pCFI=fieldinfo;i&lt;NUM_CAR_FIELDS;i++,pCFI++) */
+  /* Terminate linked list */
+  fieldinfo[NUM_CAR_FIELDS-1].pNextFieldInfo = NULL;
+}   /* End carM_ wpclsInitData() */
+
+</PRE>
+<!-- lm: 0x2 2 -->
+</UL> 3.<!-- lm: 0x2 6 -->
+<UL>Defining the column headings
+and format of the Details data placed into the object's Details record by
+overriding wpclsQueryDetailsInfo, as shown in the following sample code:
+
+<PRE>/****************************************************************/
+/* Method: wpclsQueryDetailsInfo                                */
+/* Appends the CAR specific chain of FIELDINFO data structure   */
+/* describing the Details data of this object to                */
+/* *ppClassFieldInfo, if ppClassFieldInfo is non-NULL.          */
+/* In this case, it <!-- entering slot 119 -->also sets *ppClasssFieldInfo to the head    */
+/* of the linked list.                                          */
+/*                                                              */
+/* Adds the number of bytes required by the Details data for    */
+/* car to *pSize, if pSize is non-NULL.                         */
+/*                                                              */
+/* Add Details data for this object.                            */
+/****************************************************************/
+
+SOM_Scope ULONG SOMLINK
+  redcarM_wpclsQueryDetailsInfo(M_Car *somself,
+                                PCLASSFIELDINFO *ppClassFieldInfo,
+                                PULONG pSize)
+
+{
+  ULONG           cParentColumns;
+  PCLASSFIELDINFO pCFI;
+  ULONG           i;
+
+  /* M_CarData  *somThis = M_CarGetData(somself); */
+  M_CarMethodDebug("M_Car","carM_wpclsQueryDetailsInfo");
+
+  /* Always call the parent method first to retrieve the number */
+  /* of Details columns and parent's data already defined in    */
+  /* the Details buffer.                                        */
+  cParentColumns =
+    parent_wpclsQueryDetailsInfo(somself,ppClassFieldInfo,pSize);
+
+  /* If pSize is non-NULL, we must add the size of our */
+  /* Details column data structure.                    */
+  if (pSize)
+    *pSize += sizeof(CARDETAILS);  /* Adjust size */
+
+  /*******************************************************************/
+  /* If the request was for the chained FIELDINFO data structures    */
+  /* (ppClassFieldInfo is non-NULL), link them in.                   */
+  /* Eventually the chain will look like this:                       */
+  /*                                                                 */
+  /* Grandparent - Parent - Me - Child - Grandchild.                 */
+  /*                                                                 */
+  /* Get the pointer to the beginning of the chain.                  */
+  /* If the beginning of the chain is 0, assign the address          */
+  /* of the first CLASSFIELDINFO structure to *ppClassFieldInfo.     */
+  /* Otherwise, *ppClassFieldInfo points to the first column         */
+  /* description in the chain.  The chain is examined and            */
+  /* the CLASSFIELDINFO data structure is linked to the end of it.   */
+  /*******************************************************************/
+
+  if (ppClassFieldInfo)
+  {
+    /* Find the last link in the chain; then link the CLASSFIELDINFO */
+    /* data structures to the chain.                                 */
+    if (*ppClassFieldInfo)
+    {
+      pCFI = *ppClassFieldInfo;
+      for (i=0;i&lt;cParentColumns;i++)
+        pCFI = (pCFI-&gt;pNextFieldInfo) ? pCFI-&gt;pNextFieldInfo : pCFI;
+
+      pCFI-&gt;pNextFieldInfo = fieldinfo;
+    }
+    else
+      *ppClassFieldInfo = fieldinfo;
+  }
+  return ((ULONG) (cParentColumns + NUM_CAR_FIELDS));
+}   /* End carM_wpclsQueryDetailsInfo() */
+
+</PRE>
+<!-- lm: 0x2 2 -->
+</UL> 4.<!-- lm: 0x2 6 -->
+<UL>Adding Details data to
+an object's Details record by overriding wpQueryDetailsData, as shown in
+the following sample code:
+<PRE>/*
+ *  Returns the car specific data for the Details view of this object.
+ *  Sets the pointer (*ppDetailsData) to the beginning of the buffer
+ *  into which the data is written.
+ */
+
+SOM_Scope ULONG SOMLINK car_wpQueryDetailsData(Car *somSelf,
+                                               PVOID *ppDetailsData,
+                                               PULONG pcp)
+
+{
+  PCARDETAILS pCarDetails;
+  PBYTE       pSize;
+  CarData *somThis = CarGetData(somSelf);
+  CarMethodDebug("Car","car_wpQueryDetailsData");
+
+  parent_wpQueryDetailsData(somSelf,ppDetailsData,pcp);
+
+  if (ppDetailsData)    /* Query data */
+  {
+    pCarDetails                  = (PCARDETAILS) *ppDetailsData;
+    pCarDetails-&gt;pszMake         = "Toyota";   /* Manufacturer     */
+    pCarDetails-&gt;pszModel        = "Camry";    /* Model name       */
+    pCarDetails-&gt;pszColor        = "BLUE";     /* Color of the car */
+    pCarDetails-&gt;cdateSale.day   = 24;         /* Date of sale     */
+    pCarDetails-&gt;cdateSale.month = 12;
+    pCarDetails-&gt;cdateSale.year  = 91;
+    pCarDetails-&gt;ulPrice         = 14000;      /* Price in dollars */
+
+    /* Point to buffer location after the Details data */
+    *ppDetailsData = ((PBYTE) (*ppDetailsData)) + sizeof(*pCarDetails);
+
+  }   /* End if (ppDetailsData) */
+  else   /* Query size of data */
+  {
+    /* Caller is querying the buffer size */
+    *pcp += sizeof(*pCarDetails);
+  }
+  return(TRUE);
+}   /* End car_wpQueryDetailsData() */
+
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="110_L2_AboutDetailsMethods.html">[Back: About Details Methods]</A> <BR>
+<A HREF="112_L3_IncludingObjectsinaC.html">[Next: Including Objects in a Container]</A> 
+</BODY>
+</HTML>

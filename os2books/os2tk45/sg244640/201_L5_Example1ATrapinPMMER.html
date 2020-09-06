@@ -1,0 +1,248 @@
+<HTML>
+<HEAD>
+<TITLE>Example 1 - A Trap in PMMERGE.DLL</TITLE>
+</HEAD>
+<BODY>
+<H1>Example 1 - A Trap in PMMERGE.DLL</H1><!-- entering slot 293 -->
+<P>
+<U><I>Steps for analysing traps in PM DLLs:</I></U><!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Intercept the trap at the point of failure.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Unwind the stack to the application call.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Validate the parameters to the API call.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If necessary, determine how the user routine was invoked
+by examining the<B> MQ</B> and looking for dispatched messages or by unwinding
+the stack further.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+This example is of a trap in PMMERGE.DLL, but caused by an application fault!
+
+<P>
+Because we have a trap E, we set the fatal vector under the Kernel Debugger
+(or use TRAPDUMP=ON in CONFIG.SYS to take a dump) then re-create the problem.
+
+<PRE>##vsf *##g
+Trap 14 (0EH) - Page Fault 0006, Not Present, Write Access, User Mode
+eax=00000007 ebx=00273fcc ecx=00000001 edx=00000007 esi=12d3e089 edi=00000000
+eip=1bd3d261 esp=00273ebc ebp=00273f1c iopl=2 rf -- -- nv up ei pl nz ac po cy
+cs=005b ss=0053 ds=0053 es=0053 fs=150b gs=0000  cr2=00000000  cr3=001d4000
+005b:1bd3d261 f3a5          repe movsd es:00000000=invalid ds:12d3e089=69727453
+##ln
+005b:00000000 turkey:FLAT:__$dummy$ + 1bd3d261
+</PRE>
+
+<P>
+We have trapped in a DLL, probably PMMERGE.DLL, certainly not in the user's
+.EXE code.  We unwind the stack to find the return address in the user's
+.EXE 
+<PRE>##dd %ebp
+%00273f1c  00273f5c 1bd3d05b 00000000 00000005
+%00273f2c  00080001 00000000 00080013 00010423
+%00273f3c  00190008 00000000 00000001 00000014
+%00273f4c  00000000 80000144 00000001 00190008
+%00273f5c  00273fa8 1bd03893 80000144 00000071
+%00273f6c  00280018 00000000 000103ec 00000000
+%00273f7c  00000000 00190008 00273fcc 00000000
+%00273f8c  00000000 ffffffff 80000144 12d31630
+##d
+%00273f9c  00000000 12d31494 00190008 00273ff4
+%00273fac  00010932 00190008 00273fcc 0000000c
+%00273fbc  00000004 00000004 00000007 80000144
+%00273fcc  80000144 00000071 00280018 00000000
+%00273fdc  0092d87d 0000027a 000000f0 00000000
+%00273fec  12d31630 00190008 00000000 1bfbbf68
+%00273ffc  00022bf4
+Invalid linear address: %00274000
+</PRE>
+
+<P>
+Not all the stack was paged in to physical memory, but never mind. Enough
+is there to allow us to find the return address to the user's application
+code. 
+<P>
+Following the base pointer (EBP): 
+<PRE>%00273f1c  00273f5c 1bd3d05b
+
+%00273f5c  00273fa8 1bd03893 80000144 00000071
+
+%00273f9c                             00273ff4
+%00273fac  00010932 00190008 00273fcc 0000000c
+
+</PRE>
+
+<P>
+The return address is %10932. We inspect the code just before this address.
+
+<PRE>##u %10932-20
+%00010912 25837ddc2a         and     eax,2adc7d83
+%00010917 0f8507000000       jnz     %00010924
+%0001091d e916000000         jmp     %00010938
+%<!-- entering slot 294 -->00010922 8bc0               mov     eax,eax
+%00010924 8d45d8             lea     eax,[ebp-28]
+%00010927 50                 push    eax
+%00010928 ff75fc             push    dword ptr [ebp-04]
+%0001092b b002               mov     al,02
+%0001092d e8862ecf1b         call    %1bd037b8
+%00010932 83c408             add     esp,+08
+%00010935 ebc1               jmp     %000108f8
+%00010937 fc                 cld
+##ln %1bd037b8
+%00000000 turkey:FLAT:__$dummy$ + 1bd037b8
+</PRE>
+
+<P>
+This call was to a routine at %1bd037b8. LN doesn't give us a useful symbol
+(our .EXE is being selected instead of the correct .DLL symbol). We find
+out who owns this address from the memory management control blocks. 
+<PRE>##.m %1bd037b8
+
+*har     par      cpg        va    flg next prev link hash hob   hal
+ 01c0 %feaf168a 00000001 %ffe3c000 101 000d 01e2 01bd 0000 013e 000c      =0000
+ hal=000c pal=%ffe5c078  har=01c0  hptda=010c  pgoff=000d7  f=021
+ har     par      cpg        va    flg next prev link hash hob   hal
+ 01bd %feaf1648 00000001 %ffede000 101 01a2 01be 0106 0000 013e 0009      =0000
+ hal=0009 pal=%ffe5c060  har=01bd  hptda=010c  pgoff=00000  f=021
+ har     par      cpg        va    flg next prev link hash hob   hal
+ 0106 %feaf068e 000000f0 %1bd00000 3d9 0105 0107 0000 0000 013e 0000  hco=00307
+ hob   har hobnxt flgs own  hmte  sown,cnt lt st xf
+ 013e  01c0 0000  1838 0139 0139  0000 00  02 00 00 shared    c:pmmerge.dll
+ hco=00307 pco=fe64ef3e  hconext=00296 hptda=032f f=1c  pid=0019 a:turkey.exe
+ hco=00296 pco=fe64ed09  hconext=001f9 hptda=0301 f=1c  pid=0009 d:cmd.exe
+ hco=001f9 pco=fe64e9f8  hconext=00188 hptda=02c9 f=1c  pid=0007 d:cmd.exe
+ hco=00188 pco=fe64e7c3  hconext=00107 hptda=0291 f=1c  pid=0005 c:2000.exe
+ hco=00107 pco=fe64e53e  hconext=0008e hptda=023b f=1c  pid=0004 c:pmshell.exe
+ hco=0008e pco=fe64e2e1  hconext=0002a hptda=01b5 f=1c  pid=0003 c:harderr.exe
+ hco=0002a pco=fe64e0ed  hconext=00000 hptda=010c f=1d  pid=0002 c:pmshell.exe
+</PRE>
+
+<P>
+We can see that our call was to an entry point in PMMERGE.DLL. We need to
+activate PMMERGE's symbols.
+<PRE>##wa pmmerge
+##ln %1bd037b8
+%1bd037b8 pmmerge:PM32BIT:WIN32DISPATCHMSG
+##ln
+005b:1bd3d064 pmmerge:PM32BIT:LoadStrMsg + 1fd
+005b:1bd3d2a8 WIN32POSTQUEUEMSG - 47
+</PRE>
+
+<P>
+So we called WinDispatchMsg and some time later we probably called LoadStrMsg,
+which is where we trapped. First we need to check the parameters to WinDispatchMsg.
+These are:<!-- lm: 0x2 1 -->
+<P>
+HAB<!-- lm: 0x2 11 -->
+<UL> 00190008<!-- lm: 0x2 1 -->
+</UL> PQMSG<!-- lm: 0x2 11 -->
+<UL> 00273fcc
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<!-- entering slot 295 -->The QMSG at %273fcc is also in the stack we dumped:
+
+<PRE>%00273fcc  80000144 00000071 00280018 00000000%00273fdc  0092d87d 0000027a 000000f0 00000000
+</PRE>
+
+<P>
+The first parameter is the<B> HWND</B>. We convert this to a PWND, dump
+the WND and look for the window procedure entry point.
+<PRE>##dd phandletable l1
+9f3f:0000ab78  12d50000
+
+##dd %12d50000+20+(8*144) l2
+%12d50a40  12d31494 00000000
+
+##dd %12d31494
+%12d31494  12d31838 12d3c974 00000000 12d3c974
+%12d314a4  00c80262 0104029e 80000000 00000008
+%12d314b4  12d314f0 00000004 12d31630 80000144
+%12d314c4  00000000 000103ec 00000000 00000000
+%12d314d4  12d3147c 00000000 00000000 00000000
+%12d314e4  00000000 2050534d 00000034 12d31894
+%12d314f4  00004b4e 00000000 0000fc4e 00000019
+%12d31504  00000000 000103ec 00000000 00000000
+</PRE>
+
+<P>
+<B>Note: </B>
+<P>
+We could have used the following more complex single command construct to
+achieve the same result:
+<PRE>
+##dd %(dw(%(dw(phandletable))+20+(8*144)))
+%12d31494  12d31838 12d3c974 00000000 12d3c974
+%12d314a4  00c80262 0104029e 80000000 00000008
+%12d314b4  12d314f0 00000004 12d31630 80000144
+%12d314c4  00000000 000103ec 00000000 00000000
+%12d314d4  12d3147c 00000000 00000000 00000000
+%12d314e4  00000000 2050534d 00000034 12d31894
+%12d314f4  00004b4e 00000000 0000fc4e 00000019
+%12d31504  00000000 000103ec 00000000 00000000
+
+</PRE>
+<!-- lm: 0x2 1 -->
+<P>
+ 
+<P>
+The window procedure entry point is at offset +0x34.
+<P>
+We now unassemble this:
+<PRE>##u %103ec
+%000103ec 55                 push    ebp
+%000103ed 8bec               mov     ebp,esp
+%000103ef 83ec08             sub     esp,+08
+%000103f2 8b4508             mov     eax,dword ptr [ebp+08]
+%000103f5 a32c0d0200         mov     dword ptr [00020d2c],eax
+%000103fa 8b450c             mov     eax,dword ptr [ebp+0c]
+%000103fd e93a000000         jmp     %0001043c
+%00010402 8bc0               mov     eax,eax
+%00010404 ff7508             push    dword ptr [ebp+08]
+%00010407 b001               mov     al,01
+%00010409 e8322dcf1b         call    WIN32QUERYANCHORBLOCK (%1bd03140)
+%0001040e 8945fc             mov     dword ptr [ebp-04],eax
+##u
+%00010411 6a00               push    +00
+%00010413 6a14               push    +14
+%00010415 6a01               push    +01
+%00010417 6a00               push    +00
+%00010419 ff75fc             push    dword ptr [ebp-04]
+%0001041c b005               mov     al,05
+%0001041e e81dccd21b         call    WIN32LOADSTRING (%1bd3d040)
+%00010423 83c418             add     esp,+18
+%00010426 eb1e               jmp     %00010446
+%00010428 8b4508             mov     eax,dword ptr [ebp+08]
+%0001042b e8d0fbffff         call    main (%00010000)
+%00010430 eb14               jmp     %00010446
+</PRE>
+
+<P>
+We notice that we trapped in an internal routine called LoadStrMsg and that
+we have called WinLoadString in the window procedure. Could these be related?
+
+<P>
+We see from the PM Programming Reference that WinLoadString has 5 parameters.
+ The right most is a pointer to a buffer and we see that the window procedure
+has pushed 0 on the stack this will surely cause WinLoadString to trap at
+some point.  How do we make this supposition less circumstantial and more
+concrete?
+<P>
+Clearly, for EBP to take us back to a call to WinDispatchMsg, without finding
+a stack frame from the window procedure implies that PMMERGE is using optimised
+code when the trap occurred. <!-- entering slot 296 --> That is, the conventional
+use of EBP is not in place - and this does occur in many internal routines
+in PMMERGE, for performance reasons.  If we scan back through the stack
+we notice the address %10423 occurring shortly before (in time) the call
+to LoadStrMsg.  This address is the return address from the WinLoadString
+call in the window procedure.  It would seem therefore that we have called
+that API with the bad parameter as suspected! 
+
+<P><HR>
+
+<A HREF="200_L4_PMWorkedExamplesUnde.html">[Back: PM Worked Examples Under WARP]</A> <BR>
+<A HREF="202_L5_Example2AHanginaPMAp.html">[Next: Example 2 - A Hang in a PM Application]</A> 
+</BODY>
+</HTML>

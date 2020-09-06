@@ -1,0 +1,101 @@
+<HTML>
+<HEAD>
+<TITLE>How can I determine a diskette format and if a disk is in a drive?</TITLE>
+</HEAD>
+<BODY>
+<H1>How can I determine a diskette format and if a disk is in a drive?</H1><!-- entering slot 123 -->
+<P>
+Let's have a snippet from one of my functions:
+<P>
+The 'ifdef M_I386's mean CSet/2
+<P>
+--- snip ---
+<PRE>EXPORT int GetFileSysAttach ( char cDrv, PVOID pInfo, UnsInt cbInfo )
+{
+CHAR szFileSys [4];
+
+  szFileSys [0] = (CHAR) toupper ( cDrv );
+  szFileSys [1] = ':';
+  szFileSys [2] = '\0';
+
+  DosError ( EXCEPTION_DISABLE );
+
+#ifdef M_I386
+  Errno = DosQueryFSAttach ( szFileSys, 0, FSAIL_QUERYNAME, pInfo, &amp;cbInfo );
+#else
+  Errno = DosQFSAttach ( szFileSys, 0, FSAIL_QUERYNAME, pInfo, &amp;cbInfo, 0L );
+#endif
+
+  DosError ( EXCEPTION_ENABLE );
+  return Errno ? -1 : 0;
+}
+
+
+EXPORT	int	GetFileSysInfo ( PSZ pszFileSys, PFSysInfo pfsi )
+{
+USHORT	idDrv;
+FSALLOCATE fsal;
+FSINFO	fsinfo;
+#ifdef M_I386
+PFSQBUFFER2 fsq = NULL;
+#else
+PFSQBUFFER  fsq = NULL;
+PUSHORT     pus;
+#endif
+CHAR    hbuf [L_FILENAME];
+PCHAR   pch;
+#ifndef _MT
+BOOL    fProt = ProtectedMode ();
+#else
+#define fProt TRUE
+#endif
+
+  idDrv = tolower ( *pszFileSys ) - ('a' - 1);
+
+  DosError ( EXCEPTION_DISABLE );
+
+  if ( ! (Errno = DosQFSInfo ( idDrv, 1, (PBYTE) &amp;fsal, sizeof ( fsal ) )) )
+    Errno = DosQFSInfo ( idDrv, 2, (PBYTE) &amp;fsinfo, sizeof ( fsinfo ) );
+
+  DosError ( EXCEPTION_ENABLE );
+
+  if ( Errno )
+  {
+    if ( Errno == ERROR_NO_VOLUME_LABEL )
+      memset ( &amp;fsinfo, 0, sizeof (fsinfo) );
+    else
+      return -1; // No disk inserted
+  }
+
+  if ( fProt )
+  {
+    if ( GetFileSysAttach ( (CHAR) (idDrv + 'a' - 1), hbuf, L_FILENAME ) )
+      return -1;
+
+#ifdef M_I386
+    fsq = (PFSQBUFFER2) hbuf;
+#else
+    fsq = (PFSQBUFFER) hbuf;
+#endif
+  }
+
+  DosError ( EXCEPTION_ENABLE );
+
+  ...
+</PRE>
+
+<P>
+--- snap ---
+<P>
+I think it's more than you want, the fsal-struct contains the size information,
+but I think if you want to retrieve ALL information about a logical drive
+that's what you need.
+<P>
+Credit:  Rainer Prem 
+
+<P><HR>
+
+<A HREF="103_L2_HowdoIsetanexception.html">[Back: How do I set an exception handler?]</A> <BR>
+<A HREF="105_L2_Whatdoallthosekeywor.html">[Next: What do all those keywords mean when making a DLL?]</A> 
+</BODY>
+</HTML>

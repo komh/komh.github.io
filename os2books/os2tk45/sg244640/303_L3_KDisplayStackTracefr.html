@@ -1,0 +1,141 @@
+<HTML>
+<HEAD>
+<TITLE>K - Display Stack Trace from Address</TITLE>
+</HEAD>
+<BODY>
+<H1>K - Display Stack Trace from Address</H1><!-- entering slot 436 --><!-- Unable to decode bitmap format --><IMG SRC="303_L3_KDisplayStackTracefr_87.gif" WIDTH=32 HEIGHT=32><!-- Unable to decode bitmap format --><IMG SRC="303_L3_KDisplayStackTracefr_88.gif" WIDTH=32 HEIGHT=32>
+<P>
+Display the stack-trace from a given stack frame address.
+<P>
+<U><I>Syntax:</I></U>
+<PRE>
+ÄÂÄÄ K  ÄÄÂÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄ
+   ÃÄÄ KS ÄÄ´  ÀÄÄ stack-frame  ÄÄÙ ÀÄÄ selector:offset  ÄÄÙ
+   ÀÄÄ KB ÄÄÙ
+
+
+
+</PRE>
+
+<P>
+<U><I>Parameters:</I></U><!-- lm: 0x2 1 -->
+<UL>
+<P>
+<B>K</B><!-- lm: 0x11 11 -->
+<UL> Display stack frame trace assuming the
+default operation size from the code descriptor specified by<B><I> selector:offset
+</B></I><!-- lm: 0x2 1 -->
+</UL><B>KS</B><!-- lm: 0x11 11 -->
+<UL> Display
+frame trace assuming an operation size of 16-bits (small-model).<!-- lm: 0x2 1 -->
+</UL><B> KB
+</B><!-- lm: 0x11 11 -->
+<UL>Display frame trace assuming an operation size
+of 32-bits (big-model).<!-- lm: 0x2 1 -->
+</UL><B><I> stack-frame</B></I><!-- lm: 0x11 11 -->
+<UL> Address
+of the starting stack-frame. If not specified then this defaults to the
+current<B> SS:EBP</B> or<B> SS:BP</B> as set by the last register display.
+
+<P>
+See the <A HREF="309_L3_RSetorDisplayCurrent.html">R</A> and <A HREF="384_L3_RDisplayUsersRegiste.html">.R
+</A>commands for information on changing the default register values.
+<P>
+An <A HREF="270_L4_AddressSeparatorsand.html">address expression</A> may
+be specified.<!-- lm: 0x2 1 -->
+</UL><B><I> selector:offset</B></I><!-- lm: 0x11 11 -->
+<UL> The
+<B><I>selector:offset</B></I> address of the code that is in effect when
+the starting<B><I> Stack-frame</B></I> address was created. If not specified
+this defaults to the current<B> CS:EIP</B> or<B> CS:IP</B> as displayed
+by the
+<P>
+See the <A HREF="309_L3_RSetorDisplayCurrent.html">R command</A>.
+<P>
+The code selector associated with this address is used for two purposes:
+<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 19 -->To determine the default operand size in effect from
+the code segment descriptor.<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 19 -->To attempt to distinguish between near and far calls
+at the starting<B><I> stack-frame</B></I> address.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<U><I>Results &amp; Notes:</I></U>
+<P>
+The<B> K</B> command displays the stack trace, threading through the<B> BP
+</B>or<B> EBP</B> chain until either an invalid chain pointer is encountered
+or the command is interrupted by the user. For each stack-frame, the return
+address and for parameter words or double-words are displayed. The symbol
+associated with the return address is displayed after the parameter words.
+An example is given below:
+<PRE>-------------------------------------------------------------------------------##.S 8
+##.R
+eax=c7c00000 ebx=00000014 ecx=003acd7 edx=0000aff7 esi=00030bff edi=00030000
+eip=0000272d esp=0003f8b8 ebp=0003f8c0 iopl=2 -- -- -- nv up ei ng nz na pe nc
+cs=d02f ss=001f ds=aff7 es=be47 fs=150b gs=0000  cr2=1701d000  cr3=001d9000
+doscall1:CONFORM16:postDOSSEMWAIT:
+d02f:0000272d c9             leave
+##K SS:BP CS:IP
+
+bdef:0000711e ffff ffff 06d6 0a23 SEEPSMQ + 67
+bdef:0000e1df ffff ffff 0bff f91c GETMSGNOINPUT + 4a
+be1f:00000271 8001 ffff 0000 0000 THK16_CALLUSERTHUNKPROC + 12
+be1f:00000003 05ae 0001 0001 0003 THUNKTOINITMOVECURSOR + 30020:00000003 0001 0001 0000 0010
+0020:00000000 02af 1a03 0197 0000
+##-------------------------------------------------------------------------------
+</PRE>
+
+<P>
+<B>Notes </B><!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->The<B> K</B> command is insensitive to unconventional
+use of the stack, such as where subroutine returns are effected explicitly
+by setting the stack pointer and jumping back to the calling code or in
+optimised code where the<B> EBP</B> or<B> BP</B> registers are not used
+as stack-frame pointers.
+<P>
+Such<!-- entering slot 437 --> possibilities exist within the system when
+for example the kernel returns to user code and also within some Presentation
+Manager components.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->No attempt is made to trace correctly through
+<A HREF="3307_L0_.html">thunking</A> layers where the default operand size
+changes.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->The stack trace is insensitive to any explicit
+segment operand overrides that may be active.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->No attempt is made to examine the descriptor
+of the<B> SS</B> register to determine whether<B> EBP</B> or<B> BP</B> should
+be used. In much 32-bit code both the 16-bit and 32-bit data descriptors
+are created by the system for calls to 16-bit subroutines.
+<P>
+In the example above the stack-frame address has been explicitly overridden
+to use<B> BP</B> since the 16-bit stack selector (<B>1f</B>) is in effect
+rather than the 32-bit<B> 53</B> selector.<!-- lm: 0x2 2 -->
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Unlike the default stack-frame address the default
+code<B><I> selector:offset</B></I> is taken<!-- lm: 0x2 1 -->
+</UL>from the register values on entry to the Kernel Debugger.<!-- lm: 0x2 1 -->
+<P>
+
+<P>
+<B>Warning:</B>
+<P>
+In consequence of these points it recommended that the<B><I> stack-frame
+</B></I>and code<B><I> selector:offset</B></I> addresses be explicitly coded
+when using the<B> K</B> command, as in the example above. In addition the
+stack trace should be verified with a <A HREF="285_L3_DDisplayMemory.html">memory
+dump</A> of the stack.
+<P>
+
+
+<P><HR>
+
+<A HREF="302_L3_JExecuteCommandsCond.html">[Back: J - Execute Commands Conditionally]</A> <BR>
+<A HREF="304_L3_LListMapsGroupsandSy.html">[Next: L - List Maps, Groups and Symbols]</A> 
+</BODY>
+</HTML>

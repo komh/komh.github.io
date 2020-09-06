@@ -1,0 +1,155 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>wpclsQueryDetailsInfo - Remarks</TITLE>
+</HEAD>
+<BODY>
+<H1>wpclsQueryDetailsInfo - Remarks</H1><!-- entering slot 372 -->
+<P>
+All objects which have information to display in details view must override
+this method.
+<P>
+The two possible queries are:
+<P>
+<B>Query 1</B>
+<P>
+A request for the<A><!-- external link: 1D B1 C5 39 --> CLASSFIELDINFO</A> linked
+the list segment associated with an object. This information is needed just
+prior to changing the view of a container control to details view.
+<P>
+If<I> pClassFieldInfo</I> is NULL (no subclasses have appended details data),
+the number of columns of details information for this class and all its
+superclasses is returned. If<I> pClassFieldInfo</I> is NON-NULL, the number
+of columns of details informtion is returned and *<I>pClassFieldInfo</I> points
+to the head of a linked list of<A><!-- external link: 1D B1 C5 39 --> CLASSFIELDINFO
+</A>structures to which a linked list of<A><!-- external link: 1D B1 C5 39 --> CLASSFIELDINFO
+</A>structures describing the details fields of objects of this subclass
+should be appended.
+<P>
+For example,on input *<I>pClassFieldInfo</I>:
+<PRE>
+CLASSFIELDINFO_1_grandparent_
+CLASSFIELDINFO_2_grandparent
+  CLASSFIELDINFO_1_parent
+
+</PRE>
+
+<P>
+on output, *<I>pClassFieldInfo</I>:
+<PRE>
+CLASSFIELDINFO_1_grandparent_
+CLASSFIELDINFO_2_grandparent
+  CLASSFIELDINFO_1_parent
+CLASSFIELDINFO_1_self
+
+</PRE>
+
+<P>
+The correct way to handle this request is to do the following:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Call the parent method. The parent method returns
+the number of columns the ancestors have contributed.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Walk the chain of<A><!-- external link: 1D B1 C5 39 --> CLASSFIELDINFO
+</A>structures to the end and append the chain of<A><!-- external link: 1D B1 C5 39 --> CLASSFIELDINFO
+</A>structures for the current class (using the<I> pNextFieldInfo</I> element).
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->If *<I>pClassFieldInfo</I> is zero (indicating no
+parent columns), assign *<I>pClassFieldInfo</I> = beginning of<A><!-- external link: 1D B1 C5 39 --> CLASSFIELDINFO
+</A>chain for this subclass.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Return the sum of the details columns of the parent
+and the current subclass.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Note the following differences between the<A><!-- external link: 1D B1 C5 39 --> CLASSFIELDINFO
+</A>and<A><!-- external link: 1D C0 C5 55 --> FIELDINFO</A> structures:
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->The<I> offFieldData</I> and<I> ulLenFieldData</I> fields
+are required so that appropriate offsets for the data can be computed. The
+application is responsible for providing<I> offFieldData</I> and<I> ulLenFieldData
+</I>fields.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The<I> ulReserved</I> field should be left NULL.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Owner draw, comparison, and sort functions may be
+specified for the field.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+For example, if an object has three fields:
+<PRE>typedef struct _SAMPLE_DETAIL_DATA {
+  CDATE   cdate;
+  CTIME   ctime;
+  PSZ     psz;
+}  SAMPLE_DETAIL_DATA;
+
+classfieldinfo[0].offFieldData   = FIELDOFFSET(SAMPLE,cdate);
+classfieldinfo[0].ulLenFieldData = FIELDOFFSET(SAMPLE,ctime)
+                                       FIELDOFFSET(SAMPLE,cdate);
+
+classfieldinfo[1].offFieldData   = FIELDOFFSET(SAMPLE,ctime);
+classfieldinfo[1].ulLenFieldData = FIELDOFFSET(SAMPLE,psz) -
+                                       FIELDOFFSET(SAMPLE,ctime);
+
+classfieldinfo[2].offFieldData   = FIELDOFFSET(SAMPLE,psz);
+classfieldinfo[2].ulLenFieldData = sizeof(SAMPLE) -
+                                       FIELDOFFSET(SAMPLE,psz);
+
+</PRE>
+
+<P>
+Note that *<I>pClassFieldInfo</I> must be modified to point to the beginning
+of the<A><!-- external link: 1D B1 C5 39 --> CLASSFIELDINFO</A> linked list
+only if *<I>pClassFieldInfo</I> is 0.
+<P>
+The application must return the sum of the details columns of the parent
+and itself:
+<PRE>
+return(n_cols + n_parent_cols);
+
+</PRE>
+
+<P>
+Note also that the fields MUST be set up sequentially. classfieldinfo[0]
+must point to data at an offset of 0. classfieldinfo[n] must point to data
+adjacent, and directly following that described by classfieldinfo[-1].
+<P>
+<B>Query 2</B>
+<P>
+The number of bytes of details data associated with an object. This information
+is needed prior to allocating memory for a container control insert record.
+
+<P>
+If<I> pSize</I> is NON-NULL, the override should adjust *<I>pSize</I> by
+the number of bytes which must be added to the end of a<A><!-- external link: 1D D8 C5 75 --> MINIRECORDCORE
+</A>structure to hold the details information for objects of this class.
+
+<P>
+Example:
+<PRE>
+*pSize += bytes_of_details_data;
+
+</PRE>
+
+<P>
+In the case of the above example,
+<PRE>
+*pSize += sizeof(SAMPLE_DETAIL_DATA);
+
+</PRE>
+
+<P>
+<B>Note: </B> All class field pointers returned should be pointers to static
+data areas.<!-- lm: 0x2 1 -->
+<P>
+
+
+<P><HR>
+
+<A HREF="356_L2H_wpclsQueryDetailsInf.html">[Back: wpclsQueryDetailsInfo - Parameters]</A> <BR>
+<A HREF="358_L2H_wpclsQueryDetailsInf.html">[Next: wpclsQueryDetailsInfo - Usage]</A> 
+</BODY>
+</HTML>

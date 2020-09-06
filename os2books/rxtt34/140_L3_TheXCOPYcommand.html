@@ -1,0 +1,187 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>The XCOPY command</TITLE>
+</HEAD>
+<BODY>
+<H1>The XCOPY command</H1><!-- entering slot 139 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+In OS/2 WARP 4 you may get the error SYS1186</A> while trying to copy files
+with odd characters in their names (e.g. "ý1þ%Eþ.AXþ") using XCOPY</A>.
+
+<BR>
+To resolve this problem, you must change the codepage to 437. To do this
+either issue the command<B> CHCP 437</B> for a temporary change, or change
+the codepage line in the file CONFIG.SYS  to<B> CODEPAGE=437,850</B> and
+reboot the system to make the change permanent.
+<P>
+Please note that I cannot reproduce this error on my system with WARP 4
+and Fixpack #1.
+<P>
+<!--0xfb-->---------- * ----------
+<BR>
+
+<P>
+According to the OS/2 online help, XCOPY</A> should return a return code
+of 2 if it cannot access one or more source or target files. In reality
+(OS/2 WARP 3 with Fixpack #17) XCOPY returns 0 in this case.
+<P>
+(Note: I've tried this again with WARP 4 Fixpack #5 - and at least in this
+environment XCOPY</A> does return a return code of 2 in case of an error.)
+
+<P>
+To get around this bug, you can use a REXX program (see below) to call XCOPY,
+redirect its output to the REXX queue and check the contents of the REXX
+queue afterwards to get the results of the XCOPY command (see also <A HREF="128_L3_TheCOPYcommand.html">The
+COPY command</A>). 
+<P>
+<B>Warning: </B> XCOPY is a version dependent program!<B> Always</B> use
+the XCOPY.EXE from the current active OS/2 version!!!<!-- lm: 0x2 1 -->
+<UL>
+<P>
+ 
+<PRE> 
+/* sample REXX cmd to get around some of the bugs of XCOPY            */
+
+                    /* init global variables                          */
+  sourceFiles = "*.*"
+  targetFiles = "test1\*.*"
+
+                    /* flush the current REXX queue                   */
+  do i = 1 to queued(); parse pull; end;
+
+  say "Now calling xcopy to copy " || ,
+       sourceFiles || " to " || targetFiles || " ..."
+
+                    /* execute XCOPY and redirect STDOUT and STDERR   */
+                    /* into the REXX queue (because the filenames go  */
+                    /* to STDOUT but the error messages go to STDERR) */
+  "@xcopy" sourceFiles TargetFiles "2&gt;&gt;&amp;1" "| rxqueue"
+
+  say " ... done. The RC of XCOPY is " || rc || "."
+
+  say
+  say "Now checking the result ... "
+  say
+
+                    /* get no. of lines in the REXX queue             */
+  qCount = queued()
+
+                    /* number of files copied                         */
+  filesCopied = 0
+
+
+                    /* no. of files not copied due to source file     */
+                    /* access errors                                  */
+  sourceFileErrors = 0
+
+
+                    /* no. of files not copied due to target file     */
+                    /* access errors                                  */
+  targetFileErrors = 0
+
+                    /* no. of files not copied due to unknown errors  */
+  unknownErrors = 0
+
+                    /* error marker for the loop                      */
+  errorFound = 0
+
+  do i = 1 to qCount
+    parse upper pull curLine
+
+    curLine = strip( curLine )
+    if curLine = "" then
+      iterate
+
+    select
+
+      when errorFound = "SourceError" then
+      do
+        sourceFileErrors = sourceFileErrors + 1
+        say " Error: XCOPY could not access the source file "
+        say "        " || curLine
+        errorFound = ""
+      end /* when */
+
+      when errorFound = "TargetError" then
+      do
+        targetFileErrors = targetFileErrors + 1
+        say " Error: XCOPY could not access the target file "
+        say "        " || curLine
+        errorFound = ""
+      end /* when */
+
+      when word( errorFound,1 ) = "UnknownError" then
+      do
+        unknownErrors = unknownErrors + 1
+
+                    /* check if the next line is the name of a file   */
+        if stream( curLine, "c", "QUERY EXISTS" ) &lt;&gt; "" then
+        do
+          say " Error: XCOPY retrieved the error " || ,
+              word( errorFound,2 ) || " accessing the file "
+          say "        " || curLine
+        end /* if stream( ... */
+        else
+          say " Error: XCOPY retrieved the error " || ,
+              word( errorFound,2 )
+
+        errorFound = ""
+      end /* when */
+
+                    /* SYS1186</A> - source file access error            */
+      when left( curLine,7 ) = "SYS1186" then
+        errorFound = "SourceError"
+
+                    /* SYS1187</A> - target file access error            */
+      when left( curLine,7 ) = "SYS1187" then
+        errorFound = "TargetError"
+
+      when left( curLine,3 ) = "SYS" &amp; substr( curLine,8,1 ) = ":" then
+        errorFound = "UnknownError" substr( curLine,1,7 )
+
+      otherwise
+                    /* ignore status output of XCOPY                  */
+        if stream( curLine, 'c', 'QUERY EXISTS' ) &lt;&gt; '' then
+          filesCopied = filesCopied + 1
+
+    end /* select */
+
+  end /* do i = 1 to qCount */
+
+  say
+  say "XCOPY copied " || filesCopied || " file(s)."
+
+  filesNotCopied = sourceFileErrors + targetFileErrors + unknownErrors
+  if filesNotCopied &lt;&gt; 0 then
+  do
+    if filesNotCopied &lt;&gt; 1 then
+      say filesNotCopied || " file(s) were not copied due to access errors."
+    else
+      say filesNotCopied || " file <!-- entering slot 140 -->was not copied due to access errors."
+
+    say " " || sourceFileErrors  || ,
+        " file(s) because of source file access errors, "
+
+    say " " || targetFileErrors  || ,
+        " file(s) because of target file access errors "
+
+    say " and " || unknownErrors || " file(s) because of unknown errors."
+  end /* if filesNotCopied &lt;&gt; 0 then */
+  else
+  do
+    say " No errors found."
+  end /* else */
+exit 0
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="139_L3_TheSYSINSTXcommand.html">[Back: The SYSINSTX command]</A> <BR>
+<A HREF="141_L2_HintsforsomeDOScomma.html">[Next: Hints for some DOS commands]</A> 
+</BODY>
+</HTML>

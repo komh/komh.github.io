@@ -1,0 +1,78 @@
+<HTML XPOS=20% YPOS=BOTTOM WIDTH=80% HEIGHT=100%>
+<HEAD>
+<!-- extra bytes: 03 00 14 14 00 08 00 11 50 00 64 00 --><TITLE>Get the current filesystem</TITLE>
+</HEAD>
+<BODY>
+<H1>Get the current filesystem</H1><!-- entering slot 479 --><A AUTO VIEWPORT DEPENDENT GROUP=4100 HREF="107_L4_Menu.html">[Autolink] Menu</A><P><!-- extra bytes: 4C 06 04 10 04 00 -->
+<P>
+
+<P>
+
+<PRE> 
+/* sample code to show how to get the filesystem (FAT, HPFS, CDFS     */
+/* or LAN) of a drive                                                 */
+/* Tested with OS/2 v2.99 WARP BETA 2 (English) and OS/2 Version 3    */
+/* WARP (German &amp; English)                                            */
+/*                                                                    */
+/* Note that there's a function called <A HREF="818_L5H_QLDrives.html">QLDrives</A> in the DLL <A HREF="801_L4_RLANUTIL.html">RXLANUTIL</A>  */
+/* which detects the data about all drives (including the             */
+/* filesystem). The new <A HREF="327_L2_NewREXXUTILfunctions.html">REXXUTIL</A> introduced with <A HREF="269_L1_HintsforObjectREXX.html">Object-Oriented REXX</A> */
+/* also contains a function to get the filesystem of a drive.         */
+
+                                /* drives to check                    */
+  possibleDrives = "CDEFGHI"
+
+  do i = 1 to length( possibleDrives )
+    curdrive = substr( possibleDrives,i,1 )
+
+    say "The filesystem of drive " || curDrive || ": is " || ,
+        GetFileSystem( curDrive )
+  end /* do i = 1 to ... */
+exit 0
+
+/* ------------------------------------------------------------------ */
+/* function: Get the filesystem of a drive                            */
+/*                                                                    */
+/* call:     GetFileSystem( testDrive )                               */
+/*                                                                    */
+/* where:    testdrive - Name of the drive to test (e.g. "A:")        */
+/*                                                                    */
+/* returns:  the type of the filesystem or "UNKNOWN"                  */
+/*                                                                    */
+GetFileSystem: PROCEDURE expose (exposeList)
+  parse arg testDrive ":" .
+
+  curFileSystem = "UNKNOWN"
+
+                                /* use an unknown parameter for       */
+                                /* CHKDSK to suppress all actions     */
+                                /* (except the print of the           */
+                                /* filesystem)                        */
+
+                        /* flush the REXX queue                 v3.20 */
+  do while queued() &lt;&gt; 0; parse pull; end;
+
+  "@chkdsk " testDrive || ": /dfdad 2&gt;nul | rxqueue 2&gt;NUL 1&gt;&amp;2"
+  do while queued() &lt;&gt; 0
+    curLine = lineIN( "QUEUE:" )
+    if abbrev( curLine, "Dateisystemtyp f&uuml;r den Datentr&auml;ger ist:" ) | ,
+       abbrev( curLine, "The type of file system for the disk is" ) then
+    do
+      curFileSystem = word( curLine, words( curLine ) )
+      if right( curFileSystem,1 ) == "." then
+        curFileSystem = dbrright( curFileSystem,1 )
+    end /* if abbrev( ... */
+  end /* do while queued() &lt;&gt; 0 */
+
+RETURN curFileSystem
+</PRE>
+
+<P>
+ 
+
+<P><HR>
+
+<A HREF="460_L3_Checkifadriveisready.html">[Back: Check if a drive is ready]</A> <BR>
+<A HREF="462_L3_Checkifadirectoryexi.html">[Next: Check if a directory exists]</A> 
+</BODY>
+</HTML>

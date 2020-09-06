@@ -1,0 +1,84 @@
+<HTML>
+<HEAD>
+<TITLE>Exchanging Data</TITLE>
+</HEAD>
+<BODY>
+<H1>Exchanging Data</H1><!-- entering slot 1461 -->
+<P>
+Direct manipulation offers various ways for source and target applications
+to exchange data. To accomplish the exchange, a separate conversation must
+be established to transfer each data object from the source to the target.
+The target must inform the source about the rendering mechanism it is using
+and the format in which the data is to be exchanged. The target can establish
+the conversations to run in parallel, or it can initiate the conversations
+in a serial fashion.
+<P>
+The target determines which rendering mechanism and format to use in the
+following manner:<!-- lm: 0x2 2 -->
+<UL>
+<P>
+ <LI><LI><!-- lm: 0x2 6 -->Uses the native rendering mechanism and format
+whenever possible.
+<P>
+This rendering conveys all information about the data. A target can determine
+if it supports the native rendering mechanism and format by using the following
+functions:<!-- lm: 0x2 8 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 11 -->DrgVerifyNativeRMF<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->DrgQueryNativeRMFLen<!-- lm: 0x2 8 -->
+<BR>
+<LI><!-- lm: 0x2 11 -->DrgQueryNativeRMF<!-- lm: 0x2 6 -->
+</UL> Even if
+it can use the native rendering mechanism and format supported by the source,
+the target can elect to exchange the data in a rendering mechanism and format
+that conveys less information about the object.<!-- lm: 0x2 2 -->
+</UL>
+2.<!-- lm: 0x2 6 -->
+<UL>Uses the next best rendering mechanism and format.
+
+<P>
+This is especially good for a Copy operation, because the user does not
+lose data about the object as occurs when the object is moved.
+<P>
+The target can determine the next best rendering mechanism and format to
+use through repeated calls to DrgVerifyRMF. The calls are made starting
+with the most desirable rendering mechanism and format pair and progressing
+to the least desirable pair. Once a pair that the source supports has been
+found, the target can exchange the data.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following sample code shows how the target checks the rendering mechanism
+and format:
+<PRE>          /* Now, we need to look at each item in turn */          for (i = 0; i &lt; cItems; i++)
+          {
+            dragItem = DrgQueryDragitemPtr(dragInfo, i);
+
+            /* Make sure we can move for a Move request */
+            /* or copy for a Copy                       */
+            if (((dragItem-&gt;fsSupportedOps &amp; DO_COPYABLE)   &amp;&amp;
+                 (usOp == (USHORT)DO_COPY))                 ||
+                ((dragItem-&gt;fsSupportedOps &amp; DO_MOVEABLE)   &amp;&amp;
+                 (usOp == (USHORT)DO_MOVE)))
+            {
+
+               /* Check the rendering format */
+               if (DrgVerifyRMF(dragItem, "DRM_OS2FILE", "DRF_UNKNOWN"))
+                  usIndicator = DOR_DROP;
+               else
+                  usIndicator = DOR_NEVERDROP;
+            }
+            else
+               usIndicator = DOR_NODROPOP;
+          }
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1434_L3_RespondingtotheDM_DR.html">[Back: Responding to the DM_DROP Message]</A> <BR>
+<A HREF="1436_L4_PerformanceConsidera.html">[Next: Performance Considerations]</A> 
+</BODY>
+</HTML>

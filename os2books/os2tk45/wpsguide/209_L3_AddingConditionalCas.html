@@ -1,0 +1,85 @@
+<HTML>
+<HEAD>
+<TITLE>Adding Conditional Cascaded Menus to a Pop-Up Menu</TITLE>
+</HEAD>
+<BODY>
+<H1>Adding Conditional Cascaded Menus to a Pop-Up Menu</H1><!-- entering slot 225 -->
+<P>
+Items on an object's pop-up menu sometimes have pull-down menus or submenus
+associated with them. In the previous sample codes,<B> New item</B> is not
+a pull-down menu. However,<B> New item</B> can be defined as a pull-down
+menu by defining it as a submenu in MyObject's resource file, as shown in
+the following sample code:
+<PRE>#define ID_MOREITEMS  WPMENUID_USER+1
+#define ID_NEWITEMS   WPMENUID_USER+2
+#define ID_SUBITEM1   WPMENUID_USER+3
+#define ID_SUBITEM2   WPMENUID_USER+4
+#define ID_SUBITEM3   WPMENUID_USER+5
+
+MENU ID_MOREITEMS LOADONCALL MOVEABLE DISCARDABLE
+BEGIN
+  SUBMENU "New Item", ID_NEWITEMS
+  BEGIN
+    MENUITEM  "SubItem_1"  ID_SUBITEM1
+    MENUITEM  "SubItem_2"  ID_SUBITEM2
+    MENUITEM  "SubItem_3"  ID_SUBITEM3
+  END
+END
+
+</PRE>
+
+<P>
+The<B> New item</B> submenu is added to MyObject's primary pop-up menu using
+the same technique as shown in the "Adding Items to Pop-Up Menu Inherited
+from an Object's Ancestors" section. For the Workplace Shell to display
+the submenu as a conditional cascaded menu with the mini-push button and
+default selection, the menu's style and default selection must be set, as
+shown in the following sample code:
+<PRE>/**********************  Method Override  ******************************/
+
+/* Add a new item to MyObject's pop-up menu  */
+SOM_SCOPE BOOL32 SOMLINK MyObject_wpModifyPopupMenu
+   (MyObject *somSelf, HWND hwndMenu, HWND hwndCnr, ULONG iPosition)
+
+{
+  .
+  .
+
+  MENUITEM mi;
+  .
+  .
+
+  /* Get a handle to the New item submenu   */
+  WinSendMsg(hwndMenu,
+             MM_QUERYITEM,
+             MPFROM2SHORT(ID_NEWITEMS),
+             (MPARAM)&amp;mi);
+  hwndSubMenu = mi.hwndSubMenu;
+
+  /* Query the menu's style  */
+  ulstyle = WinQueryWindowULong(hwndSubMenu, QWL_STYLE);
+
+  /* Add conditional cascaded capabilities to the existing menu style */
+  ulstyle |= MS_CONDITIONALCASCADE;
+
+  /* Set the menu style to include conditional cascaded capabilities  */
+  WinSetWindowULong(hwndSubMenu, QWL_STYLE, ulstyle);
+
+  /* Set the default selection in the submenu.  It must exist.  */
+  WinSendMsg(hwndSubMenu,
+             MM_SETDEFAULTITEMID,
+             (MPARAM)ID_SUBITEM1, 0L);
+  .
+  .
+
+}
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="208_L3_AddingandRemovingCla.html">[Back: Adding and Removing Class Items to a Pop-Up Menu]</A> <BR>
+<A HREF="210_L3_SupportingUserSelect.html">[Next: Supporting User Selection of New Pop-Up Menu Items]</A> 
+</BODY>
+</HTML>

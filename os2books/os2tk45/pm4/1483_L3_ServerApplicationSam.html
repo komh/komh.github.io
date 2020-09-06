@@ -1,0 +1,384 @@
+<HTML>
+<HEAD>
+<TITLE>Server Application Sample Code</TITLE>
+</HEAD>
+<BODY>
+<H1>Server Application Sample Code</H1><!-- entering slot 1514 -->
+<P>
+The server application includes the following files:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->DDES.C<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->DDES.RC<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->DDES.H<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->DDES.DEF<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->DDES.LNK<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->DDES.MAK<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following sample shows the server application code:
+<PRE>===============DDES.C
+===============
+
+#define  INCL_WIN
+#define  INCL_WINDDE
+#define  INCL_DOS
+
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+#include "ddes.h"
+
+#pragma  linkage (main, optlink)
+INT      main(VOID);
+void     ShowMessage(PSZ);
+
+/***********************************************************************/
+/*  Main() - program entry point.                                      */
+/***********************************************************************/
+MRESULT EXPENTRY LocalWndProc(HWND, ULONG, MPARAM, MPARAM);
+
+HAB     hab;
+HWND    hFrameWnd, hListWnd, hClientWnd;
+PFNWP   SysWndProc;
+
+INT main (VOID)
+{
+    HMQ         hmq;
+    FRAMECDATA  fcd;
+    QMSG        qmsg;
+
+    if (!(hab = WinInitialize(0)))
+      return FALSE;
+
+    if (!(hmq = WinCreateMsgQueue(hab, 0)))
+      return FALSE;
+
+/***********************************************************************/
+/*  Setup the frame control data for the frame window.                 */
+/***********************************************************************/
+    fcd.cb = sizeof(FRAMECDATA);
+    fcd.flCreateFlags = FCF_TITLEBAR        |
+                        FCF_SYSMENU         |
+                        FCF_MENU            |
+                        FCF_SIZEBORDER      |
+                        FCF_SHELLPOSITION   |
+                        FCF_MINMAX          |
+                        FCF_TASKLIST;
+
+    fcd.hmodResources = NULLHANDLE;
+
+/***********************************************************************/
+/*  Set our resource key (so PM can find menus, icons, etc).           */
+/***********************************************************************/
+    fcd.idResources = DDES;
+
+/***********************************************************************/
+/*  Create the frame window.                                           */
+/***********************************************************************/
+    hFrameWnd = WinCreateWindow(HWND_DESKTOP,
+                                WC_FRAME,
+                                "DDE Server",
+                                0, 0, 0, 0, 0,
+                                NULLHANDLE,
+                                HWND_TOP,
+                                DDES,
+                                &amp;fcd,
+                                NULL);
+
+/***********************************************************************/
+/*  Verify that the frame was created; otherwise, stop.                */
+/***********************************************************************/
+    if (!hFrameWnd)
+      return FALSE;
+
+/***********************************************************************/
+/*  Set an icon for the frame window.                                  */
+/***********************************************************************/
+    WinSendMsg(hFrameWnd,
+               WM_SETICON,
+               (MPARAM)WinQuerySysPointer(HWND_DESKTOP,
+                                          SPTR_FOLDER,
+                                          FALSE),
+               NULL);
+
+/***********************************************************************/
+/*  Create a list window child.                                        */
+/***********************************************************************/
+    hListWnd = WinCreateWindow(hFrameWnd,
+                               WC_LISTBOX,
+                               NULL,
+                               LS_HORZSCROLL,
+                               0, 0, 0, 0,
+                               hFrameWnd,
+                               HWND_BOTTOM,
+                               FID_CLIENT,
+                               NULL,
+                               NULL);
+
+/***********************************************************************/
+/*  We must intercept the frame window's messages                      */
+/*  (to capture any input from the container control).                 */
+/*  We save the return value (the current WndProc),                    */
+/*  so we can pass it all the other messages the frame gets.           */
+/***********************************************************************/
+    SysWndProc = WinSubclassWindow(hFrameWnd, (PFNWP)LocalWndProc);
+
+    WinShowWindow(hFrameWnd, TRUE);
+
+/***********************************************************************/
+/*  Standard PM message loop - get it, dispatch it.                    */
+/***********************************************************************/
+    while (WinGetMsg(hab, &amp;qmsg, NULLHANDLE, 0, 0))
+    {
+       WinDispatchMsg(hab, &amp;qmsg);
+    }
+
+/***********************************************************************/
+/*  Clean up on the way out.                                           */
+/***********************************************************************/
+    WinDestroyMsgQueue(hmq);
+    WinTerminate(hab);
+
+    return TRUE;
+}
+
+/***********************************************************************/
+/*  LocalWndProc() - window procedure for the frame window.            */
+/*  Called by PM whenever a message is sent to the frame.              */
+/***********************************************************************/
+MRESULT EXPENTRY LocalWndProc(HWND hwnd,ULONG msg,MPARAM mp1,MPARAM mp2)
+{
+    /* Our inbound DDE stuff */
+    PSZ         szClientApp;
+    PSZ         szClientTopic;
+    PSZ         szReqItem;
+
+    /* Our supported DDE stuff */
+    PSZ         szApp    = "DDEdemo";
+    PSZ         szTopic  = "System";
+    PSZ         szItem   = "Status";
+    PSZ         szStatus = "RUNNING";
+
+    /* System DDE structures */
+    CONVCONTEXT context;
+    PDDEINIT    pDDEinit;
+    PDDESTRUCT  pDDEdata;
+
+    /* Miscellaneous */
+    PID         pid;
+    TID         tid;
+    PVOID       mem;
+
+    switch(msg)
+    {
+        /* All WinDDEInitate calls arrive here */
+        <!-- entering slot 1515 -->case WM_DDE_INITIATE:
+           ShowMessage("init");
+           hClientWnd = (HWND)mp1;
+           pDDEinit = (PDDEINIT)mp2;
+
+            /* Check incoming poll - if the App and Topic match,     */
+            /* we must acknowledge. If both are NULL, the client is  */
+            /* searching for anyone - send our names                 */
+            szClientApp   = pDDEinit-&gt;pszAppName;
+            szClientTopic = pDDEinit-&gt;pszTopic;
+            ShowMessage(szClientApp);
+            ShowMessage(szClientTopic);
+
+            if (!strcmpi(szClientApp, szApp) ||
+                !strcmpi(szClientApp, NULL))
+            {
+                if (!strcmpi(szClientTopic, szTopic) ||
+                    !strcmpi(szClientTopic, NULL) )
+                {
+                    context.cb = sizeof(CONVCONTEXT);
+                    context.fsContext = 0;
+                    WinDdeRespond(hClientWnd,
+                                  hwnd,
+                                  szApp,
+                                  szTopic,
+                                  &amp;context);
+                }
+            }
+            break;
+
+        /* Incoming DDE request - get the item name, send the data out. */
+        case WM_DDE_REQUEST:
+            ShowMessage("request in...");
+            hClientWnd = (HWND)mp1;
+
+            /* The DDE structure is passed, and           */
+            /*  the client should have shared it with us  */
+            pDDEdata  = (PDDESTRUCT)mp2;
+            szReqItem = (BYTE *)(pDDEdata+(pDDEdata-&gt;offszItemName));
+            ShowMessage(szReqItem);
+
+            /* We support item status, but not anything else */
+            if (!strcmpi(szReqItem, szItem))
+            {
+               ShowMessage("sending...");
+
+               /* Get some sharable memory */
+               DosAllocSharedMem((PVOID)&amp;mem,
+                                 NULL,
+                                 sizeof(DDESTRUCT)+21,
+                                 PAG_COMMIT |
+                                 PAG_READ |
+                                 PAG_WRITE |
+                                 OBJ_GIVEABLE);
+
+               /* Get the server's id and give it access */
+               /* to the shared memory                   */
+               WinQueryWindowProcess(hClientWnd, &amp;pid, &amp;tid);
+               DosGiveSharedMem(&amp;mem, pid, PAG_READ | PAG_WRITE);
+
+               /* Setup DDE data structures                      */
+               /* (11 byte name length, 10 plus NULL,            */
+               /*  10 byte data length)                          */
+               pDDEdata = (PDDESTRUCT)mem;
+               pDDEdata-&gt;cbData   = 10;           /* Data length */
+               pDDEdata-&gt;fsStatus = 0;            /* Status      */
+               pDDEdata-&gt;usFormat = DDEFMT_TEXT;  /* Text format */
+
+               /* Go past end of structure for the name */
+               pDDEdata-&gt;offszItemName = sizeof(DDESTRUCT);
+
+               /* Go past end of structure (and name) for the data  */
+               pDDEdata-&gt;offabData = sizeof(DDESTRUCT)+11;
+               strcpy((BYTE *)(pDDEdata+(pDDEdata-&gt;offabData)), szStatus);
+               WinDdePostMsg(hClientWnd,
+                             hwnd,
+                             WM_DDE_DATA,
+                             pDDEdata,
+                             DDEPM_RETRY);
+            }
+
+            else
+            {
+               ShowMessage("rejecting...");
+               pDDEdata-&gt;cbData   = 0;                /* Data length */
+               pDDEdata-&gt;fsStatus = DDE_NOTPROCESSED; /* Status      */
+               pDDEdata-&gt;usFormat = DDEFMT_TEXT;      /* Text format */
+               WinDdePostMsg(hClientWnd,
+                             hwnd,
+                             WM_DDE_ACK,
+                             pDDEdata,
+                             DDEPM_RETRY);
+            }
+            ShowMessage("sent...");
+            break;
+
+            /* Menu item processing */
+            case WM_COMMAND:
+            switch (SHORT1FROMMP(mp1))
+            {
+               case IDM_EXIT:
+                  WinPostMsg(hwnd, WM_CLOSE, 0, 0);
+                  break;
+               default:
+                  return (*SysWndProc)(hwnd, msg, mp1, mp2);
+                  break;
+            }
+            break;
+
+            /* Send the message to the usual WC_FRAME WndProc */
+            default:
+               return (*SysWndProc)(hwnd, msg, mp1, mp2);
+               break;
+    }
+    return (MRESULT)FALSE;
+}
+
+/***********************************************************************/
+/*  ShowMessage().                                                     */
+/***********************************************************************/
+void ShowMessage(PSZ szText)
+{
+    WinPostMsg(hListWnd,
+               LM_INSERTITEM,
+               MPFROMSHORT(LIT_END),
+               szText);
+}
+
+===============
+DDES.RC
+===============
+#include &lt;os2.h&gt;
+#include "ddes.h"
+
+MENU    DDES
+BEGIN
+    SUBMENU       "Commands",  IDM_MENU
+    BEGIN
+        MENUITEM  "Exit",      IDM_EXIT
+    END
+END
+
+===============
+DDES.H
+===============
+#define DDES        100
+#define IDM_MENU    1000
+#define IDM_EXIT    1001
+
+===============
+DDES.DEF
+===============
+NAME      DDES WINDOWAPI
+
+DESCRIPTION 'PM DDE Server Sample'
+
+CODE      MOVEABLE
+DATA      MOVEABLE MULTIPLE
+
+STACKSIZE 24576
+HEAPSIZE  10240
+
+PROTMODE
+
+===============
+DDES.LNK
+===============
+ddes.obj
+ddes.exe
+ddes.map
+
+ddes.def
+
+===============
+DDES.MAK
+===============
+CC      = icc /c /Ge /Gd- /<!-- entering slot 1516 -->Se /Re /ss /Gm+
+LINK    = link386
+HEADERS = ddes.h
+
+#-------------------------------------------------------------------
+#   A list of all of the object files.
+#-------------------------------------------------------------------
+ALL_OBJ1 = ddes.obj
+
+all: ddes.exe
+
+ddes.res: ddes.rc ddes.h
+
+ddes.obj: ddes.c $(HEADERS)
+
+ddes.exe: $(ALL_OBJ1) ddes.def ddes.lnk ddes.res
+          $(LINK) @ddes.lnk
+          rc -p -x ddes.res ddes.exe
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1482_L3_ClientApplicationSam.html">[Back: Client Application Sample Code]</A> <BR>
+<A HREF="1484_L1_EntryFieldControls.html">[Next: Entry-Field Controls]</A> 
+</BODY>
+</HTML>

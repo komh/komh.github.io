@@ -1,0 +1,268 @@
+<HTML>
+<HEAD>
+<TITLE>DosListIOL</TITLE>
+</HEAD>
+<BODY>
+<H1>DosListIOL</H1><!-- entering slot 46 -->
+<P>
+<B>Purpose</B>
+<P>
+DosListIOL performs the specified number of seek/read or seek/write operations
+or both.
+<P>
+<B>Syntax</B>
+<PRE>#define INCL_DOSFILEMGR
+#include  os2.h&gt;
+
+</PRE>
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+APIRET DosListIOL<!-- lm: 0x2 11 -->
+<UL><B> (LONG CmdMode, LONG NumEntries,
+PLISTIOL pListIO)</B><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Parameters</B><!-- lm: 0x2 1 -->
+<P>
+CmdMode (LONG)  input<!-- lm: 0x11 11 -->
+<UL> This specifies the mode in
+which the operations should be performed. Valid modes are <!-- lm: 0x2 11 -->
+<P>
+LISTIO_ORDERED<!-- lm: 0x11 20 -->
+<UL> Operations are performed synchronously
+in the given order.<!-- lm: 0x2 11 -->
+</UL> LISTIO_UNORDERED<!-- lm: 0x11 20 -->
+<UL> Operations
+are performed independent of order.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL> NumEntries
+(LONG)  input<!-- lm: 0x11 11 -->
+<UL> The number of seek/read or seek/write
+operations in the list.<!-- lm: 0x2 1 -->
+</UL> pListIOL (PLISTIO)  input/output
+<!-- lm: 0x11 11 -->
+<UL>Pointer to an array of<I> NumEntries</I><B> LISTIO
+</B>data structures which contain the information necessary to perform the
+seek/read and seek/write operations.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Returns</B><!-- lm: 0x2 1 -->
+<P>
+ulrc (APIRET)  returns<!-- lm: 0x11 11 -->
+<UL> Return Code.
+<P>
+DosListIOL returns one of the following values <!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->NO_ERROR<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->ERROR_ACCESS_DENIED<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->ERROR_INVALID_HANDLE<!-- lm: 0x2 11 -->
+<P>
+19<!-- lm: 0x2 26 -->
+<UL> ERROR_WRITE_PROTECT<!-- lm: 0x2 11 -->
+</UL> 26
+<!-- lm: 0x2 26 -->
+<UL>ERROR_NOT_DOS_DISK<!-- lm: 0x2 11 -->
+</UL> 29<!-- lm: 0x2 26 -->
+<UL> ERROR_WRITE_FAULT
+<!-- lm: 0x2 11 -->
+</UL>33<!-- lm: 0x2 26 -->
+<UL> ERROR_LOCK_VIOLATION
+<!-- lm: 0x2 11 -->
+</UL>87<!-- lm: 0x2 26 -->
+<UL> ERROR_INVALID_PARAMETER
+<!-- lm: 0x2 11 -->
+</UL>109<!-- lm: 0x2 26 -->
+<UL> ERROR_BROKEN_PIPE<!-- lm: 0x2 11 -->
+</UL> 234
+<!-- lm: 0x2 26 -->
+<UL>ERROR_MORE_DATA<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Remarks</B>
+<P>
+DosListIOL applies the same restrictions for each seek/read and seek/write
+control block as would be applied if the requests were issued separately
+with DosSetFilePtrL, DosRead, and DosWrite.
+<P>
+Each request control block contains fields for the Actual number of bytes
+read/written and the operation return code. These fields are updated upon
+completion of each request; therefore, care must be taken that the memory
+containing the control block array not be deallocated or manipulated by
+another thread before the DosListIOL request returns.
+<P>
+There are two valid modes for the list of I/O operations to be processed
+ <!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Ordered - This mode guarantees the order in which
+the operations will be performed. The API will return with an error code
+corresponding to the first failed request and will leave the following requests
+unissued. This provides a synchronous sequence of automatic seek/read and
+seek/write requests. This is the only mode that is compatible with file
+systems other than the raw file system.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->Unordered - This mode does not guarantee the order
+of issue or completion of the requests. The API will return with an error
+code if any request fails. Additionally, each request in the list will be
+issued, even those following a failed operation. This mode is valid for
+the raw file system only.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Related Functions</B><!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->DosOpenL<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosSetFilePtrL<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosRead<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosWrite<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Example Code</B>
+<P>
+In this example, the source file  SOURCE.DAT  is copied to  TARGET.DAT.
+ First, the information about the source file is obtained by calling DosQueryPathInfo.
+Next, the target file is created with the same size as the source file.
+Using a series of calls to DosListIO, the content of the source file is
+copied to the target file.
+<PRE>#define INCL_DOSFILEMGR          /* File Manager values */#define INCL_DOSERRORS           /* DOS Error values    */
+#define INCL_LONGLONG
+#include #define SOURCE_PATHNAME "source.dat"
+#define TARGET_PATHNAME "target.dat"
+#define BUFFER_SIZE 4096
+
+int main(void) {
+   FILESTATUS3L<!-- entering slot 47 -->  fsSource = { {0} };          /* Buffer for information about source file  */
+   LONGLONG llSize;                           /* Source file size (totalcopy size) */
+   HFILE  hfSource   = 0L;                    /* Handle for source file */
+   HFILE  hfTarget   = 0L;                    /* Handle for target file */
+   ULONG  ulAction = 0;                       /* Action taken by DosOpen*/
+   LISTIOL listIOCtrlBlks[2];                 /* List IO control blocks */
+   ULONG  ulNumCtrlBlks;                      /* Number of control blocks*/
+   BYTE   pData[BUFFER_SIZE];                 /* Buffer to hold copy data */
+   ULONG  cbData;                             /* Size of data for each IO operation */
+   APIRET rc = NO_ERROR;                      /* Return code */
+
+   /* Query information about the source file to obtain its size */
+   rc = DosQueryPathInfo(SOURCE_PATHNAME, FIL_STANDARDL,  fsSource, sizeof(fsSource));
+   if (rc != NO_ERROR)
+   {
+      printf("DosQueryPathInfo failed, return code = %u\n", rc);
+      return 1;
+   }
+
+   llSize = fsSource.cbFile;
+
+   /* Open the source file for reading */
+   rc = DosOpenL(SOURCE_PATHNAME,               /* File path name */
+                 hfSource,                      /* File handle */
+                 ulAction,                      /* Action taken */
+                0,                              /* File primary allocation */
+                FILE_ARCHIVED | FILE_NORMAL,    /* File attribute */
+                OPEN_ACTION_FAIL_IF_NEW |       /* Open existing file */
+                OPEN_ACTION_OPEN_IF_EXISTS,
+                OPEN_FLAGS_NOINHERIT |
+                OPEN_SHARE_DENYNONE  |
+                OPEN_ACCESS_READWRITE,          /* Open mode of the file */
+                0L);                            /* No extended attribute */
+
+   if (rc != NO_ERROR)
+   {
+      printf("DosOpenL failed to open %s, rc = %u\n", SOURCE_PATHNAME, rc);
+      return 1;
+   }
+
+   /* Open the target file for writing */
+   rc = DosOpenL(TARGET_PATHNAME,               /* File path name */
+                 hfTarget,                      /* File handle */
+                 ulAction,                      /* Action taken */
+                llSize,                         /* Target equals source file size */
+                FILE_ARCHIVED | FILE_NORMAL,    /* File attribute */
+                OPEN_ACTION_CREATE_IF_NEW |     /* Open new file */
+                OPEN_ACTION_FAIL_IF_EXISTS,
+                OPEN_FLAGS_NOINHERIT |
+                OPEN_SHARE_DENYNONE  |
+                OPEN_ACCESS_READWRITE,          /* Open mode of the file */
+                0L);                            /* No extended attribute */
+
+   if (rc != NO_ERROR)
+   {
+      printf("DosOpenL failed to create %s, rc = %u\n", TARGET_PATHNAME, rc);
+      DosClose(hfSource);  /* Remember to close source file before exiting */
+      return 1;
+   }
+In this example, the source file "SOURCE.DAT" is copied to "TARGET.DAT." First,
+the information about the source file is obtained by calling DosQueryPathInfo.
+Next, the target file is created with the same size as the source file. Using
+a series of calls to DosListIO, the content of the source file is copied to
+the target file.   /* Initialize listIOL control blocks */
+   memset(listIOCtrlBlks, 0, sizeof(listIOCtrlBlks));
+
+   listIOCtrlBlks[0].hFile = hfSource;                      /* Source file handle */
+   listIOCtrlBlks[0].CmdFlag = LISTIO_READ | FILE_CURRENT;  /* Read operation */
+   listIOCtrlBlks[0].Offset = 0;
+   listIOCtrlBlks[0].pBuffer = (PVOID)pData;
+
+   listIOCtrlBlks[1].hFile = hfTarget;                      /* Target file handle */
+   listIOCtrlBlks[1].CmdFlag = LISTIO_WRITE | FILE_CURRENT; /* Write operation */
+   listIOCtrlBlks[1].Offset = 0;
+   listIOCtrlBlks[1].pBuffer = (PVOID)pData;
+
+   while (llSize) {
+
+      if (llSize   BUFFER_SIZE) {
+         cbData = llSize;
+      } else {
+         cbData = BUFFER_SIZE;
+      }
+      llSize = llSize - cbData;   /* adjust remaining copy size */
+
+      listIOCtrlBlks[0].NumBytes = cbData;
+      listIOCtrlBlks[1].NumBytes = cbData;
+
+      ulNumCtrlBlks = 2;
+      rc = DosListIOL(LISTIO_ORDERED,
+                     ulNumCtrlBlks,
+                     listIOCtrlBlks);
+      if (rc != NO_ERROR)
+      {
+         printf("DosListIOL error  rc = %u\n", rc);
+         break;
+      }
+      else
+      {
+
+         /* Check return code from the read operation */
+         if (listIOCtrlBlks[0].RetCode != NO_ERROR)
+         {
+            printf("DosListIOL read operation failed, rc = %u\n", listIOCtrlBlks[0].RetCode);
+            break;
+         }
+
+         /* Check return code from the write operation */
+         if (listIOCtrlBlks[0].RetCode != NO_ERROR)
+         {
+            printf("DosListIOL write operation failed, rc = %u\n", listIOCtrlBlks[0].RetCode);
+            break;
+         }
+      }
+   } /* end while */
+
+   DosClose(hfSource);                /* Close source file */
+   DosClose(hfTarget);                /* Close target file */
+
+   return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="032_L2_DosListIO.html">[Back: DosListIO]</A> <BR>
+<A HREF="034_L2_DosOpen.html">[Next: DosOpen]</A> 
+</BODY>
+</HTML>

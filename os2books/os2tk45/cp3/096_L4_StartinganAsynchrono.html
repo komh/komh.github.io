@@ -1,0 +1,75 @@
+<HTML>
+<HEAD>
+<TITLE>Starting an Asynchronous Child Process</TITLE>
+</HEAD>
+<BODY>
+<H1>Starting an Asynchronous Child Process</H1><!-- entering slot 100 -->
+<P>
+To start a child process and enable it to run asynchronously (that is, without
+suspending the parent process until the child process ends), you use the
+EXEC_ASYNC constant in a call to<A><!-- external link: 1D 83 C3 FC --> DosExecPgm</A>.
+If you start a process in this way, the function copies the process identifier
+of the child process to the<I> codeTerminate</I> field of the<A><!-- external link: 1D CA C4 75 --> RESULTCODES
+</A>structure that is returned by<A><!-- external link: 1D 83 C3 FC --> DosExecPgm</A>.
+You can use this process identifier to check the progress of the child process
+or to end the process.
+<P>
+You can also run a child process asynchronously by using<A><!-- external link: 1D 83 C3 3B --> DosExecPgm
+</A>with the EXEC_ASYNCRESULT constant. In addition to causing<A><!-- external link: 1D 83 C3 3B --> DosExecPgm
+</A>to return to the parent process immediately, this constant also directs
+OS/2 to save a copy of the termination status when the child process ends.
+This status specifies the reason the child process stopped. The parent process
+can retrieve the termination status by using<A><!-- external link: 1D 0A C4 FC --> DosWaitChild</A>.
+ 
+<P>
+The following code fragment starts the program SIMPLE.EXE, and then waits
+for it to finish. It then prints the termination code and the return code.
+
+<PRE>    #define INCL_DOSPROCESS       /* Process and thread values */
+    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+
+    #define START_PROGRAM "SIMPLE.EXE"
+
+    CHAR         szLoadError[100];
+    PSZ          pszArgs;
+    PSZ          pszEnvs;
+    RESULTCODES  rcReturnCodes;
+    APIRET       ulrc;
+
+    ulrc = DosExecPgm(szLoadError,         /* Object name buffer           */
+                      sizeof(szLoadError), /* Length of object name buffer */
+                      EXEC_SYNC,           /* Asynchronous/Trace flags     */
+                      pszArgs,             /* Argument string              */
+                      pszEnvs,             /* Environment string           */
+                      &amp;rcReturnCodes,      /* Termination codes            */
+                      START_PROGRAM);      /* Program file name            */
+
+    printf("Termination Code %d  Return Code %d \n",
+           rcReturnCodes.codeTerminate,
+           rcReturnCodes.codeResult);
+
+/*----------------SIMPLE.EXE------------------*/
+
+    #define INCL_DOSPROCESS       /* Process and thread values */
+    #include &lt;os2.h&gt;
+    #include &lt;stdio.h&gt;
+
+    #define RETURN_CODE 0
+
+    main()
+    {
+        printf("Hello!\n");
+        DosExit(EXIT_PROCESS,     /* End the thread or process */
+                RETURN_CODE);     /* Result code               */
+    }
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="095_L3_StartingaChildProces.html">[Back: Starting a Child Process]</A> <BR>
+<A HREF="097_L4_StartingaBackgroundP.html">[Next: Starting a Background Process]</A> 
+</BODY>
+</HTML>

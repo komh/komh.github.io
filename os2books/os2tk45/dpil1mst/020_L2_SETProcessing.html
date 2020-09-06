@@ -1,0 +1,99 @@
+<HTML>
+<HEAD>
+<TITLE>SET Processing</TITLE>
+</HEAD>
+<BODY>
+<H1>SET Processing</H1><!-- entering slot 20 -->
+<P>
+A DPI SET packet contains the name, type, length, and value of each varBind
+requested, plus the value type, value length, and value to be set.
+<P>
+If the subagent encounters an error while processing the request, it creates
+a DPI RESPONSE packet with an appropriate error indication in the error_code
+field and an error_index listing the position of the varBind at which the
+error occurs.  The first varBind is index 1, the second varBind is index
+2, and so on.  No name, type, length, or value information needs to provided
+in the packet because, by definition, the varBind information is the same
+as in the request to which this is a response and the agent still has that
+information.
+<P>
+If there are no errors, the subagent creates a DPI RESPONSE packet in which
+the error_code is set to SNMP_ERROR_noError (zero) and error_index is set
+to zero.  No name, type, length, or value information is needed because
+the RESPONSE to a SET should contain exactly the same varBind data as the
+data present in the request.  The agent can use the values it already has.
+
+<P>
+This suggests that the agent must keep state information, and that is the
+case.  It needs to do that anyway in order to be able to later pass the
+data with a DPI COMMIT or DPI UNDO packet.  Since there are no errors, the
+subagent must have allocated the required resources and prepared itself
+for the SET.  It does not yet carry out the set, that will be done at COMMIT
+time.
+<P>
+The subagent sends a DPI RESPONSE packet, indicating success or failure
+for the preparation phase, back to the agent.  The agent will issue a SET
+request for all other varBinds in the same original SNMP request it received.
+ This may be to the same subagent or to one or more different subagents.
+
+<P>
+Once all SET requests have returned a "no error" condition, the agent starts
+sending DPI COMMIT packets to the subagent(s).  If any SET request returns
+an error, the agent sends DPI UNDO packets to those subagents that indicated
+successful processing of the SET preparation phase.
+<P>
+When the subagent receives the DPI COMMIT packet, all the varBind information
+will again be available in the packet.  The subagent can now carry out the
+SET request.
+<P>
+If the subagent encounters an error while processing the COMMIT request,
+it creates a DPI RESPONSE packet with value SNMP_ERROR_commitFailed in the
+error_code field and an error_index that lists at which varBind the error
+occurs.  The first varBind is index 1, and so on.  No name, type, length,
+or value information is needed.  The fact that a commitFailed error exists
+does not mean that this error should be returned easily.  A subagent should
+do all that is possible to make a COMMIT succeed.
+<P>
+If there are no errors and the SET and COMMIT have been carried out with
+success, the subagent creates a DPI RESPONSE packet in which the error_code
+is set to SNMP_ERROR_noError (zero) and error_index is set to zero.  No
+name, type, length, or value information is needed.
+<P>
+So far we have discussed a successful SET and COMMIT sequence. However,
+after a successful SET, the subagent may receive a DPI UNDO packet.  The
+subagent must now undo any preparations it made during the SET processing,
+such as free allocated memory.
+<P>
+Even after a COMMIT, a subagent may still receive a DPI UNDO packet.  This
+will occur if some other subagent could not complete a COMMIT request.  Because
+of the SNMP requirement that all varBinds in a single SNMP SET request must
+be changed "as if simultaneous", all committed changes must be undone if
+any of the COMMIT requests fail. In this case the subagent must try and
+undo the committed SET operation.
+<P>
+If the subagent encounters an error while processing the UNDO request, it
+creates a DPI RESPONSE packet with value SNMP_ERROR_undoFailed in the error_code
+field and an error_index that lists at which varBind the error occurs.  The
+first varBind is index 1, and so on.  No name, type, length, or value information
+is needed.  The fact that an undoFailed error exists does not mean that
+this error should be returned easily.  A subagent should do all that is
+possible to make an UNDO succeed.
+<P>
+If there are no errors and the UNDO has been successful, the subagent creates
+a DPI RESPONSE packet in which the error_code is set to SNMP_ERROR_noError
+(zero) and error_index is set to zero.  No name, type, length, or value
+information is needed.
+<P>
+<B>Related Information</B><!-- lm: 0x2 6 -->
+<UL>
+<P>
+<A HREF="083_L2_ProcessingaSETCOMMIT.html">Processing a SET/COMMIT/UNDO
+Request</A><!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="019_L2_GETProcessing.html">[Back: GET Processing]</A> <BR>
+<A HREF="021_L2_GETNEXTProcessing.html">[Next: GETNEXT Processing]</A> 
+</BODY>
+</HTML>

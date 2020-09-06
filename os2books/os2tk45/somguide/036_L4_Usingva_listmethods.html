@@ -1,0 +1,230 @@
+<HTML>
+<HEAD>
+<TITLE>Using 'va_list' methods</TITLE>
+</HEAD>
+<BODY>
+<H1>Using 'va_list' methods</H1><!-- entering slot 49 -->
+<P>
+SOM supports methods whose final argument is a<B> va_list.</B> A<B> va_list
+</B>is a data type whose representation depends on the operating-system
+platform. To aid construction of portable code, SOM supports a platform-neutral
+API for building and manipulating<B> va_lists</B>. Use of this API is recommended
+on all platforms because it is compliant with the ANSI C standard and because
+of its portability.
+<P>
+<B>Note: </B> Initially support for<B> va_list</B> functions is available
+only for the PowerPC platform. With the release of SOM 3.0 however, support
+is extended to the PC platform.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+A function to create a<B> va_list</B> is not provided. Instead, users declare
+local variables of type<B> somVaBuf</B> and<B> va_list</B>.
+<P>
+The following sequence of calls is used to create and destroy a<B> va_list</B>:
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 --><B>somVaBuf_create</B>
+<P>
+Creates a SOM buffer for variable arguments from which the<B> va_list</B> will
+be built.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><B>somVaBuf_add</B>
+<P>
+Adds an argument to the SOM buffer for variable arguments.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><B>somVaBuf_get_valist</B>
+<P>
+Copies the<B> va_list</B> from the SOM buffer.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><B>somVaBuf_destroy</B>
+<P>
+Releases the SOM buffer and its associated<B> va_list</B>.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><B>somvalistSetTarget</B>
+<P>
+Modifies the first scalar value on the<B> va_list</B> without other side
+effects.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 --><B>somvalistGetTarget</B>
+<P>
+Gets the first scalar value from the<B> va_list</B> without other side effects.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Detailed information on these functions is provided in the<I> System Object
+Model Programming Reference</I>.
+<P>
+<B>Examples of va_list usage</B>
+<P>
+The following code segments pass a<B> va_list</B> to the<B> somDispatch
+</B>method by using the SOMobjects functions that build the<B> va_list</B>.
+
+<P>
+The<B> somDispatch</B> method (introduced by<B> SOMObject</B>) is a particularly
+useful method whose final argument is a<B> va_list</B>. As explained in
+the<I> System Object Model Programming Reference</I>,<B> somDispatch</B> can
+be used to invoke some other method (called the "dispatched" method) on
+an object when usage bindings for the dispatched method are not available
+or when the method to be dispatched is not known until run time. The<B> va_list
+</B>argument for<B> somDispatch</B> holds the arguments that will be passed
+to the dispatched method, including the target object for the dispatched
+method.
+<P>
+For C:
+<PRE>#include &lt;somobj.h&gt;void f1(SOMObject obj, Environment *ev)
+{
+        char *msg;
+        va_list start_val;
+        somVaBuf vb;
+        char *msg1 = "Good Morning";
+
+        vb = (somVaBuf)<B>somVaBuf_create</B>(NULL, 0);
+        <B>somVaBuf_add</B>(vb, (char *)&amp;obj, tk_pointer);
+                                                            /* target for _set_msg */
+        <B>somVaBuf_add</B>(vb, (char *)&amp;ev, tk_pointer);
+                                                            /* next argument  */
+        <B>somVaBuf_add</B>(vb, (char *)&amp;msg1, tk_pointer);
+                                                            /* final argument */
+        <B>somVaBuf_get_valist</B>(vb, &amp;start_val);
+
+        /* dispatch _set_msg on object */
+        <B>SOMObject_somDispatch</B>(
+                obj,    /* target for somDispatch */
+                0,      /* says ignore dispatched method result */
+                somIdFromString("_set_msg"),  /* the somId for _set_msg */
+                start_val);     /* target and args for _set_msg */
+
+        /* dispatch _get_msg on obj:      */
+        /* Get a fresh copy of the va_list      */
+        <B>somVaBuf_get_valist</B>(vb, &amp;start_val);
+        <B>SOMObject_somDispatch</B>(
+                obj,
+                (somToken *)&amp;msg,
+                               /* address to store dispatched result */
+                somIdFromString("_get_msg"),
+                start_val);     /* target and arguments for _get_msg */
+        printf("%s\n",msg);
+        <B>somVaBuf_destroy</B>(vb);
+}
+</PRE>
+For C++:
+<PRE>#include &lt;somobj.h&gt;
+void f1(SOMObject obj, Environment *ev)
+{
+        char *msg;
+        va_list start_val;
+        somVaBuf vb;
+        char *msg1 = "Good Morning";
+
+        vb = (somVaBuf)<B>somVaBuf_create</B>(NULL, 0);
+        <B>somVaBuf_add</B>(vb, (char *)&amp;obj, tk_pointer);
+                                         /* target for _set_msg */
+        <B>somVaBuf_add</B>(vb, (char *)&amp;ev, tk_pointer);
+                                              /* next argument  */
+        <B>somVaBuf_add</B>(vb, (char *)&amp;msg1, tk_pointer);
+                                              /* final argument */
+        <B>somVaBuf_get_valist</B>(vb, &amp;start_val);
+
+        /* dispatch _set_msg on object */
+        obj-&gt;<B>SOMObject_somDispatch</B>(
+                0,      /* says ignore dispatched method result */
+                somIdFromString("_set_msg"),  /* the somId for _set_msg */
+                start_val);     /* target and args for _set_msg */
+
+        /* dispatch _get_msg on obj:      */
+        /* Get a fresh copy of the va_list      */
+        <B>somVaBuf_get_valist</B>(vb, &amp;start_val);
+        obj-&gt;<B>SOMObject_somDispatch</B>(
+                (somToken *)&amp;msg,
+                               /* address to store dispatched result */
+                somIdFromString("_get_msg"),
+                start_val);     /* target and arguments for _get_msg */
+        printf("%s\n",msg);
+        <B>somVaBuf_destroy</B>(vb);
+}
+</PRE>
+
+<P>
+As a convenience, methods whose final argument is a<B> va_list</B> can be
+invoked from C and C++ by using the short form of method invocation and
+specifying a variable number of arguments in place of the<B> va_list</B>.
+That is, beginning at the syntax position where the<B> va_list</B> argument
+is expected, SOMobjects interprets all subsequent arguments as being the
+components of the<B> va_list</B>. This is illustrated below, using the<B> somDispatch
+</B>method.
+<P>
+As an example of using the variable-argument interface to<B> somDispatch</B>,
+the following code segments illustrate how an example of attribute<!-- entering slot 50 --> access
+(in the topic "Accessing attributes") could be recoded to operate without
+usage bindings for the "Hello" class. These code segments are expressed
+as functions that accept an argument of type<B> SOMObject</B> under the
+assumption that bindings for "Hello" are not available. (This requires usage
+bindings for<B> SOMObject</B>, which are also required for calling<B> somDispatch</B>.)
+
+<P>
+For C:
+<PRE>#include &lt;somobj.h&gt;
+void f1(SOMObject obj, Environment *ev)
+{
+        char *msg;
+        /* dispatch _set_msg on obj:   */
+        _<B>somDispatch</B>(
+                obj,    /* the target for somDispatch */
+                0,      /* says ignore the dispatched method result */
+                somIdFromString("_set_msg"),  /* the somId for _set_msg */
+                obj,    /* the target for _set_msg */
+                ev,     /* the other arguments for _set_msg */
+                "Good Morning");
+        /* dispatch _get_msg on obj:     */
+        _<B>somDispatch</B>(
+                obj,
+                (somToken *)&amp;msg,
+                            /* address to hold dispatched method result */
+                somIdFromString("_get_msg"),
+                obj,    /* the target for _get_msg */
+                ev);    /* the other argument for _get_msg */
+        printf("%s\n", msg);
+}
+</PRE>
+
+<P>
+For C++:
+<PRE>#include &lt;somobj.h&gt;
+void f1(SOMObject obj, Environment *ev)
+{
+        char *msg;
+        /* dispatch _set_msg on obj:   */
+        obj-&gt;<B>somDispatch</B>(
+                0,      /* says ignore the dispatched method result */
+                somIdFromString("_set_msg"),  /* dispatched method id */
+                obj,    /* the target for _set_msg */
+                ev,     /* the other arguments for _set_msg */
+                "Good Morning");
+        /* dispatch _get_msg on obj:     */
+        obj-&gt;<B>somDispatch</B>(
+                (somToken *)&amp;msg,
+                      /* address to store dispatched result */
+                somIdFromString("_get_msg"),
+                obj,
+                ev);
+        printf("%s\n", msg);
+}
+</PRE>
+
+<P>
+C programmers must be aware that the "short form" of the invocation macro
+that is used above to pass a variable number of arguments to a<B> va_list
+</B>method is only available in the absence of ambiguity. The long-form
+macro (which is always available) requires an explicit<B> va_list</B> argument.
+(See "Short form vs long form" under "Making typical method calls" earlier
+in this chapter.)
+
+<P><HR>
+
+<A HREF="035_L4_AccessingAttributes.html">[Back: Accessing Attributes]</A> <BR>
+<A HREF="037_L4_Usingnamelookupmetho.html">[Next: Using name-lookup method resolution]</A> 
+</BODY>
+</HTML>

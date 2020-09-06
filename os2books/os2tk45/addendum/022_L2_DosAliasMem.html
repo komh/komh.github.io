@@ -1,0 +1,154 @@
+<HTML>
+<HEAD>
+<TITLE>DosAliasMem</TITLE>
+</HEAD>
+<BODY>
+<H1>DosAliasMem</H1><!-- entering slot 26 -->
+<P>
+<B>Purpose</B>
+<P>
+DosAliasMem creates a private Read/Write alias or an LDT code segment alias
+to part of an existing memory object. The alias object is accessible only
+to the process that created it. The original object must be accessible to
+the caller of DosAliasMem.
+<P>
+<B>Syntax</B>
+<PRE>#define INCL_DOSMEMMGR
+#include  os2.h&gt;
+
+</PRE>
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+APIRET APIENTRY DosAliasMem<!-- lm: 0x2 11 -->
+<UL><B> (PVOID pMem, ULONG
+cbSize, PPVOID ppAlias, ULONG flags)</B><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Parameters</B><!-- lm: 0x2 1 -->
+<P>
+pMem (PMEM)  input<!-- lm: 0x11 11 -->
+<UL> Contains the address of the
+memory to be aliased. It must be on a page boundary (that is, 4K aligned),
+but may specify an address within a memory object.<!-- lm: 0x2 1 -->
+</UL> cbSize
+(CBSIZE)  input<!-- lm: 0x11 11 -->
+<UL> Specifies the size in bytes for
+the memory to alias. The entire range must lie within a single memory object
+and must be committed if OBJ_SELMAPALL is specified.<!-- lm: 0x2 1 -->
+</UL> ppAlias
+(PPALIAS)  output<!-- lm: 0x11 11 -->
+<UL> Address of a location in which
+the address of the aliased memory is returned. The corresponding LDT selector
+is not explicitly returned but may be calculated by using the Compatibility
+Mapping Algorithm 
+<PRE>sel = (SEL) ((ULONG) (*ppAlias) &gt;&gt; 13 | 7)</PRE>
+<!-- lm: 0x2 1 -->
+</UL> flags (FLAGS)  input<!-- lm: 0x11 11 -->
+<UL> Flags
+are defined as follows <!-- lm: 0x2 11 -->
+<P>
+OBJ_SELMAPALL (0x00000800)<!-- lm: 0x2 26 -->
+<UL> OBJ_SELMAPALL creates
+a Read/Write 32 bit alias to the address specified. The entire range must
+be committed, start on page boundary and be within the extent of a single
+memory object. An LDT selector is created to map the entire range specified.
+
+<P>
+If OBJ_SELMAPALL is not specified, then size is rounded up to a 4K multiple
+and the alias created inherits the permissions from the pages of the original
+object.
+<P>
+OBJ_TILE may be specified, but currently this is enforced whether or not
+specified. This forces LDT selectors to be based on 64K boundaries.<!-- lm: 0x2 11 -->
+</UL> SEL_CODE
+(0x00000001)<!-- lm: 0x2 26 -->
+<UL> Marks the LDT alias selector(s) Read-Executable
+code selectors.<!-- lm: 0x2 11 -->
+</UL> SEL_USE32 (0x00000002)<!-- lm: 0x2 26 -->
+<UL> Used
+with OBJ_SELMAPALL, otherwise ignored. Marks the first alias LDT selector
+as a 32 bit selector by setting the BIG/C32 bit.<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Returns</B><!-- lm: 0x2 1 -->
+<P>
+ulrc (APIRET)  returns<!-- lm: 0x11 11 -->
+<UL> Return Code.
+<P>
+DosAliasMem returns one of the following values <!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->NO_ERROR<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->ERROR_NOT_ENOUGH_MEMORY<!-- lm: 0x2 11 -->
+<P>
+87<!-- lm: 0x2 26 -->
+<UL> ERROR_INVALID_PARAMETER<!-- lm: 0x2 11 -->
+</UL> 95
+<!-- lm: 0x2 26 -->
+<UL>ERROR_INTERRUPT<!-- lm: 0x2 11 -->
+</UL> 32798<!-- lm: 0x2 26 -->
+<UL> ERROR_CROSSES_OBJECT_BOUNDARY
+<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Remarks</B>
+<P>
+An export for DosAliasMem does not appear in versions of OS2386.LIB distributed
+prior to Warp Server for e-business. When using older versions, the following
+statements should be added to the link edit .DEF file 
+<PRE>importsDosAliasMem = DOSCALLS.298
+</PRE>
+
+<P>
+An alias is removed by calling DosFreeMem with the alias address.
+<P>
+Though it is possible to create a Read/Write alias to a code segment to
+allow code modification this is not recommended. On Pentium(R) processors,
+and later, pipe-lining techniques used by the  processor might allow the
+processor not to be aware of the modified code, if appropriate pipe-line
+serialization is not performed by the programmer. For further information
+see the processor documentation.
+<P>
+<B>Related Functions</B><!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 --><!-- entering slot 27 -->DosAllocMem<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosAllocSharedMem<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosFreeMem<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Example Code</B>
+<PRE>#define INCL_DOSMEMMGR#include int main(int argc, char *argv[], char *envp[])
+{
+   PVOID pAlias;
+   PVOID pMem;
+   APIRET rc;
+
+   /* alias a read-only shared memory object as a private read/write */
+   /* object. This will allow clients of this object to read only    */
+   /* while allowing the owner to update it.                         */
+
+   rc=DosAllocSharedMem( pMem,NULL,128*1024,
+      PAG_READ+PAG_COMMIT+OBJ_GIVEABLE);
+
+   rc = DosAliasMem(pMem, 128*1024,  pAlias, OBJ_TILE);
+
+   .
+   .
+   .
+   .
+
+   return 0;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="021_L1_ControlProgramFuncti.html">[Back: Control Program Functions]</A> <BR>
+<A HREF="023_L2_DosCancelLockRequest.html">[Next: DosCancelLockRequestL]</A> 
+</BODY>
+</HTML>

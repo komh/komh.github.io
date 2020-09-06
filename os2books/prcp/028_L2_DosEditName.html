@@ -1,0 +1,135 @@
+<HTML>
+<HEAD>
+<TITLE>DosEditName</TITLE>
+</HEAD>
+<BODY>
+<H1>DosEditName</H1><!-- entering slot 30 -->Bindings:  <A HREF="203_L2H_DosEditName.html">C</A>,
+<A HREF="378_L2H_DosEditName.html">MASM</A>
+<BR>
+
+<P>
+This call edits file and subdirectory names indirectly by transforming one
+ASCII string into another, using global file name characters for editing
+or search operations on the string.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+DosEditName<!-- lm: 0x2 17 -->
+<UL> (EditLevel, SourceString, EditString,
+TargetBuf, TargetBufLen)<!-- lm: 0x2 1 -->
+</UL><!-- lm: 0x2 1 -->
+<P>
+<B>EditLevel</B> (USHORT) - input<!-- lm: 0x11 4 -->
+<UL> The level of editing
+semantics to use in transforming the source string. The value of EditLevel
+must be 0001H for OS/2 Version 1.2.<!-- lm: 0x2 1 -->
+</UL><B> SourceString
+</B>(PSZ) - input<!-- lm: 0x11 4 -->
+<UL> Address of the ASCIIZ string to
+transform. Global file name characters are specified only in the subdirectory
+or file name component of the path name and are interpreted as search characters.
+<!-- lm: 0x2 1 -->
+</UL><B>EditString</B> (PSZ) - input<!-- lm: 0x11 4 -->
+<UL> Address
+of the ASCIIZ string to use for editing. Global file name characters specified
+in the edit string are interpreted as editing characters. Because only the
+name component of a path name is transformed, this string does not include
+the path component.<!-- lm: 0x2 1 -->
+</UL><B> TargetBuf</B> (PBYTE) - output
+<!-- lm: 0x11 4 -->
+<UL>Address of the buffer to store the resulting ASCIIZ
+string in.<!-- lm: 0x2 1 -->
+</UL><B> TargetBufLen</B> (USHORT) - input
+<!-- lm: 0x11 4 -->
+<UL>The length of the buffer to store the resulting
+string in.<!-- lm: 0x2 1 -->
+</UL><B> rc</B> (USHORT) - return<!-- lm: 0x11 4 -->
+<UL> Return
+code descriptions are:<!-- lm: 0x2 4 -->
+<P>
+<LI><!-- lm: 0x2 14 -->NO_ERROR<!-- lm: 0x2 4 --> 87<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_PARAMETER
+<!-- lm: 0x2 4 -->
+</UL>123<!-- lm: 0x2 14 -->
+<UL> ERROR_INVALID_NAME<!-- lm: 0x2 1 -->
+</UL><B>Remarks</B>
+<P>
+DosEditName is used to search for and edit names of files and subdirectories.
+ This call is typically used in conjunction with calls like <A HREF="088_L2_DosMove.html">DosMove
+</A>and <A HREF="016_L2_DosCopy.html">DosCopy</A>, which do not permit the
+use of global file name characters, to perform repetitive operations on
+files.
+<P>
+As an example of an editing operation, a SourceString of "foo.bar" specified
+with an EditString of "*.baz" results in "FOO.BAZ" being returned. In the
+editing process, the string is changed to uppercase.
+<P>
+Global file name characters have two sets of semantics; one for searching
+and one for editing. If they are specified in SourceString, they are interpreted
+as search characters.  If they are specified in EditString, they are interpreted
+as editing characters.
+<P>
+Use of the OS/2 COPY utility illustrates this difference in semantics. For
+example, if a user enters:
+<PRE>copy *.old *.new
+</PRE>
+In the source, the "*" acts as a search character and determines which files
+to return to the user.  In the target, the "*" functions as an editing character
+by constructing new names for the matched files.
+<P>
+When used as search characters in SourceString, global file name characters
+simply match files and behave like any other search characters. They have
+the following meanings:<!-- lm: 0x2 1 -->
+<P>
+<LI><!-- lm: 0x2 4 -->The "." has no special meaning itself but "?" gives
+it one.<!-- lm: 0x2 1 -->
+<P>
+<LI><!-- lm: 0x2 4 -->The "*" matches 0 or more characters, any character,
+including a blank. The matching operation does not cross the null character
+or the backslash (\), which means only the file name is matched, not an
+entire path.<!-- lm: 0x2 1 -->
+<P>
+<LI><!-- lm: 0x2 4 -->The "?" matches 1 character, unless what it would
+match is a "." or the terminating null characters, in which case it matches
+0 characters.  It also doesn't cross "\".<!-- lm: 0x2 1 -->
+<BR>
+Any character other than * and ? matches itself, including ".".
+<P>
+Searching is case-insensitive.
+<P>
+Any file name that does not have a period (.) in it gets an implicit one
+automatically appended to the end during searching operations.  For example,
+searching for "foo." would return "foo".
+<P>
+When used as editing characters in EditString, global file name characters
+have the following meanings:<!-- lm: 0x2 1 -->
+<P>
+<LI><!-- lm: 0x2 4 -->The "." has a special meaning for editing.  The "."
+in the target synchronizes pointers.  It causes the source pointer to match
+a corresponding pointer to the "." in the target.  Counting starts from
+the left of the pointers.<!-- lm: 0x2 1 -->
+<P>
+<LI><!-- lm: 0x2 4 -->The "?" copies one character, unless what it would
+copy is a ".", in which case it copies 0.  It also copies 0 characters when
+the end of the source string is reached.<!-- lm: 0x2 1 -->
+<P>
+<LI><!-- lm: 0x2 4 -->The "*" copies characters from the source to the target
+until it finds a source character that matches the character following it
+in the target.<!-- lm: 0x2 1 -->
+<BR>
+Editing is case-insensitive and case-preserving.  If conflicts arise between
+the case of the source and editing string, the case of the editing string
+is used. For example:
+<PRE>source string:      "file.txt"
+editing string:     "*E.TMP"
+destination string: "filE.TMP"
+
+copy file.txt  *E.tmp  -&gt;  filE.tmp
+</PRE>
+
+
+<P><HR>
+
+<A HREF="027_L2_DosDupHandle.html">[Back: DosDupHandle]</A> <BR>
+<A HREF="029_L2_DosEnterCritSec.html">[Next: DosEnterCritSec]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,65 @@
+<HTML>
+<HEAD>
+<TITLE>Error codes -- errno, h_errno & WSAGetLastError()</TITLE>
+</HEAD>
+<BODY>
+<H1>Error codes -- errno, h_errno & WSAGetLastError()</H1><!-- entering slot 25 -->
+<P>
+Error codes set by the Windows Sockets implementation are<B> NOT</B> made
+available via the errno variable.  Additionally, for the <A HREF="036_L2_DatabaseFunctions.html">getXbyY()
+</A>class of functions, error codes are<B> NOT</B> made available via the
+h_errno variable.  Instead, error codes are accessed by using the <A HREF="089_L3_WSAGetLastError.html">WSAGetLastError()
+</A>API.  This function is provided in Windows Sockets as a precursor (and
+eventually an alias) for the Win32 function<B> GetLastError()</B>.  This
+is intended to provide a reliable way for a thread in a multi-threaded process
+to obtain per-thread error information.
+<P>
+For compatibility with BSD, an application may choose to include a line
+of the form:
+<PRE>#define errno WSAGetLastError()
+</PRE>
+
+<P>
+This will allow networking code which was written to use the global errno
+to work correctly in a single-threaded environment.  There are, obviously,
+some drawbacks.  If a source file includes code which inspects errno for
+both socket and non-socket functions, this mechanism cannot be used.  Furthermore,
+it is not possible for an application to assign a new value to errno.  (In
+Windows Sockets the function <A HREF="092_L3_WSASetLastError.html">WSASetLastError()
+</A>may be used for this purpose.)
+<P>
+<B>TYPICAL BSD STYLE:</B>
+<PRE>r = recv(...);
+if (r == -1
+    &amp;&amp; errno == EWOULDBLOCK)
+        {...}
+</PRE>
+
+<P>
+<B>PREFERRED STYLE:</B>
+<PRE>r = recv(...);
+if (r == -1       /* (but see below) */
+    &amp;&amp; WSAGetLastError() == EWOULDBLOCK)
+        {...}
+</PRE>
+
+<P>
+Although error constants consistent with 4.3 Berkeley Sockets are provided
+for compatibility purposes, applications should, where possible, use the
+"WSA" error code definitions.  For example, a more accurate version of the
+above source code fragment is:
+<PRE>r = recv(...);
+if (r == -1
+    &amp;&amp; WSAGetLastError() == WSAEWOULDBLOCK)
+        {...}
+</PRE>
+
+<P>
+
+
+<P><HR>
+
+<A HREF="023_L3_selectandFD_.html">[Back: select() and FD_*]</A> <BR>
+<A HREF="025_L3_Pointers.html">[Next: Pointers]</A> 
+</BODY>
+</HTML>

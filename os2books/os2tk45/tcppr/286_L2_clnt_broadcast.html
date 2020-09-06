@@ -1,0 +1,141 @@
+<HTML>
+<HEAD>
+<TITLE>clnt_broadcast()</TITLE>
+</HEAD>
+<BODY>
+<H1>clnt_broadcast()</H1><!-- entering slot 324 -->
+<P>
+The clnt_broadcast() call broadcasts a remote program to all locally connected
+broadcast networks.
+<P>
+<B>Syntax</B>
+<PRE>#include &lt;rpc\rpc.h&gt;
+
+enum clnt_stat
+clnt_broadcast(<I>prognum</I>, <I>versnum</I>, <I>procnum</I>, <I>inproc</I>, <I>in</I>, <I>outproc</I>, <I>out</I>, <I>eachresult</I>)
+u_long <I>prognum</I>;
+u_long <I>versnum</I>;
+u_long <I>procnum</I>;
+xdrproc_t <I>inproc</I>;
+caddr_t <I>in</I>;
+xdrproc_t <I>outproc</I>;
+caddr_t <I>out</I>;
+resultproc_t <I>eachresult</I>;
+</PRE>
+
+<P>
+<B>Parameters</B><!-- lm: 0x2 0 -->
+<P>
+<I>prognum</I><!-- lm: 0x11 2 -->
+<UL> Program number of the remote procedure.
+<!-- lm: 0x2 0 -->
+</UL><I>versnum</I><!-- lm: 0x11 2 -->
+<UL> Version number
+of the remote procedure.<!-- lm: 0x2 0 -->
+</UL><I> procnum</I><!-- lm: 0x11 2 -->
+<UL> Procedure
+number of the remote procedure.<!-- lm: 0x2 0 -->
+</UL><I> inproc</I><!-- lm: 0x11 2 -->
+<UL> XDR
+procedure used to encode the arguments of the remote procedure.<!-- lm: 0x2 0 -->
+</UL><I> in
+</I><!-- lm: 0x11 2 -->
+<UL>Pointer to the arguments of the remote procedure.
+<!-- lm: 0x2 0 -->
+</UL><I>outproc</I><!-- lm: 0x11 2 -->
+<UL> XDR procedure
+used to decode the results of the remote procedure.<!-- lm: 0x2 0 -->
+</UL><I> out
+</I><!-- lm: 0x11 2 -->
+<UL>Pointer to the results of the remote procedure.
+<!-- lm: 0x2 0 -->
+</UL><I>eachresult</I><!-- lm: 0x11 2 -->
+<UL> Procedure
+called after each response.<!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>Note: </B> resultproc_t is a type definition:
+<PRE>typedef bool_t (*resultproc_t) ();</PRE>
+<!-- lm: 0x2 0 -->
+<P>
+
+<P>
+<B>Description</B>
+<P>
+The clnt_broadcast() call broadcasts a remote program described by<I> prognum</I>,
+<I>versnum</I>, and<I> procnum</I> to all locally connected broadcast networks.
+Each time clnt_broadcast() receives a response, it calls eachresult().
+<P>
+The syntax and parameters of eachresult() are:<!-- lm: 0x2 5 -->
+<UL>
+<P>
+
+<PRE>#include &lt;netinet\in.h&gt;
+#include &lt;rpc\rpctypes.h&gt;
+
+bool_t eachresult(<I>out</I>, <I>addr</I>)
+char *<I>out</I>;
+struct sockaddr_in *<I>addr</I>;
+</PRE>
+ <!-- lm: 0x2 5 -->
+<BR>
+<I>out</I><!-- lm: 0x11 12 -->
+<UL> Has the same function as it does for
+clnt_broadcast(), except that the output of the remote procedure is decoded
+<!-- lm: 0x2 5 -->
+</UL><I>addr</I><!-- lm: 0x11 12 -->
+<UL> Pointer to
+the address of the machine that sent the results<!-- lm: 0x2 5 --><!-- lm: 0x2 0 -->
+</UL>
+<P>
+<B>Return Values</B>
+<P>
+If eachresult() returns 0, clnt_broadcast() waits for more replies; otherwise,
+eachresult() returns the appropriate status.
+<P>
+<B>Note: </B> Broadcast sockets are limited in size to the maximum transfer
+unit of the data link.<!-- lm: 0x2 0 -->
+<P>
+
+<P>
+<B>Examples</B>
+<PRE>enum clnt_stat cs;u_long prognum, versnum;
+...
+cs = clnt_broadcast(prognum, versnum, NULLPROC, xdr_void,
+                    (char *)NULL, xdr_void, (char *)NULL, eachresult);
+if ((cs != RPC_SUCCESS) &amp;&amp; (cs != RPC_TIMEDOUT))
+  {
+   fprintf( " broadcast failed: \n");
+   exit(-1);
+  }
+...
+bool_t
+eachresult(out, addr)
+void *out;                                    /* Nothing comes back */
+struct sockaddr_in *addr;                        /* Reply from whom */
+{
+    register struct hostent *hp;
+    ...
+    hp = gethostbyaddr((char *) &amp;addr-&gt;sin_addr, sizeof addr-&gt;sin_addr,
+        AF_INET);
+    printf("%s %s\n", inet_ntoa(addr-&gt;sin_addr), hp-&gt;h_name);
+    ...
+    return(FALSE);
+}
+</PRE>
+
+<P>
+<B>Related Calls</B><!-- lm: 0x2 5 -->
+<UL>
+<P>
+<A HREF="285_L2_callrpc.html">callrpc()</A><!-- lm: 0x2 5 -->
+<BR>
+<A HREF="287_L2_clnt_call.html">clnt_call()</A><!-- lm: 0x2 0 -->
+</UL>
+
+<P><HR>
+
+<A HREF="285_L2_callrpc.html">[Back: callrpc()]</A> <BR>
+<A HREF="287_L2_clnt_call.html">[Next: clnt_call()]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,187 @@
+<HTML>
+<HEAD>
+<TITLE>Serial Device Category</TITLE>
+</HEAD>
+<BODY>
+<H1>Serial Device Category</H1><!-- entering slot 410 -->
+<P>
+This category includes the following APIs:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+<A HREF="325_L2_NetCharDevControlorN.html">Serial Device - NetCharDevControl
+</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="326_L2_NetCharDevEnumorNet3.html">Serial Device - NetCharDevEnum
+</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="327_L2_NetCharDevGetInfoorN.html">Serial Device - NetCharDevGetInfo
+</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="328_L2_NetCharDevQEnumorNet.html">Serial Device - NetCharDevQEnum
+</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="329_L2_NetCharDevQGetInfoor.html">Serial Device - NetCharDevQGetInfo
+</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="330_L2_NetCharDevQPurgeorNe.html">Serial Device - NetCharDevQPurge
+</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="331_L2_NetCharDevQPurgeSelf.html">Serial Device - NetCharDevQPurgeSelf
+</A><!-- lm: 0x2 6 -->
+<BR>
+<A HREF="332_L2_NetCharDevQSetInfoor.html">Serial Device - NetCharDevQSetInfo
+</A><!-- lm: 0x2 1 -->
+</UL>
+<P>
+Serial device APIs control shared serial devices and their associated queues.
+
+<P>
+For an application to communicate with a device such as a serial printer
+or a plotter, the application must be able to communicate directly and interactively.
+The communication must allow commands to be submitted dynamically and protocols
+to be changed as the application runs. The LAN Server software defines these
+types of communication devices as<I> serial devices</I>.  This definition
+is not limited to devices attached to hardware serial ports.
+<P>
+The serial device APIs are used with the CHARDEV.H and NETCONS.H header
+files.
+<P>
+The LAN Server software can pool serial devices of the same type into a
+serial device queue to which a requesting application makes its connection.
+A<I> serial device queue</I> can contain one or more serial devices and
+simultaneously allow multiple applications to connect to one of the available
+serial devices. Serial device queues can pool serial devices only on a server.
+
+<P>
+<B>Note: </B> Serial device queues exist only while they are being shared.
+In contrast, a spooled device queue (such as for a printer) exists from
+the time it is created (by calling the appropriate Add function) to the
+time it is removed.<!-- lm: 0x2 1 -->
+<P>
+
+<P>
+Before an application can communicate with a serial device, the following
+must occur:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->The server must have a serial device connected to
+one of its available LPT or COM ports.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A serial device queue must be created and shared on
+the network.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A requesting application must (1) explicitly redirect
+a local or null device name to the shared serial device queue by calling
+NetUseAdd, or (2) implicitly open the serial device queue by calling DosOpen
+and specifying the name of a queue.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+An explicit connection allows the application to refer to the serial device
+queue with a local device name.  An explicit connection does not, however,
+open a serial device.  For more information about redirecting a local device
+name to a shared resource, see <A HREF="402_L1_UseCategory.html">Use Category</A>.
+
+<P>
+To illustrate how serial devices and queues work on the LAN, consider the
+following scenario.  Assume that there are 4 serial devices connected to
+the communication ports of a server in the following manner: ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿³PORT
+      ³   ³DEVICE                     ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ COM1, COM2, COM3  ³    ³ Printers                     ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ COM4        ³    ³ Special                     ³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+
+<P>
+Once the serial devices are connected to the ports of a server, an application
+can create a serial device queue by calling the NetShareAdd function and
+specifying the share type as a serial device queue. In this scenario, assume
+the NetShareAdd function is called three times, creating the following 3
+queues: ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+<BR>
+³ QUEUE NAME        ³ PRIORITY   ³ DEVICE NAME             ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ SPLQ           ³ 5       ³ COM4                 ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ PRINTQ          ³ 5       ³ COM1, COM2, COM3           ³
+<BR>
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+<BR>
+³ VIPPRINT         ³ 1       ³ COM3                 ³
+<BR>
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+<BR>
+
+<P>
+The COM3 port is allocated for use by 2 different queues, PRINTQ and VIPPRINT.
+ After calling the NetShareAdd function to create a queue, you can set a
+parameter to assign a priority to the queue by calling NetCharDevQSetInfo.
+The priority can be from 1 (high) through 9 (low). Generally, the LAN Server
+software allows requests to serial device queues with a higher priority
+to access the pool of serial devices before other queues with lower priorities.
+
+<P>
+At this point, an application can connect to the shared serial device queue
+and begin communicating with one of the pooled serial devices in the queue.
+
+<P>
+If more than 1 serial device happens to be available in a serial device
+queue, the queue returns the first available serial device to the requesting
+application. If no devices currently are available, the queue puts the request
+on a waiting list<!-- entering slot 411 --> until a serial device becomes
+available.  The queue waits only as long as the<I> charwait</I> parameter
+of a requester specifies. If the thread undergoes a timeout while waiting
+for a serial device to become available, the DosOpen function returns the
+ERROR_BAD_NET_RESP error code.
+<P>
+An application can check (1) a particular serial device to see if it is
+working by calling the NetCharDevGetInfo function, or (2) all devices by
+calling the NetCharDevEnum function. An application also can check to see
+if the queue is busy or where the request of the application is on the queue
+waiting list by calling the NetCharDevQGetInfo function. To check all queues,
+call the NetCharDevQEnum function.
+<P>
+Applications can call the NetCharDevQPurgeSelf function to eliminate all
+requests submitted to a particular serial device queue from the requester
+of that application. To remove all requests submitted by all applications
+from the queue, call NetCharDevQPurge.  A process that currently has a device
+open is unaffected.
+<P>
+When the application no longer needs the device, it should call the DosClose
+function to return control of the serial device to the serial device queue,
+allowing another application to use it. If the application cannot call the
+DosClose function successfully to close the serial device queue, the application
+can call the NetCharDevControl function to force the serial device queue
+closed.
+<P>
+When an application successfully opens a remote serial device, the values
+of the<I> chartime</I> and<I> charcount</I> components from the<I> wksta_info
+</I>data structure control how information flows across the network to other
+pertinent requesters and servers. Any application changing these values
+on the requester where the open was performed should note the following:
+<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->The<I> chartime</I> and<I> charcount</I> components
+affect all applications running on the requester.<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Network efficiency, network response time, and network
+throughput might be slowed.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="318_L2_NetSetRIPLMachineInf.html">[Back: NetSetRIPLMachineInfo or Net32SetRIPLMachineInfo]</A> <BR>
+<A HREF="320_L2_SerialDeviceDataStru.html">[Next: Serial Device Data Structures]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,57 @@
+<HTML>
+<HEAD>
+<TITLE>Dump Analysis of Loops in Ring 0 Code</TITLE>
+</HEAD>
+<BODY>
+<H1>Dump Analysis of Loops in Ring 0 Code</H1><!-- entering slot 310 -->
+<P>
+Ring zero loops can sometimes be successfully analysed from a dump. The
+trick is knowing how to locate the register set at the time the dump was
+taken.
+<P>
+The Dump Formatter only implements the .R command, which obtains the registers
+from a stack frame on the thread's ring 0 stack. Under the kernel Debugger
+there is no problem: the R command will display the current system registers.
+
+<P>
+<B>Note: </B>
+<P>
+If a thread never runs in User Mode, such as the internal PID 0 threads
+then a stack frame is never built and .R will be unsuccessful in formatting
+the registers.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+Fortunately there is a way of obtaining the current registers:<!-- lm: 0x2 6 -->
+<UL>
+<P>
+When a dump is initiated using Ctrl-Alt-Numlock-Numlock a keyboard interrupt
+is initiated by the processor hardware.<!-- lm: 0x2 6 -->
+<P>
+Via the IDT control passes to the interrupt router who is responsible for
+switching to the interrupt stack before passing control to the appropriate
+interrupt handler.<!-- lm: 0x2 6 -->
+<P>
+The interrupt router checks to see if the system is already running from
+the interrupt stack.<!-- lm: 0x2 11 -->
+<UL>
+<P>
+If it isn't then an interrupt stack frame is built on the current stack
+and the stack frame pointer is saved in<B> fpoldstack</B>. Then the SS selector
+is switched to the interrupt stack selector (E8).<!-- lm: 0x2 11 -->
+<P>
+If it is then a nested interrupt has occurred and the interrupt stack frame
+is built on the interrupt stack itself.<!-- lm: 0x2 6 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+It is from<B> fpoldstack</B> that we are able to obtain the registers before
+any interrupt occurred. The following debug log illustrates this and many
+of the techniques previously discussed.
+
+<P><HR>
+
+<A HREF="211_L5_FindingtheSystemQueu.html">[Back: Finding the System Queue]</A> <BR>
+<A HREF="213_L4_Ring0LoopDumpAnalysi.html">[Next: Ring 0 Loop Dump Analysis Example]</A> 
+</BODY>
+</HTML>

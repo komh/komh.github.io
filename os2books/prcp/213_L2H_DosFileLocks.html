@@ -1,0 +1,94 @@
+<HTMLHIDDEN>
+<HEAD>
+<TITLE>DosFileLocks</TITLE>
+</HEAD>
+<BODY>
+<H1>DosFileLocks</H1><!-- entering slot 256 -->
+<PRE>#define INCL_DOSFILEMGR
+
+USHORT  rc = DosFileLocks(FileHandle, UnLockRange, LockRange);
+
+HFILE            FileHandle;    /* File handle */
+PLONG            UnLockRange;   /* UnLock range */
+PLONG            LockRange;     /* Lock range */
+
+USHORT           rc;            /* return code */
+</PRE>
+
+<P>
+<B>Example</B>
+<P>
+This example opens a file, writes some data to it, locks a block of the
+data, and then unlocks it.
+<PRE>#define INCL_DOSFILEMGR
+
+#define OPEN_FILE 0x01
+#define CREATE_FILE 0x10
+#define FILE_ARCHIVE 0x20
+#define FILE_EXISTS OPEN_FILE
+#define FILE_NOEXISTS CREATE_FILE
+#define DASD_FLAG 0
+#define INHERIT 0x80
+#define WRITE_THRU 0
+#define FAIL_FLAG 0
+#define SHARE_FLAG 0x10
+#define ACCESS_FLAG 0x02
+
+#define FILE_NAME "test.dat"
+#define FILE_SIZE 800L
+#define FILE_ATTRIBUTE FILE_ARCHIVE
+#define RESERVED 0L
+#define NULL_RANGE 0L
+
+HFILE   FileHandle;
+USHORT  Wrote;
+USHORT  Action;
+PSZ     FileData[100];
+USHORT  rc;
+
+struct LockStrc
+   {
+   long Offset;
+   long Range;
+   } Area;
+
+int i;
+
+   Action = 2;
+   strcpy(FileData, "Data...");
+   Area.Offset = 4;
+   Area.Range = 100;
+
+   if(!DosOpen(FILE_NAME,                /* File path name */
+                &amp;FileHandle,             /* File handle */
+                &amp;Action,                 /* Action taken */
+                FILE_SIZE,               /* File primary allocation */
+                FILE_ATTRIBUTE,          /* File attribute */
+                FILE_EXISTS | FILE_NOEXISTS,              /* Open function
+                                                                    type */
+                DASD_FLAG | INHERIT |            /* Open mode of the file */
+                WRITE_THRU | FAIL_FLAG |
+                SHARE_FLAG | ACCESS_FLAG,
+                RESERVED))               /* Reserved (must be zero) */
+      {
+      for(i=0; i&lt;200; ++i)
+         DosWrite(FileHandle,            /* File handle */
+                  FileData,              /* User buffer */
+                  sizeof(FileData),      /* Buffer length */
+                  &amp;Wrote);               /* Bytes written */
+      rc = DosFileLocks(FileHandle,            /* File handle */
+                        NULL_RANGE,            /* Unlock range */
+                        (PLONG) &amp;Area);       /* Lock range */
+      rc = DosFileLocks(FileHandle,            /* File handle */
+                        (PLONG) &amp;Area,        /* Unlock range */
+                        NULL_RANGE);           /* Lock range */
+      }
+</PRE>
+
+
+<P><HR>
+
+<A HREF="212_L2H_DosFileIO.html">[Back: DosFileIO]</A> <BR>
+<A HREF="214_L2H_DosFindClose.html">[Next: DosFindClose]</A> 
+</BODY>
+</HTML>

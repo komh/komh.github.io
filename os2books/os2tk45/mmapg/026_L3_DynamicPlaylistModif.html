@@ -1,0 +1,65 @@
+<HTML>
+<HEAD>
+<TITLE>Dynamic Playlist Modification</TITLE>
+</HEAD>
+<BODY>
+<H1>Dynamic Playlist Modification</H1><!-- entering slot 32 -->
+<P>
+An application can change a playlist dynamically to achieve various effects
+in controlling the data stream in memory.  In the case of the Clock Sample
+program, if the chime is an hour chime, then the program will dynamically
+modify the loop instruction in the memory playlist structure.  This is how
+the device playing the playlist knows how many times to play the chime.
+ The variable<I> usHour</I> is assigned the valid hour in the UpdateTheClock
+procedure.
+<PRE>      /*
+       * Set the playlist to loop for the number of hours to
+       * be played.  The hour value will be placed into operand one
+       * of the loop instruction playlist structure.*/
+
+           apltPlayList[ HOUR_PLAYLIST ][ LOOP_LINE ].ulOperandOne =
+               ((ULONG) (usHour));
+</PRE>
+
+<P>
+Manipulations that entail atomic, or uninterruptible, operations are acceptable
+techniques for achieving special effects with playlists. For example, the
+modification of the 32-bit operation code of an instruction is considered
+to be an atomic operation. Changing BRANCH to NOP, NOP to BRANCH, or changing
+the loop count value of a LOOP instruction are examples of atomic operations
+that produce special effects.
+<P>
+Because the playlist processor is asynchronously interpreting instructions,
+care must be taken to avoid a situation where unexpected results can occur.
+For example, suppose a situation exists that enables the loop count field
+to be modified by the application at the same time that the LOOP instruction
+is being executed by the playlist processor. The playlist processor can
+overwrite the application modification with a loop count value based on
+the execution of the LOOP instruction.
+<P>
+More extensive modifications (particularly those to pointer and length parameters
+of DATA instructions) should also be performed with caution.  You do not
+want the playlist processor to gain control of a partially modified instruction.
+
+<P>
+As a rule, it is not a good idea to modify a DATA instruction unless you
+are sure the playlist processor cannot interpret the instruction during
+the modification process; that is, you know the instruction is currently
+unreachable by the processor.  One way to determine the location of the
+processor is with the MESSAGE instruction.  For example, suppose you precede
+a LOOP instruction with a MESSAGE instruction. When the message is returned
+to your application, you know the processor is busy with the loop and you
+can safely modify any DATA instructions outside the loop.
+<P>
+After DATA instructions have been modified, BRANCH or NOP instructions can
+be changed to direct playlist interpretation to the modified section of
+the playlist.
+<P>
+
+
+<P><HR>
+
+<A HREF="025_L4_SettingupthePlaylist.html">[Back: Setting up the Playlist]</A> <BR>
+<A HREF="027_L3_UsingaPlaylistforRec.html">[Next: Using a Playlist for Recording]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,145 @@
+<HTML>
+<HEAD>
+<TITLE>DosProtectSetFileSizeL</TITLE>
+</HEAD>
+<BODY>
+<H1>DosProtectSetFileSizeL</H1><!-- entering slot 71 -->
+<P>
+<B>Purpose</B>
+<P>
+DosProtectSetFileSizeL changes the size of a file.
+<P>
+<B>Syntax</B>
+<PRE>#define INCL DOSFILEMGR
+#include  os2.h 
+
+</PRE>
+<!-- lm: 0x2 1 -->
+<UL>
+<P>
+APIRET DosProtectSetFileSizeL<!-- lm: 0x2 11 -->
+<UL><B> (HFILE hFile, LONGLONG
+cbSize, FHLOCK fhFileHandleLockID)</B><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Parameters</B><!-- lm: 0x2 1 -->
+<P>
+hFile  HFILE)  input<!-- lm: 0x11 11 -->
+<UL> Handle of the file whose size
+to be changed.<!-- lm: 0x2 1 -->
+</UL> cbSize  LONGLONG)  input<!-- lm: 0x11 11 -->
+<UL> New
+size, in bytes, of the file.<!-- lm: 0x2 1 -->
+</UL> fhFileHandleLockID
+ FHLOCK)  input<!-- lm: 0x11 11 -->
+<UL> The filehandle lockid obtained
+from DosProtectOpenL.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Returns</B><!-- lm: 0x2 1 -->
+<P>
+ulrc  APIRET)  returns<!-- lm: 0x11 11 -->
+<UL> Return Code.
+<P>
+DosProtectSetFileSizeL returns one of the following values <!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->NO_ERROR<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->ERROR_ACCESS_DENIED<!-- lm: 0x2 11 -->
+<P>
+<LI><!-- lm: 0x2 26 -->ERROR_INVALID_HANDLE<!-- lm: 0x2 11 -->
+<P>
+26<!-- lm: 0x2 26 -->
+<UL> ERROR_NOT_DOS_DISK<!-- lm: 0x2 11 -->
+</UL> 33
+<!-- lm: 0x2 26 -->
+<UL>ERROR_LOCK_VIOLATION<!-- lm: 0x2 11 -->
+</UL> 87
+<!-- lm: 0x2 26 -->
+<UL>ERROR_INVALID_PARAMETER<!-- lm: 0x2 11 -->
+</UL> 112
+<!-- lm: 0x2 26 -->
+<UL>ERROR_DISK_FULL<!-- lm: 0x2 11 --><!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Remarks</B>
+<P>
+When DosProtectSetFileSizeL is issued, the file must be open in a mode that
+allows write access.
+<P>
+The size of the open file can be truncated or extended. If the file size
+is being extended, the file system tries to allocate additional bytes in
+a contiguous (or nearly contiguous) space on the medium. The values of the
+new bytes are undefined.
+<P>
+<B>Related Functions</B><!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->DosProtectOpenL<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosProtectQueryFileInfo<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->DosQueryPathInfo<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Example Code</B>
+<P>
+This example writes to a file named  DOSPMAN.DAT , resets the buffer, and
+changes the size of the file using DosProtect functions.
+<PRE>#define INCL_DOSFILEMGR          /* File Manager values */#define INCL_DOSERRORS           /* DOS Error values    */
+#include  os2.h 
+#include  stdio.h 
+#include  string.h 
+
+int main(VOID)  
+HFILE  hfFileHandle   = 0L;     /* Handle for file being manipulated */
+ULONG  ulAction       = 0;      /* Action taken by DosOpenL */
+FHLOCK FileHandleLock = 0;      /* File handle lock   */
+
+ULONG  ulWrote        = 0;      /* Number of bytes written by DosWrite */
+UCHAR  uchFileName 20   = "dospman.dat",     /* Name of file */
+uchFileData 4    = "DATA";            /* Data to write to file */
+APIRET rc             = NO_ERROR;            /* Return code */
+
+/* Open the file dosman.dat.  Use an existing file or create a new */
+/* one if it doesn't exist.                                      */
+rc = DosProtectOpenL(uchFileName,  hfFileHandle,  ulAction, (LONGLONG)4,
+FILE_ARCHIVED | FILE_NORMAL,
+OPEN_ACTION_CREATE_IF_NEW | OPEN_ACTION_OPEN_IF_EXISTS,
+OPEN_FLAGS_NOINHERIT | OPEN_SHARE_DENYNONE  |
+OPEN_ACCESS_READWRITE, 0L,  FileHandleLock);
+if (rc != NO_ERROR)  
+printf("DosProtectOpenL error  return code = %u\n", rc);
+return 1;
+ 
+
+rc = DosProtectWrite (hfFileHandle, (PVOID) uchFileData,
+sizeof (uchFileData),  ulWrote, FileHandleLock);
+if (rc != NO_ERROR)  
+printf("DosProtectWrite error  return code = %u\n", rc);
+return 1;
+ 
+
+rc = DosResetBuffer (hfFileHandle);
+if (rc != NO_ERROR)  
+printf("DosResetBuffer error  return code = %u\n", rc);
+return 1;
+  /* endif */
+
+rc = DosProtectSetFileSizeL (hfFileHandle, (LONGLONG)8, FileHandleLock);
+if (rc != NO_ERROR)  
+printf("DosProtectSetFileSizeL error  return code = %u\n", rc);
+return 1;
+ 
+
+return NO_ERROR;
+ 
+</PRE>
+
+
+<P><HR>
+
+<A HREF="041_L2_DosProtectSetFilePtr.html">[Back: DosProtectSetFilePtrL]</A> <BR>
+<A HREF="043_L2_DosQueryABIOSSupport.html">[Next: DosQueryABIOSSupport]</A> 
+</BODY>
+</HTML>

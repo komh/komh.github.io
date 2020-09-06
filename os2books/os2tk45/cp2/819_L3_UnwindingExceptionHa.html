@@ -1,0 +1,138 @@
+<HTML>
+<HEAD>
+<TITLE>Unwinding Exception Handlers</TITLE>
+</HEAD>
+<BODY>
+<H1>Unwinding Exception Handlers</H1><!-- entering slot 837 -->
+<P>
+In addition to handling exceptions, exception handlers are used to clean
+up resources during the execution of a nonlocal GOTO instruction or during
+thread termination. (A nonlocal GOTO instruction jumps to a label outside
+the current procedure. The label is a procedure address or an address within
+a procedure that is on the stack, higher in the call frame chain.)
+<P>
+<A><!-- external link: 1D 09 C4 47 -->DosUnwindException</A> calls and removes
+exception handlers from a thread's chain of registered exception handlers
+up to, but not including, a specified exception handler. This is known as
+an<I> unwind operation</I>.<A><!-- external link: 1D 09 C4 47 --> DosUnwindException
+</A>can also be used to unwind all exception handlers from the thread's
+exception handler chain and to terminate the thread.
+<P>
+For example, with the C language setjmp() and longjmp() routines, the setjmp()
+would save the address of the current exception handler structure, along
+with any other information that is necessary to perform the longjmp() routine.
+ (The address of the current exception handler structure is obtained from
+the head of the exception handler chain. A pointer to the head of the chain
+is located in the Thread Information Block.)
+<P>
+The longjmp() routine would initiate the unwind of procedure call frames
+by calling<A><!-- external link: 1D 09 C4 47 --> DosUnwindException</A> and
+passing to it the saved address of the <A HREF="181_L2_EXCEPTIONREGISTRATIO.html">EXCEPTIONREGISTRATIONRECORD
+</A>data structure. If the address of the <A HREF="181_L2_EXCEPTIONREGISTRATIO.html">EXCEPTIONREGISTRATIONRECORD
+</A>data structure is not found in the chain, then the XCPT_INVALID_UNWIND_TARGET
+exception is raised, and the chain is not unwound.
+<P>
+The machine state at the time of the call to<A><!-- external link: 1D 09 C4 47 --> DosUnwindException
+</A>is captured in ContextRecord. The EH_UNWINDING flag is set in the exception
+flags field of the <A HREF="184_L2_EXCEPTIONREPORTRECOR.html">EXCEPTIONREPORTRECORD
+</A>data structure. The EH_EXIT_UNWIND flag is also set if the <A HREF="181_L2_EXCEPTIONREGISTRATIO.html">EXCEPTIONREGISTRATIONRECORD
+</A>parameter is set to 0 (if the application does not provide its own <A HREF="184_L2_EXCEPTIONREPORTRECOR.html">EXCEPTIONREPORTRECORD
+</A>parameter OS/2 will construct one). A backward walk through the procedure
+call frames is then performed to find the target of the unwind operation.
+
+<P>
+<B>Note: </B> Even though a ContextRecord is used to capture the state of
+the machine, unwinding is not considered an exception.  It is simply delivered
+through the exception mechanism.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+
+<P>
+The first parameter to<A><!-- external link: 1D 09 C4 47 --> DosUnwindException
+</A>is the address of an exception handler's <A HREF="181_L2_EXCEPTIONREGISTRATIO.html">EXCEPTIONREGISTRATIONRECORD</A>.
+<A><!-- external link: 1D 09 C4 47 -->DosUnwindException</A> will unwind
+exception handlers up to, but not including that exception handler. If a
+-1 is passed to<A><!-- external link: 1D 09 C4 47 --> DosUnwindException
+</A>for this parameter,<A><!-- external link: 1D 09 C4 47 --> DosUnwindException
+</A>will unwind all the exception handlers on the chain. If a 0 is passed
+to<A><!-- external link: 1D 09 C4 47 --> DosUnwindException</A> for this
+parameter,<A><!-- external link: 1D 09 C4 47 --> DosUnwindException</A> will
+unwind all the exception handlers on the chain and exit.
+<P>
+There is no return from a call to<A><!-- external link: 1D 09 C4 FC --> DosUnwindException</A>,
+unless the stack is invalid. Control is transferred to the specified instruction
+pointer address. If<A><!-- external link: 1D 09 C4 47 --> DosUnwindException
+</A>encounters an error during its processing, it raises another exception
+rather than return control to the caller.
+<P>
+If the target call frame is reached and an exit unwind is not being performed
+(that is, an <A HREF="181_L2_EXCEPTIONREGISTRATIO.html">EXCEPTIONREGISTRATIONRECORD
+</A>is not 0), then the computed machine state is restored from ContextRecord
+and control is transferred to the address specified by the target-IP address
+parameter. Note that the stack pointer is not restored, making it possible
+to transfer information on the stack. It is the responsibility of the code
+at the target address to reset the stack pointer as necessary.
+<P>
+<A><!-- external link: 1D 09 C4 47 -->DosUnwindException</A> is called with
+C language calling conventions, which permits the use of a variable number
+of arguments. Thus, the caller can pass any amount of information on the
+stack, to be picked up at the target-IP address.
+<P>
+If an exit unwind is being performed (the <A HREF="181_L2_EXCEPTIONREGISTRATIO.html">EXCEPTIONREGISTRATIONRECORD
+</A>parameter is 0), then all call frames are unwound until the base of
+the stack is reached.
+<P>
+If the <A HREF="184_L2_EXCEPTIONREPORTRECOR.html">EXCEPTIONREPORTRECORD
+</A>parameter is specified, then each exception handler encountered during
+the unwind operation is called, using the specified record. If this parameter
+is not specified, then<A><!-- external link: 1D 09 C4 47 --> DosUnwindException
+</A>constructs an <A HREF="184_L2_EXCEPTIONREPORTRECOR.html">EXCEPTIONREPORTRECORD
+</A>that specifies the exception XCPT_UNWIND.
+<P>
+<B>Colliding Unwinds</B>
+<BR>
+During an unwind operation, it is possible for one unwind to collide with
+a previous unwind. This occurs when the scope of the second unwind overlaps
+the scope of the first unwind. Following are two situations:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->The target frame of the second unwind is a frame that
+has already been unwound by the first unwind.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->The target frame of the second unwind is a valid frame
+that is positioned before or after the target frame of the first unwind.
+<!-- lm: 0x2 1 -->
+</UL>
+<P>
+Either of these situations could occur during the following scenarios:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->An unwind handler calls unwind, or<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->An unwind handler hits an exception that has called
+unwind.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+In the first scenario, the second unwind is attempting to unwind to an invalid
+target. This causes the exception XCPT_INVALID_UNWIND_TARGET to be raised.
+
+<P>
+In the second scenario, the first unwind is abandoned, and the second unwind
+<!-- entering slot 838 -->continues to its target. The second scenario is
+far more likely.
+<P>
+<B>Note: </B> A user program that uses high level language exception mechanisms
+must never call<A><!-- external link: 1D 09 C4 FC --> DosUnwindException</A>,
+because this could create conflicts with the runtime exception strategy
+of the high level language. Unwind operations in this case are performed
+through language-supported facilities such as the C language longjmp() routine.
+<!-- lm: 0x2 1 -->
+<P>
+
+
+<P><HR>
+
+<A HREF="818_L3_MustCompleteSections.html">[Back: Must-Complete Sections]</A> <BR>
+<A HREF="820_L3_NestedExceptions.html">[Next: Nested Exceptions]</A> 
+</BODY>
+</HTML>

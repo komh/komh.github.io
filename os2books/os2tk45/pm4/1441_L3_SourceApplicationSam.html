@@ -1,0 +1,405 @@
+<HTML>
+<HEAD>
+<TITLE>Source Application Sample Code</TITLE>
+</HEAD>
+<BODY>
+<H1>Source Application Sample Code</H1><!-- entering slot 1467 -->
+<P>
+The source application includes the following files:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->Dragfrom.C<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Dragfrom.H<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Dragfrom.DEF<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Dragfrom.LNK<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->Dragfrom.MAK<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The following sample shows the source application code:
+<PRE>===============DRAGFROM.C
+===============
+
+/***********************************************************************/
+/*  DRAGFROM.C - Drag source program                                   */
+/*                                                                     */
+/*  This program displays a list of files in the current directory.    */
+/*  Drag any file name to EPM, and drop, and the file will be          */
+/*  displayed in the editor.                                           */
+/***********************************************************************/
+#define INCL_DOSFILEMGR
+#define INCL_WIN
+#define INCL_WINSTDDRAG
+#define INCL_WINLISTBOXES
+#define INCL_WINWINDOWMGR
+
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+#include "dragfrom.h"
+
+/***********************************************************************/
+/*  Global variables.                                                  */
+/***********************************************************************/
+HAB      hab;
+char     szFormats[]  = "&lt;DRM_OS2FILE, DRF_UNKNOWN&gt;";
+char     szFileNames[50][CCHMAXPATH];
+HWND     hFrameWnd;
+HWND     hListWnd;
+PFNWP    SysWndProc;
+PFNWP    ListWndProc;
+HPOINTER hptrFile;
+
+/***********************************************************************/
+/*  Function prototypes.                                               */
+/***********************************************************************/
+MRESULT EXPENTRY LocalWndProc(HWND, ULONG, MPARAM, MPARAM);
+MRESULT EXPENTRY LocalListProc(HWND, ULONG, MPARAM, MPARAM);
+BOOL DoDrag(void);
+void LoadList(void);
+
+/***********************************************************************/
+/*   Main() - program entry point.                                     */
+/***********************************************************************/
+int main(void)
+{
+   FRAMECDATA   fcd;
+   HMQ          hmq;
+   QMSG         qmsg;
+
+   if (!(hab = WinInitialize (0)))
+     return FALSE;
+
+   hmq = WinCreateMsgQueue (hab, 0);
+
+   if (!hmq)
+   {
+      WinTerminate(hab);
+      return FALSE;
+   }
+
+/***********************************************************************/
+/*  Setup the frame control data for the frame window.                 */
+/***********************************************************************/
+   fcd.cb = sizeof(FRAMECDATA);
+   fcd.flCreateFlags = FCF_TITLEBAR        |
+                       FCF_SYSMENU         |
+                       FCF_SIZEBORDER      |
+                       FCF_SHELLPOSITION   |
+                       FCF_MINMAX          |
+                       FCF_TASKLIST;
+
+   fcd.hmodResources = NULLHANDLE;
+
+/***********************************************************************/
+/*  Set our resource key (so PM can find menus, icons, etc).           */
+/***********************************************************************/
+   fcd.idResources = DRAGFROM;
+
+/***********************************************************************/
+/*  Create the frame - it will hold the list box.                      */
+/***********************************************************************/
+   hFrameWnd = WinCreateWindow(HWND_DESKTOP,
+                               WC_FRAME,
+                               "Drag Source",
+                               0, 0, 0, 0, 0,
+                               NULLHANDLE,
+                               HWND_TOP,
+                               DRAGFROM,
+                               &amp;fcd,
+                               NULL);
+
+/***********************************************************************/
+/*  Verify that the frame was created; otherwise, stop.                */
+/***********************************************************************/
+   if (!hFrameWnd)
+     return FALSE;
+
+/***********************************************************************/
+/*  Set an icon for the frame window.                                  */
+/***********************************************************************/
+   WinSendMsg(hFrameWnd,
+              WM_SETICON,
+              (MPARAM)WinQuerySysPointer(HWND_DESKTOP,
+                                         SPTR_FOLDER,
+                                         FALSE),
+               NULL);
+
+/***********************************************************************/
+/*  Create a list window child - we willl list files in it.            */
+/***********************************************************************/
+   hListWnd = WinCreateWindow(hFrameWnd,
+                              WC_LISTBOX,
+                              NULL,
+                              0, 0, 0, 0, 0,
+                              hFrameWnd,
+                              HWND_BOTTOM,
+                              FID_CLIENT,
+                              NULL,
+                              NULL);
+
+/***********************************************************************/
+/*  We must intercept the frame window's messages.                     */
+/*  We save the return value (the current WndProc),                    */
+/*  so we can pass it all the other messages the frame gets.           */
+/***********************************************************************/
+   SysWndProc  = WinSubclassWindow(hFrameWnd, (PFNWP)LocalWndProc);
+   ListWndProc = WinSubclassWindow (hListWnd, (PFNWP)LocalListProc);
+
+   WinShowWindow(hFrameWnd, TRUE);
+   WinPostMsg(hFrameWnd, WM_LOAD_LIST, 0, 0);
+
+/***********************************************************************/
+/*  Main message loop.                                                 */
+/***********************************************************************/
+   while (WinGetMsg (hab, &amp;qmsg, 0L, 0, 0))
+     WinDispatchMsg (hab, &amp;qmsg);
+
+   WinDestroyWindow (hFrameWnd);
+   WinDestroyMsgQueue (hmq);
+   WinTerminate (hab);
+}
+
+/***********************************************************************/
+/*  LocalWndProc() - intercepts frame window messages.                 */
+/***********************************************************************/
+MRESULT EXPENTRY LocalWndProc (HWND hwnd,ULONG msg,MPARAM mp1,MPARAM mp2)
+{
+   switch (msg)
+   {
+      /* Post a message to fill the list box */
+      case WM_LOAD_LIST:
+         LoadList();
+         break;
+
+      case WM_DESTROY:
+         WinDestroyPointer (hptrFile);
+          break;
+
+      case WM_STARTDRAG:
+         DoDrag();
+         break;
+
+      default:
+         return (*SysWndProc)(hwnd, msg, mp1, mp2);
+         break;
+   }
+   return FALSE;
+}
+
+/***********************************************************************/
+/*  LocalListProc() - List box subclassing                             */
+/*  (all we care about is starting a <!-- entering slot 1468 -->drag).                            */
+/***********************************************************************/
+MRESULT EXPENTRY LocalListProc(HWND hwnd,
+                               ULONG msg,
+                               MPARAM mp1,
+                               MPARAM mp2)
+
+{
+   if (msg == WM_BUTTON2DOWN)
+   {
+      WinPostMsg(hFrameWnd, WM_STARTDRAG, mp1, 0);
+      return (MRESULT)FALSE;
+   }
+   else
+      return (*ListWndProc)(hwnd, msg, mp1, mp2);
+}
+
+/***********************************************************************/
+/*  DoDrag() - the actual drag function.                               */
+/***********************************************************************/
+BOOL DoDrag ()
+{
+   char             szBuffer[CCHMAXPATH];
+   char             szDir[256];
+   SHORT            index, len;
+   HWND             hTargetWnd;
+   LHANDLE          hImage;
+
+   DRAGITEM         Dragitem;
+   HSTR             hstrType, hstrRMF, hstrContainer;
+   CHAR             szItemName[64];
+   CHAR             szContainer[CCHMAXPATH];
+   PDRAGINFO        pSourceDraginfo;
+   DRAGIMAGE        dimg;
+   ULONG            dirlen;
+
+/***********************************************************************/
+/*  Get the file name from the listbox.                                */
+/***********************************************************************/
+   index = WinQueryLboxSelectedItem(hListWnd);
+   len   = WinQueryLboxItemTextLength(hListWnd, index);
+   WinQueryLboxItemText(hListWnd,
+                        index,
+                        szBuffer,
+                        len);
+   szBuffer[len] = '\0';
+
+/***********************************************************************/
+/*  Allocate the DRAGINFO data structure.                              */
+/***********************************************************************/
+   pSourceDraginfo = DrgAllocDraginfo(1);
+
+/***********************************************************************/
+/*  Define file type as unknown.                                       */
+/***********************************************************************/
+   hstrType  = DrgAddStrHandle (DRT_UNKNOWN);
+   hstrRMF   = DrgAddStrHandle (szFormats);         /* OS2file unknown */
+
+/***********************************************************************/
+/*  Get our current directory for the container name.                  */
+/***********************************************************************/
+   dirlen                     = CCHMAXPATH-1;
+   DosQueryCurrentDir(0, szDir, &amp;dirlen);
+   sprintf(szContainer, "\\%s\\", szDir);
+   hstrContainer              = DrgAddStrHandle(szContainer);
+   Dragitem.hwndItem          = hListWnd;
+   Dragitem.hstrType          = hstrType;
+
+   Dragitem.hstrRMF           = hstrRMF;
+   Dragitem.hstrContainerName = hstrContainer;
+   Dragitem.fsControl         = 0;
+   Dragitem.fsSupportedOps    = DO_COPYABLE | DO_MOVEABLE;
+   Dragitem.hstrSourceName    = DrgAddStrHandle (szBuffer);
+   Dragitem.hstrTargetName    = Dragitem.hstrSourceName;
+   Dragitem.ulItemID          = index;
+
+/***********************************************************************/
+/*  Set info, prepare for drag.                                        */
+/***********************************************************************/
+   DrgSetDragitem(pSourceDraginfo,
+                  &amp;Dragitem,
+                  sizeof(DRAGITEM),
+                  0);
+
+/***********************************************************************/
+/*  Initialize the drag image.                                         */
+/***********************************************************************/
+   dimg.cb       = sizeof (DRAGIMAGE);
+   dimg.hImage   = WinQuerySysPointer (HWND_DESKTOP, SPTR_FILE, FALSE);
+   dimg.fl       = DRG_ICON | DRG_TRANSPARENT;
+   dimg.cxOffset = 0;
+   dimg.cyOffset = 0;
+
+   pSourceDraginfo-&gt;hwndSource = hFrameWnd;
+
+/***********************************************************************/
+/*  Start drag operation.                                              */
+/***********************************************************************/
+   DrgDrag(hFrameWnd,
+           pSourceDraginfo,
+           &amp;dimg,
+           1L,
+           VK_BUTTON2,
+           NULL);
+
+   return TRUE;
+}
+
+/***********************************************************************/
+/*  LoadList().                                                        */
+/***********************************************************************/
+void LoadList(void)
+{
+   char          szDir[CCHMAXPATH];
+   FILEFINDBUF3  ffbFile;
+   HDIR          hDir;
+   int           rc, x;
+   ULONG         dirlen;
+   ULONG         count;
+
+/***********************************************************************/
+/*  We use a DosFindFirst/DosFindNext loop to fill the list box.       */
+/***********************************************************************/
+   hDir  = HDIR_CREATE;
+   count = 1;
+   rc = DosFindFirst("*.*",
+                     &amp;hDir,
+                     0,
+                     &amp;ffbFile,
+                     sizeof(FILEFINDBUF3),
+                     &amp;count,
+                     FIL_STANDARD);
+
+   x = 0;
+   do
+   {
+      sprintf(szFileNames[x], "%s", ffbFile.achName);
+
+      WinPostMsg(hListWnd,
+                 LM_INSERTITEM,
+                 MPFROMSHORT(LIT_END),
+                 szFileNames[x]);
+      count = 1;
+      x++;
+
+      rc = DosFindNext(hDir,
+                       &amp;ffbFile,
+                       sizeof(FILEFINDBUF3),
+                       &amp;count);
+   }
+   while (count &amp;&amp; (x &lt; 50));
+
+   DosFindClose(hDir);
+}
+
+===============
+DRAGFROM.H
+===============
+#define DRAGFROM      100
+#define WM_STARTDRAG  WM_USER+100
+#define WM_LOAD_LIST  WM_USER+110
+
+===============
+DRAGFROM.DEF
+===============
+NAME            DRAGFROM WINDOWAPI
+
+PROTMODE
+HEAPSIZE        8192
+STACKSIZE       32768
+EXPORTS         LocalWndProc
+                LocalListProc
+
+===============
+DRAGFROM.LNK
+===============
+dragfrom.obj
+dragfrom.exe
+dragfrom.map
+dragfrom.def
+
+===============
+DRAGFROM.MAK
+===============
+
+CC      = icc /c /Ge /Gd- /Se /Re /ss /Gm+
+LINK    = link386
+HEADERS = dragfrom.h
+
+#----------------------------------------------------------------------
+#  A list of all of the object files.
+#----------------------------------------------------------------------
+ALL_OBJ1 = dragfrom.obj
+
+all: dragfrom.exe
+
+dragfrom.obj: dragfrom.c $(HEADERS)
+
+dragfrom.exe: $(ALL_OBJ1) dragfrom.def dragfrom.lnk
+              $(LINK) @dragfrom.lnk
+
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1440_L2_SampleCodeforDirectM.html">[Back: Sample Code for Direct Manipulation]</A> <BR>
+<A HREF="1442_L3_TargetApplicationSam.html">[Next: Target Application Sample Code]</A> 
+</BODY>
+</HTML>
