@@ -1,0 +1,113 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="TEXT/HTML; CHARSET=UTF-8">
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosRead - Remarks</TITLE>
+<STYLE>
+PRE {
+  FONT-FAMILY: Consolas, "Lucida Console", "Courier New", Courier, MONOSPACE;
+}
+</STYLE>
+</HEAD>
+<BODY>
+<H1>DosRead - Remarks</H1><!-- entering slot 168 -->
+<P>
+
+<P>
+<B>Note: </B> When writing message pipes the application is limited to 64K
+messages. As well, these messages cannot span 64k boundaries due to the
+current design of the thunk layer in read or write routines. If the message
+is not written in an aligned manner, the subsequent read will not be able
+to handle the messages properly. If a 64k or less message is written to
+a pipe from an aligned buffer, the read will handle this properly.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+The requested number of bytes might not be read. If the value returned in
+<I>pcbActual</I> is zero, the process tried to read from the end of the
+file.
+<P>
+The file pointer is moved to the desired position by reading data, writing
+data, or issuing <A HREF="162_L2_DosSetFilePtr.html">DosSetFilePtr</A>.
+
+<P>
+If you issue <A HREF="121_L2_DosOpen.html">DosOpen</A> with the Direct Open
+flag set to 1 in the<I> fsOpenFlags</I> parameter, you have direct access
+to an entire disk or diskette volume, independent of the file system. You
+must lock the logical volume before accessing it, and you must unlock the
+logical volume when you are finished accessing it. Issue <A HREF="093_L2_DosDevIOCtl.html">DosDevIOCtl
+</A>for Category 8, <A HREF="958_L3_DSK_LOCKDRIVE00hLock.html">DSK_LOCKDRIVE
+</A>to lock the logical volume, and for Category 8, <A HREF="966_L3_DSK_UNLOCKDRIVE01hUn.html">DSK_UNLOCKDRIVE
+</A>to unlock the logical volume. While the logical volume is locked, no
+other process can access it.
+<P>
+<B>Raw File System Considerations</B>
+<P>
+Using the Raw File System on logical partitions requires you to lock and
+unlock the volume using the <A HREF="093_L2_DosDevIOCtl.html">DosDevIOCtl
+</A>Category 8, DSK_LOCKDRIVE and DSK_UNLOCKDRIVE.  Reads and writes will
+not complete successfully until the logical drive is locked.
+<P>
+The Raw File System requires that the number of bytes being read is a multiple
+of the sector size (512).
+<P>
+<B>Named Pipe Considerations</B>
+<P>
+A named pipe is read as one of the following:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->A byte pipe in byte-read mode<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->A message pipe in message-read mode<!-- lm: 0x2 3 -->
+<BR>
+<LI><!-- lm: 0x2 6 -->A message pipe in byte-read mode.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+A byte pipe must be in byte-read mode to be read; an error is returned if
+it is in message-read mode. All currently available data, up to the size
+requested, is returned.
+<P>
+A message pipe can be read in either message-read mode or byte-read mode.
+When the message pipe is in message-read mode, a read operation that is
+larger than the next available message returns only that message.<I> pcbActual
+</I>is set to indicate the size of the message returned.
+<P>
+A read operation that is smaller than the next available message returns
+with the number of bytes requested and an ERROR_MORE_DATA return code. When
+the reading of a message is resumed after ERROR_MORE_DATA is returned, a
+read operation always blocks until the next piece (or the rest) of the message
+can be transferred. DosPeekNPipe can be issued to determine how many bytes
+are left in the message.
+<P>
+A message pipe in byte-read mode is read as if it were a byte stream, and
+DosRead skips over message headers. This is like reading a byte pipe in
+byte-read mode.
+<P>
+When blocking mode is set for a named pipe, a read operation blocks until
+data is available. In this case, the read operation never returns with<I> pcbActual
+</I>equal to zero, except when the pipe is closed. When the mode is set
+to message-read, messages are always read in their entirety, except when
+the message is bigger than the size of the read operation.
+<P>
+<I>pcbActual</I> can equal zero in nonblocking mode, but only when no data
+is available at the time of the read operation.
+<P>
+If you attempt a read of a named pipe when the other end of the pipe is
+closed while the read is pending, DosRead returns:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->pcbActual equal to 0<!-- lm: 0x2 3 --> <!-- lm: 0x2 6 -->
+<UL>ulrc
+equal to either 0 or ERROR_NO_DATA<!-- lm: 0x2 1 -->
+</UL>
+<P>
+<B>Unnamed Pipe Considerations</B>
+<P>
+Threads writing to and reading from the same unnamed pipe are not synchronized.
+It is possible for the pipe reader to obtain partial contents of a write
+request if the pipe becomes full during the write request.
+
+<P><HR>
+
+<A HREF="157_L2H_DosReadParameters.html">[Back: DosRead - Parameters]</A> <BR>
+<A HREF="159_L2H_DosReadRelatedFuncti.html">[Next: DosRead - Related Functions]</A> 
+</BODY>
+</HTML>

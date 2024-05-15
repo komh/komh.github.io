@@ -1,0 +1,274 @@
+<HTML>
+<HEAD>
+<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="TEXT/HTML; CHARSET=UTF-8">
+<TITLE>Makefile</TITLE>
+<STYLE>
+PRE {
+  FONT-FAMILY: Consolas, "Lucida Console", "Courier New", Courier, MONOSPACE;
+}
+</STYLE>
+</HEAD>
+<BODY>
+<H1>Makefile</H1><!-- entering slot 1231 -->
+<PRE># SCCSID = @(#)makefile 6.7 92/06/03
+
+#/***********************************************************************/
+#/*                                                                     */
+#/* PSD Name: ALR.PSD - ALR PSD                                         */
+#/*           -----------------------------------                       */
+#/*                                                                     */
+#/* Source File Name: MAKEFILE                                          */
+#/*                                                                     */
+#/* Descriptive Name: MAKEFILE for the ALR PSD                          */
+#/*                                                                     */
+#/* Function:                                                           */
+#/*                                                                     */
+#/*                                                                     */
+#/*---------------------------------------------------------------------*/
+#/*                                                                     */
+#/* Copyright (C) 1992 IBM Corporation                                  */
+#/*                                                                     */
+#/* DISCLAIMER OF WARRANTIES.  The following enclosed code is           */
+#/* provided to you solely for the purpose of assisting you in          */
+#/* the development of your applications. The code is provided          */
+#/* "AS IS", without warranty of any kind. IBM shall not be liable      */
+#/* for any damages arising out of your use of this code, even if       */
+#/* they have been advised of the possibility of such damages.          */
+#/*                                                                     */
+#/*---------------------------------------------------------------------*/
+#/*                                                                     */
+#/* Change Log                                                          */
+#/*                                                                     */
+#/* Mark    Date      Programmer  Comment                               */
+#/* ----    ----      ----------  -------                               */
+#/* @nnnn   mm/dd/yy  NNN                                               */
+#/*                                                                     */
+#/*                                                                     */
+#/***********************************************************************/
+
+# ******  NOTE  ******
+#
+#       If you are using a SED command with TAB characters, many editors
+#       will expand tabs causing unpredictable results in other programs.
+#
+#       Documentation:
+#
+#       Using SED command with TABS. Besure to invoke set tab save option
+#       on your editor. If you don't, the program 'xyz' will not work
+#       correctly.
+#
+
+#****************************************************************************
+#  Dot directive definition area (usually just suffixes)
+#****************************************************************************
+
+.SUFFIXES:
+.SUFFIXES: .com .sys .exe .obj .mbj .asm .inc .def .lnk .lrf .crf .ref
+.SUFFIXES: .lst .sym .map .c .h .lib
+
+#****************************************************************************
+#  Environment Setup for the component(s).
+#****************************************************************************
+
+#
+# Conditional Setup Area and User Defined Macros
+#
+
+#
+# Compiler Location w/ includes, libs and tools
+#
+
+INC    = ..\..\..\inc
+H      = ..\..\..\h
+LIB    = ..\..\..\lib386;..\..\..\lib
+TOOLSPATH = ..\..\..\tools
+
+#
+# Because the compiler/linker and other tools use environment
+# variables ( INCLUDE, LIB, etc ) in order to get the location of files,
+# the following line will check the environment for the LIFE of the
+# makefile and will be specific to this set of instructions. All MAKEFILES
+# are requested to use this format to insure that they are using the correct
+# level of files and tools.
+#
+
+!if set INCLUDE=$(INC) || \
+    set LIB=$(LIB) || set PATH=$(TOOLSPATH);$(DK_TOOLS)
+!endif
+
+
+#
+# Compiler/tools Macros
+#
+
+AS=masm
+CC=cl386
+IMPLIB=implib
+IPF=ipfc
+LIBUTIL=lib
+LINK=link386
+MAPSYM=mapsym
+RC=rc
+
+#
+# Compiler and Linker Options
+#
+
+AFLAGS = -MX -T -Z $(ENV)
+AINC   = -I. -I$(INC)
+CINC   = -I$(H) -I$(MAKEDIR)
+CFLAGS = /c /Zp /Gs /AS $(ENV)
+LFLAGS = /map /nod /<!-- entering slot 1232 -->exepack
+
+LIBS = os2386.lib
+DEF = ALR.def
+
+#****************************************************************************
+# Set up Macros that will contain all the different dependencies for the
+# executables and dlls etc. that are generated.
+#****************************************************************************
+
+#
+#
+#
+OBJ1 =  entry.obj main.obj
+
+#
+#       LIST Files
+#
+LIST =
+
+OBJS = $(OBJ1)
+
+#****************************************************************************
+#   Setup the inference rules for compiling and assembling source code to
+#   object code.
+#****************************************************************************
+
+
+.asm.obj:
+        $(AS) $(AFLAGS) $(AINC) $*.asm;
+
+.asm.mbj:
+        $(AS) $(AFLAGS) -DMMIOPH $(AINC) $*.asm $*.mbj;
+
+.asm.lst:
+        $(AS) -l -n $(AFLAGS) $(AINC) $*.asm;
+
+.c.obj:
+        $(CC) $(CFLAGS) $(CINC) $*.c
+
+.c.lst:
+        $(CC) $(CFLAGS) /Fc $(CINC) $*.c
+        copy $*.cod $*.lst
+        del $*.cod
+
+
+#****************************************************************************
+#   Target Information
+#****************************************************************************
+#
+# This is a very important step. The following small amount of code MUST
+# NOT be removed from the program. The following directive will do
+# dependency checking every time this component is built UNLESS the
+# following is performed:
+#               A specific tag is used -- ie. all
+#
+# This allows the developer as well as the B &amp; I group to perform incremental
+# build with a degree of accuracy that has not been used before.
+# There are some instances where certain types of INCLUDE files must be
+# created first. This type of format will allow the developer to require
+# that file to be created first. In order to achieve that, all that has to
+# be done is to make the DEPEND.MAK tag have your required target. Below is
+# an example:
+#
+#    depend.mak:   { your file(s) } dephold
+#
+# Please DON'T remove the following line
+#
+
+!include      "$(H)\common.mak"
+!include      "$(H)\version.mak"
+
+#
+# Should be the default tag for all general processing
+#
+
+all:    ALR.psd
+
+list: $(LIST)
+
+clean:
+        if exist *.lnk  del *.lnk
+        if exist *.obj  del *.obj
+        if exist *.mbj  del *.mbj
+        if exist *.map  del *.map
+        if exist *.old  del *.old
+        if exist *.lst  del *.lst
+        if exist *.lsd  del *.lsd
+        if exist *.sym  del *.sym
+        if exist *.sys  del *.sys
+
+
+
+
+#*****************************************************************************
+#   Specific Description Block Information
+#*****************************************************************************
+
+# This section would only be for specific direction as to how to create
+# unique elements that are necessary to the build process. This could
+# be compiling or assembling, creation of DEF files and other unique
+# files.
+# If all compiler and assembly rules are the same, use an inference rule to
+# perform the compilation.
+#
+
+alr.psd:  $(OBJS) makefile
+        Rem Create DEF file &lt;&lt;$(DEF)
+LIBRARY ALR
+
+EXPORTS
+
+   PSD_INSTALL          = _Install
+   PSD_DEINSTALL        = _DeInstall
+   PSD_INIT             = _Init
+   PSD_PROC_INIT        = _ProcInit
+   PSD_START_PROC       = _StartProcessor
+   PSD_GET_NUM_OF_PROCS = _GetNumOfProcs
+   PSD_GEN_IPI          = _<!-- entering slot 1233 -->GenIPI
+   PSD_END_IPI          = _EndIPI
+&lt;&lt;keep
+        $(LINK) $(LFLAGS) @&lt;&lt;$(@B).lnk
+$(OBJ1)
+$*.psd
+$*.map
+$(LIBS)
+$(DEF)
+&lt;&lt;keep
+        $(MAPSYM) $*.map
+
+
+
+#****************************************************************************
+#  Dependency generation and Checking
+#****************************************************************************
+
+depend.mak:  dephold
+        touch depchk
+        includes -e -sobj -llst -I. -I$(H) -I$(DISKH) -I$(INC) -P$$(H)=$(H) *.c *.asm &gt;$@
+        -del depchk
+
+dephold:
+        touch $@
+
+!include depend.mak
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1202_L2_Specificheader.html">[Back: Specific header]</A> <BR>
+<A HREF="1204_L1_CommentsPlease!.html">[Next: Comments, Please!]</A> 
+</BODY>
+</HTML>

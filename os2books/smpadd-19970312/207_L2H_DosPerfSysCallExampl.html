@@ -1,0 +1,127 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="TEXT/HTML; CHARSET=UTF-8">
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosPerfSysCall - Example Code</TITLE>
+<STYLE>
+PRE {
+  FONT-FAMILY: Consolas, "Lucida Console", "Courier New", Courier, MONOSPACE;
+}
+</STYLE>
+</HEAD>
+<BODY>
+<H1>DosPerfSysCall - Example Code</H1><!-- entering slot 217 -->
+<P>
+This example uses DosPerfSysCall to obtain CPU Utilization information on
+a uniprocessor.
+<PRE>#define INCL_BASE
+
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+#include &lt;perfutil.h&gt;
+
+/*
+   Convert 8-byte (low, high) time value to double
+*/
+#define LL2F(high, low) (4294967296.0*(high)+(low))
+
+
+/* This is a 1 processor example */
+
+void main (int argc, char *argv[])
+{
+    APIRET      rc;
+    int         i, iter, sleep_sec;
+    double      ts_val, ts_val_prev;
+    double      idle_val, idle_val_prev;
+    double      busy_val, busy_val_prev;
+    double      intr_val, intr_val_prev;
+    CPUUTIL     CPUUtil;
+
+    if ((argc &lt; 2) || (*argv[1] &lt; '1') || (*argv[1] &gt; '9')) {
+        fprintf(stderr, "usage: %s [1-9]\n", argv[0]);
+        exit(0);
+    }
+    sleep_sec = *argv[1] - '0';
+
+    iter = 0;
+    do {
+        rc = DosPerfSysCall(CMD_KI_RDCNT,(ULONG) &amp;CPUUtil,0,0);
+        if (rc) {
+            fprintf(stderr, "CMD_KI_RDCNT failed rc = %d\n",rc);
+            exit(1);
+        }
+        ts_val = LL2F(CPUUtil.ulTimeHigh, CPUUtil.ulTimeLow);
+        idle_val = LL2F(CPUUtil.ulIdleHigh, CPUUtil.ulIdleLow);
+        busy_val = LL2F(CPUUtil.ulBusyHigh, CPUUtil.ulBusyLow);
+        intr_val = LL2F(CPUUtil.ulIntrHigh, CPUUtil.ulIntrLow);
+
+        if (iter &gt; 0) {
+            double  ts_delta = ts_val - ts_val_prev;
+            printf("idle: %4.2f%%  busy: %4.2f%%  intr: %4.2f%%\n",
+                   (idle_val - idle_val_prev)/ts_delta*100.0,
+                   (busy_val - busy_val_prev)/ts_delta*100.0,
+                   (intr_val - intr_val_prev)/ts_delta*100.0);
+        }
+
+        ts_val_prev = ts_val;
+        idle_val_prev = idle_val;
+        busy_val_prev = busy_val;
+        intr_val_prev = intr_val;
+
+        iter++;
+        DosSleep(1000*sleep_sec);
+
+    } while (1);
+}
+</PRE>
+
+<P>
+This example performs software tracing from a program in ring 3.
+<PRE>
+#define INCL_BASE
+
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+#include &lt;perfutil.h&gt;
+
+int main ( int argc, char *argv[] )
+{
+    APIRET    rc;
+    BYTE      HookBuffer[256];
+    HOOKDATA  HookData = {0,HookBuffer};
+    ULONG     ulMajor, ulMinor;
+
+    /* Log 3 ULONG values (1, 2, and 3) and a string.   */
+
+    *((PULONG)&amp;HookBuffer[0]) = 1;
+    *((PULONG)&amp;HookBuffer[4]) = 2;
+    *((PULONG)&amp;HookBuffer[8]) = 3;
+    strcpy((PSZ)&amp;HookBuffer[12], "Test of 3 ULONG values and a string.")
+    HookData.ulLength = 12 + strlen((PSZ)&amp;HookBuffer[12]) + 1;
+
+    ulMajor = 0x00b8;        /* Hook major code  */
+    ulMinor = 0x0001;        /* Hook minor code  */
+
+    rc = DosPerfSysCall( CMD_SOFTTRACE_LOG,
+                         ulMajor, ulMinor,
+                         (ULONG) &amp;HookData);
+    if (rc != NO_ERROR) {
+       fprintf(stderr, "CMD_SOFTTRACE_LOG failed:  rc = %u\n", rc);
+       return 1;
+       }
+
+    return NO_ERROR;
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="206_L2H_DosPerfSysCallRelate.html">[Back: DosPerfSysCall - Related Functions]</A> <BR>
+<A HREF="208_L2H_DosPerfSysCallTopics.html">[Next: DosPerfSysCall - Topics]</A> 
+</BODY>
+</HTML>

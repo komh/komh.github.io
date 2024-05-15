@@ -1,0 +1,72 @@
+<HTML>
+<HEAD>
+<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="TEXT/HTML; CHARSET=UTF-8">
+<TITLE>Requirements for Multi-Processing</TITLE>
+<STYLE>
+PRE {
+  FONT-FAMILY: Consolas, "Lucida Console", "Courier New", Courier, MONOSPACE;
+}
+</STYLE>
+</HEAD>
+<BODY>
+<H1>Requirements for Multi-Processing</H1><!-- entering slot 544 -->
+<P>
+The following should be considered before running an application in multi-processor
+mode:<!-- lm: 0x2 3 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 6 -->An application or associated subsystem must not use
+the 'INC' instruction as a semaphore without prepending a 'LOCK' prefix.
+ On a UniProcessor (UP) system this instruction can be used as a high-performance
+semaphore without calling any other operating system service if the semaphore
+is free and when the semaphore is clear and there are no waiters for the
+semaphore.  Because the INC instruction cannot be interrupted once started,
+and because the results would be stored in the flags register which are
+per thread, then it could be used safely as a semaphore.
+<P>
+In an OS/2 Warp Server for SMP environment, this technique will not work
+because it is possible that two or more threads could be executing the same
+INC instruction, receiving the same results in each processor's or thread's
+flag register and thinking that they have the semaphore.<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->A 486 or greater instruction such as CMPXCHG has the
+same problem as above if a 'LOCK' prefix is not prepended before the instruction.
+<!-- lm: 0x2 3 -->
+<P>
+<LI><!-- lm: 0x2 6 -->An application or associated subsystem which relies
+on priorities to guarantee execution of its threads within a process will
+not work in OS/2 Warp Server for SMP.
+<P>
+For example, an application may have a time-critical and an idle thread,
+and may assume that while the time-critical thread is executing the idle
+thread will not get any execution time unless the time-critical thread explicitly
+yields the CPU.  In an OS/2 Warp Server for SMP  environment it is possible
+that both the time-critical and the idle threads are executing simultaneously
+on different processors.<!-- lm: 0x2 1 -->
+</UL>
+<P>
+The above compatibility requirements apply only to multi-threaded applications,
+and therefore do no apply to DOS and WINOS2 applications.  However, you
+are strongly encouraged to write 32-bit multi-threaded applications for
+better performance and portability on OS/2 Warp Server for SMP.
+<P>
+Given the possibility that some set of applications may use one of these
+techniques,  OS/2 Warp Server for SMP provides a mechanism that allows these
+multi-threaded applications to execute in UP mode.  UP mode permits only
+one thread of that process to execute at a time. That thread could execute
+on any one of the available processors.
+<P>
+MARKEXE, described in <A HREF="523_L1_ViewandSetProgramTyp.html">View and
+Set Program Type For Executable File (MARKEXE)</A>, is used to mark an executable
+file as uniprocessor only.  When an executable file that has the uniprocessor
+mode flag set is loaded, OS/2 ensures that only one thread of that process
+will ever execute at a time.  Multiple uniprocessor only processes may be
+active in the system at the same time, but only one thread from each process
+may be active at a time.
+
+<P><HR>
+
+<A HREF="527_L3_SettingProgramType.html">[Back: Setting Program Type]</A> <BR>
+<A HREF="529_L1_DataTypes.html">[Next: Data Types]</A> 
+</BODY>
+</HTML>

@@ -1,0 +1,232 @@
+<HTML>
+<HEAD>
+<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="TEXT/HTML; CHARSET=UTF-8">
+<TITLE>Setting Environment Variables</TITLE>
+<STYLE>
+PRE {
+  FONT-FAMILY: Consolas, "Lucida Console", "Courier New", Courier, MONOSPACE;
+}
+</STYLE>
+</HEAD>
+<BODY>
+<H1>Setting Environment Variables</H1><!-- entering slot 305 -->
+<P>
+The debugger uses environment variables to manage debugging sessions and
+remote communications. To set the environmental variables, you will need
+to edit the SETICAT.CMD file. The environment variables should be set in
+the OS/2 session where the debugger is to be run.  The environment variables
+are as follows:<!-- lm: 0x2 1 -->
+<UL>
+<P>
+CAT_MACHINE<!-- lm: 0x11 11 -->
+<UL> Specifies which host com port the debugger
+uses to communicate with KDB and the baud rate for communications.  This
+variable has the following form:
+<PRE>   COMx:nnnn
+</PRE>
+where<I> x</I> identifies the port (for example, 1 for COM1) and<I> nnnn
+</I>specifies the baud rate.  The following rates are supported:<!-- lm: 0x2 13 -->
+<UL>
+<P>
+<LI><!-- lm: 0x2 16 -->9600 (the default)<!-- lm: 0x2 13 -->
+<BR>
+<LI><!-- lm: 0x2 16 -->19200<!-- lm: 0x2 13 -->
+<BR>
+<LI><!-- lm: 0x2 16 -->38400<!-- lm: 0x2 13 -->
+<BR>
+<LI><!-- lm: 0x2 16 -->57600<!-- lm: 0x2 13 -->
+<BR>
+<LI><!-- lm: 0x2 16 -->115200<!-- lm: 0x2 11 -->
+</UL> For speeds above
+19200, you need buffered UARTs on both the host and victim machines.  For
+speeds above 57600, you need customized serial drivers such as SIO.SYS or
+the COM.SYS that ships with Warp Version 4 (which can also be used with
+earlier versions of Warp).
+<P>
+For example, type the following at the command prompt:
+<PRE>   set CAT_MACHINE=COM2:57600
+</PRE>
+
+<P>
+<B>Note: </B> Ensure that your communication port is enabled if you use
+a ThinkPad.<!-- lm: 0x2 1 -->
+</UL> CAT_SETUP_RATE<!-- lm: 0x11 11 -->
+<UL> When
+the debugger first attempts to communicate with KDB, it does so at the baud
+rate specified by this environment variable or at 9600 baud if this variable
+is not defined.  If the communication succeeds, the debugger changes the
+baud rate to the rate specified by the CAT_MACHINE environment variable
+and proceeds.  Otherwise, the debugger tries to  initiate contact at the
+rate specified by the CAT_MACHINE environment variable.  If neither attempt
+succeeds, the debugger issues an error message.
+<P>
+In most cases, you do<B> not</B> need to set CAT_SETUP_RATE.  It is primarily
+useful if you have been communicating with the victim system directly (for
+example, using ZOC or T) and have left the serial line running at a rate
+other than 9600 baud that does not match the rate specified by the CAT_MACHINE
+environment variable.
+<P>
+Additionally, if this environment variable is set, the debugger will reset
+KDB to this rate when the debugger is closed.
+<P>
+For example, type the following at the command prompt:
+<PRE>   set CAT_SETUP_RATE=9600
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>CAT_HOST_BIN_PATH<!-- lm: 0x11 11 -->
+<UL> Tells
+the debugger where to find your debug binaries (the .SYS and .EXE files
+with debug information) on your host system.
+<P>
+For example, type the following at the command prompt:
+<PRE>   set CAT_HOST_BIN_PATH=I:\SDE\SAMDETW
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>CAT_COMMUNICATION_TYPE<!-- lm: 0x11 11 -->
+<UL> Allows
+asynchronous communications. Currently, this must be set to ASYNC_SIGBRK
+in subsequent releases it is planned to support other forms of communication.
+
+<P>
+For example, type the following at the command prompt:
+<PRE>   set CAT_COMMUNICATION_TYPE=ASYNC_SIGBRK
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>CAT_HOST_SOURCE_PATH<!-- lm: 0x11 11 -->
+<UL> Tells
+the debugger where to find the source files that were used to build your
+debug binaries. See <A HREF="295_L3_FindingSourceFiles.html">Finding Source
+Files</A> for more details.
+<P>
+For example, type the following at the command prompt:
+<PRE>   set CAT_HOST_SOURCE_PATH=I:\SDE\SAMDETW;E:\icat\testcases\src
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>CAT_PATH_RECURSE<!-- lm: 0x11 11 -->
+<UL> Causes
+a recursive search of the subdirectories below the subdirectories listed
+in CAT_HOST_BIN_PATH and CAT_HOST_SOURCE_PATH. For example, with the CAT_HOST_SOURCE_PATH=i\sde\samdetw
+variable, the debugger will search the samdetw subdirectory and all subdirectories
+below samdetw as well as their subdirectories.  The default is NULL, which
+means the debugger will not perform a recursive search. When the variable
+is set to any non-null value, the recursive search is performed.
+<P>
+For example, type the following at the command prompt:
+<P>
+set CAT_PATH_RECURSE=ON<!-- lm: 0x2 1 -->
+</UL> CAT_MODULE_LIST<!-- lm: 0x11 11 -->
+<UL> By
+default, the debugger obtains information about<!-- entering slot 306 --> every
+executable module (DLL, EXE, device driver, and so on) running on the victim
+system.  As a result, it can take several minutes to attach to the victim
+system.  If the CAT_MODULE_LIST environment variable is defined, the debugger
+only obtains information about a module if its name appears in the environment
+variable string.  (The debugger always obtains information about the kernel
+itself.)  This can dramatically reduce the amount of time it takes for the
+debugger to come up.
+<P>
+For example, type the following at the command prompt:
+<PRE>    set CAT_MODULE_LIST=SAMPLEDD.SYS SAMPLE.EXE
+</PRE>
+
+<P>
+The debugger will only obtain information on the kernel and the two modules
+listed in CAT_MODULE_LIST.  (If a program named LE.EXE were running, the
+debugger would also obtain information on it since LE.EXE is a substring
+of SAMPLE.EXE.)<!-- lm: 0x2 1 -->
+</UL> CAT_RESUME<!-- lm: 0x11 11 -->
+<UL> During
+debugger initialization, the debugger stops the victim system in order to
+establish the desired baud rate.  The debugger then continues its initialization
+and eventually allows the user to attach to the victim system.  By default,
+the debugger does not allow the victim system to resume execution during
+this interval.  This behavior is necessary to debug a system that has already
+reached a failure or that contains a hardcoded INT3 instruction (as device
+drivers often do).
+<P>
+There could be situations where you want to initialize the debugger, but
+somehow time your attach to the victim system using the Attach push button.
+ In this case, define CAT_RESUME, and then the debugger will resume the
+victim system waiting for your attach command to stop it again.
+<P>
+For example, type the following at the command prompt:
+<PRE>   set CAT_RESUME=ON
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>CAT_DIAL and CAT_MODEM_INIT<!-- lm: 0x11 11 -->
+<UL> The
+host and victim machines can be connected directly (with a null modem serial
+cable) or by way of modem.  If either of these variables is defined, the
+debugger sets up the COM port specified by the CAT_MACHINE environment variable
+so that the debugger can talk to a modem. The debugger then issues the modem
+attention string (+++) followed by the string specified by the CAT_MODEM_INIT
+variable (if any) to initialize the modem.  The debugger then issues the
+string specified by the CAT_DIAL variable (if any) and waits 500 seconds
+for the remote modem to answer.
+<P>
+The CAT_MODEM_INIT environment variable should be based on the string your
+terminal emulator uses to initialize the modem. This string presumably doesn't
+change very often.  Once you have determined the correct AT commands, you
+can keep the CAT_MODEM_INIT environment variable constant and change CAT_DIAL
+when you need to place calls to different numbers.
+<P>
+For example, type the following at the command prompt:
+<PRE>   set CAT_MODEM_INIT=ATZ
+   set CAT_DIAL=ATDT4840
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>CAT_OVERRIDE<!-- lm: 0x11 11 -->
+<UL> Specifies
+a path that the debugger searches first to find the source files that were
+used to build your debug binaries.  See "Finding Source Files" below for
+a complete description of the process.
+<P>
+For example, type the following at the command prompt:
+<PRE>   set CAT_OVERRIDE=e:\temp\updates
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>CATTAB<!-- lm: 0x11 11 -->
+<UL> Specifies the number
+of spaces between tab stops when source code containing<!-- entering slot 307 --> tabs
+is displayed in a debugger window.
+<P>
+For example, type the following at the command prompt:
+<PRE>   set CATTAB=5
+</PRE>
+
+<P>
+The debugger will convert each tab in the source to 5 spaces when the source
+is displayed.<!-- lm: 0x2 1 -->
+</UL> CATTABGRID<!-- lm: 0x11 11 -->
+<UL> Specifies
+the column positions for the tab stops when source code containing tabs
+is displayed in a debugger window.
+<P>
+For example, typing the following command at the command prompt sets tab
+stops at the 6th position:
+<PRE>   set CATTABGRID=6
+</PRE>
+<!-- lm: 0x2 1 -->
+</UL>DEBUG_NUMBEROFELEMENTS<!-- lm: 0x11 11 -->
+<UL> DEBUG_NUMBEROFELEMENTS
+is an environment variable that is set to an integer,<B><I> n</B></I>. This
+integer represents the default number of elements displayed for a variable
+or structure that has a substantial number of elements. The last element
+displayed for such a structure is labeled "more elements." Clicking on this
+entry will display the next<B><I> n</B></I> elements of the variable or
+structure.
+<P>
+For example, type the following at the command prompt:
+<PRE>   set DEBUG_NUMBEROFELEMENTS=100
+</PRE>
+
+<P>
+The next 100 elements are displayed.<!-- lm: 0x2 1 -->
+</UL>
+
+<P><HR>
+
+<A HREF="293_L3_CompilingandLinkingY.html">[Back: Compiling and Linking Your Program]</A> <BR>
+<A HREF="295_L3_FindingSourceFiles.html">[Next: Finding Source Files]</A> 
+</BODY>
+</HTML>

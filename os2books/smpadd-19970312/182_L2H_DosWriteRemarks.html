@@ -1,0 +1,100 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="TEXT/HTML; CHARSET=UTF-8">
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosWrite - Remarks</TITLE>
+<STYLE>
+PRE {
+  FONT-FAMILY: Consolas, "Lucida Console", "Courier New", Courier, MONOSPACE;
+}
+</STYLE>
+</HEAD>
+<BODY>
+<H1>DosWrite - Remarks</H1><!-- entering slot 192 -->
+<P>
+
+<P>
+<B>Note: </B> When writing message pipes the application is limited to 64K
+messages. As well, these messages cannot span 64k boundaries due to the
+current design of the thunk layer in read or write routines. If the message
+is not written in an aligned manner, the subsequent read will not be able
+to handle the messages properly. If a 64k or less message is written to
+a pipe from an aligned buffer, the read will handle this properly.<!-- lm: 0x2 1 -->
+<UL>
+<P>
+DosWrite begins to write at the current file-pointer position. The file
+pointer is automatically moved by read and write operations. It can be moved
+to a desired position by issuing <A HREF="162_L2_DosSetFilePtr.html">DosSetFilePtr</A>.
+
+<P>
+If the specified file has been opened using the write-through flag, DosWrite
+writes the data to the disk before returning. Upon return to the caller,
+<I>pcbActual</I> contains the number of bytes actually written.
+<P>
+If there is not enough space on the disk or diskette to write all of the
+bytes specified by<I> cbWrite</I> then DosWrite does not write any bytes.
+Upon return to the caller,<I> pcbActual</I> contains zero.
+<P>
+A value of zero for<I> cbWrite</I> is not considered an error. No data transfer
+occurs, and there is no effect on the file or the file pointer.
+<P>
+If the file is read-only, the write operation to the file is not performed.
+
+<P>
+If you issue <A HREF="121_L2_DosOpen.html">DosOpen</A> with the Direct Open
+flag set to 1 in the<I> fsOpenMode</I> parameter, you have direct access
+to an entire disk or diskette volume, independent of the file system. You
+must lock the logical volume before accessing it, and you must unlock the
+logical volume when you are finished accessing it. Issue <A HREF="093_L2_DosDevIOCtl.html">DosDevIOCtl
+</A>for Category 8, <A HREF="958_L3_DSK_LOCKDRIVE00hLock.html">DSK_LOCKDRIVE
+</A>to lock the logical volume, and for Category 8, <A HREF="966_L3_DSK_UNLOCKDRIVE01hUn.html">DSK_UNLOCKDRIVE
+</A>to unlock the logical volume. While the logical volume is locked, no
+other process can access it.
+<P>
+<B>Raw File System Considerations</B>
+<P>
+Using the raw file system on logical partitions requires you to lock and
+unlock the volume using <A HREF="093_L2_DosDevIOCtl.html">DosDevIOCtl</A> Category
+8, DSK_LOCKDRIVE and DSK_UNLOCKDRIVE.  Unless the logical drive is locked,
+write requests will fail.
+<P>
+The raw file system requires that the number of bytes written be a multiple
+of the sector size (512).
+<P>
+<B>Named-Pipe Considerations</B>
+<P>
+DosWrite also is used to write bytes or messages to a named pipe.
+<P>
+Each write operation to a message pipe writes a message whose size is the
+length of the write operation. DosWrite automatically encodes message lengths
+in the pipe, so applications need not encode this information in the buffer
+being written.
+<P>
+Write operations in blocking mode always write all requested bytes before
+returning.
+<P>
+In nonblocking mode, DosWrite returns either with all bytes written or none
+written. DosWrite returns with no bytes written when it would have to divide
+the message into blocks in order to complete the request. This can occur
+when there is not enough space left in the pipe, or when the pipe is currently
+being written to by another client. If this occurs, DosWrite returns immediately
+with a value of zero for<I> pcbActual</I>, indicating that no bytes were
+written.
+<P>
+For a byte pipe, if the number of bytes to be written exceeds the space
+available in the pipe, DosWrite writes as many bytes as it can, and returns
+with the number of bytes actually written in<I> pcbActual</I>.
+<P>
+An attempt to write to a pipe whose other end has been closed returns ERROR_BROKEN_PIPE
+or, if the other end was closed without reading all pending data, ERROR_DISCARDED.
+
+<P>
+Clients of named pipes created with the NP_ACCESS_OUTBOUND access mode cannot
+use the DosWrite function. If the named pipe's client uses the DosWrite
+function, the function returns error code ERROR_ACCESS_DENIED.
+
+<P><HR>
+
+<A HREF="181_L2H_DosWriteParameters.html">[Back: DosWrite - Parameters]</A> <BR>
+<A HREF="183_L2H_DosWriteRelatedFunct.html">[Next: DosWrite - Related Functions]</A> 
+</BODY>
+</HTML>

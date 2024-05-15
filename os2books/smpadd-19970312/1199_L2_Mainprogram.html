@@ -1,0 +1,487 @@
+<HTML>
+<HEAD>
+<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="TEXT/HTML; CHARSET=UTF-8">
+<TITLE>Main program</TITLE>
+<STYLE>
+PRE {
+  FONT-FAMILY: Consolas, "Lucida Console", "Courier New", Courier, MONOSPACE;
+}
+</STYLE>
+</HEAD>
+<BODY>
+<H1>Main program</H1><!-- entering slot 1224 -->
+<PRE>
+#define INCL_ERROR_H
+
+#include &lt;os2.h&gt;
+#include &lt;psd.h&gt;
+#include &lt;alr.h&gt;
+
+
+extern ulong_t RMP2Available(void);
+
+
+/*
+ *  Global Variables
+ */
+
+P_F_2   router = 0;
+char   *pParmString = 0;
+int     IODelayCount = 30;
+PLMA   *pPSDPLMA = 0;
+ulong_t sizePLMA = 0;
+
+
+/***  Disable - Disable interrupts
+ *
+ *    This function disables interrupts, and returns
+ *    the original state of eflags
+ *
+ *    ENTRY   None
+ *
+ *    EXIT    EFLAGS
+ *
+ */
+
+ulong_t Disable(void) {
+
+   ulong_t eflags;
+
+   _asm {
+      pushfd
+      pop   eax
+      mov   eflags,eax
+      cli
+   };
+
+   return (eflags);
+}
+
+
+/***  Enable - Restore the state of eflags
+ *
+ *    This function restores the state of eflags
+ *
+ *    ENTRY   eflags - state of eflags to restore
+ *
+ *    EXIT    None
+ *
+ */
+
+void Enable(ulong_t eflags) {
+
+   _asm {
+      push  eflags
+      popfd
+   };
+
+   return;
+}
+
+
+ /***  InByte - Read a byte from a port
+  *
+  *    This function reads a byte from a specified port
+  *
+  *    ENTRY   port - port number to read from
+  *
+  *    EXIT    data read
+  *
+  */
+
+ ulong_t InByte(ulong_t port) {
+
+    ulong_t data;
+
+    _asm {
+       mov   dx,port
+       in    al,dx
+       movzx eax,al
+       mov   data,eax
+    };
+
+    return (data);
+}
+
+
+/***  OutByte - Writes a byte to a port
+ *
+ *    This function writes a byte to a specified port
+ *
+ *    ENTRY   port - port number to read from
+ *            data - data to write
+ *
+ *    EXIT    None
+ *
+ */
+
+void OutByte(ulong_t port, ulong_t data) {
+
+   _asm {
+      mov   dx,port
+      mov   al,byte ptr data
+      out   dx,al
+   };
+
+   return;
+}
+
+
+/***  SendEOI - Send an end of interrupt
+ *
+ *    This function sends an end of interrupt.
+ *
+ *    ENTRY   irq - irq level to end
+ *
+ *    EXIT    None
+ *
+ */
+
+ulong_t SendEOI(ulong_t irq) {
+
+   ulong_t flags;
+
+   flags = Disable();
+
+   if (irq &lt; NUM_IRQ_PER_PIC)
+      OutByte(PIC1_PORT0, OCW2_NON_SPECIFIC_EOI);
+   else {
+      OutByte(PIC2_PORT0, OCW2_NON_SPECIFIC_EOI);
+      IODelay;
+      OutByte(PIC1_PORT0, OCW2_NON_SPECIFIC_EOI);
+   }
+
+   Enable(flags);
+}
+
+
+/***  WHO_AM_I - Returns the current processor number
+ *
+ *    This function returns the current processor number
+ *
+ *    ENTRY   NONE
+ *
+ *    EXIT    Current processor number (P1 or P2)
+ *
+ */
+
+ulong_t WHO_AM_I (void) {
+   return(InByte(WHO_AM_I_PORT));
+}
+
+
+/***  IPIPresent - Detects the presence of an IPI
+ *
+ *    This function detects the presence of an IPI on the current
+ *    processor
+ *
+ *    ENTRY   None
+ *
+ *    EXIT    NO_ERROR - IPI present
+ *            -1       - IPI not present
+ *
+ */
+
+ulong_t IPIPresent (void) {
+
+   ulong_t rc = 0;
+   struct control_s ctrl;
+   ulong_t port;
+
+   port = pPSDPLMA-&gt;controlport;
+
+   ctrl.b_all = InByte(port);
+   if (ctrl.b_387err)
+   {
+      OutByte (0xf0, 0); // The busy latch for NPX must be cleared.
+                         // When we call the interrupt handler
+                         // (w/ Call16bitDD int.asm), ints. are 1st enabled.
+                         // If the busy latch is not cleared, then we
+                         // will take this interrupt in again and will
+                         // eventually nest until the interrupt stack is
+                         // overrun.
+      rc = -1;
+   }
+   return (rc);
+}
+
+
+/***  Install - Install PSD
+ *
+ *    This function checks to see if this PSD is installable on the
+ *    current platform.
+ *
+ *    ENTRY   pinstall - pointer to an INSTALL structure
+ *
+ *    EXIT    NO_ERROR - PSD Installed
+ *            -1       - PSD not valid for this platform
+ *
+ */
+
+ulong_t Install(INSTALL *pinstall) {
+
+   VMALLOC vmac;
+   int i;
+   char *p;
+   ulong_t rc = 0;
+   char ALR_String =  "PROVEISA";
+
+// _asm int 3;
+
+   /* Setup Global variables */
+
+   router = pinstall-&gt;pPSDHlpRouter;
+   pParmString = pinstall-&gt;pParmString;
+   pPSDPLMA = (void *)pinstall-&gt;pPSDPLMA;
+   sizePLMA = pinstall-&gt;sizePLMA;
+
+   vmac.addr = BIOS_SEG &lt;&lt; 4;
+   vmac.cbsize = _64K;
+   vmac.flags = VMALLOC_PHYS;
+
+   /* Map BIOS area */
+
+   if ((rc = PSDHelp(router, PSDHLP_VMALLOC, &amp;vmac)) == NO_ERROR) {
+
+      /* Check for ALR string */
+
+      p = (char *)vmac.addr + ALR_STRING_OFFSET;
+
+      for (i = 0; ALR_String i != '\0'; i++)
+         if (p i  != ALR_String i) {
+            rc = -1;
+            break;
+         }
+
+      /* Free BIOS mapping */
+
+      PSDHelp(router, PSDHLP_VMFREE, vmac.addr);
+   }
+
+   return (rc);
+}
+
+
+/***  DeInstall - DeInstall PSD
+ *
+ *    This function deinstalls the PSD.
+ *
+ *    ENTRY   None
+ *
+ *    EXIT    NO_ERROR
+ *
+ */
+
+ulong_t DeInstall(void) {
+
+   return (NO_ERROR);
+}
+
+
+/***  Init - Initialize the PSD
+ *
+ *    This function initializes the PSD.
+ *
+ *    ENTRY   None
+ *
+ *    EXIT    NO_ERROR - PSD initialized
+ *            -1       - PSD not initialized
+ *
+ */
+
+ulong_t Init(INIT *pinit) {
+
+   struct control_s ctrl;
+   <!-- entering slot 1225 -->SET_IRQ set_irq;
+
+
+   /* Initialize P1 control port */
+
+   ctrl.b_all = 0;
+   ctrl.b_cacheon = 1;
+
+
+   OutByte(P1_PROCESSOR_CONTROL_PORT, ctrl.b_all);
+
+   /* Setup P2 interrupt vector */
+
+   OutByte(P2_INTERRUPT_VECTOR_CONTROL_PORT, IPI_VECTOR);
+
+   /* Setup IPI info */
+
+   set_irq.irq = 13;
+   set_irq.flags = IRQf_IPI;
+   set_irq.vector = 0;
+   set_irq.handler = (P_F_2)IPIPresent;
+
+   PSDHelp(router, PSDHLP_SET_IRQ, &amp;set_irq);
+
+   /* Fill init structure */
+
+   pinit-&gt;flags = INIT_EOI_IRQ13_ON_CPU0;           //76422
+   pinit-&gt;version = VERSION;
+
+   return (NO_ERROR);
+}
+
+
+/***  ProcInit - Processor initialization
+ *
+ *    This function initializes per processor items.
+ *
+ *    NOTE: This function is called once on each processor
+ *          in the system.
+ *
+ *    ENTRY   None
+ *
+ *    EXIT    NO_ERROR - Processor initialized
+ *            -1       - Processor not initialized
+ *
+ */
+
+ulong_t ProcInit(void) {
+
+   if (WHO_AM_I() == P1) {
+      pPSDPLMA-&gt;procnum = 0;
+      pPSDPLMA-&gt;controlport = P1_PROCESSOR_CONTROL_PORT;
+   }
+   else {
+      pPSDPLMA-&gt;procnum = 1;
+      pPSDPLMA-&gt;controlport = P2_PROCESSOR_CONTROL_PORT;
+   }
+
+   return (NO_ERROR);
+}
+
+
+/***  StartProcessor - Start a processor
+ *
+ *    This function starts a processor.
+ *
+ *    ENTRY   procnum - processor number to start (0-based)
+ *
+ *    EXIT    Return Code
+ *
+ */
+
+ulong_t StartProcessor(ulong_t procnum) {
+
+   CALL_REAL_MODE rm;
+   struct control_s ctrl;
+   ulong_t rc = -1;
+
+
+   if (procnum == 1) {
+
+      rm.function = (ulong_t)&amp;RMP2Available;
+      rm.pdata = 0;
+
+      rc = PSDHelp(router, PSDHLP_CALL_REAL_MODE, &amp;rm);
+
+      if (rc &amp; P2_AVAILABLE) {
+
+         /* Dispatch P2 */
+
+         ctrl.b_all = 0;
+         ctrl.b_cacheon = 1;
+
+         OutByte(P2_PROCESSOR_CONTROL_PORT, ctrl.b_all);
+         rc = NO_ERROR;
+      }
+      else
+         rc = -1;
+   }
+
+   return (rc);
+}
+
+
+/***  GetNumOfProcs - Get number of processors
+ *
+ *    This function gets the number of processors which exist on this
+ *    platform.
+ *
+ *    ENTRY   None
+ *
+ *    EXIT    Number of processors
+ *
+ */
+
+ulong_t GetNumOfProcs(void) {
+
+   ulong_t cprocs = 2;
+
+   return (cprocs);
+}
+
+
+/***  GenIPI - Generate an inter-processor interrupt
+ *
+ *    This function generates an IPI.
+ *
+ *    ENTRY   procnum - processor number to interrupt (0-based)
+ *
+ *    EXIT    NO_ERROR
+ *
+ */
+
+ulong_t GenIPI(ulong_t procnum) {
+
+   struct control_s ctrl;
+   ulong_t port;
+
+
+   if (procnum == 0)
+      port = P1_PROCESSOR_CONTROL_PORT;
+   else
+      port = P2_PROCESSOR_CONTROL_PORT;
+
+
+   ctrl.b_all = InByte(port);
+   ctrl.b_pint = 1;
+
+   OutByte(port, ctrl.b_all);
+
+   return (NO_ERROR);
+}
+
+
+/***  EndIPI - End an inter-processor interrupt
+ *
+ *    This function ends an IPI.
+ *
+ *    ENTRY   procnum - processor number to end interrupt on (0-based)
+ *
+ *    EXIT    NO_ERROR
+ *
+ */
+
+ulong_t EndIPI(ulong_t procnum) {
+
+   struct control_s ctrl;
+   ulong_t port;
+
+   if (procnum == 0)
+      port = P1_PROCESSOR_CONTROL_PORT;
+   else
+      port = P2_PROCESSOR_CONTROL_PORT;
+
+   ctrl.b_all = InByte(port);
+   ctrl.b_pint = 0;
+
+   OutByte(port, ctrl.b_all);
+
+   if (procnum == 0)
+      SendEOI(IPI_IRQ);
+
+   return (NO_ERROR);
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="1198_L1_SampleSourceCodefora.html">[Back: Sample Source Code for a PSD]</A> <BR>
+<A HREF="1200_L2_Entrystub.html">[Next: Entry stub]</A> 
+</BODY>
+</HTML>

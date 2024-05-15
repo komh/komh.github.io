@@ -1,0 +1,156 @@
+<HTML XPOS=30% YPOS=TOP WIDTH=70% HEIGHT=100%HIDDEN>
+<HEAD>
+<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="TEXT/HTML; CHARSET=UTF-8">
+<!-- extra bytes: 03 00 14 1E 00 04 00 11 46 00 64 00 --><TITLE>DosRead - Example Code</TITLE>
+<STYLE>
+PRE {
+  FONT-FAMILY: Consolas, "Lucida Console", "Courier New", Courier, MONOSPACE;
+}
+</STYLE>
+</HEAD>
+<BODY>
+<H1>DosRead - Example Code</H1><!-- entering slot 170 -->
+<P>
+This example reads to a physical disk using the raw file system and DosListIO.
+
+<PRE>#define  INCL_ERRORS
+#define  INCL_DOS
+#define  INCL_NOPMAPI
+#include &lt;os2.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+#include &lt;bsedev.h&gt;
+#include "listio.h"
+
+#define   EightK   8*1024
+#define   FourK   4*1024
+#define   LISTIO_NUM 1000
+#define   PAGE_RAND_MAX 100
+
+CHAR  Buf[EightK];
+LISTIO ListIO[LISTIO_NUM];
+ULONG seed = 1;
+ULONG page_rand(void);
+
+int main (VOID)
+
+{
+   CHAR  *BufAligned;
+   ULONG  rc;
+   ULONG  Loop = LISTIO_NUM,
+          i, j;
+   ULONG  Action, Actual;
+   HFILE  hFile;
+
+   /* Make sure buffer is page aligned */
+
+   BufAligned = (UCHAR *)(((LONG)Buf + FourK) &amp; 0xFFFFF000);
+
+   /* Open a raw file system disk */
+
+   rc = DosOpen((PSZ)"\\\\.\\Physical_Disk2",
+                &amp;hFile,
+                &amp;Action,
+                0L,
+                FILE_NORMAL,
+                OPEN_ACTION_OPEN_IF_EXISTS,
+                OPEN_SHARE_DENYNONE | OPEN_ACCESS_READWRITE,
+                0L);
+
+   if (rc != NO_ERROR) {
+      printf("ERROR:DosOpen rc = %d\n", rc);
+      return(1);
+   } /* if */
+   /*************************************/
+   /* Perform Random READ using DosRead */
+   /*************************************/
+
+   for(i = 0; i &lt; Loop ; i++) { /* Loop for Random Read */
+      rc = DosSetFilePtr(hFile,  /* file's handle */
+                         page_rand()*FourK, /* offset */
+                         FILE_BEGIN, /* from beginning of file */
+                         &amp;Actual);
+
+      if (rc != NO_ERROR) {
+         printf("ERROR:DosSetFilePtr rc = %d\n", rc);
+         return(1);
+      } /* if */
+
+      rc = DosRead( hFile,  /* file's handle */
+                    BufAligned,  /* buffer pointer */
+                    FourK,   /* size to read */
+                    &amp;Actual);
+
+      if (rc != NO_ERROR) {
+         printf("ERROR:DosRead rc = %d\n", rc);
+         return(1);
+      } /* if */
+
+   } /* for i */
+   /****************************************/
+   /* Perform Random Read using DosListIO  */
+   /****************************************/
+
+   for (i = 0; i &lt; Loop; i++) {
+      ListIO[i].hFile = hFile;
+      ListIO[i].CmdFlag = LISTIO_READ | FILE_BEGIN;
+      ListIO[i].Offset = page_rand()*FourK;
+      ListIO[i].pBuffer = BufAligned;
+      ListIO[i].NumBytes = FourK;
+   } /* for i */
+
+   rc = DosListIO( LISTIO_UNORDERED, /* unordered mode */
+                   Loop,    /* number of reads */
+                   ListIO);   /* array of control blocks */
+
+   if (rc != NO_ERROR) {
+      printf("ERROR:DosListIO rc = %d\n", rc);
+
+      for (i = 0; i &lt; Loop; i++) {
+         if ((ListIO[i].Actual != FourK) ||
+             (ListIO[i].RetCode != NO_ERROR)) {
+            printf("ERROR:DosListIO i = %d, Actual = %d, RetCode = %d\n",
+     I, ListIO[i].Actual, ListIO[i].RetCode);
+         } /* if */
+      } /* for i */
+      return(1);
+   } /* if */
+   /* Close file */
+
+   rc = DosClose(hFile);
+
+   if (rc != NO_ERROR) {
+      printf("ERROR:DosClose rc = %d\n", rc);
+      return(1);
+   }
+
+   return(NO_ERROR);
+
+}
+
+/********************************************************/
+/*                                                      */
+/* FUNCTION: page_rand                               */
+/*                                                      */
+/* DESCRIPTION: Generate random number in range         */
+/*              [0,PAGE_RAND_MAX-1]           */
+/*                                                      */
+/********************************************************/
+
+ULONG page_rand()
+
+{
+   seed = seed * 1103515245 + 12345;
+   return(((ULONG)(seed/(2*PAGE_RAND_MAX)) % PAGE_RAND_MAX));
+
+}
+</PRE>
+
+
+<P><HR>
+
+<A HREF="159_L2H_DosReadRelatedFuncti.html">[Back: DosRead - Related Functions]</A> <BR>
+<A HREF="161_L2H_DosReadTopics.html">[Next: DosRead - Topics]</A> 
+</BODY>
+</HTML>
